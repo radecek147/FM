@@ -173,22 +173,60 @@ export function generateShopBoosters(
   opts: { firstShop?: boolean } = {},
 ): ShopState['boosters'] {
   const rng = core.rng('shop');
-  const defs = Object.values(core.registry.boosters)
-    .filter((b) => b.weight > 0 && boosterAllowed(core, b.id))
-    .sort((a, b) => compareIds(a.id, b.id));
   const out: ShopState['boosters'] = [];
   const guaranteed = opts.firstShop ? firstShopBoosterId(core) : null;
   for (let i = 0; i < core.mods().shopBoosterSlots; i++) {
-    let id: string | null = null;
-    if (i === 0 && guaranteed) id = guaranteed;
-    else if (defs.length > 0) id = rng.weighted(defs.map((d) => ({ item: d.id, weight: d.weight })));
+    const id = i === 0 && guaranteed ? guaranteed : rollShopBoosterId(core, rng);
     if (!id) break;
     out.push({ boosterId: id, price: boosterPrice(core, id), sold: false });
   }
   return out;
 }
 
-/** Kupóny, které lze v tomto runu nabídnout (nevlastněné, splněný předpoklad, odemčené, nezakázané). */
+/** Jedna obálka do slotu Večerky podle vah (null = žádná obálka v registru/poolu). */
+function rollShopBoosterId(core: GameCore, rng: Rng): string | null {
+  const defs = Object.values(core.registry.boosters)
+    .filter((b) => b.weight > 0 && boosterAllowed(core, b.id))
+    .sort((a, b) => compareIds(a.id, b.id));
+  if (defs.length === 0) return null;
+  return rng.weighted(defs.map((d) => ({ item: d.id, weight: d.weight })));
+}
+
+/**
+ * Doplní otevřenou Večerku na aktuální počet kartových slotů a slotů obálek (kupón „Druhý regál“ / „Regál
+ * u pokladny“ platí hned, ne až v příští Večerce). Chybějící sloty se vylosují (stream `shop`) stejně jako při
+ * vstupu; vystavené i prodané zboží zůstává. Sloty nikdy neubírá (to se projeví až při přehození / v příští Večerce).
+ */
+export function syncShopSlots(core: GameCore, shop: ShopState): void {
+  const m = core.mods();
+  const rng = core.rng('shop');
+  if (shop.items.length < m.shopCardSlots) {
+    const taken = shop.items.flatMap((it) => (it.kind === 'joker' ? [it.joker.defId] : []));
+    for (let i = shop.items.length; i < m.shopCardSlots; i++) {
+      const item = generateItem(core, rng, taken);
+      if (!item) break;
+      shop.items.push(item);
+    }
+  }
+  for (let i = shop.boosters.length; i < m.shopBoosterSlots; i++) {
+    const id = rollShopBoosterId(core, rng);
+    if (!id) break;
+    shop.boosters.push({ boosterId: id, price: boosterPrice(core, id), sold: false });
+  }
+}
+
+/** Smí se kupón teď nabídnout/koupit (`VoucherDef.available`, čistá funkce)? Neznámý kupón ne. */
+export function voucherAvailable(core: GameCore, id: string): boolean {
+  const def = core.registry.vouchers[id];
+  if (!def) return false;
+  const check = def.available;
+  return !check || core.readOnly(() => check(core.baseCtx('misc')));
+}
+
+/**
+ * Kupóny, které lze v tomto runu nabídnout (nevlastněné, splněný předpoklad, odemčené, nezakázané a teď dostupné
+ * podle `VoucherDef.available`).
+ */
 export function eligibleVouchers(core: GameCore): string[] {
   const s = core.state;
   const pool = s.unlockedPool.vouchers;
@@ -199,7 +237,8 @@ export function eligibleVouchers(core: GameCore): string[] {
         !s.vouchers.includes(v.id) &&
         (!v.requires || s.vouchers.includes(v.requires)) &&
         (!pool || pool.includes(v.id)) &&
-        !banned.includes(v.id),
+        !banned.includes(v.id) &&
+        voucherAvailable(core, v.id),
     )
     .map((v) => v.id)
     .sort();

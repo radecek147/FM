@@ -144,15 +144,30 @@ Viz `JokerHooks`, `BossHooks`, `TagHooks` v `content-types.ts`. Hooky smí:
 `EngineApi` (`ctx.api`, implementace `effects/api.ts`, typy v `content-types.ts`) — příkazy jsou deterministické,
 emitují události a respektují limity (sloty, dluhový limit, „jen během kola“):
 
-| Oblast             | Příkazy                                                                                                                  |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| peníze             | `addMoney` (ořízne dluhovým limitem), `setMoney` (přesně)                                                                |
-| kolo a ruka        | `addHands`, `addDiscards`, `drawCards`, `addRoundHandSize`, `discardFromHand`, `setCardFaceDown`, `shuffleHand`          |
-| kombinace          | `levelUpHand`, `levelUpAll`, `handBase` (dotaz na základ úrovně)                                                         |
-| žolíci a spotřebky | `createJoker`, `destroyJoker`, `setJokerDebuffed`, `createConsumable`                                                    |
-| karty balíčku      | `addCard`, `copyCard`, `destroyCard`, `modifyCard`                                                                       |
-| run                | `addTag`, `disableBoss`, `rerollBoss`, `changeAnte`, `addPermanentModifier`, `message` (i18n klíč)                       |
-| dotazy (bez změn)  | `getCard`, `handCards`, `modifiers` (zmrazené), `handLevel`, `isFace`, `hasSuit`, `cardChips`, `jokerSlots`, `sellValue` |
+| Oblast             | Příkazy                                                                                                                                                                      |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| peníze             | `addMoney` (ořízne dluhovým limitem), `setMoney` (přesně)                                                                                                                    |
+| kolo a ruka        | `addHands`, `addDiscards`, `drawCards`, `addRoundHandSize`, `discardFromHand`, `setCardFaceDown`, `shuffleHand`, `cleanseCard`                                               |
+| kombinace          | `levelUpHand`, `levelUpAll`, `handBase` (dotaz na základ úrovně)                                                                                                             |
+| žolíci a spotřebky | `createJoker`, `destroyJoker`, `setJokerDebuffed`, `setJokerEdition`, `removeJokerStickers`, `copyJoker`, `transformJoker`, `createConsumable`                               |
+| karty balíčku      | `addCard`, `copyCard`, `destroyCard`, `modifyCard`                                                                                                                           |
+| run                | `addTag`, `disableBoss`, `rerollBoss`, `changeAnte`, `addPermanentModifier`, `message` (i18n klíč)                                                                           |
+| dotazy (bez změn)  | `getCard`, `handCards`, `modifiers` (zmrazené), `handLevel`, `isFace`, `hasSuit`, `cardChips`, `jokerSlots`, `sellValue`, `availableJokers`, `jokerRarity`, `consumableKind` |
+
+Žolíci z efektů spotřebek (fáze 5, úřední razítka): `setJokerEdition` mění edici (negativní tím mění sloty),
+`removeJokerStickers` sundá nálepky (zvětralý žolík bez „zvětrávající“ znovu funguje, dočasný debuff kola trvá),
+`copyJoker` vytvoří kopii i se stavem, nálepkami a prodejním bonusem (`onAcquire` jako u získání; edici lze přepsat)
+a dotaz `availableJokers({ rarity })` vrátí pool, ze kterého by losoval `createJoker` — bez náhradního Pivního tácku,
+takže obsah pozná, že žolík dané vzácnosti dostupný není (Výjimka z vyhlášky, Daňové přiznání). Změna edice/nálepek
+emituje událost `jokerChanged`.
+
+Babské rady (fáze 5): `transformJoker(uid, defId)` promění žolíka na místě (Kouzelný kotlík) — uid, pozice, edice,
+nálepky i odpočet zvětrávání zůstanou, stav (`initState`) a prodejní bonus se založí znovu, nový žolík dostane
+`onAcquire` a emituje se `jokerChanged`. `cleanseCard(cardId)` vrátí kartu do provozu do konce kola (Česnek na krk):
+zruší debuff, otočí ji lícem nahoru a zapíše ji do `RoundState.cleansedCards`, takže ji `bossDebuffs` při dalších
+přepočtech vynechá (pole je volitelné kvůli starším uložením). Dotazy `jokerRarity(defId)` a `consumableKind(defId)`
+čtou definice z registru (obsah registr sám nemá). `ConsumableCtx.targets` jsou vždy seřazené zleva doprava podle
+pozice v ruce (v kole nebo v ruce dobrané obálkou), ne podle pořadí výběru — „levá“ a „pravá“ karta (DESIGN 5.1).
 
 Číselné vstupy příkazů: NaN a ±∞ se ignorují, počty (ruce, zahození, úrovně, patra, velikost ruky) se usekávají na
 celá čísla, peníze a statistiky se zastaví na `Number.MAX_VALUE` — stav musí zůstat uložitelný do JSON.

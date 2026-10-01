@@ -468,7 +468,7 @@
 
 /* Neskórující zahrané karty ztmavnou (neprůhledně — sukno ani potisk nemají prosvítat). */
 .game-table .pcard.is-played:not(.is-scoring) .pcard__inner {
-  filter: brightness(0.62) saturate(0.7);
+  filter: brightness(0.74) saturate(0.55);
 }
 
 .game-table__hint {
@@ -812,8 +812,9 @@
   box-shadow: inset 0 2px 8px rgb(0 0 0 / 35%);
 }
 
+/* Zboží, obálky a kupón vedle sebe, když se vejdou (1366 px) — Večerka pak nepotřebuje posouvání. */
 .shop-section--items {
-  flex-basis: 100%;
+  flex-grow: 2;
 }
 
 .shop-section__title {
@@ -839,7 +840,7 @@
   flex-direction: column;
   gap: 0.4rem;
   align-items: center;
-  width: calc(var(--card-w) * 1.6);
+  width: max(calc(var(--card-w) * 1.6), 8.5rem);
   padding-top: 1.4rem;
 }
 
@@ -922,7 +923,7 @@
   flex-direction: column;
   gap: 0.4rem;
   align-items: center;
-  width: calc(var(--card-w) * 1.6);
+  width: max(calc(var(--card-w) * 1.6), 8.5rem);
 }
 
 .booster-option__name {
@@ -987,6 +988,18 @@
 
 .game.is-ended .game-main {
   grid-template-rows: minmax(0, 1fr);
+}
+
+/* Jediná řada — jeviště nesmí zůstat ve 2. řadě (pravidlo `.is-handless` níž), jinak by panel spadl dolů. */
+.game.is-ended .game-main .game-stage {
+  grid-area: 1 / 1;
+  padding-right: 0;
+}
+
+/* Pitva a výhra uprostřed stolu; když se nevejdou, začínají nahoře (safe — nic se neuřízne). */
+.game.is-ended .game-panel-host {
+  align-self: start;
+  align-self: safe center;
 }
 
 .game-over,
@@ -1652,6 +1665,14 @@
   gap: 0.5rem;
 }
 
+/* Posunout doleva / doprava jako stejně široká dvojice vedle sebe. */
+.detail__moves .btn {
+  flex: 1 1 9rem;
+  min-width: 0;
+  padding-inline: 0.6em;
+  font-size: 0.95rem;
+}
+
 .modal--pause .modal__actions {
   flex-direction: column;
   align-items: stretch;
@@ -1669,6 +1690,7 @@
 }
 
 .no-anim .blind-card,
+.no-anim .game-stage__decor,
 .no-anim .game-table .pcard,
 .no-anim .gt-item.is-shifting,
 .no-anim .gb-deck {
@@ -1699,8 +1721,11 @@
   }
 }
 
-/* Úzký stůl v jednotkách rem (malé okno nebo velké UI 120–140 %): Zahrát / Zahodit vedle sebe, třídění pod nimi. */
-@container game-main (max-width: 36rem) {
+/*
+ * Úzký stůl (malé okno, nebo velké UI 120–140 % — `html.ui-large` posune práh): Zahrát / Zahodit vedle sebe,
+ * třídění pod nimi.
+ */
+@container game-main (max-width: 640px) {
   .gb-controls {
     grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
@@ -1726,10 +1751,37 @@
   }
 }
 
+@container game-main (max-width: 900px) {
+  .ui-large .gb-controls {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .ui-large .gb-mid {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    flex-flow: row wrap;
+    gap: 0.25rem 0.75rem;
+    justify-content: center;
+  }
+
+  .ui-large .gb-play,
+  .ui-large .gb-discard {
+    justify-self: stretch;
+    min-width: 0;
+  }
+
+  .ui-large .shop__header {
+    justify-content: center;
+    text-align: center;
+  }
+}
+
 /* Tablet na výšku a menší: levý panel se složí nad stůl (kompaktní mřížka), hra zůstává v okně. */
 @media (max-width: 900px) {
   .game {
-    --game-card-w: clamp(40px, min(calc((100vw - 8rem) / 8.6), calc((100dvh - 24rem) / 4.4)), 96px);
+    /* Ruka smí vedle balíčku lehce překrývat karty — na tabletu jsou pak karty čitelně velké. */
+    --game-card-w: clamp(40px, min(calc((100vw - 5rem) / 8.6), calc((100dvh - 24rem) / 4.4)), 104px);
 
     grid-template-rows: auto minmax(0, 1fr);
     grid-template-columns: minmax(0, 1fr);
@@ -1817,10 +1869,13 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  /* Na výšku je místa dost — zboží a obálky můžou mít větší karty. */
-  .shop,
-  .booster {
+  /* Na výšku je místa dost — zboží může mít větší karty; obálka (až 5 možností) se vejde do jedné řady. */
+  .shop {
     --card-w: min(calc(var(--game-card-w) * 1.2), 104px);
+  }
+
+  .booster-option {
+    width: calc(var(--card-w) * 1.45);
   }
 }
 
@@ -1886,6 +1941,25 @@
   .gb-mid {
     flex-wrap: wrap;
     row-gap: 0.25rem;
+  }
+
+  /* Mimo kolo se na telefonu náhled kombinace a skóre kola nezobrazují — panel fáze je pak výš. */
+  .game-sidebar:not([data-phase='round'], [data-phase='booster']) .gs-hand,
+  .game-sidebar:not([data-phase='round'], [data-phase='round_end'], [data-phase='game_over']) .gs-score {
+    display: none;
+  }
+
+  .game-sidebar:not([data-phase='round'], [data-phase='round_end'], [data-phase='game_over']) .gs-target {
+    grid-column: 1 / -1;
+  }
+
+  .shop__bar {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .booster-option {
+    width: max(calc(var(--card-w) * 1.6), 6.5rem);
   }
 
   .game-stage {

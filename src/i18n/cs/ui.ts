@@ -182,7 +182,7 @@ export const credits = {
     title: 'Písmo',
     license: 'Licence SIL Open Font License 1.1',
     digits:
-      'Číslice jsme podle něj překreslili, aby se pětka nepletla s písmenem S. I upravené písmo je pod OFL 1.1.',
+      'Číslice a písmeno Z jsme podle něj překreslili, aby se pětka nepletla s písmenem S a zet s dvojkou. I upravené písmo je pod OFL 1.1.',
   },
   icons: {
     title: 'Ikony',

@@ -49,16 +49,45 @@ export function pickJokerDefId(
     if (available.length === 0) return fallbackJoker(core);
     rarity = rng.weighted(available.map((r) => ({ item: r, weight: RARITY_WEIGHTS[r] })));
   }
-  const owned = new Set(core.state.jokers.map((j) => j.defId));
-  const exclude = new Set(opts.exclude ?? []);
-  const pool = all
-    .filter((d) => d.rarity === rarity && (opts.rarity === 'legendary' || !d.noShop))
-    // Pivní tácek se smí opakovat (v nabídce i ve slotech).
-    .filter((d) => d.id === FALLBACK_JOKER_ID || (!owned.has(d.id) && !exclude.has(d.id)))
-    .map((d) => d.id)
-    .sort();
+  const pool = jokerCandidates(core, all, rarity, opts.rarity === 'legendary', opts.exclude);
   if (pool.length === 0) return fallbackJoker(core);
   return rng.pick(pool);
+}
+
+/**
+ * Seřazená id žolíků dané vzácnosti, ze kterých se losuje: nevlastněné a mimo `exclude` (Pivní tácek se smí
+ * opakovat); `noShop` jen s `allowNoShop` (výslovně vyžádaný legendární žolík).
+ */
+function jokerCandidates(
+  core: GameCore,
+  all: readonly JokerDef[],
+  rarity: JokerRarity,
+  allowNoShop: boolean,
+  exclude: readonly string[] = [],
+): string[] {
+  const owned = new Set(core.state.jokers.map((j) => j.defId));
+  const excluded = new Set(exclude);
+  return (
+    all
+      .filter((d) => d.rarity === rarity && (allowNoShop || !d.noShop))
+      // Pivní tácek se smí opakovat (v nabídce i ve slotech).
+      .filter((d) => d.id === FALLBACK_JOKER_ID || (!owned.has(d.id) && !excluded.has(d.id)))
+      .map((d) => d.id)
+      .sort()
+  );
+}
+
+/**
+ * Id žolíků, ze kterých by teď losoval `pickJokerDefId` (a tedy `EngineApi.createJoker`) se stejnou `rarity` —
+ * bez náhradního žolíka pro vyčerpaný pool. Bez `rarity` sjednocení vzácností, které se v obchodě losují.
+ */
+export function availableJokerIds(core: GameCore, opts: { rarity?: JokerRarity } = {}): string[] {
+  const all = Object.values(core.registry.jokers).filter((d) => jokerAllowed(core, d));
+  if (opts.rarity) return jokerCandidates(core, all, opts.rarity, opts.rarity === 'legendary');
+  return (Object.keys(RARITY_WEIGHTS) as JokerRarity[])
+    .filter((r) => RARITY_WEIGHTS[r] > 0)
+    .flatMap((r) => jokerCandidates(core, all, r, false))
+    .sort();
 }
 
 function consumableAllowed(core: GameCore, def: ConsumableDef): boolean {

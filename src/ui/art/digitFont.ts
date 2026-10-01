@@ -1,16 +1,19 @@
 /**
- * Písmo „Karban Digits“ — číslice 0–9 skládané z pixelové mřížky a sestavené za běhu do TrueType (FontFace API).
+ * Písmo „Karban Digits“ — číslice 0–9 a písmena Z / Ž skládané z pixelové mřížky a sestavené za běhu
+ * do TrueType (FontFace API).
  *
- * Proč: v Pixelify Sans jsou „5“ a „S“ (a téměř i „2“ a „Z“) stejné glyfy, takže cíl „650“ vypadal jako „6S0“.
- * Hra je plná čísel, proto má číslice vlastní písmo, které se v `--font-game` řadí před Pixelify Sans
- * a díky `unicode-range` přebírá jen U+0030–0039. Ostatní znaky dál kreslí Pixelify Sans.
+ * Proč: v Pixelify Sans jsou „5“ a „S“ stejné glyfy a „Z“ vypadá jako „2“, takže cíl „650“ vypadal jako „6S0“
+ * a tlačítko „Zahrát“ jako „2ahrát“. Hra je plná čísel, proto má tyhle znaky vlastní písmo, které se
+ * v `--font-game` řadí před Pixelify Sans a díky `unicode-range` přebírá jen U+0030–0039, U+005A a U+017D.
+ * Ostatní znaky dál kreslí Pixelify Sans.
  *
- * Glyfy: obrysy číslic Pixelify Sans (© 2021 The Pixelify Sans Project Authors, SIL Open Font License 1.1)
- * přepsané do obdélníkové mřížky ve stejných jednotkách (UPM 1000, váhy 400 a 700); „5“ dostala rovnou horní
- * linku s ostrými rohy a „2“ rovnou patku, aby se nepletly s „S“ a „Z“. Odvozené písmo je tedy také pod OFL 1.1
- * a nenese rezervované jméno původního písma. Nic se nestahuje — data jsou tady, binárka vzniká v prohlížeči.
+ * Glyfy: obrysy Pixelify Sans (© 2021 The Pixelify Sans Project Authors, SIL Open Font License 1.1) přepsané
+ * do obdélníkové mřížky ve stejných jednotkách (UPM 1000, váhy 400 a 700). „5“ dostala rovnou horní linku
+ * s ostrými rohy, „2“ rovnou patku, „7“ přišla o háček vlevo a „Z“ má šikmou tahu po schodech (mřížka „X“),
+ * háček „Ž“ je původní. Odvozené písmo je tedy také pod OFL 1.1 a nenese rezervované jméno původního písma.
+ * Nic se nestahuje — data jsou tady, binárka vzniká v prohlížeči.
  *
- * Bez FontFace API (testy, starý prohlížeč) se nic nestane: čísla kreslí Pixelify Sans jako dřív.
+ * Bez FontFace API (testy, starý prohlížeč) se nic nestane: znaky kreslí Pixelify Sans jako dřív.
  */
 
 /** Jméno rodiny v CSS (`--font-game` v base.css). */
@@ -22,14 +25,25 @@ const DESCENT = 280;
 const CAP_HEIGHT = 631;
 
 /**
- * Číslice na nepravidelné mřížce: `x` a `y` jsou hrany sloupců a řádků v jednotkách písma (y shora dolů),
+ * Část glyfu na nepravidelné mřížce: `x` a `y` jsou hrany sloupců a řádků v jednotkách písma (y shora dolů),
  * `rows` řádky buněk (`#` = plno). Úzké sloupce/řádky (≈ 10 jednotek) jsou „zuby“ zaoblených rohů Pixelify Sans.
  */
-interface DigitGrid {
-  adv: number;
+interface GlyphPart {
   x: readonly number[];
   y: readonly number[];
   rows: readonly string[];
+}
+
+/** Číslice (jedna část) — tvar mřížky s šířkou znaku. */
+interface DigitGrid extends GlyphPart {
+  adv: number;
+}
+
+/** Glyf písma: kódový bod, šířka a části (Ž = Z + háček). */
+interface GlyphDef {
+  code: number;
+  adv: number;
+  parts: readonly GlyphPart[];
 }
 
 type Weight = 400 | 700;
@@ -61,7 +75,8 @@ const SHAPES = {
   // Nová „5“: rovná horní linka s ostrými rohy, svislice vlevo, bříško vpravo (≠ „S“).
   five: ['#####', '#####', '##...', '##...', '####.', '####.', '#####', '...##', '##.##', '#####', '.###.'],
   six: ['.###.', '#####', '##.##', '##...', '####.', '#####', '##.##', '#####', '.###.'],
-  seven: ['.###.', '#####', '##.##', '...##'],
+  // „7“ bez háčku vlevo (v Pixelify Sans připomínala obrácené „ʃ“): rovná horní linka a svislice vpravo.
+  seven: ['#####', '#####', '...##', '...##'],
   eight: ['.###.', '#####', '##.##', '#####', '.###.', '#####', '##.##', '#####', '.###.'],
   nine: ['.###.', '#####', '##.##', '#####', '.####', '...##', '##.##', '#####', '.###.'],
 } as const;
@@ -103,6 +118,58 @@ const GRIDS: Readonly<Record<Weight, readonly DigitGrid[]>> = {
   ],
 };
 
+/** „Z“ se šikmou tahou po schodech na mřížce písmene „X“ z Pixelify Sans (≠ „2“). */
+const SHAPE_Z = [
+  '#########',
+  '#########',
+  '.....###.',
+  '...#####.',
+  '...###...',
+  '.#####...',
+  '.###.....',
+  '#########',
+  '#########',
+];
+const SHAPE_CARON = ['##.##', '#####', '.###.'];
+
+const LETTERS: Readonly<Record<Weight, { adv: number; z: GlyphPart; caron: GlyphPart }>> = {
+  400: {
+    adv: 586,
+    z: {
+      x: [60, 151, 161, 241, 251, 333, 343, 423, 433, 525],
+      y: [631, 540, 530, 359, 350, 270, 260, 88, 78, -12],
+      rows: SHAPE_Z,
+    },
+    caron: { x: [220, 265, 275, 311, 321, 366], y: [806, 760, 751, 705], rows: SHAPE_CARON },
+  },
+  700: {
+    adv: 603,
+    z: {
+      x: [61, 149, 188, 237, 276, 326, 365, 414, 453, 542],
+      y: [638, 552, 501, 381, 331, 297, 246, 125, 74, -11],
+      rows: SHAPE_Z,
+    },
+    caron: { x: [217, 261, 299, 305, 344, 388], y: [818, 775, 725, 681], rows: SHAPE_CARON },
+  },
+};
+
+const CODE_ZERO = 0x30;
+const CODE_Z = 0x5a;
+const CODE_Z_CARON = 0x17d;
+
+/** Všechny glyfy dané váhy seřazené podle kódového bodu. */
+function glyphDefs(weight: Weight): GlyphDef[] {
+  const l = LETTERS[weight];
+  return [
+    ...GRIDS[weight].map((g, i) => ({ code: CODE_ZERO + i, adv: g.adv, parts: [g] })),
+    { code: CODE_Z, adv: l.adv, parts: [l.z] },
+    { code: CODE_Z_CARON, adv: l.adv, parts: [l.z, l.caron] },
+  ];
+}
+
+/** `unicode-range` písma (FontFace) — jen znaky, které písmo opravdu má. */
+export const DIGIT_FONT_RANGE = 'U+0030-0039, U+005A, U+017D';
+
 // ─────────────────────────── Obrysy z mřížky ───────────────────────────
 
 type Point = readonly [number, number];
@@ -111,7 +178,7 @@ type Point = readonly [number, number];
  * Obrysy glyfu: hranice plných buněk, orientované po směru hodinových ručiček (vnější obrys TrueType,
  * osa y nahoru), díry vyjdou proti směru samy. Body na přímce se vynechají.
  */
-export function digitContours(grid: DigitGrid): Point[][] {
+export function digitContours(grid: GlyphPart): Point[][] {
   const nx = grid.x.length - 1;
   const ny = grid.y.length - 1;
   if (grid.rows.length !== ny || grid.rows.some((r) => r.length !== nx))
@@ -220,8 +287,8 @@ interface BuiltGlyph {
   contours: number;
 }
 
-function buildGlyph(grid: DigitGrid): BuiltGlyph {
-  const contours = digitContours(grid);
+function buildGlyph(def: GlyphDef): BuiltGlyph {
+  const contours = def.parts.flatMap(digitContours);
   const all = contours.flat();
   const xs = all.map((p) => p[0]);
   const ys = all.map((p) => p[1]);
@@ -246,7 +313,7 @@ function buildGlyph(grid: DigitGrid): BuiltGlyph {
     py = y;
   }
   w.pad4();
-  return { data: w.done(), adv: grid.adv, ...box, points: all.length, contours: contours.length };
+  return { data: w.done(), adv: def.adv, ...box, points: all.length, contours: contours.length };
 }
 
 function utf16be(s: string): number[] {
@@ -261,7 +328,7 @@ function utf16be(s: string): number[] {
 function nameTable(weight: Weight): Uint8Array {
   const style = weight === 700 ? 'Bold' : 'Regular';
   const records: Array<[number, string]> = [
-    [0, 'Digits derived from Pixelify Sans, (c) 2021 The Pixelify Sans Project Authors'],
+    [0, 'Glyphs derived from Pixelify Sans, (c) 2021 The Pixelify Sans Project Authors'],
     [1, DIGIT_FONT_FAMILY],
     [2, style],
     [3, `${DIGIT_FONT_FAMILY} ${style}`],
@@ -273,7 +340,9 @@ function nameTable(weight: Weight): Uint8Array {
   ];
   const strings = records.map(([, s]) => utf16be(s));
   const w = new Writer();
-  w.u16(0).u16(records.length).u16(6 + records.length * 12);
+  w.u16(0)
+    .u16(records.length)
+    .u16(6 + records.length * 12);
   let offset = 0;
   records.forEach(([id], i) => {
     const len = strings[i]!.length;
@@ -284,12 +353,44 @@ function nameTable(weight: Weight): Uint8Array {
   return w.done();
 }
 
-/** Sestaví TrueType s glyfy .notdef + 0–9 pro danou váhu. */
+/**
+ * cmap formátu 4: souvislé úseky kódů se souvislými čísly glyfů (glyf 0 je .notdef) a povinný koncový
+ * úsek 0xFFFF.
+ */
+function cmapTable(codes: readonly number[]): Uint8Array {
+  const segs: Array<{ start: number; end: number; delta: number }> = [];
+  codes.forEach((code, i) => {
+    const glyph = i + 1;
+    const last = segs[segs.length - 1];
+    if (last && code === last.end + 1 && glyph - code === last.delta) last.end = code;
+    else segs.push({ start: code, end: code, delta: glyph - code });
+  });
+  segs.push({ start: 0xffff, end: 0xffff, delta: 1 });
+  const n = segs.length;
+  const pow = 2 ** Math.floor(Math.log2(n));
+  const sub = new Writer()
+    .u16(4)
+    .u16(16 + n * 8)
+    .u16(0)
+    .u16(n * 2)
+    .u16(pow * 2)
+    .u16(Math.log2(pow))
+    .u16(n * 2 - pow * 2);
+  for (const sg of segs) sub.u16(sg.end);
+  sub.u16(0);
+  for (const sg of segs) sub.u16(sg.start);
+  for (const sg of segs) sub.i16(((sg.delta + 0x8000) & 0xffff) - 0x8000);
+  for (let i = 0; i < n; i++) sub.u16(0);
+  return new Writer().u16(0).u16(1).u16(3).u16(1).u32(12).raw(sub.done()).done();
+}
+
+/** Sestaví TrueType s glyfy .notdef + 0–9, Z, Ž pro danou váhu. */
 export function buildDigitFont(weight: Weight): Uint8Array {
+  const defs = glyphDefs(weight);
   const glyphs: BuiltGlyph[] = [
-    // .notdef — prázdný glyf (kreslit ho nikdy nebudeme, unicode-range pokrývá jen číslice)
+    // .notdef — prázdný glyf (kreslit ho nikdy nebudeme, unicode-range pokrývá jen znaky písma)
     { data: new Uint8Array(0), adv: 500, xMin: 0, yMin: 0, xMax: 0, yMax: 0, points: 0, contours: 0 },
-    ...GRIDS[weight].map(buildGlyph),
+    ...defs.map(buildGlyph),
   ];
   const drawn = glyphs.slice(1);
   const bbox = {
@@ -370,27 +471,10 @@ export function buildDigitFont(weight: Weight): Uint8Array {
     .u16(0)
     .u16(0);
 
-  const firstCode = 0x30;
-  const lastCode = 0x39;
-  // cmap: formát 4, jediný úsek 0x30–0x39 → glyfy 1–10 (+ povinný koncový úsek 0xFFFF)
-  const sub = new Writer()
-    .u16(4)
-    .u16(32)
-    .u16(0)
-    .u16(4) // segCountX2
-    .u16(4) // searchRange
-    .u16(1) // entrySelector
-    .u16(0) // rangeShift
-    .u16(lastCode)
-    .u16(0xffff)
-    .u16(0)
-    .u16(firstCode)
-    .u16(0xffff)
-    .i16(1 - firstCode)
-    .i16(1)
-    .u16(0)
-    .u16(0);
-  const cmap = new Writer().u16(0).u16(1).u16(3).u16(1).u32(12).raw(sub.done());
+  const codes = defs.map((d) => d.code);
+  const firstCode = codes[0] ?? CODE_ZERO;
+  const lastCode = codes[codes.length - 1] ?? CODE_ZERO;
+  const cmap = cmapTable(codes);
 
   const avg = Math.round(drawn.reduce((s, g) => s + g.adv, 0) / drawn.length);
   const os2 = new Writer()
@@ -411,7 +495,7 @@ export function buildDigitFont(weight: Weight): Uint8Array {
     .i16(300)
     .i16(0)
     .raw(new Array<number>(10).fill(0))
-    .u32(1)
+    .u32(0b101)
     .u32(0)
     .u32(0)
     .u32(0)
@@ -424,7 +508,7 @@ export function buildDigitFont(weight: Weight): Uint8Array {
     .i16(0)
     .u16(ASCENT)
     .u16(DESCENT)
-    .u32(1)
+    .u32(0b11)
     .u32(0)
     .i16(450)
     .i16(CAP_HEIGHT)
@@ -432,20 +516,11 @@ export function buildDigitFont(weight: Weight): Uint8Array {
     .u16(0x20)
     .u16(0);
 
-  const post = new Writer()
-    .u32(0x00030000)
-    .u32(0)
-    .i16(-100)
-    .i16(50)
-    .u32(0)
-    .u32(0)
-    .u32(0)
-    .u32(0)
-    .u32(0);
+  const post = new Writer().u32(0x00030000).u32(0).i16(-100).i16(50).u32(0).u32(0).u32(0).u32(0).u32(0);
 
   const tables: Array<[string, Uint8Array]> = [
     ['OS/2', os2.done()],
-    ['cmap', cmap.done()],
+    ['cmap', cmap],
     ['glyf', glyf.done()],
     ['head', head.done()],
     ['hhea', hhea.done()],
@@ -494,7 +569,7 @@ export function installDigitFont(): void {
       const face = new FontFace(DIGIT_FONT_FAMILY, bytes.buffer as ArrayBuffer, {
         weight: String(weight),
         style: 'normal',
-        unicodeRange: 'U+0030-0039',
+        unicodeRange: DIGIT_FONT_RANGE,
         display: 'swap',
       });
       document.fonts.add(face);

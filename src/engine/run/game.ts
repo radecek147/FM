@@ -17,7 +17,14 @@ import { GameCore, extend } from '../effects/core';
 import type { EventBus } from '../events';
 import { afterScoredCards, previewHand, safe, scoreHand } from '../scoring/score';
 import { consumableSellValue, jokerSellValue, refreshShopPrices } from '../shop/prices';
-import { generateShop, generateShopItems, openBooster, rollAnteVouchers } from '../shop/shop';
+import {
+  generateShop,
+  generateShopItems,
+  openBooster,
+  rollAnteVouchers,
+  syncShopSlots,
+  voucherAvailable,
+} from '../shop/shop';
 import type {
   Action,
   ActionErrorCode,
@@ -924,12 +931,20 @@ export class Game {
     const v = this.shop().vouchers[slot];
     if (!v) fail('unknownItem');
     if (v.sold) fail('soldOut');
+    // Tier 2 bez vlastněného tier 1 a kupón, který teď nemá smysl (Úřední škrt v patře 1), koupit nejde.
+    const requires = core.registry.vouchers[v.voucherId]?.requires;
+    if (requires && !core.state.vouchers.includes(requires)) fail('cannotUse');
+    if (!voucherAvailable(core, v.voucherId)) fail('cannotUse');
     this.pay(v.price);
     v.sold = true;
     core.emit({ type: 'itemBought', kind: 'voucher', defId: v.voucherId, price: v.price });
     this.redeemVoucher(v.voucherId);
   }
 
+  /**
+   * Uplatní kupón: zapíše ho do runu, zavolá `onRedeem` a v otevřené Večerce hned doplní sloty, které kupón přidal
+   * (`syncShopSlots`); ceny přepočítá `dispatch` po akci.
+   */
   private redeemVoucher(id: string): void {
     const core = this.core;
     const s = core.state;
@@ -940,6 +955,7 @@ export class Game {
     core.invalidate();
     def.onRedeem?.(core.baseCtx('misc'));
     core.invalidate();
+    if (s.shop) syncShopSlots(core, s.shop);
     core.emit({ type: 'voucherRedeemed', voucherId: id });
   }
 
@@ -1072,9 +1088,18 @@ export class Game {
     return [];
   }
 
+  /**
+   * Kontext spotřebky. Cíle jsou seřazené zleva doprava podle pozice v ruce (ne podle pořadí výběru), takže
+   * „levá“ a „pravá“ karta z DESIGN 5.1 (Zrcátko v předsíni, Kopřivový odvar, Sloučení spisů) nezávisí na UI.
+   */
   private consumableCtx(inst: ConsumableInstance, targetIds: readonly number[]): ConsumableCtx {
     const core = this.core;
-    const targets = targetIds.map((id) => core.mustCard(id));
+    const pool = this.targetPool();
+    const pos = (id: number) => {
+      const i = pool.indexOf(id);
+      return i < 0 ? Number.MAX_SAFE_INTEGER : i;
+    };
+    const targets = [...targetIds].sort((a, b) => pos(a) - pos(b)).map((id) => core.mustCard(id));
     return Object.assign(core.baseCtx('consumable'), { self: inst, targets });
   }
 

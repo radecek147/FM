@@ -115,7 +115,8 @@ async function metrics(page: Page, touch: boolean) {
       if (el.classList.contains('visually-hidden')) continue;
       const overX = el.scrollWidth > el.clientWidth + 1 && hides(cs.overflowX);
       const overY = el.scrollHeight > el.clientHeight + 1 && hides(cs.overflowY);
-      if ((overX || overY) && el.clientWidth > 0) clipped.push(`${label(el)} ${overX ? 'X' : ''}${overY ? 'Y' : ''}`);
+      if ((overX || overY) && el.clientWidth > 0)
+        clipped.push(`${label(el)} ${overX ? 'X' : ''}${overY ? 'Y' : ''}`);
     }
     // Prvky vyčnívající z okna (vodorovně).
     const outside: string[] = [];
@@ -132,11 +133,13 @@ async function metrics(page: Page, touch: boolean) {
     }
     const small: string[] = [];
     if (isTouch) {
-      const sel = 'button, [role="button"], [role="radio"], [role="tab"], a[href], input, select, .pcard, .kcard';
+      const sel =
+        'button, [role="button"], [role="radio"], [role="tab"], a[href], input, select, .pcard, .kcard';
       for (const el of Array.from(document.querySelectorAll(sel))) {
         if (!visible(el)) continue;
         const r = el.getBoundingClientRect();
-        if (r.width < 44 || r.height < 44) small.push(`${label(el)} ${Math.round(r.width)}×${Math.round(r.height)}`);
+        if (r.width < 44 || r.height < 44)
+          small.push(`${label(el)} ${Math.round(r.width)}×${Math.round(r.height)}`);
       }
     }
     return {
@@ -152,7 +155,12 @@ async function metrics(page: Page, touch: boolean) {
   }, touch);
 }
 
-async function shot(page: Page, vp: Viewport, name: string, opts: { fullPage?: boolean } = {}): Promise<void> {
+async function shot(
+  page: Page,
+  vp: Viewport,
+  name: string,
+  opts: { fullPage?: boolean } = {},
+): Promise<void> {
   await page.evaluate(() => document.fonts.ready);
   const dir = `${OUT}/${vp.name}`;
   mkdirSync(dir, { recursive: true });
@@ -176,20 +184,17 @@ for (const vp of VIEWPORTS) {
       await expect(page.locator('#app')).toHaveAttribute('data-screen', 'menu');
       await settle(page);
       await shot(page, vp, '01-menu');
-      await shot(page, vp, '01-menu-full', { fullPage: true });
 
       await page.getByTestId('menu-new-game').click();
       await expect(page.locator('#app')).toHaveAttribute('data-screen', 'newGame');
       await settle(page);
       await shot(page, vp, '02-new-game');
-      await shot(page, vp, '02-new-game-full', { fullPage: true });
 
       await page.goto('/');
       await page.getByTestId('menu-settings').click();
       await expect(page.locator('#app')).toHaveAttribute('data-screen', 'settings');
       await settle(page);
       await shot(page, vp, '03-settings');
-      await shot(page, vp, '03-settings-full', { fullPage: true });
 
       await page.goto('/');
       await page.getByTestId('menu-credits').click();
@@ -201,7 +206,27 @@ for (const vp of VIEWPORTS) {
       await expect(page.getByTestId('gallery')).toBeVisible();
       await settle(page);
       await shot(page, vp, '05-gallery');
-      await shot(page, vp, '05-gallery-full', { fullPage: true });
+      expect(problems).toEqual([]);
+    });
+
+    // Celostránkové snímky zvlášť: Chromium po fullPage snímku zapomene emulaci dotyku (pointer: coarse)
+    // a další metriky stejné stránky by hlásily falešně malé dotykové cíle.
+    test('celé stránky: menu, nová hra, nastavení, galerie', async ({ page }) => {
+      const problems = watchConsole(page);
+      const pages: Array<[string, string, () => Promise<void>]> = [
+        ['01-menu-full', '/', async () => undefined],
+        ['02-new-game-full', '/', () => page.getByTestId('menu-new-game').click()],
+        ['03-settings-full', '/', () => page.getByTestId('menu-settings').click()],
+        ['05-gallery-full', '/#gallery', async () => undefined],
+      ];
+      for (const [name, url, open] of pages) {
+        await page.goto(url);
+        await open();
+        await settle(page);
+        await page.evaluate(() => document.fonts.ready);
+        mkdirSync(`${OUT}/${vp.name}`, { recursive: true });
+        await page.screenshot({ path: `${OUT}/${vp.name}/${name}.png`, fullPage: true });
+      }
       expect(problems).toEqual([]);
     });
 

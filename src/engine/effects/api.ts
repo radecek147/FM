@@ -5,7 +5,7 @@ import { cardChips, cardHasSuit, createCard, isFaceCard } from '../cards/cards';
 import { handValueAtLevel } from '../hands/levels';
 import { rerollBossSlot, revalidateBoss } from '../run/bosses';
 import { drawCards, bossDebuffs, refreshDebuffs } from '../run/draw';
-import { pickConsumableDefId, pickJokerDefId } from '../shop/pool';
+import { availableJokerIds, pickConsumableDefId, pickJokerDefId } from '../shop/pool';
 import { jokerSellValue } from '../shop/prices';
 import type { Card, ConsumableInstance, ConsumableKind, EditionId, HandType, JokerInstance } from '../types';
 import { HAND_TYPES } from '../types';
@@ -359,6 +359,83 @@ export function createApi(core: GameCore): EngineApi {
       return rerollBossSlot(core);
     },
 
+    setJokerEdition(uid, edition) {
+      const j = core.state.jokers.find((x) => x.uid === uid);
+      if (!j || j.edition === edition) return;
+      if (edition !== null && !core.registry.editions[edition]) throw new Error(`Unknown edition ${edition}`);
+      j.edition = edition;
+      core.invalidate();
+      core.emit({ type: 'jokerChanged', uid, defId: j.defId });
+    },
+
+    removeJokerStickers(uid, stickers) {
+      const j = core.state.jokers.find((x) => x.uid === uid);
+      if (!j) return;
+      const remove = stickers ?? j.stickers;
+      const next = j.stickers.filter((st) => !remove.includes(st));
+      if (next.length === j.stickers.length) return;
+      j.stickers = next;
+      if (!next.includes('perishable')) delete j.perishRounds;
+      // Zvětralý žolík ožije; dočasný debuff z tohoto kola (šéf) trvá dál.
+      const before = j.debuffed;
+      j.debuffed = core.isPerished(j) || (core.state.round?.jokerDebuffs.includes(uid) ?? false);
+      core.invalidate();
+      core.emit({ type: 'jokerChanged', uid, defId: j.defId });
+      if (j.debuffed !== before) core.emit({ type: 'jokerDebuffChanged', uid, debuffed: j.debuffed });
+    },
+
+    copyJoker(uid, opts = {}) {
+      const src = core.state.jokers.find((x) => x.uid === uid);
+      if (!src || !core.registry.jokers[src.defId]) return null;
+      const edition = opts.edition !== undefined ? opts.edition : src.edition;
+      if (!opts.ignoreSlots && !jokerHasRoom(core, edition)) return null;
+      const copy: JokerInstance = {
+        uid: core.uid(),
+        defId: src.defId,
+        edition,
+        state: JSON.parse(JSON.stringify(src.state)) as JokerInstance['state'],
+        sellBonus: src.sellBonus,
+        stickers: [...src.stickers],
+        debuffed: false,
+      };
+      if (src.perishRounds !== undefined) copy.perishRounds = src.perishRounds;
+      copy.debuffed = core.isPerished(copy);
+      addJokerInstance(core, copy, { ignoreSlots: true, acquire: true });
+      return copy;
+    },
+
+    transformJoker(uid, defId) {
+      const s = core.state;
+      const j = s.jokers.find((x) => x.uid === uid);
+      const def = core.registry.jokers[defId];
+      if (!j || !def || j.defId === defId) return null;
+      // Na místě: uid, pozice, edice, nálepky i odpočet zvětrávání zůstávají, stav a prodejní bonus ne.
+      j.defId = defId;
+      j.state = def.initState
+        ? (JSON.parse(JSON.stringify(def.initState() ?? {})) as JokerInstance['state'])
+        : {};
+      j.sellBonus = 0;
+      core.invalidate();
+      core.emit({ type: 'jokerChanged', uid, defId });
+      if (def.hooks.onAcquire) {
+        def.hooks.onAcquire(core.jokerCtx(j, s.jokers.indexOf(j), false, def));
+        core.invalidate();
+      }
+      return j;
+    },
+
+    cleanseCard(cardId) {
+      const r = core.state.round;
+      const card = core.card(cardId);
+      if (!r || !card) return;
+      const cleansed = r.cleansedCards ?? [];
+      if (!cleansed.includes(cardId)) r.cleansedCards = [...cleansed, cardId];
+      const changed = card.debuffed || card.faceDown;
+      card.debuffed = false;
+      card.faceDown = false;
+      if (changed) core.emit({ type: 'cardChanged', cardId });
+    },
+
     addTag(defId) {
       if (!core.registry.tags[defId]) throw new Error(`Unknown tag ${defId}`);
       const tag = { uid: core.uid(), defId, state: {} };
@@ -406,6 +483,9 @@ export function createApi(core: GameCore): EngineApi {
     hasSuit: (card, suit) => cardHasSuit(card, suit, core.mods(), core.enhancements()),
     cardChips: (card) => cardChips(card, core.enhancements(), core.mods()),
     jokerSlots: () => core.mods().jokerSlots,
+    availableJokers: (opts) => availableJokerIds(core, opts),
+    jokerRarity: (defId) => core.registry.jokers[defId]?.rarity ?? null,
+    consumableKind: (defId) => core.registry.consumables[defId]?.kind ?? null,
     sellValue: (joker) => jokerSellValue(core, joker),
   };
   return api;

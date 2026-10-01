@@ -165,8 +165,45 @@ export interface EngineApi {
    * šéfa nebo null, když přelosovat nejde.
    */
   rerollBoss(): string | null;
+  /**
+   * Nastaví edici žolíka (Hromadné vyřízení); `null` edici odebere. Negativní edice tím přidá/ubere slot.
+   * Neznámá edice = výjimka (chyba obsahu).
+   */
+  setJokerEdition(uid: number, edition: EditionId | null): void;
+  /**
+   * Odebere žolíkovi nálepky — všechny, nebo jen vyjmenované (Prominutí pokut). Bez „zvětrávající“ zmizí
+   * i odpočet kol a zvětralý žolík znovu funguje (dočasný debuff z kola zůstává).
+   */
+  removeJokerStickers(uid: number, stickers?: readonly StickerId[]): void;
+  /**
+   * Zkopíruje žolíka včetně stavu (`state`), nálepek, odpočtu zvětrávání a prodejního bonusu (Ověřená kopie).
+   * `edition` přepíše edici kopie (výchozí = edice originálu). Kopie vstoupí do slotů jako získaná (`onAcquire`).
+   * Vrátí null, když originál neexistuje nebo pro kopii není místo (pokud `ignoreSlots` není true).
+   */
+  copyJoker(uid: number, opts?: { edition?: EditionId | null; ignoreSlots?: boolean }): JokerInstance | null;
+  /**
+   * Promění žolíka v jiného (`defId`) na stejném místě (Kouzelný kotlík): `uid`, pozice, edice, nálepky
+   * i odpočet zvětrávání zůstanou; stav se založí znovu (`initState`), prodejní bonus se vynuluje a nový žolík
+   * dostane `onAcquire`. Emituje `jokerChanged`. Vrátí null, když žolík nebo `defId` neexistuje (nebo je stejné).
+   */
+  transformJoker(uid: number, defId: string): JokerInstance | null;
+  /**
+   * Vrátí kartu do provozu (Česnek na krk): zruší debuff a otočí ji lícem nahoru; šéf ji do konce kola znovu
+   * nedebuffne (`RoundState.cleansedCards`). Jen během kola, jinak nic.
+   */
+  cleanseCard(cardId: number): void;
 
   // ── dotazy ──
+  /** Vzácnost žolíka podle definice (null = registr ho nezná). */
+  jokerRarity(defId: string): JokerRarity | null;
+  /** Druh spotřebky podle definice (null = registr ji nezná) — Babiččin recept opakuje jen rady a pranostiky. */
+  consumableKind(defId: string): ConsumableKind | null;
+  /**
+   * Id žolíků, ze kterých by teď losoval `createJoker` se stejnou `rarity` (odemčené, nezakázané, nevlastněné;
+   * legendární i `noShop`). Prázdné pole = `createJoker` by sáhl po náhradním žolíkovi (Výjimka z vyhlášky,
+   * Daňové přiznání to kontrolují v `canUse`).
+   */
+  availableJokers(opts?: { rarity?: JokerRarity }): string[];
   getCard(id: number): Card | undefined;
   handCards(): Card[];
   /** Aktuální modifikátory — zmrazený objekt (jen ke čtení; pravidla mění delta, např. `addPermanentModifier`). */
@@ -518,6 +555,12 @@ export interface VoucherDef {
   params?: Record<string, number | string>;
   passive?(ctx: BaseCtx): ModifierDelta;
   onRedeem?(ctx: BaseCtx): void;
+  /**
+   * Smí se kupón teď nabídnout a koupit? (Úřední škrt a Amnestie až od patra 2 — v patře 1 by „−1 patro“ nic
+   * neudělalo a zbyl by jen postih.) Čistá funkce (běží v `GameCore.readOnly`); výchozí ano. Kontroluje se při
+   * losování kupónu patra i při koupi (`cannotUse`); startovní kupóny výzvy ji obcházejí.
+   */
+  available?(ctx: BaseCtx): boolean;
   art: ArtSpec;
   unlock?: UnlockCondition;
 }

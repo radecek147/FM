@@ -94,7 +94,11 @@ describe('boti a žolíci – barva a kombinace vlastních žolíků', () => {
 
 describe('boti a žolíci – nákup podle štítků a params', () => {
   it('spotřebkového žolíka bez spotřebek v obsahu ani žolíka na úroveň bez pranostik nekoupí', () => {
-    const game = shopWith(['grandmas_chest', 'herbalist', 'old_guard', 'beer_mat'], { money: 50 });
+    const noConsumables: ContentRegistry = { ...reg, consumables: {} };
+    const game = shopWith(['grandmas_chest', 'herbalist', 'old_guard', 'beer_mat'], {
+      money: 50,
+      registry: noConsumables,
+    });
     expect(createBot('max').decide(game)).toEqual({ type: 'buy', slot: 3 });
   });
 

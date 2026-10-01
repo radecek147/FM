@@ -848,6 +848,23 @@ Vzácná a silná, většinou s cenou. V obchodě jen s kupónem „Babiččina 
 |  15 | Vyvlastnění (`expropriation`)         | —                                 | Zničí žolíka **nejvíc vpravo** (ne přibitého) a dá **3× jeho prodejní cenu**.                                               | „Ve veřejném zájmu, samozřejmě.“                     |
 |  16 | Prominutí pokut (`fine_waiver`)       | —                                 | Odstraní všechny nálepky ze všech tvých žolíků (zvětralým vrátí funkci).                                                    | „Amnestie na všechno kromě parkování.“               |
 
+Upřesnění pravidel (fáze 5, `canUse` = kdy jde razítko použít; bez platného cíle je Použít neaktivní):
+
+- **Pečetě (1–4)** přepíšou dosavadní pečeť karty. **Kontrola totožnosti** jen na kartu bez edice.
+- **Výjimka z vyhlášky** a **Daňové přiznání** potřebují volný slot a aspoň jednoho dostupného (nevlastněného, odemčeného)
+  žolíka dané vzácnosti — náhradní žolík (Pivní tácek) se nikdy nevytvoří. Dokud legendární žolíci nejsou
+  (fáze 7), Výjimka z vyhlášky použít nejde. Daňové přiznání nuluje jen kladný zůstatek.
+- **Zpětný odběr** pracuje s rukou v kole i s dobranou rukou razítkové obálky; zničí `ceil(n / 2)` náhodných karet.
+- **Ověřená kopie**: nejdřív zničí ostatní (kromě přibitých), pak vznikne kopie i se stavem, nálepkami, odpočtem
+  zvětrávání a prodejním bonusem; edice zůstane, jen negativní ne. Nejde použít, když by po zničení nezbyl slot
+  (zničený negativní žolík si odnese svůj slot).
+- **Hromadné vyřízení** potřebuje aspoň jednoho žolíka bez edice a velikost ruky aspoň 2; **Úřední hodiny** aspoň
+  2 ruce za kolo (postih nesmí být zadarmo). Úřední hodiny zvednou i tajné kombinace.
+- **Sloučení spisů**: levá/pravá podle pořadí v ruce, ne podle pořadí výběru.
+- **Odvolání**: jen ve fázi kola s aktivním (nevypnutým) šéfovským pravidlem a jen když `peníze − 5 ≥ −dluhový limit`.
+- **Vyvlastnění** vezme nejpravějšího žolíka, který **není přibitý** (přibité přeskočí); zapůjčený vynese 3 × 1 Kč.
+- **Prominutí pokut**: zvětralému žolíkovi vrátí funkci; dočasný debuff od šéfa v kole trvá.
+
 ### 5.5 Čtvrtý typ spotřebky — rozhodnutí: **ne (v 1.0)**
 
 Důvody:
@@ -1420,6 +1437,7 @@ Obsah v tomto dokumentu počítá s těmito doplňky `src/engine/types.ts` a `sr
 | `EngineApi`                 | `handBase(hand, level)`                                                                                 | Nová vyhláška, Influencerka Nikča                                                            |
 | `EngineApi`                 | `addRoundHandSize(n)`                                                                                   | Velká voda, Rozložené noviny                                                                 |
 | `EngineApi`                 | `setMoney(n)`, `changeAnte(delta)`, `levelUpAll(levels)`, `addPermanentModifier(delta)`, `rerollBoss()` | Daňové přiznání, Úřední škrt/Amnestie, Úřední hodiny, trvalé postihy razítek, Známý na úřadě |
+| `EngineApi`                 | `setJokerEdition`, `removeJokerStickers`, `copyJoker`, `availableJokers`                                | Hromadné vyřízení, Prominutí pokut, Ověřená kopie, Výjimka z vyhlášky, Daňové přiznání       |
 | `RunState`                  | `discoveredHands: HandType[]`                                                                           | objev kombinace v runu (2.2.4) — komentář v `RunState` už s polem počítá                     |
 | `Card` / `RoundState.flags` | dočasné debuffy z efektů (Černá kočka)                                                                  | uloženo v `round.flags`, `isCardDebuffed` je čte                                             |
 

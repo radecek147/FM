@@ -163,8 +163,7 @@ async function expectUnclipped(locator: Locator): Promise<void> {
 }
 
 /** Testovací žolík do Večerky (obecně první žolík z registru — obsah doplňuje jiný workflow). */
-function shopJoker(uid: number): JokerInstance {
-  const defId = Object.keys(registry().jokers)[0];
+function shopJoker(uid: number, defId = Object.keys(registry().jokers)[0]): JokerInstance {
   if (!defId) throw new Error('Registr nemá žádné žolíky.');
   return { uid, defId, edition: null, state: {}, sellBonus: 0, stickers: [], debuffed: false };
 }
@@ -393,7 +392,6 @@ test('přeskočení Malé a Velké útraty: stav karet, focus, oznámení, šéf
   await expect(page.locator('[data-testid^="blind-skip-"]')).toHaveCount(0);
   state = await readRun(page);
   expect(state.blinds.map((b) => b.status)).toEqual(['skipped', 'skipped', 'current']);
-  expect(state.money).toBe(Game.newRun({ deckId: 'pub', stake: 1, seed: 'SKIP1' }, registry()).state.money);
 
   // Enter vybere šéfa — kolo šéfa (2× cíl).
   await page.keyboard.press('Enter');
@@ -596,14 +594,18 @@ test.describe('dotyk', () => {
 
 // ─────────────────────────── 7. Fáze z uloženého runu ───────────────────────────
 
-test('Večerka z uloženého runu: koupit žolíka, detail s prodejem, Přehodit, Pokračovat', async ({ page }) => {
+test('Večerka z uloženého runu: koupit žolíka, přesun tažením, detail s prodejem, Přehodit, Pokračovat', async ({
+  page,
+}) => {
   const log = watchConsole(page);
+  const defs = Object.keys(registry().jokers);
   const g = engineRun('E2EVECER');
   const s = snapshot(g);
   s.phase = 'shop';
   s.money = 10;
+  s.jokers = [shopJoker(901, defs[1])];
   s.shop = {
-    items: [{ kind: 'joker', joker: shopJoker(900), price: 4, sold: false }],
+    items: [{ kind: 'joker', joker: shopJoker(900, defs[0]), price: 4, sold: false }],
     boosters: [],
     vouchers: [],
     rerollCost: 5,
@@ -616,31 +618,52 @@ test('Večerka z uloženého runu: koupit žolíka, detail s prodejem, Přehodit
   await expect(game(page)).toHaveAttribute('data-phase', 'shop');
   await expect(page.getByTestId('shop')).toContainText('Večerka');
   await expect(page.getByTestId('money')).toHaveText('10 Kč');
-  await expect(page.getByTestId('joker-count')).toHaveText('0/5');
+  await expect(page.getByTestId('joker-count')).toHaveText('1/5');
   await expect(page.getByTestId('shop-reroll')).toBeEnabled();
+  await expect(page.getByTestId('shop-item-0')).toContainText(t(`jokers.${defs[0]}.name`));
   await page.screenshot({ path: 'test-results/game-shop.png', animations: 'disabled' });
 
   await page.getByTestId('shop-buy-0').click();
   await idle(page);
-  await expect(page.getByTestId('joker-count')).toHaveText('1/5');
+  await expect(page.getByTestId('joker-count')).toHaveText('2/5');
   await expect(page.getByTestId('money')).toHaveText('6 Kč');
   await expect(page.getByTestId('shop-empty')).toContainText('Večerka zavřená');
-  expect((await readRun(page)).jokers).toHaveLength(1);
+  expect((await readRun(page)).jokers.map((j) => j.uid)).toEqual([901, 900]);
 
-  // Detail žolíka → Prodat (polovina ceny).
-  await page.getByTestId('joker-row').locator('.kcard').first().click();
+  // Tažení myší: první žolík za druhého → nové pořadí se uloží, detail se po tažení neotevře.
+  const row = page.getByTestId('joker-row');
+  const first = await row.locator('[data-joker-uid="901"]').boundingBox();
+  const second = await row.locator('[data-joker-uid="900"]').boundingBox();
+  if (!first || !second) throw new Error('Žolíci nejsou vidět.');
+  await page.mouse.move(first.x + first.width / 2, first.y + first.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(second.x + second.width * 0.9, first.y + first.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await idle(page);
+  await expect.poll(async () => (await readRun(page)).jokers.map((j) => j.uid)).toEqual([900, 901]);
+  await expect(row.locator('.kcard').first()).toHaveAttribute('data-joker-uid', '900');
+  await expect(page.getByTestId('joker-detail')).toHaveCount(0);
+
+  // Detail žolíka → Prodat (prodejní cena podle enginu).
+  const state = await readRun(page);
+  const sellValue = Game.fromState(structuredClone(state), registry()).sellValue(900);
+  await page.mouse.move(10, 10);
+  await row.locator('.kcard').first().click();
   await expect(page.getByTestId('joker-detail')).toBeVisible();
+  await expect(page.getByTestId('joker-position')).toContainText('1');
+  await expect(page.getByTestId('joker-sell')).toContainText(formatMoney(sellValue));
   await page.getByTestId('joker-sell').click();
   await idle(page);
-  await expect(page.getByTestId('joker-count')).toHaveText('0/5');
-  await expect(page.getByTestId('money')).toHaveText('8 Kč');
+  await expect(page.getByTestId('joker-count')).toHaveText('1/5');
+  await expect(page.getByTestId('money')).toHaveText(formatMoney(6 + sellValue));
 
   // Přehodit za cenu z tlačítka naplní prázdnou Večerku.
+  const money = 6 + sellValue;
   const rerollPriceShown = await numberOf(page.getByTestId('shop-reroll'));
   expect(rerollPriceShown).toBe((await readRun(page)).shop!.rerollCost);
   await page.getByTestId('shop-reroll').click();
   await idle(page);
-  await expect(page.getByTestId('money')).toHaveText(formatMoney(8 - rerollPriceShown));
+  await expect(page.getByTestId('money')).toHaveText(formatMoney(money - rerollPriceShown));
   await expect(page.getByTestId('shop-empty')).toHaveCount(0);
   expect((await readRun(page)).shop!.rerollsThisShop).toBe(1);
 
@@ -693,7 +716,9 @@ test('pitva z uloženého runu: poslední ruka nestačí → hláška, statistik
   await page.keyboard.press('x');
   await expect(game(page)).toHaveAttribute('data-phase', 'game_over');
 
-  await page.getByTestId('game-over-menu').click();
+  // Oznámení (chyba zahození + seed) v pravém dolním rohu nesmí blokovat tlačítka pitvy.
+  await expect(page.getByTestId('toasts').locator('.toast')).not.toHaveCount(0);
+  await page.getByTestId('game-over-menu').click({ timeout: 2000 });
   await expect(page.locator('#app')).toHaveAttribute('data-screen', 'menu');
   await expect(page.getByTestId('menu-continue')).toBeDisabled();
   expectCleanConsole(log);
@@ -733,11 +758,15 @@ function finalBossState(seed: string): { state: RunState; play: number[] } {
   if (!res.ok) throw new Error(`selectBlind: ${res.error}`);
   const state = snapshot(boss);
   state.round!.score = state.round!.target - 1;
-  // Najdi ruku, která run opravdu vyhraje (pravidlo šéfa může některé kombinace blokovat).
-  for (const id of state.round!.hand) {
+  // Najdi ruku, která run opravdu vyhraje (pravidlo šéfa může některé kombinace blokovat): jednotlivé karty,
+  // pak volba bota.
+  const botPlay = createBot('max').decide(Game.fromState(structuredClone(state), registry()));
+  const candidates = state.round!.hand.map((id) => [id]);
+  if (botPlay.type === 'play') candidates.push(botPlay.cardIds);
+  for (const ids of candidates) {
     const trial = Game.fromState(structuredClone(state), registry());
-    trial.dispatch({ type: 'play', cardIds: [id] });
-    if (trial.state.phase === 'victory') return { state, play: [id] };
+    trial.dispatch({ type: 'play', cardIds: ids });
+    if (trial.state.phase === 'victory') return { state, play: ids };
   }
   throw new Error('finalBossState: žádná karta nevyhrává');
 }

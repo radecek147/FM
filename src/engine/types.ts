@@ -258,6 +258,11 @@ export interface RoundState {
   handSizeDelta: number;
   /** Uid žolíků dočasně debuffnutých do konce kola (`EngineApi.setJokerDebuffed`; Exekutor, Krajský úřad…). */
   jokerDebuffs: number[];
+  /**
+   * Id karet vrácených do provozu do konce kola (`EngineApi.cleanseCard`; Česnek na krk) — šéf je nedebuffne.
+   * Volitelné kvůli uloženým runům ze starší verze (chybí = žádné).
+   */
+  cleansedCards?: number[];
   /** Volné pole pro šéfy/žolíky s per-kolo stavem (např. dočasné debuffy karet od Černé kočky). */
   flags: InstanceState;
 }
@@ -562,6 +567,11 @@ export type GameEvent =
   | { type: 'jokerTriggered'; uid: number; defId: string; message: string }
   /** Žolík byl dočasně (do konce kola) debuffnut nebo debuff skončil. */
   | { type: 'jokerDebuffChanged'; uid: number; debuffed: boolean }
+  /**
+   * Žolíkovi se efektem změnila edice nebo nálepky (`setJokerEdition`, `removeJokerStickers`), nebo se proměnil
+   * v jiného (`transformJoker`; `defId` je pak nové).
+   */
+  | { type: 'jokerChanged'; uid: number; defId: string }
   | { type: 'consumableAdded'; uid: number; defId: string }
   | { type: 'consumableUsed'; uid: number; defId: string }
   | { type: 'consumableSold'; uid: number; defId: string; price: number }

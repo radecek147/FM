@@ -356,12 +356,12 @@ body {
 
 /*
  * Na šířku (notebook 1366 × 768, monitor 1920 × 1080): logo, rada a kontrolní věta vlevo, deska s menu vpravo
- * — celé menu se vejde do okna bez posouvání. Na výšku (tablet, telefon) a při velkém UI (kontejner v rem)
+ * — celé menu se vejde do okna bez posouvání. Na výšku (tablet, telefon) a při velkém UI (`html.ui-large`)
  * zůstává jeden sloupec.
  */
 @media (min-aspect-ratio: 4/3) {
-  @container app (min-width: 56rem) {
-    .menu {
+  @container app (min-width: 1000px) {
+    :root:not(.ui-large) .menu {
       display: grid;
       grid-template-areas:
         '. board'
@@ -376,36 +376,36 @@ body {
       padding-block: 1.5rem 3.5rem;
     }
 
-    .menu__logo {
+    :root:not(.ui-large) .menu__logo {
       grid-area: logo;
     }
 
-    .menu__board {
+    :root:not(.ui-large) .menu__board {
       grid-area: board;
       align-self: center;
       width: 100%;
     }
 
-    .menu__tip {
+    :root:not(.ui-large) .menu__tip {
       grid-area: tip;
       justify-self: center;
       margin-top: 0.75rem;
     }
 
-    .menu__typo {
+    :root:not(.ui-large) .menu__typo {
       grid-area: typo;
     }
 
-    .menu__list {
+    :root:not(.ui-large) .menu__list {
       gap: 0.5rem;
     }
 
-    .menu__item.btn--large {
+    :root:not(.ui-large) .menu__item.btn--large {
       min-height: 2.8rem;
       font-size: 1.2rem;
     }
 
-    .menu__hint {
+    :root:not(.ui-large) .menu__hint {
       min-height: 2.9em;
       margin-top: 0.8rem;
     }
@@ -736,10 +736,21 @@ body {
   opacity: 0.8;
 }
 
+/* „Rozdat karty“ je pořád po ruce — lišta se při posouvání drží u spodního okraje okna. */
 .newgame__actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
   display: flex;
   justify-content: center;
-  padding-top: 0.5rem;
+  padding: 1.25rem 0 1rem;
+  margin-bottom: -2rem;
+  background: linear-gradient(rgb(18 56 38 / 0%), rgb(18 56 38 / 88%) 45%);
+  pointer-events: none;
+}
+
+.newgame__actions .btn {
+  pointer-events: auto;
 }
 
 /* ─────────────────────────── Nastavení ─────────────────────────── */
@@ -1310,7 +1321,9 @@ html.modal-open {
   border-left: 6px solid var(--toast-color, var(--felt-light));
   border-radius: var(--radius);
   box-shadow: 0 8px 22px rgb(0 0 0 / 40%);
-  pointer-events: auto;
+  /* Oznámení jen informuje: kliknutí projde na tlačítko pod ním (např. Hlavní menu na pitvě), klikací je
+     jen křížek. Jinak by dvě oznámení nad sebou na 1366×768 na pár sekund zablokovala akce panelu. */
+  pointer-events: none;
   animation: toast-in var(--t-med) ease-out;
 }
 
@@ -1351,6 +1364,7 @@ html.modal-open {
 
 .toast__close {
   flex: 0 0 auto;
+  pointer-events: auto;
   width: 1.8rem;
   height: 1.8rem;
   font-size: 1.3rem;

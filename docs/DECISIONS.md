@@ -886,3 +886,108 @@ běžných žolíků výše). Napodobitel cíl v popisku neukazuje (`describe` n
 
 **Proč:** CLAUDE.md kap. 3 (žolíci), 5 (humor) a 6 (čeština); DESIGN 4.4 (přesná věta, disciplína hooků, nálepky);
 ARCHITECTURE 2.5–2.7 (pořadí skórování, kopírování, debuff, edice).
+
+## 2026-10-01 — Fáze 3 (U4): e2e testy herní obrazovky a opravy ovládání
+
+**Co:** `tests/e2e/game.spec.ts` (1366×768) projde kolo klávesnicí od výběru útraty po výhru kola (rozhoduje bot
+z enginu nad uloženým stavem, UI se ovládá jen klávesami), autosave a obnovení, přeskočení útrat, dialogy ze hry,
+myš, dotyk a fáze připravené uloženým runem z enginu (Večerka, pitva, výhra → Nekonečný režim). Ve všech testech
+konzole bez chyb a varování. Opravy, které testy našly:
+
+- **Enter na kartě v ruce = Zahrát.** Po kliknutí myší zůstane focus na kartě a Enter ji dřív jen přepnul (DESIGN 13.3
+  říká Enter = Zahrát). Kartu teď přepíná klik, mezerník a 1–8; Enter v kole vždy hraje (i na zaměřené kartě).
+  V obálce s rukou (výběr cílů) Enter kartu dál přepíná — žádná globální akce tam není.
+- **Mezerník přeskočí animaci vždy.** Karta, žolík i spotřebka mezerník zastaví u sebe, takže se zaměřenou kartou
+  přeskočení nefungovalo. App ho teď chytá ve fázi zachytávání (kromě textových polí a otevřeného dialogu).
+- **Neplatné zahrání/zahození nemaže výběr.** `GameController.play/discard` výběr dřív smazal předem — X bez zahození
+  přišel o vybrané karty. Teď ho po úspěchu dorovná `act` (zahrané karty z ruky zmizí), po chybě zůstane.
+- **Bez ruky dostane jeviště celou výšku.** Ve výběru útraty a ve Večerce zabírala prázdná dolní řada s balíčkem
+  ~150 px a karty útrat se na 1366×768 ořízly (tlačítko Vybrat napůl). Balíček se přesune do pravého dolního rohu
+  jeviště (`.game-main.is-handless`, od 601 px; telefon se posouvá celou stránkou).
+- **Karty letící na stůl se neořezávají.** Jeviště v kole nemá `overflow: hidden`/`auto` (FLIP z ruky na stůl
+  a ze stolu pryč mizel na jeho hraně).
+- **Oznámení neblokují kliknutí.** Dvě oznámení nad sebou zakryla na pár sekund tlačítka pitvy; tělo oznámení je teď
+  průchozí pro ukazatel, klikací zůstává křížek.
+
+**Proč:** CLAUDE.md kap. 4 (klávesy, rozvržení), DESIGN 13.2–13.3; Esc u bubliny s detailem karty pod ukazatelem ji
+nejdřív zavře (WCAG 1.4.13) — to je záměr, ne chyba (test proto před Esc odsune myš).
+
+## 2026-10-01 — Fáze 5: pranostiky (13) a úřední razítka (16)
+
+**Co:** `src/content/pranostiky.ts` (13, cena 3 Kč, `levelUpHand(hand, 1)`) a `src/content/razitka.ts` (16, cena 6 Kč)
+podle DESIGN 5.2 a 5.4, texty `src/i18n/cs/{pranostiky,razitka}.ts`, testy přes skutečný engine
+(`tests/unit/pranostiky.test.ts`, `tests/unit/razitka.test.ts`). Rozhodnutí a upřesnění:
+
+- **Popisek pranostiky** ukazuje i přírůstek za úroveň (`Barva +1 úroveň (+18 čipů a +2 mult za úroveň)`); čísla
+  bere `params` přímo z `HAND_TYPE_DEFS` (`chipsPerLevel`, `multPerLevel`), takže se s tabulkou kombinací nerozejdou.
+  Název kombinace je v textu napsaný (ne `{hand}`), aby popisek nezávisel na doplňování parametrů v UI.
+- **Tajné pranostiky** hlídá engine (`consumableAllowed` v `shop/pool.ts`); test ověřuje obálku i Večerku před a po
+  zahrání Pětice. Pranostiku tajné kombinace, kterou už hráč drží, jde použít vždy.
+- **Výjimka z vyhlášky / Daňové přiznání** nikdy nesáhnou po náhradním žolíkovi (Pivní tácek): `canUse` vyžaduje
+  volný slot a dostupného žolíka vzácnosti (`api.availableJokers`). Legendární žolíci zatím nejsou (fáze 7), takže
+  Výjimku teď použít nejde — padá jen z razítkových obálek (váha 0,25) a dá se prodat. Daňové přiznání nuluje jen
+  kladný zůstatek (dluh zůstává, jak říká DESIGN).
+- **Ověřená kopie** kopíruje i stav (počítadla), nálepky, odpočet zvětrávání a prodejní bonus („kopie souhlasí
+  s originálem“); negativní edice se nekopíruje. Ostatní (nepřibité) se zničí **před** vytvořením kopie, kopie pak
+  projde `onAcquire`. `canUse` počítá slot po zničení včetně slotu, který si odnese zničený negativní žolík.
+- **Postih nesmí být zadarmo:** Hromadné vyřízení jen při velikosti ruky ≥ 2 (a aspoň jednom žolíkovi bez edice),
+  Úřední hodiny jen při ≥ 2 rukách za kolo, Kolaudace jen při ≥ 2 slotech spotřebek (DESIGN). Kontrola totožnosti jen
+  na kartu bez edice (nepřepíše lepší edici horší).
+- **Vyvlastnění** vezme nejpravějšího žolíka, který není přibitý (přibité přeskočí), a vyplatí 3× `sellValue`
+  (zapůjčený 3 Kč). **Odvolání** jde jen ve fázi kola s aktivním šéfovským pravidlem a při `peníze − 5 ≥ −debtLimit`.
+- **Zpětný odběr** funguje v kole i v razítkové obálce (ruka obálky), zničí `ceil(n/2)` náhodných karet (`ctx.rng`).
+- **Sloučení spisů** určuje levou/pravou kartu podle pořadí v ruce, ne podle pořadí výběru.
+- Flavory z DESIGN s dlouhou pomlčkou (`—`) mají v textech hry krátkou (`–`) podle CONTENT-GUIDE 12.
+
+**Engine (obecně, s testy v `razitka.test.ts`):** `EngineApi.setJokerEdition`, `removeJokerStickers`, `copyJoker`
+a dotaz `availableJokers({ rarity })` (pool `createJoker` bez náhradního žolíka; `shop/pool.ts` → `availableJokerIds`,
+`pickJokerDefId` sdílí stejný výběr kandidátů, losování se nezměnilo). Nová událost `jokerChanged` (edice/nálepky).
+
+**Testy jiných oblastí upravené kvůli spotřebkám v obsahu:** `jokers-bots.test.ts` (test „bez spotřebek v obsahu“
+teď spotřebky z registru výslovně odebere) a `jokers-value.test.ts` (Stálý host: Δmult proti tahu bez žolíka už
+nevychází přesně +16, protože bot s pranostikami občas zahraje bez žolíka jinou kombinaci — tolerance ±0,5).
+
+**Otevřené pro simulaci:** boti (`sim/bots.ts`) zatím použijí každou spotřebku bez cíle, jakmile `canUse` dovolí —
+i razítka s tvrdou cenou (Ověřená kopie zničí ostatní žolíky, Daňové přiznání vynuluje peníze, Úřední hodiny…).
+Razítka do Večerky bez kupónu nechodí, ale z razítkových obálek ano; botům je potřeba dát hodnocení razítek.
+
+**Proč:** CLAUDE.md kap. 3 (spotřební karty), 5 (humor), 6 (čeština); DESIGN 2.2.4, 5.1–5.4, příloha B.
+
+## 2026-10-01 — Fáze 5: babské rady (22) a obálky (15)
+
+**Co:** `src/content/rady.ts` (22 babských rad, DESIGN 5.3), `src/content/boosters.ts` (5 druhů × 3 velikosti,
+DESIGN 2.9), texty `src/i18n/cs/{rady,boosters}.ts`, testy `tests/unit/{rady,boosters}.test.ts`. Čísla, cíle, ceny
+a váhy přesně podle DESIGN (tabulka 5.3 je závazná i tam, kde zadání úkolu uvádělo jiná čísla: Pod slamníkem +50 %
+max +12 Kč, ne ×2 do 20 Kč; Zaříkávání 1 z 3, ne 1 z 4; Babiččina barva 2–4 karty, Kynuté těsto a Generální úklid
+až 3 karty). Výklady:
+
+- **Babiččin recept** zopakuje `RunState.lastConsumable` (zapisuje se při každém použití, DESIGN 5.1), jen když je
+  to babská rada nebo pranostika a ne recept sám. Po razítku nebo po receptu tlačítko Použít zhasne. Proč: jediný
+  zdroj pravdy bez další historie ve stavu; popisek to říká přesně („naposledy použité spotřebky, pokud to byla…“).
+- **Rosnička:** nejčastější kombinace podle `handLevels[h].played`, při shodě silnější, bez zahraných rukou Vysoká
+  karta (stejně jako štítek Předpověď počasí). Vytváří, dokud jsou volné sloty (nejdřív pranostiku nejčastější
+  kombinace, pak náhodnou); `canUse` chce aspoň 1 volný slot po uvolnění vlastního (DESIGN 5.1).
+- **Jablko od stromu:** kopie nese vylepšení, pečeť **i bonusové čipy**, jen edici ne (bonusové čipy jsou vlastnost
+  karty, ne edice). **Kopřivový odvar:** pravá karta dostane `api.cardChips(levá)` (hodnota + bonusové čipy; kamenná 0).
+- **Pod slamníkem** jde použít i při 0 Kč nebo v dluhu, jen nic nedá (DESIGN: „při záporném zůstatku nic“).
+- **Zaříkávání:** `ctx.chance(1, 3)` (násobí ho `probabilityMult`), lesklá/holografická 50 : 50 přes `ctx.rng`;
+  bez žolíka bez edice nejde použít.
+- **Kouzelný kotlík:** kandidáti = `availableJokers({ rarity })` bez sebe (odemčení, nezakázaní, nevlastnění,
+  ne `noShop`). Bez kandidáta tlačítko zhasne — radši než proměnit vzácného žolíka v Pivní tácek jiné vzácnosti.
+  Proměna na místě (`transformJoker`): uid, pozice, edice, nálepka i odpočet zvětrávání zůstanou; stav a prodejní
+  bonus se založí znovu a nový žolík dostane `onAcquire` (z Golema tak přibudou kamenné karty).
+- **Česnek na krk** ochrání karty do konce kola i před dalšími přepočty debuffu (`RoundState.cleansedCards`), jinak
+  by je šéf po příští ruce zase vyřadil.
+- **Popisky vylepšovacích rad** přebírají čísla vylepšení z `ENHANCEMENTS[].params` (`+25 čipů`, `×2 mult`, `1 z 5`),
+  takže po změně balancu vylepšení nelžou.
+- **Obálky:** id `<druh>_<velikost>` (`joker_normal`, `rada_mega`…) — štítky a výzvy na ně budou odkazovat. Vlastní
+  texty `boosters.<id>.name|desc` (název „Velikost · Druh“ jako dosavadní fallback UI, popis s `{picks}`/`{options}`).
+  Vzhled: ikona podle druhu, vzor podle velikosti (tlustá proužky + papíry, krabice od bot kostky + dárek).
+  Logiku obálek (losování, dobraná ruka, zaručená Žolíková obálka v první Večerce) už engine měl; přibyla jen data.
+
+**Engine (obecně, s testy v `rady.test.ts`):** `EngineApi.transformJoker`, `cleanseCard`, dotazy `jokerRarity`
+a `consumableKind`; volitelné `RoundState.cleansedCards` (starší uložení bez migrace), které respektuje `bossDebuffs`;
+`ConsumableCtx.targets` seřazené podle pozice v ruce (`Game.consumableCtx`), aby „levá/pravá karta“ (Zrcátko,
+Kopřivový odvar, Sloučení spisů) nezávisela na pořadí kliknutí. Viz ARCHITECTURE 2.7.
+
+**Proč:** CLAUDE.md kap. 3 (spotřebky, Večerka), 5 a 6; DESIGN 2.7, 2.9, 5.1, 5.3.

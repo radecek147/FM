@@ -2,10 +2,11 @@
 import type { GameCore } from '../effects/core';
 import type { Card } from '../types';
 
-/** Je karta debuffnutá aktivním šéfem? */
+/** Je karta debuffnutá aktivním šéfem? Karty vrácené do provozu (`cleanseCard`) do konce kola ne. */
 export function bossDebuffs(core: GameCore, card: Card): boolean {
   const boss = core.activeBoss();
   if (!boss?.hooks.isCardDebuffed) return false;
+  if (core.state.round?.cleansedCards?.includes(card.id)) return false;
   return boss.hooks.isCardDebuffed(core.bossCtx(), card);
 }
 

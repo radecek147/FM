@@ -36,7 +36,7 @@
   --suit-clubs: #1e1b16;
 
   /* Typografie */
-  /* 'Karban Digits' (src/ui/art/digitFont.ts) kreslí jen číslice 0–9 — v Pixelify Sans je „5“ stejná jako „S“. */
+  /* 'Karban Digits' (src/ui/art/digitFont.ts) kreslí jen 0–9, Z a Ž — v Pixelify Sans je „5“ jako „S“ a „Z“ jako „2“. */
   --font-game: 'Karban Digits', 'Pixelify Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-size-base: 18px;
   --ui-scale: 1;
@@ -211,7 +211,8 @@ ol[role='list'] {
   min-height: 100vh;
   min-height: 100dvh;
   isolation: isolate;
-  /* Kontejnerové dotazy v `rem` počítají i s velikostí UI z nastavení (media dotazy ji neznají). */
+  /* Šířka pro kontejnerové dotazy (prahy v px; velké UI z nastavení řeší třída `html.ui-large` — jednotky
+     rem/em v podmínce dotazu velikost UI spolehlivě nezohlední). */
   container: app / inline-size;
 }
 

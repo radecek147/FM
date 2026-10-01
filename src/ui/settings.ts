@@ -65,6 +65,8 @@ export function applySettingsToDocument(s: Settings, doc: Document = document): 
   root.style.setProperty('--speed', String(s.speed));
   root.style.setProperty('--ui-scale', String(s.uiScale));
   root.classList.toggle('colorblind', s.colorblind);
+  // Velké UI (120–140 %): rozvržení s pevnými prahy v px (kontejnerové dotazy) se přepne dřív (styles/*.css).
+  root.classList.toggle('ui-large', s.uiScale >= 1.2);
   root.classList.toggle('no-anim', !s.animations);
   root.classList.toggle('no-shake', !s.screenShake || reduced);
 }
