@@ -8,7 +8,7 @@
  *   neinteraktivní je `<div role="img">`,
  * - `data-card-id`, třídy stavu `is-selected` / `is-debuffed` / `is-face-down`, edice `ed-<id>`,
  *   vylepšení `enh-<id>` (styly v styles/cards.css; výběr = posun nahoru, hover/tilt jen transform),
- * - Enter/mezerník na zaměřené kartě přepne výběr a nepropadne do globálních zkratek (Enter = Zahrát),
+ * - mezerník na zaměřené kartě přepne výběr; Enter propadne k obrazovce (ve hře = Zahrát, DESIGN 13.3),
  * - tooltip (hover/focus/dlouhý stisk) s detailem karty.
  */
 import '../styles/cards.css';
@@ -126,9 +126,11 @@ export function createCardView(card: Readonly<Card>, opts: CardViewOptions = {})
       const current = el.__card;
       if (current) el.__opts?.onClick?.(current, e);
     });
-    // Enter/mezerník na zaměřené kartě = výběr; nesmí spustit globální zkratky (Enter = Zahrát).
+    // Mezerník na zaměřené kartě = výběr (nativní aktivace tlačítka). Enter propadne k obrazovce: herní
+    // obrazovka z něj v kole udělá Zahrát (DESIGN 13.3), jinde ho tlačítko zpracuje samo. Přeskočení animace
+    // mezerníkem řeší App už ve fázi zachytávání, takže ho tohle nezablokuje.
     el.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') e.stopPropagation();
+      if (e.key === ' ') e.stopPropagation();
     });
   }
   if (opts.tooltip !== false) {

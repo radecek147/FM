@@ -137,17 +137,22 @@ export function renderBooster(ctx: GameCtx): HTMLElement {
   return h(
     'section',
     { class: 'game-panel booster', 'aria-labelledby': 'booster-title', 'data-testid': 'booster' },
+    // Přeskočit je v záhlaví vedle názvu — s dobranou rukou dole by se pod možnosti nevešlo (1366 × 768).
     h(
       'header',
-      { class: 'game-panel__header' },
-      h('h2', { class: 'game-panel__title', id: 'booster-title' }, name),
+      { class: 'game-panel__header booster__header' },
       h(
-        'p',
-        { class: 'game-panel__subtitle booster__picks', 'data-testid': 'booster-picks' },
-        t('game.booster.pick', { n: b?.picksLeft ?? 0 }),
+        'div',
+        { class: 'booster__titles' },
+        h('h2', { class: 'game-panel__title', id: 'booster-title' }, name),
+        h(
+          'p',
+          { class: 'game-panel__subtitle booster__picks', 'data-testid': 'booster-picks' },
+          t('game.booster.pick', { n: b?.picksLeft ?? 0 }),
+        ),
       ),
+      skip,
     ),
     h('ul', { class: 'booster__options', role: 'list' }, options),
-    h('div', { class: 'game-panel__actions' }, skip),
   );
 }

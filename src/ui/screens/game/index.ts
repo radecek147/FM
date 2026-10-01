@@ -7,13 +7,15 @@
  * Překreslení je levné: levý panel a karty se aktualizují na místě, panel fáze se postaví znovu, jen když
  * se změní jeho podpis. Animace událostí přehrává presenter (src/ui/present.ts), částice src/ui/fx.
  *
- * Klávesy: 1–8 výběr karty, Enter zahrát (ve výběru útraty vybrat, na konci kola vyplatit), X zahodit,
+ * Klávesy: 1–8 výběr karty, Enter zahrát (i na zaměřené kartě; ve výběru útraty vybrat, na konci kola
+ * vyplatit), X zahodit,
  * S / B třídění, Esc pauza (Pokračovat / Nastavení / Hlavní menu), mezerník přeskočí animaci (řeší App).
  */
 import '../../styles/game.css';
 import type { HandType, RunPhase } from '../../../engine';
 import { t } from '../../../i18n/cs';
 import type { App, Screen, ScreenFactory } from '../../app';
+import { tableEmblem } from '../../art/table';
 import { backButton } from '../../components/button';
 import { closeAllModals, isModalOpen } from '../../components/modal';
 import { hideTooltip, isTooltipVisible } from '../../components/tooltip';
@@ -105,7 +107,9 @@ class GameView implements PresentView {
       inert: true,
     });
     this.panelHost = h('div', { class: 'game-panel-host' });
-    const stage = h('section', { class: 'game-stage' }, this.tableHint, this.table, this.panelHost);
+    // Potisk na suknu (prošívaný ovál + znak) — jen ozdoba, pod vším ostatním na jevišti.
+    const decor = h('div', { class: 'game-stage__decor', 'aria-hidden': 'true' }, tableEmblem());
+    const stage = h('section', { class: 'game-stage' }, decor, this.tableHint, this.table, this.panelHost);
     this.main = h('div', { class: 'game-main' }, this.topRow.el, stage, this.handArea.el);
     this.fx = h('div', { class: 'game-fx', 'aria-hidden': 'true' });
     this.live = h('p', { class: 'visually-hidden', 'aria-live': 'polite', 'data-testid': 'game-live' });
@@ -151,6 +155,8 @@ class GameView implements PresentView {
     this.sidebar.update();
     this.topRow.update();
     this.handArea.update();
+    // Bez ruky dole jen balíček — jeviště dostane celou výšku (styles/game.css, `.is-handless`).
+    this.main.classList.toggle('is-handless', this.handArea.el.classList.contains('is-empty'));
 
     const inRound = s.phase === 'round';
     this.table.hidden = !inRound;
@@ -280,7 +286,14 @@ class GameView implements PresentView {
     }
     const key = e.key.toLowerCase();
     if (e.key === 'Enter') {
-      if (isControl(e.target)) return false;
+      // Enter na kartě v ruce (zaměřené po kliknutí myší) je v kole taky Zahrát; kartu přepíná klik,
+      // mezerník a 1–8. Ostatní ovládací prvky si Enter zpracují samy.
+      const onHandCard =
+        s.phase === 'round' &&
+        e.target instanceof HTMLElement &&
+        e.target.classList.contains('pcard') &&
+        this.handArea.el.contains(e.target);
+      if (isControl(e.target) && !onHandCard) return false;
       if (s.phase === 'round') void this.ctx.play();
       else if (s.phase === 'blind_select') void this.ctx.act({ type: 'selectBlind' });
       else if (s.phase === 'round_end') void this.ctx.act({ type: 'cashOut' });

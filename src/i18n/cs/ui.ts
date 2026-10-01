@@ -181,6 +181,8 @@ export const credits = {
   font: {
     title: 'Písmo',
     license: 'Licence SIL Open Font License 1.1',
+    digits:
+      'Číslice jsme podle něj překreslili, aby se pětka nepletla s písmenem S. I upravené písmo je pod OFL 1.1.',
   },
   icons: {
     title: 'Ikony',

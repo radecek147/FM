@@ -13,7 +13,7 @@
   --game-card-w: clamp(
     52px,
     min(calc((100vw - var(--sidebar-w) - 7rem) / 9.6), calc((100dvh - 11rem) / 4.6)),
-    108px
+    calc(108px * var(--vp-scale, 1))
   );
   --card-w: var(--game-card-w);
   --card-lift: calc(var(--card-w) * -0.22);
@@ -29,6 +29,7 @@
 }
 
 .game-main {
+  container: game-main / inline-size;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 0.4rem;
@@ -205,6 +206,12 @@
   font-size: 1.3rem;
   font-weight: 700;
   color: var(--paper);
+}
+
+/* Mimo kolo (výběr útraty, Večerka…) jsou náhled kombinace a skóre kola jen informační. */
+.game-sidebar:not([data-phase='round'], [data-phase='booster']) .gs-hand,
+.game-sidebar:not([data-phase='round'], [data-phase='round_end'], [data-phase='game_over']) .gs-score {
+  opacity: 0.6;
 }
 
 .gs-hand.is-scoring {
@@ -391,6 +398,49 @@
   grid-area: 1 / 1;
 }
 
+/* Potisk na suknu: prošívaný ovál hrací plochy a znak se čtyřmi barvami (jen v kole, jinak ho kryjí panely). */
+.game-stage__decor {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  justify-self: stretch;
+  min-height: 0;
+  color: rgb(0 0 0 / 11%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--t-med) ease-out;
+}
+
+.game-stage__decor::before {
+  content: '';
+  position: absolute;
+  inset: 3% 2%;
+  border: 3px dashed rgb(244 236 216 / 9%);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 10px rgb(0 0 0 / 5%),
+    0 0 0 10px rgb(0 0 0 / 4%);
+}
+
+.game[data-phase='round'] .game-stage__decor {
+  opacity: 1;
+}
+
+.table-emblem {
+  width: min(42%, 15rem, 60vh);
+  height: auto;
+  max-height: 80%;
+}
+
+/*
+ * V kole je na jevišti jen stůl (vejde se) — bez ořezu, ať karty letící z ruky na stůl a ze stolu pryč
+ * (FLIP přes transform) nemizí na hraně jeviště. Panely fází (Večerka…) se dál posouvají.
+ */
+.game[data-phase='round'] .game-stage {
+  overflow: visible;
+}
+
 /* Šéf: stůl lehce zčervená (statický stín, žádná animace). */
 .game.is-boss .game-stage {
   border-radius: var(--radius);
@@ -416,8 +466,9 @@
   translate: 0 calc(var(--card-w) * -0.16);
 }
 
+/* Neskórující zahrané karty ztmavnou (neprůhledně — sukno ani potisk nemají prosvítat). */
 .game-table .pcard.is-played:not(.is-scoring) .pcard__inner {
-  opacity: 0.6;
+  filter: brightness(0.62) saturate(0.7);
 }
 
 .game-table__hint {
@@ -896,6 +947,36 @@
   color: var(--accent);
 }
 
+.booster__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.booster__titles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.9rem;
+  align-items: baseline;
+  justify-content: center;
+}
+
+.booster__titles .booster__picks {
+  margin-top: 0;
+  padding: 0.05rem 0.7rem;
+  font-size: 1.05rem;
+  background: rgb(0 0 0 / 25%);
+  border-radius: 999px;
+}
+
+.booster__header .btn {
+  min-width: 0;
+  min-height: 2.5rem;
+  font-size: 1.05rem;
+}
+
 /* ─────────────────────────── Pitva a výhra ─────────────────────────── */
 
 /* Konec runu: panel dostane celou výšku (řada žolíků a ruka už nejsou potřeba). */
@@ -1066,6 +1147,30 @@
 
 .game-bottom.is-empty .gb-deck {
   pointer-events: auto;
+}
+
+/*
+ * Bez ruky (výběr útraty, Večerka, obálka bez karet) by prázdná dolní řada s balíčkem ubrala panelu fáze
+ * ~150 px výšky a výběr útraty by se na 1366×768 ořízl. Balíček se proto přesune do pravého dolního rohu
+ * jeviště (stejná řada mřížky) a jeviště mu vpravo uvolní místo. Telefon se posouvá celou stránkou.
+ */
+@media (min-width: 601px) {
+  .game-main.is-handless .game-bottom {
+    grid-area: 2 / 1;
+    align-self: end;
+    justify-self: end;
+    z-index: 1;
+  }
+
+  .game-main.is-handless .game-top {
+    grid-area: 1 / 1;
+  }
+
+  /* Jeviště i balíček explicitně ve stejné buňce (jinak je automatické umístění rozhodí do dalších buněk). */
+  .game-main.is-handless .game-stage {
+    grid-area: 2 / 1;
+    padding-right: calc(var(--game-card-w) * 0.8 + 1.2rem);
+  }
 }
 
 .gb-hand-wrap {
@@ -1329,10 +1434,15 @@
   align-items: start;
 }
 
+/* Sekce v novinových sloupcích — dlouhý seznam žolíků neroztáhne řádek i sousední sekci. */
 .run-info__columns {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
-  gap: 0.9rem 1.25rem;
+  columns: 13rem 2;
+  column-gap: 1.25rem;
+}
+
+.run-info__columns > .run-info__section {
+  margin-bottom: 0.9rem;
+  break-inside: avoid;
 }
 
 .run-info__title {
@@ -1424,13 +1534,23 @@
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
+  container-type: inline-size;
 }
 
+/* Karty náhledu využijí šířku dialogu (13 karet na řádek), ale nepřerostou malou kartu. */
 .deck-preview__row {
+  --card-w: clamp(28px, calc((100cqi - 5rem) / 14.6), 60px);
+
   display: grid;
   grid-template-columns: 4.5rem minmax(0, 1fr);
   gap: 0.5rem;
   align-items: center;
+}
+
+.deck-preview__row--other .deck-preview__suit {
+  font-size: 0.8rem;
+  line-height: 1.15;
+  overflow-wrap: normal;
 }
 
 .deck-preview__suit {
@@ -1579,6 +1699,33 @@
   }
 }
 
+/* Úzký stůl v jednotkách rem (malé okno nebo velké UI 120–140 %): Zahrát / Zahodit vedle sebe, třídění pod nimi. */
+@container game-main (max-width: 36rem) {
+  .gb-controls {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .gb-mid {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    flex-flow: row wrap;
+    gap: 0.25rem 0.75rem;
+    justify-content: center;
+  }
+
+  .gb-play,
+  .gb-discard {
+    justify-self: stretch;
+    min-width: 0;
+  }
+
+  .shop__header {
+    justify-content: center;
+    text-align: center;
+  }
+}
+
 /* Tablet na výšku a menší: levý panel se složí nad stůl (kompaktní mřížka), hra zůstává v okně. */
 @media (max-width: 900px) {
   .game {
@@ -1669,6 +1816,12 @@
   .blind-card__facts {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  /* Na výšku je místa dost — zboží a obálky můžou mít větší karty. */
+  .shop,
+  .booster {
+    --card-w: min(calc(var(--game-card-w) * 1.2), 104px);
+  }
 }
 
 /* Telefon („best effort“): jeden sloupec, stránka se posouvá. */
@@ -1678,7 +1831,8 @@
   }
 
   .game {
-    --game-card-w: clamp(36px, calc((100vw - 2rem) / 8.6), 64px);
+    /* Karty v ruce se mírně překrývají, ať je každá aspoň 44 px široký dotykový cíl. */
+    --game-card-w: clamp(40px, calc((100vw - 1.5rem) / 7), 64px);
 
     height: auto;
     min-height: 100dvh;
@@ -1707,10 +1861,31 @@
 
   .gs-stat__label {
     font-size: 0.6rem;
+    letter-spacing: 0;
+    text-transform: none;
   }
 
   .gs-stat__value {
     font-size: 0.95rem;
+  }
+
+  .gs-buttons .btn {
+    padding-inline: 0.25em;
+    font-size: 0.78rem;
+  }
+
+  /* Žolíci přes celou šířku, spotřebky pod nimi (vedle sebe by se žolíci schovali pod kapsu). */
+  .game-top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gt-group--consumables {
+    min-width: 0;
+  }
+
+  .gb-mid {
+    flex-wrap: wrap;
+    row-gap: 0.25rem;
   }
 
   .game-stage {
@@ -1746,5 +1921,15 @@
 @media (hover: none) {
   .gb-deck:hover {
     transform: none;
+  }
+}
+
+/* Dotyk: menší tlačítka herní obrazovky taky aspoň 44 px vysoká. */
+@media (pointer: coarse) {
+  .gs-buttons .btn,
+  .gb-sort .btn,
+  .shop-slot__actions .btn,
+  .booster-option__actions .btn {
+    min-height: 44px;
   }
 }

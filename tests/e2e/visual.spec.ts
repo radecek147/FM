@@ -16,7 +16,8 @@ import { Game, createBot, serializeRun, type BoosterState, type RunState } from 
 test.skip(!process.env.KARBAN_VISUAL, 'vizuální snímky jen s KARBAN_VISUAL=1');
 test.describe.configure({ mode: 'parallel' });
 
-const OUT = 'test-results/visual';
+// Pozor: běžné `playwright test` maže celé test-results/ — snímky jde přesměrovat proměnnou KARBAN_VISUAL_OUT.
+const OUT = process.env.KARBAN_VISUAL_OUT ?? 'test-results/visual';
 const SEED = 'VIZUAL01';
 
 interface Viewport {

@@ -99,6 +99,7 @@ export const creditsScreen: ScreenFactory = (app) => {
       h('p', null, FONT_CREDIT.author),
       h('p', { class: 'credits__small' }, FONT_CREDIT.copyright),
       h('p', { class: 'credits__small' }, link(FONT_CREDIT.licenseUrl, t('credits.font.license'))),
+      h('p', { class: 'credits__small' }, t('credits.font.digits')),
     ),
     block(
       t('credits.icons.title'),

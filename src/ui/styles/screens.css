@@ -354,6 +354,64 @@ body {
   color: var(--on-felt-muted);
 }
 
+/*
+ * Na šířku (notebook 1366 × 768, monitor 1920 × 1080): logo, rada a kontrolní věta vlevo, deska s menu vpravo
+ * — celé menu se vejde do okna bez posouvání. Na výšku (tablet, telefon) a při velkém UI (kontejner v rem)
+ * zůstává jeden sloupec.
+ */
+@media (min-aspect-ratio: 4/3) {
+  @container app (min-width: 56rem) {
+    .menu {
+      display: grid;
+      grid-template-areas:
+        '. board'
+        'logo board'
+        'tip board'
+        'typo board'
+        '. board';
+      grid-template-rows: 1fr auto auto auto 1fr;
+      grid-template-columns: minmax(0, 34rem) 24rem;
+      gap: 1.5rem clamp(2rem, 6vw, 6rem);
+      place-content: stretch center;
+      padding-block: 1.5rem 3.5rem;
+    }
+
+    .menu__logo {
+      grid-area: logo;
+    }
+
+    .menu__board {
+      grid-area: board;
+      align-self: center;
+      width: 100%;
+    }
+
+    .menu__tip {
+      grid-area: tip;
+      justify-self: center;
+      margin-top: 0.75rem;
+    }
+
+    .menu__typo {
+      grid-area: typo;
+    }
+
+    .menu__list {
+      gap: 0.5rem;
+    }
+
+    .menu__item.btn--large {
+      min-height: 2.8rem;
+      font-size: 1.2rem;
+    }
+
+    .menu__hint {
+      min-height: 2.9em;
+      margin-top: 0.8rem;
+    }
+  }
+}
+
 /* ─────────────────────────── Obrázek z ArtSpec ─────────────────────────── */
 
 .art-tile {
@@ -1160,6 +1218,15 @@ html.modal-open {
 .modal__body {
   padding: 0.5rem 1.25rem 1rem;
   overflow: auto;
+  /* Stín u horní / dolní hrany, jen když je co posouvat (pozadí „local“ se posouvá s obsahem). */
+  background:
+    linear-gradient(var(--paper) 30%, rgb(244 236 216 / 0%)) top / 100% 2rem no-repeat local,
+    linear-gradient(rgb(244 236 216 / 0%), var(--paper) 70%) bottom / 100% 2rem no-repeat local,
+    radial-gradient(farthest-side at 50% 0, rgb(30 27 22 / 22%), transparent) top / 100% 0.8rem no-repeat
+      scroll,
+    radial-gradient(farthest-side at 50% 100%, rgb(30 27 22 / 22%), transparent) bottom / 100% 0.8rem
+      no-repeat scroll,
+    var(--paper);
 }
 
 .modal__body:empty {
@@ -1385,6 +1452,30 @@ html.modal-open {
 
   .modal__actions .btn {
     flex: 1 1 auto;
+  }
+}
+
+/* Dotyk (tablet, telefon): každý ovládací prvek aspoň 44 × 44 px. */
+@media (pointer: coarse) {
+  .btn,
+  .btn--small {
+    min-height: max(44px, 2.5rem);
+  }
+
+  .menu__tip-next {
+    width: 44px;
+    height: 44px;
+    margin-top: -22px;
+  }
+
+  .range {
+    height: 44px;
+  }
+
+  .credits__link {
+    display: inline-block;
+    min-height: 44px;
+    padding-block: 0.55rem;
   }
 }
 

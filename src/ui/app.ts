@@ -6,6 +6,8 @@
  */
 import type { ContentRegistry } from '../engine';
 import { AnimQueue } from './anim/queue';
+import { installDigitFont } from './art/digitFont';
+import { isModalOpen } from './components/modal';
 import type { GameController } from './controller';
 import { mount } from './dom';
 import type { Settings } from './settings';
@@ -40,6 +42,11 @@ export class App {
     this.settings = loadSettings(store);
     this.anim = new AnimQueue(() => ({ speed: this.settings.speed, enabled: this.settings.animations }));
     applySettingsToDocument(this.settings);
+    // Číslice s čitelnou „5“ a „2“ (písmo se skládá za běhu, bez sítě).
+    installDigitFont();
+    // Mezerník během animace přeskočí — už ve fázi zachytávání, aby ho nespolkl zaměřený prvek
+    // (karta, žolík), který mezerník jinak zastaví u sebe.
+    document.addEventListener('keydown', (e) => this.handleSkipKey(e), true);
     document.addEventListener('keydown', (e) => this.handleKey(e));
   }
 
@@ -73,12 +80,17 @@ export class App {
     applySettingsToDocument(this.settings);
   }
 
-  private handleKey(e: KeyboardEvent): void {
-    if (e.key === ' ' && this.anim.busy) {
-      e.preventDefault();
-      this.anim.skip();
+  private handleSkipKey(e: KeyboardEvent): void {
+    if (e.key !== ' ' || !this.anim.busy || isModalOpen()) return;
+    const target = e.target as HTMLElement | null;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable))
       return;
-    }
+    e.preventDefault();
+    e.stopPropagation();
+    this.anim.skip();
+  }
+
+  private handleKey(e: KeyboardEvent): void {
     const target = e.target as HTMLElement | null;
     if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable))
       return;

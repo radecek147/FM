@@ -148,16 +148,16 @@ export class GameController {
     return res;
   }
 
+  /**
+   * Zahraje vybrané karty. Výběr se nemaže předem: po úspěchu z něj `act` vyřadí karty, které už nejsou
+   * v ruce (tj. všechny zahrané), a neplatná akce (např. došla zahození) výběr hráči nechá.
+   */
   play(): Promise<ActionResult> {
-    const ids = this.selectedInHandOrder();
-    this.selected = [];
-    return this.act({ type: 'play', cardIds: ids });
+    return this.act({ type: 'play', cardIds: this.selectedInHandOrder() });
   }
 
   discard(): Promise<ActionResult> {
-    const ids = this.selectedInHandOrder();
-    this.selected = [];
-    return this.act({ type: 'discard', cardIds: ids });
+    return this.act({ type: 'discard', cardIds: this.selectedInHandOrder() });
   }
 
   save(): void {

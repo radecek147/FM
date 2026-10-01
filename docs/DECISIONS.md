@@ -847,3 +847,42 @@ proto dnes nahrazuje Δ vyhraných kol: u všech změřených žolíků je mezi 
 
 **Proč:** DESIGN 4.2–4.4 a 12.4 krok 3 (ladit `params`, ne mechaniku), CLAUDE.md kap. 8 (žádný bezcenný ani
 auto-win žolík).
+
+## 2026-10-01 — Revize 30 žolíků fáze 4: texty, kombinace s enginem, fuzz
+
+**Co:** prošel jsem všech 30 žolíků: vyrenderovaný popisek (`t()` s `params` a `describe`) proti kódu a DESIGN 4.7,
+flavor (pravopis, tykání, rodová neutralita, žádné skutečné osoby, značky ani názvy z Balatra), `ArtSpec`, štítky
+a testy. Nový test `tests/unit/jokers-combos.test.ts` ověřuje u **každého** žolíka:
+
+- popisek přesně (všech 30) a že šablona nemá čísla natvrdo (výjimka: příklad „Q-K-A-2-3“ u Kolotoče); `params`,
+  které popisek nečte, smí být jen nápověda pro boty (`suit`, `hand`, `level`),
+- Napodobitel: kopie = druhá instance téhož žolíka se stejným stavem (stejné čipy, mult i měřená veličina — zahození
+  u Švejka, vyleštění karty u Klenotníka), nekopírovatelné si nevybere, stav cíle se kopií nezdvojí ani za dvě kola
+  (rada, zničená karta, slabé ruce, výhra kola); debuffnutý cíl nekopíruje,
+- debuff: ruka bez efektu, bez `passive` (Kolotoč, Sekera) a bez edice; celé kolo bez odměny a beze změny počítadel;
+  debuff skončí s kolem,
+- edice: lesklá/holografická/duhová platí i u žolíka, který ve scénáři sám nic nedá (holografická +10 mult před
+  vlastním ×mult), negativní +1 slot,
+- prodej: cena podle DESIGN 4.1 se všemi 30 žolíky ve slotech (`onSell`), prodaný uprostřed kola už nic nedá
+  (ani `passive`); prodej Sekery v dluhu nechá zůstatek záporný,
+- fuzz: runy přes boty (testovací obsah se šéfy, spotřebkami, obálkami a radou ničící kartu; obsah hry) se všemi 30
+  žolíky naráz i s náhodnými pěticemi — žádná výjimka, stav žolíků JSON-bezpečný po každé akci, uložení a načtení
+  uprostřed kola dá stejné akce i stav jako run bez načítání.
+
+**Opravy:**
+
+- **Pokladnička:** vynuceně přibitá (výzva, `createJoker` s nálepkou — `noEternal` hlídá jen Večerka a obálky)
+  se po rozbití v 8. kole zničit nedá a dřív pak vyplácela 2 + 8 Kč **každé** kolo. Teď bonus dá jednou a dál nic
+  (`rounds > 8` → 0); test v `jokers-common.test.ts`.
+- **Pivní břicho:** flavor „Každý půllitr se počítá. Dvakrát.“ opakoval pointu Pivního tácku („Každá čárka se
+  počítá.“, CONTENT-GUIDE 11). Nový: „Tohle není břicho, to je dlouhodobá investice.“ (sedí na trvalý růst; DESIGN 4.7).
+- **Švejk:** `ArtSpec` bez vzoru (jediný z 30; DESIGN 4.4/11) → `pattern: 'stripes'`.
+
+**Bez změny (vědomě):** Pan vrchní má podmínku „nejvýš 3 karty“ jako jeden komerční žolík a Klenotník +5 trvalých čipů
+jako jiný — mechanika a efekt se liší (×2 místo +mult, jen ♦ místo všech karet), téma i název jsou vlastní, takže to
+není kopie 1:1 (CONTENT-GUIDE 13). Ruka zakázaná šéfem dál nespouští `afterHandScored` (Švejk ji nepočítá — viz výklad
+běžných žolíků výše). Napodobitel cíl v popisku neukazuje (`describe` nemá texty) — úkol pro UI: zvýraznit cíl podle
+`state.target` a u žolíků s `copyable: false` ukázat, že kopírovat nejdou.
+
+**Proč:** CLAUDE.md kap. 3 (žolíci), 5 (humor) a 6 (čeština); DESIGN 4.4 (přesná věta, disciplína hooků, nálepky);
+ARCHITECTURE 2.5–2.7 (pořadí skórování, kopírování, debuff, edice).

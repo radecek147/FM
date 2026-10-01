@@ -36,7 +36,8 @@
   --suit-clubs: #1e1b16;
 
   /* Typografie */
-  --font-game: 'Pixelify Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* 'Karban Digits' (src/ui/art/digitFont.ts) kreslí jen číslice 0–9 — v Pixelify Sans je „5“ stejná jako „S“. */
+  --font-game: 'Karban Digits', 'Pixelify Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-size-base: 18px;
   --ui-scale: 1;
 
@@ -64,8 +65,31 @@
   margin: 0;
 }
 
+/* Velké monitory: rozhraní se zvětší po krocích (jinak je na 1920 × 1080 stůl prázdný a texty drobné). */
+:root {
+  --vp-scale: 1;
+}
+
+@media (min-width: 1600px) and (min-height: 900px) {
+  :root {
+    --vp-scale: 1.125;
+  }
+}
+
+@media (min-width: 1880px) and (min-height: 1020px) {
+  :root {
+    --vp-scale: 1.25;
+  }
+}
+
+@media (min-width: 2400px) and (min-height: 1300px) {
+  :root {
+    --vp-scale: 1.5;
+  }
+}
+
 html {
-  font-size: calc(var(--font-size-base) * var(--ui-scale));
+  font-size: calc(var(--font-size-base) * var(--ui-scale) * var(--vp-scale));
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -187,6 +211,8 @@ ol[role='list'] {
   min-height: 100vh;
   min-height: 100dvh;
   isolation: isolate;
+  /* Kontejnerové dotazy v `rem` počítají i s velikostí UI z nastavení (media dotazy ji neznají). */
+  container: app / inline-size;
 }
 
 #fx {

@@ -238,6 +238,8 @@ export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
     const s = c.state;
     const m = c.engine.modifiers();
     const round = s.round;
+    // Mimo kolo jsou kombinace a skóre kola jen informační — CSS je ztlumí.
+    el.dataset.phase = s.phase;
     updateBlind();
 
     const slot = s.blinds[s.blindIndex] ?? null;

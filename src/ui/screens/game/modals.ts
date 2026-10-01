@@ -286,7 +286,7 @@ export function openDeckPreview(ctx: GameCtx): void {
       stones.length > 0
         ? h(
             'div',
-            { class: 'deck-preview__row' },
+            { class: 'deck-preview__row deck-preview__row--other' },
             h('p', { class: 'deck-preview__suit' }, t('game.deck.stone')),
             h('div', { class: 'deck-preview__cards' }, stones.map(mini)),
           )

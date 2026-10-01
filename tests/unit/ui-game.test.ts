@@ -297,6 +297,44 @@ describe('herní obrazovka – ovládání', () => {
     expect(root.querySelectorAll('[data-testid="hand"] .pcard')).toHaveLength(8);
   });
 
+  it('Enter na kartě zaměřené kliknutím zahraje vybrané karty (kartu nepřepne)', async () => {
+    const c = await inRound();
+    const cards = root.querySelectorAll<HTMLButtonElement>('[data-testid="hand"] .pcard');
+    cards[0]!.click();
+    cards[1]!.click();
+    cards[1]!.focus();
+    expect(c.selected).toHaveLength(2);
+    const e = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true });
+    cards[1]!.dispatchEvent(e);
+    expect(e.defaultPrevented).toBe(true);
+    await settle(c);
+    expect(c.state.round?.handsPlayed).toBe(1);
+    expect(c.state.stats.cardsPlayed).toBe(2);
+  });
+
+  it('neplatné zahození (došla zahození) výběr nechá a oznámí důvod', async () => {
+    const g = Game.fromState(freshState(), REG);
+    g.dispatch({ type: 'selectBlind' });
+    const st = structuredClone(g.state) as RunState;
+    st.round!.discardsLeft = 0;
+    const c = fromState(st);
+    open(c);
+    press('1', 'Digit1');
+    press('2', 'Digit2');
+    press('x', 'KeyX');
+    await settle(c);
+    expect(c.selected).toHaveLength(2);
+    expect(c.state.round?.discardsUsed).toBe(0);
+    expect(document.querySelector('[data-testid="toast-action-error"]')?.textContent).toContain(
+      t('errors.noDiscardsLeft'),
+    );
+    // Zahrání pak vezme oba vybrané a výběr vyprázdní.
+    press('Enter', 'Enter');
+    await settle(c);
+    expect(c.state.round?.handsPlayed).toBe(1);
+    expect(c.selected).toEqual([]);
+  });
+
   it('Enter ve výběru útraty vybere útratu; Esc otevře pauzu, Pokračovat ji zavře', async () => {
     const c = GameController.newRun({ deckId: 'pub', stake: 1, seed: SEED }, deps());
     open(c);
