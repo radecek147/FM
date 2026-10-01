@@ -532,7 +532,10 @@ export type GameEvent =
   | { type: 'roundStarted'; ante: number; blind: BlindKind; target: number }
   | { type: 'cardsDrawn'; cardIds: number[] }
   | { type: 'handPlayed'; result: ScoreResult; roundScore: number }
-  /** Zahozené karty; `forced` = zahození efektem (šéf), ne akcí hráče. */
+  /**
+   * Zahozené karty; `forced` = zahození efektem (šéf), ne akcí hráče. Hráčovo zahození přijde před reakcemi na něj
+   * (peníze žolíka, nucené zahození šéfem).
+   */
   | { type: 'cardsDiscarded'; cardIds: number[]; forced?: boolean }
   /** Pořadí karet v ruce se změnilo efektem (zamíchání). */
   | { type: 'handShuffled'; cardIds: number[] }
@@ -544,6 +547,7 @@ export type GameEvent =
   | { type: 'cashedOut'; amount: number }
   | { type: 'moneyChanged'; delta: number; money: number; reason: string }
   | { type: 'shopEntered' }
+  /** Přehození nabídky; `cost` = zaplacená cena (0 = bezplatné přehození), cena dalšího je v `ShopState.rerollCost`. */
   | { type: 'shopRerolled'; cost: number }
   | { type: 'shopLeft' }
   | {

@@ -46,8 +46,22 @@ if (!res.ok) ui.toast(t(`errors.${res.error}`));
 
 - `dispatch(action)` validuje fázi a vstupy, změní stav, emituje události na `bus` a vrátí je i v
   `ActionResult.events` (UI je může přehrát sekvenčně s animací).
-- Neplatná akce stav **nemění** a vrací `{ ok: false, error }`.
-- Determinismus: stejný seed + stejná posloupnost akcí ⇒ identický stav (testováno).
+- Neplatná akce stav **nemění**, vrací `{ ok: false, error }` a na bus nepošle nic (i neznámý typ akce nebo vstup,
+  který není pole — textový režim). Události se na bus doručí až po dokončení akce; chyba posluchače stav nevrací.
+- Determinismus: stejný seed + stejná posloupnost akcí ⇒ identický stav (testováno i celým runem botem a s uložením
+  a načtením po každé akci — `tests/unit/run-determinism.test.ts`). Boti simulace (`engine/sim`) nemají stav mimo
+  `RunState`: rozhodnutí je čistá funkce stavu (RNG rozhodnutí ze seedu, jména bota a otisku stavu), takže simulace
+  po uložení a načtení pokračuje stejně (`tests/unit/review2-sim-save.test.ts`).
+- Stavový automat (`RunPhase`): `blind_select` → (`selectBlind`) `round` → výhra `round_end` (rozpis odměn) →
+  `cashOut` → `shop` → `leaveShop` → `blind_select`…; `skipBlind` (Malá, Velká) zůstává ve `blind_select`;
+  porážka šéfa → při výplatě nové patro (`anteChanged`, nové útraty, šéf, kupón); šéf patra 8 → `victory` →
+  `continueEndless` → `round_end` (nekonečný režim); prohra → `game_over` (konečný stav). `booster` se vrací do
+  `returnTo`. Přeřadit ruku jde jen v kole nebo v obálce, žolíky ve všech fázích kromě konce runu.
+- Zahození: karty opustí ruku a zahození se započte **před** hooky (žolíci `onDiscard`, pečetě, šéf `onDiscard`),
+  takže obsah vidí v ruce jen zbylé karty a událost `cardsDiscarded` hráčova zahození přijde před reakcemi.
+- Dotazy pro UI bez změny stavu: `blindTarget(kind, bossId)` a `blindReward(kind, bossId)` (výběr útrat ukazuje
+  stejná čísla, jaká pak použije kolo a rozpis odměn), `preview(cardIds)`, `sellValue(uid)`,
+  `canUseConsumable(uid, targets)`, `modifiers()`.
 
 ### 2.3 RNG
 
@@ -60,22 +74,22 @@ Denní run: `dailySeed(date)` = `DEN-YYYYMMDD` (UTC).
 
 ### 2.4 Moduly
 
-| Modul                     | Odpovědnost                                                                                                               |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `engine/types.ts`         | datové typy stavu, akcí, událostí                                                                                         |
-| `engine/content-types.ts` | rozhraní definic obsahu, hooků, `EngineApi`, `ContentRegistry`                                                            |
-| `engine/constants.ts`     | čísla pravidel z DESIGN 2.10 (odměny, násobky útrat, vzácnosti, nálepky, strop opakování, seed) a i18n klíče hlášek `MSG` |
-| `engine/rng/`             | seedovaný RNG                                                                                                             |
-| `engine/events.ts`        | typovaný `EventBus`                                                                                                       |
-| `engine/cards/`           | tvorba karet, standardní balíček, čipy karty, barvy (divoká/kamenná)                                                      |
-| `engine/hands/`           | detekce kombinací (vč. tajných, divokých karet, modifikátorů 4 prstů/mezer/kolem dokola)                                  |
-| `engine/scoring/`         | skórovací pipeline → `ScoreResult` s kroky pro animaci                                                                    |
-| `engine/effects/`         | skládání `Modifiers`, volání hooků žolíků/šéfů/štítků, implementace `EngineApi`                                           |
-| `engine/run/`             | `Game` — stavový automat runu (útraty, kola, odměny, konec, nekonečný režim), cíle, losování šéfů (`bosses.ts`)           |
-| `engine/shop/`            | generování obchodu a boosterů (`shop.ts`), pooly a edice (`pool.ts`), ceny a prodej (`prices.ts`)                         |
-| `engine/save/`            | serializace, verze formátu, migrace                                                                                       |
-| `engine/meta/`            | profil hráče: odemykání, statistiky, achievementy, historie (fáze 8)                                                      |
-| `engine/sim/`             | boti a headless simulace (`npm run simulate`)                                                                             |
+| Modul                     | Odpovědnost                                                                                                                       |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `engine/types.ts`         | datové typy stavu, akcí, událostí                                                                                                 |
+| `engine/content-types.ts` | rozhraní definic obsahu, hooků, `EngineApi`, `ContentRegistry`                                                                    |
+| `engine/constants.ts`     | čísla pravidel z DESIGN 2.10 (odměny, násobky útrat, vzácnosti, nálepky, strop opakování, seed) a i18n klíče hlášek `MSG`         |
+| `engine/rng/`             | seedovaný RNG                                                                                                                     |
+| `engine/events.ts`        | typovaný `EventBus`                                                                                                               |
+| `engine/cards/`           | tvorba karet, standardní balíček, čipy karty, barvy (divoká/kamenná)                                                              |
+| `engine/hands/`           | detekce kombinací (vč. tajných, divokých karet, modifikátorů 4 prstů/mezer/kolem dokola)                                          |
+| `engine/scoring/`         | skórovací pipeline → `ScoreResult` s kroky pro animaci                                                                            |
+| `engine/effects/`         | skládání `Modifiers`, volání hooků žolíků/šéfů/štítků, implementace `EngineApi`                                                   |
+| `engine/run/`             | `Game` — stavový automat runu (útraty, kola, odměny, konec, nekonečný režim), cíle, losování šéfů (`bosses.ts`)                   |
+| `engine/shop/`            | generování obchodu a boosterů (`shop.ts`), pooly a edice (`pool.ts`), ceny a prodej (`prices.ts`)                                 |
+| `engine/save/`            | serializace, verze formátu, migrace                                                                                               |
+| `engine/meta/`            | profil hráče: odemykání, statistiky, achievementy, historie (fáze 8)                                                              |
+| `engine/sim/`             | boti (`bots.ts`), hodnocení tahů (`hand-eval.ts`), runner a souhrn metrik (`runner.ts`), příkazy textového režimu (`commands.ts`) |
 
 ### 2.5 Skórování (pořadí je závazné a otestované)
 
@@ -160,6 +174,12 @@ Debuffy hracích karet určuje jen šéf (`BossHooks.isCardDebuffed`). Dočasné
 ukládají do `RoundState.flags`; engine po hooku šéfa `onRoundStart`, `afterHandPlayed` (až po `afterScored`),
 `onDiscard` a `onDraw` přepočítá `Card.debuffed` celého balíčku, takže platí hned i pro karty v ruce.
 
+Kontexty hooků jsou levné objekty: společný prototyp jádra nese živé `state`, `mods` a `api`; `ScoringInfo` zahrané
+ruky je **sdílená vrstva** (`GameCore.ctxLayer`), kterou kontexty všech hooků ruky dědí přes prototyp (gettery
+`chips`/`mult` zůstávají živé); vlastní pole volání (`card`, `isRetrigger`, `score`…) se přiřadí hodnotami a `ctx.rng`
+vzniká až při prvním použití. Obsah proto nesmí kontext kopírovat spreadem (`{ ...ctx }` zkopíruje jen vlastní pole).
+Dřív se `ScoringInfo` kopírovala přes `extend` (deskriptory) pro každý hook — ~45 % času skórování.
+
 Zvláštní hooky (volají se jen jednomu adresátovi, ne všem zleva doprava): `JokerHooks.onAcquire` (žolík vstoupil do
 slotů — koupě, obálka, `createJoker`; ne startovní žolíci výzvy), `JokerHooks.preventGameOver` a
 `TagHooks.onRoundLost` (záchrana prohraného kola; štítky se ptají první), `DeckDef.onBossDefeated`. Hlášky, které
@@ -195,9 +215,13 @@ flavor a že texty dodržují typografii.
 
 - `localStorage`: `karban.profile` (profil, odemčení, statistiky, nastavení) a `karban.run` (rozehraný run).
 - Formát `{ format: 'karban-save', kind: 'run' | 'profile', version: N, savedAt, data }` (`src/engine/save/save.ts`:
-  `serializeRun`, `deserializeRun`, `SaveError`). Migrace `RUN_MIGRATIONS` ve stejném souboru (čisté funkce
-  `vN → vN+1`, aplikují se postupně; testy roundtripu a migrací patří do fáze 2). Profil se nikdy nesmí ztratit:
-  při chybě načtení se poškozená data zálohují do `karban.profile.backup.<timestamp>`.
+  `serializeRun`, `deserializeRun`, `SaveError`). `savedAt` dodá volající (engine nečte hodiny). Migrace
+  `RUN_MIGRATIONS` ve stejném souboru (čisté funkce `vN → vN+1`, aplikují se postupně, každá musí vrátit objekt;
+  `deserializeRun(input, { migrations, currentVersion })` umí vlastní tabulku pro testy). Načtení ověří obálku (verze
+  = kladné celé číslo), odmítne novější verzi a po migracích zkontroluje tvar stavu (fáze, RNG streamy, pole);
+  vstupní objekt nemění. Chyby: `SaveError.code` = `invalidJson` / `invalidFormat` / `wrongKind` / `tooNew` /
+  `migrationFailed` (`tests/unit/save.test.ts`). Profil se nikdy nesmí ztratit: při chybě načtení se poškozená data
+  zálohují do `karban.profile.backup.<timestamp>`.
 - Export/import JSON z nastavení.
 
 ## 6. Testy
@@ -210,6 +234,11 @@ flavor a že texty dodržují typografii.
 ## 7. Skripty
 
 - `npm run simulate -- --runs 500 --stake 1 [--deck pub] [--strategy all] [--seed-prefix A] [--json out.json]`
-  — headless boti (seed runu `i` = `SIM-<prefix>-<i>`, viz `docs/DESIGN.md` kap. 12).
+  — headless boti (seed runu `i` = `SIM-<prefix>-<i>`, viz `docs/DESIGN.md` kap. 12). `--bot` a `--strategy`
+  jsou totéž, `--json -` píše na stdout, `--max-actions` mění pojistku délky runu. Výstup je česky
+  (`src/i18n/cs/cli.ts`), JSON bez doby běhu, takže stejné parametry dají stejné bajty.
+- `npm run simulate -- --play [--seed SEED] [--deck pub] [--stake 1] [--script "v;h 1 2 3;q"]` — textový hratelný
+  režim bez UI (`node:readline`; převod řádku na akci v `engine/sim/commands.ts`, nápověda `?`). `--script` přehraje
+  příkazy oddělené středníkem neinteraktivně (testy a ukázky).
 - `npm run fetch-assets` — stáhne/extrahuje volně licencované assety a přegeneruje `ASSETS.md`.
 - `npm run deploy` — build pro GitHub Pages (`BASE_PATH=/<repo>/`).

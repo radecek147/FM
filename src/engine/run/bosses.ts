@@ -26,7 +26,9 @@ export function stakeBigBlindBoss(core: GameCore): boolean {
 
 /**
  * Vylosuje šéfa patra (stream `boss`). Preferuje šéfy, kteří v runu ještě nebyli; vylosovaného zapíše
- * do `bossesSeen`. Když pro patro žádný nesedí, vezme libovolného běžného. Bez šéfů v registru vrací null.
+ * do `bossesSeen`. Když neviděné dojdou, pool se obnoví (jeho šéfové se z `bossesSeen` vyškrtnou, DESIGN 8.1) —
+ * další kola pak zase nejdřív projdou všechny, místo aby se šéf mohl opakovat hned po sobě. Když pro patro žádný
+ * nesedí, vezme libovolného běžného. Bez šéfů v registru vrací null.
  */
 export function pickBossId(core: GameCore, exclude: readonly string[] = []): string | null {
   const s = core.state;
@@ -36,8 +38,13 @@ export function pickBossId(core: GameCore, exclude: readonly string[] = []): str
   if (pool.length === 0) return null;
   const notExcluded = pool.filter((b) => !exclude.includes(b.id));
   if (notExcluded.length > 0) pool = notExcluded;
-  const unseen = pool.filter((b) => !s.bossesSeen.includes(b.id));
-  const ids = (unseen.length > 0 ? unseen : pool).map((b) => b.id).sort();
+  let unseen = pool.filter((b) => !s.bossesSeen.includes(b.id));
+  if (unseen.length === 0) {
+    const renewed = new Set(pool.map((b) => b.id));
+    s.bossesSeen = s.bossesSeen.filter((id) => !renewed.has(id));
+    unseen = pool;
+  }
+  const ids = unseen.map((b) => b.id).sort();
   const id = core.rng('boss').pick(ids);
   if (!s.bossesSeen.includes(id)) s.bossesSeen.push(id);
   return id;

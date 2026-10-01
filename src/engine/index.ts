@@ -20,3 +20,21 @@ export { shopPrice, rerollPrice, roundHalfUp } from './shop/prices';
 export { serializeRun, deserializeRun, SaveError, SAVE_FORMAT } from './save/save';
 export { generateSeed, dailySeed } from './rng/rng';
 export { EventBus } from './events';
+export {
+  BOT_NAMES,
+  createBot,
+  resolveBotName,
+  simulateRun,
+  simulateMany,
+  summarizeRuns,
+  simSeed,
+  parsePlayCommand,
+  shopOffers,
+  WIN_RATE_TARGETS,
+  type Bot,
+  type BotName,
+  type RunResult,
+  type SimSummary,
+  type JokerStat,
+  type PlayCommand,
+} from './sim';

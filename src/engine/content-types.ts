@@ -569,6 +569,8 @@ export interface StakeDef {
   noSmallBlindReward?: boolean;
   /** Šance (0–1), že žolík v obchodě a obálce dostane nálepku (kumuluje se maximem přes úrovně). */
   stickerChance?: Partial<Record<StickerId, number>>;
+  /** Čísla pro popisek (`stakes.<id>.desc`, `{param}`), stejně jako u balíčků a dalšího obsahu. */
+  params?: Record<string, number | string>;
   /**
    * Velká útrata má navíc pravidlo náhodného běžného šéfa (Imperial): jiného než šéf patra, `minAnte ≤ patro`,
    * a jen šéfa, který má nějaké pravidlo (hook) — ne ty, co jen zvyšují cíl. Cíl 1,5× a odměna 4 Kč zůstávají.

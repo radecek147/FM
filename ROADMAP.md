@@ -7,37 +7,46 @@
 
 _Aktualizováno: 2026-10-01_
 
-**Fáze 0 (Založení) je hotová** (typecheck, lint, 160 unit testů, build, e2e smoke zelené; commit `chore/docs: phase 0`).
+**Fáze 0 (Založení) a Fáze 1 (Engine jádra) jsou hotové** (commity `chore: …` a `feat(engine): complete phase 1 …`).
 
-**Fáze 1 (Engine jádra) je hotová** — všech 17 podúkolů odškrtnuto; commit `feat(engine): …` fáze 1.
+**Fáze 2 (Run loop v enginu) je hotová** — 13 ze 14 podúkolů odškrtnuto; zbývá jen „První kalibrace křivky cílů“,
+která je vědomě odložená (bez žolíků a pranostik by ladění posunulo křivku špatným směrem; viz `docs/DECISIONS.md`).
 
-- Kontroly zelené: `typecheck`, `lint` (ESLint + Prettier), `npm test` (17 souborů, 665 testů), `build`,
-  `test:e2e` (1 smoke test), `test:coverage` (prahy splněné; v CI je krok nově blokující).
-- Pokrytí `src/engine`: 91,1 % řádků, 88,2 % příkazů, 82,6 % větví, 93,5 % funkcí. Po modulech (řádky):
-  `cards` 100 %, `hands` 99 %, `effects` 100 %, `scoring` 100 %, `shop` 98 %, `rng` 99 %, `run` 83 %
-  (`game.ts` 81 %, větve 64 %), **`save` 0 %** (testy save/load a migrací patří do fáze 2).
-- Hotové moduly: `src/engine/{constants,types,content-types,events}.ts`, `cards/cards.ts`, `hands/{detect,levels}.ts`,
-  `effects/{core,api,modifiers}.ts`, `scoring/score.ts`, `run/{game,init,draw,targets,bosses}.ts`,
-  `shop/{shop,pool,prices}.ts`, `save/save.ts` (bez testů). Testovací registr: `tests/unit/fixtures/registry.ts`
-  (+ `tests/unit/engine-fixtures.ts`). Texty: `src/i18n/cs/{hands,messages,modifiers}.ts`.
-- Revize správnosti a robustnosti enginu proběhly (záznamy v `docs/DECISIONS.md`, testy
-  `tests/unit/review-*.test.ts`); detekce a skórování ověřené nezávislým referenčním výpočtem.
-- Engine vyžaduje seed od volajícího (UI generuje `generateSeed(Math.random)`); `Math.random`/`Date.now`
-  a `localeCompare` jsou v `src/engine/**` zakázané ESLintem.
+- Kontroly zelené: `typecheck`, `lint` (ESLint + Prettier), `npm test` (26 souborů, 916 testů), `build`,
+  `test:e2e` (1 smoke test), `test:coverage` (prahy splněné).
+- Pokrytí `src/engine`: 98,2 % řádků, 95,8 % příkazů, 89,6 % větví, 98,4 % funkcí. Po modulech (řádky / větve):
+  `cards` 100/100, `hands` 99/100, `effects` 100/91, `scoring` 100/97, `shop` 99/92, `rng` 99/92, `run` 100/95
+  (`game.ts` 100/96), `save` 100/100, `sim` 95/81 (`bots.ts` 90/73).
+- Hotové ve fázi 2: `src/engine/run/game.ts` (stavový automat `RunPhase`, validace akcí, rozpis odměn a úrok,
+  přeskočení útrat se štítky, Večerka a obálky, konec runu s příčinou, výhra a nekonečný režim; dotazy pro UI
+  `blindTarget`, `blindReward`, `preview`, `sellValue`, `canUseConsumable`, `modifiers`), `src/engine/save/save.ts`
+  (obálka, kontrola tvaru, migrace, kódy `SaveError`), `src/engine/sim/` (`bots`, `hand-eval`, `runner`, `commands`;
+  6 botů bez stavu mimo `RunState`), `scripts/simulate.ts` (volby `--runs`, `--stake`, `--deck`, `--bot`/`--strategy`,
+  `--seed-prefix`, `--json [soubor|-]`, `--max-actions`; textový režim `--play` a `--script`), obsah
+  `src/content/{stakes,decks}.ts` (8 obtížností „Síla piva“, 8 balíčků), texty `src/i18n/cs/{cli,decks,stakes}.ts`.
+  Nové testy v `tests/unit/`: `game`, `save`, `run-determinism`, `hook-context`, `sim`, `stakes`, `decks`,
+  `review2-rules`, `review2-sim-save`.
+- Engine vyžaduje seed od volajícího (UI generuje `generateSeed(Math.random)`); `Math.random`, `Date.now`
+  a `localeCompare` jsou v `src/engine/**` zakázané ESLintem. Stav runu je JSON-serializovatelný (fuzz test).
+- Simulace (100 runů, Desítka, obsah bez žolíků/šéfů/spotřebek): všichni boti 0 % výher, průměrné patro `max` 1,9,
+  `nojoker` 2, `random` 1 (100 % proher v patře 1); 0 neplatných akcí; ~5,5 s pro 6 botů.
+- Revize pravidel runu a simulace/ukládání/determinismu proběhly (záznamy v `docs/DECISIONS.md`).
 
-**Známé otevřené body (mimo fázi 1, řešit v uvedené fázi):**
+**Známé otevřené body (řešit v uvedené fázi):**
 
-- fáze 2: `extend()` zabere ~45 % času skórování (~1,3 ms na ruku s 8 žolíky) — zvážit před velkými simulacemi;
-- fáze 3/6: i18n texty názvů útrat a hlášek pitvy pro konec runu v Malé/Velké útratě; `formatNumber(Number.MAX_VALUE)`
-  má ukázat „nekonečno“ (DESIGN 1.3);
-- fáze 6: šéf v `onDiscard` vidí zahazované karty ještě v `round.hand` (obsah je musí odfiltrovat, jinak hrozí
-  dvojí id na odhazovací hromádce); poziční pravidlo typu Jednooký hejtman nejde přes `setJokerDebuffed` spolehlivě
-  vyjádřit po přeřazení žolíků.
+- fáze 3: názvy útrat a hlášky pitvy pro Malou/Velkou útratu jsou zatím jen v textech CLI (`cli.blind.*`,
+  `cli.play.gameOver.death.*` v `src/i18n/cs/cli.ts`) — pro UI je přesunout do sdíleného podmodulu;
+  `formatNumber(Number.MAX_VALUE)` má ukázat „nekonečno“ (DESIGN 1.3);
+- fáze 4–5: první kalibrace křivky cílů a čísel kombinací (DESIGN 12.4 krok 1) až s žolíky a pranostikami — dnes
+  `nojoker` končí s mediánem v patře 2 (cíl 3–4);
+- fáze 6: `TagHooks` nemá obdobu `roundEndMoney` (peníze ze štítků v rozpisu odměn, DESIGN 2.4.2 krok 5); poziční
+  pravidlo typu Jednooký hejtman nejde přes `setJokerDebuffed` spolehlivě vyjádřit po přeřazení žolíků;
+- fáze 7: balíčky Úřednický, Babiččin, Vetešnický a Kalendářový (potřebují kupóny, spotřebky a žolíky).
 
-**Další krok:** Fáze 2 — testy run loopu (stavový automat `RunPhase`, výběr/přeskočení útrat, odměny a úrok,
-výhra/prohra, nekonečný režim), save/load roundtrip a migrace (`src/engine/save/save.ts`), determinismus celého runu
-(stejný seed + akce = identický stav), `src/engine/sim` s boty + `npm run simulate` (`--runs`, `--stake`, `--json`…),
-textový režim `--play`, první kalibrace křivky cílů.
+**Další krok:** Fáze 3 — herní UI v1. Základy UI už existují v `src/ui`: `app.ts` (router obrazovek), `controller.ts`
+(`GameController`: most k `Game.dispatch`, autosave, přehrání událostí), `settings.ts`, `storage.ts`, `anim/queue.ts`
+(fronta animací), `dom.ts` (helper `h()`), `styles/base.css`. Navázat herní obrazovkou (levý panel, ruka, Zahrát /
+Zahodit), výběrem útraty, rozpisem odměn a pitvou nad dotazy `Game` (`blindTarget`, `blindReward`, `preview`).
 
 ## Jak pokračovat v nové session
 
@@ -110,20 +119,20 @@ projde, hra se pořád spustí; commit `feat(engine): …`; fáze odškrtnutá.
 
 ## Fáze 2 — Run loop v enginu
 
-- [ ] `engine/run/Game`: `Game.newRun(options, registry)`, `dispatch(action)` s validací fáze a vstupů, `bus`
-- [ ] Stavový automat `RunPhase`: výběr útraty → kolo → rozpis odměn → Večerka → další útrata → … → konec / výhra
-- [ ] `engine/run/targets.ts`: křivka cílů 8 pater (Malá útrata 1×, Velká 1,5×, Šéf 2×), `targetMult`, nekonečný režim (exponenciální růst)
-- [ ] Kolo: 4 ruce, 3 zahození, 8 karet v ruce, výběr max. 5 karet, dobírání po zahrání a zahození, konec kola po dosažení cíle
-- [ ] Přeskočení Malé a Velké útraty (zatím s jedním testovacím štítkem)
-- [ ] Peníze (Kč): odměna 3/4/5 Kč, +1 Kč za nevyužitou ruku, úrok 1 Kč za každých 5 Kč (strop 5 Kč), rozpis odměn jako událost
-- [ ] Konec runu: `GameOverInfo` s příčinou (pro „pitvu“), výhra po patře 8, nabídka Nekonečného režimu
-- [ ] Večerka jako zástupná fáze („Večerka zavřená — inventura“ → pokračovat)
-- [ ] Všechny `GameEvent` emitované na `bus` i vrácené v `ActionResult.events`; neplatná akce stav nemění
-- [ ] `engine/save`: serializace `RunState`, obálka `{ format: 'karban-save', kind, version, data }`, rámec migrací + test
-- [ ] `engine/sim`: bot „max. kombinace“ + `scripts/simulate.ts` (`--runs`, `--stake`, `--deck`, `--strategy`, `--seed-prefix`, `--json`); výstup: % výher podle patra, průměrné skóre, příčiny prohry
-- [ ] Textový headless režim hratelný bez UI (`npm run simulate -- --play`): výpis ruky, zadávání akcí v terminálu
-- [ ] První kalibrace křivky cílů simulací, čísla zapsaná do `docs/DESIGN.md`
-- [ ] Testy: stejný seed + stejné akce = identický stav, odměny a úrok, výhra/prohra, save/load roundtrip, migrace, simulace jako smoke test
+- [x] `engine/run/Game`: `Game.newRun(options, registry)`, `dispatch(action)` s validací fáze a vstupů, `bus`
+- [x] Stavový automat `RunPhase`: výběr útraty → kolo → rozpis odměn → Večerka → další útrata → … → konec / výhra
+- [x] `engine/run/targets.ts`: křivka cílů 8 pater (Malá útrata 1×, Velká 1,5×, Šéf 2×), `targetMult`, nekonečný režim (exponenciální růst)
+- [x] Kolo: 4 ruce, 3 zahození, 8 karet v ruce, výběr max. 5 karet, dobírání po zahrání a zahození, konec kola po dosažení cíle
+- [x] Přeskočení Malé a Velké útraty (zatím s jedním testovacím štítkem)
+- [x] Peníze (Kč): odměna 3/4/5 Kč, +1 Kč za nevyužitou ruku, úrok 1 Kč za každých 5 Kč (strop 5 Kč), rozpis odměn jako událost
+- [x] Konec runu: `GameOverInfo` s příčinou (pro „pitvu“), výhra po patře 8, nabídka Nekonečného režimu
+- [x] Večerka jako zástupná fáze („Večerka zavřená — inventura“ → pokračovat)
+- [x] Všechny `GameEvent` emitované na `bus` i vrácené v `ActionResult.events`; neplatná akce stav nemění
+- [x] `engine/save`: serializace `RunState`, obálka `{ format: 'karban-save', kind, version, data }`, rámec migrací + test
+- [x] `engine/sim`: bot „max. kombinace“ + `scripts/simulate.ts` (`--runs`, `--stake`, `--deck`, `--strategy`, `--seed-prefix`, `--json`); výstup: % výher podle patra, průměrné skóre, příčiny prohry
+- [x] Textový headless režim hratelný bez UI (`npm run simulate -- --play`): výpis ruky, zadávání akcí v terminálu
+- [ ] První kalibrace křivky cílů simulací, čísla zapsaná do `docs/DESIGN.md` — _odloženo do fáze 4–5 (až budou žolíci a pranostiky), viz DECISIONS „Fáze 2: simulace a boti“_
+- [x] Testy: stejný seed + stejné akce = identický stav, odměny a úrok, výhra/prohra, save/load roundtrip, migrace, simulace jako smoke test
 
 **Hotovo, když:** run jde odehrát od prvního patra do výhry/prohry v textovém režimu i botem,
 `npm run simulate -- --runs 50` doběhne; kontroly zelené; commit `feat(engine): run loop…`; fáze odškrtnutá.

@@ -9,11 +9,11 @@
  *  5. skóre = floor(čipy × mult), šéf `adjustHandScore`, žolíci `afterHandScored`;
  *     run loop pak volá šéfa `afterHandPlayed` a `afterScoredCards` (hod skla, Ohmataná) a ničí karty.
  */
-import type { CardCtx, EffectResult, ScoringInfo } from '../content-types';
+import type { BossCtx, EffectResult, JokerScoringCtx, ScoringInfo } from '../content-types';
 import { cardChips } from '../cards/cards';
 import { MAX_ACTIVATIONS_PER_CARD, MSG } from '../constants';
-import type { GameCore } from '../effects/core';
-import { extend, toResults } from '../effects/core';
+import type { CtxLayer, GameCore } from '../effects/core';
+import { toResults } from '../effects/core';
 import { detectHand } from '../hands/detect';
 import { handValueAtLevel } from '../hands/levels';
 import type { Card, DetectedHand, HandPreview, ScoreResult, ScoreStep } from '../types';
@@ -139,10 +139,10 @@ export function previewHand(core: GameCore, cardIds: readonly number[]): HandPre
   const boss = core.activeBoss();
   const modifyBase = boss?.hooks.modifyBase;
   if (modifyBase && core.state.round) {
-    const info = makeInfo(core, hand, cards, { chips, mult });
+    const layer = core.ctxLayer(makeInfo(core, hand, cards, { chips, mult }));
     const base = { chips, mult };
     // Náhled je dotaz UI: šéf v něm nesmí posunout RNG (jinak by run závisel na tom, kolikrát se UI zeptá).
-    ({ chips, mult } = core.readOnly(() => bossBase(modifyBase(extend(core.bossCtx(), info), base), base)));
+    ({ chips, mult } = core.readOnly(() => bossBase(modifyBase(bossScoringCtx(core, layer), base), base)));
   }
   return { hand, chips, mult, level, hidden: false };
 }
@@ -187,6 +187,8 @@ export function scoreHand(core: GameCore, playedIds: readonly number[]): ScoreRe
   if (!hand) throw new Error('scoreHand: no cards');
   const acc: Acc = { chips: 0, mult: 0, steps: [], money: 0, destroy: new Set() };
   const info = makeInfo(core, hand, played, acc);
+  // Sdílená vrstva kontextů: každý hook této ruky ji zdědí (gettery chips/mult zůstávají živé) — bez kopírování.
+  const layer = core.ctxLayer(info);
   const result = (blockedReason: string | null, score: number): ScoreResult => ({
     hand,
     playedIds: [...playedIds],
@@ -202,7 +204,7 @@ export function scoreHand(core: GameCore, playedIds: readonly number[]): ScoreRe
   // Šéf může ruku zakázat (ruka se spotřebuje, neskóruje).
   const boss = core.activeBoss();
   if (boss?.hooks.validateHand) {
-    const reason = boss.hooks.validateHand(extend(core.bossCtx(), info));
+    const reason = boss.hooks.validateHand(bossScoringCtx(core, layer));
     if (reason) {
       acc.steps.push({ source: 'boss', defId: boss.id, message: reason, chipsAfter: 0, multAfter: 0 });
       return result(reason, 0);
@@ -211,9 +213,14 @@ export function scoreHand(core: GameCore, playedIds: readonly number[]): ScoreRe
 
   // 0. beforeScoring — výsledky se aplikují až po základu.
   const before: { results: EffectResult[]; uid: number; defId: string }[] = [];
-  core.eachJoker('beforeScoring', withInfo(info, {}), (results, owner) => {
-    if (results.length) before.push({ results, uid: owner.uid, defId: owner.defId });
-  });
+  core.eachJoker(
+    'beforeScoring',
+    {},
+    (results, owner) => {
+      if (results.length) before.push({ results, uid: owner.uid, defId: owner.defId });
+    },
+    layer,
+  );
 
   // 1. základ kombinace
   const def = reg.handTypes[hand.type];
@@ -222,7 +229,7 @@ export function scoreHand(core: GameCore, playedIds: readonly number[]): ScoreRe
   // Šéf se ověřuje znovu — žolík ho mohl v beforeScoring vypnout.
   const baseBoss = core.activeBoss();
   if (baseBoss?.hooks.modifyBase)
-    base = bossBase(baseBoss.hooks.modifyBase(extend(core.bossCtx(), info), base), base);
+    base = bossBase(baseBoss.hooks.modifyBase(bossScoringCtx(core, layer), base), base);
   acc.chips = base.chips;
   acc.mult = base.mult;
   acc.steps.push({
@@ -254,28 +261,33 @@ export function scoreHand(core: GameCore, playedIds: readonly number[]): ScoreRe
     const enhDef = card.enhancement ? enh[card.enhancement] : undefined;
     const sealDef = card.seal ? reg.seals[card.seal] : undefined;
     const edDef = card.edition ? reg.editions[card.edition] : undefined;
-    const cardCtx = (): CardCtx => extend(core.baseCtx('card'), info, { card });
     const activations = activationCount(
-      (sealDef?.retriggers ?? 0) +
-        core.sumJokers('retriggerScored', withInfo(info, { card, isRetrigger: false })),
+      (sealDef?.retriggers ?? 0) + core.sumJokers('retriggerScored', { card, isRetrigger: false }, layer),
     );
     for (let a = 0; a < activations; a++) {
       const meta: StepMeta = { source: 'card', cardId: card.id };
       if (a > 0) acc.steps.push({ ...meta, message: MSG.again, chipsAfter: acc.chips, multAfter: acc.mult });
       const chips = cardChips(card, enh, core.mods());
       if (chips) applyResult(core, acc, { chips }, meta, card.id);
-      if (enhDef?.onScored) applyAll(core, acc, toResults(enhDef.onScored(cardCtx())), meta, card.id);
+      if (enhDef?.onScored)
+        applyAll(core, acc, toResults(enhDef.onScored(core.cardCtx(card, layer))), meta, card.id);
       if (edDef?.effect) applyResult(core, acc, edDef.effect(), meta, card.id);
-      if (sealDef?.onScored) applyAll(core, acc, toResults(sealDef.onScored(cardCtx())), meta, card.id);
-      core.eachJoker('onCardScored', withInfo(info, { card, isRetrigger: a > 0 }), (results, owner) => {
-        applyAll(
-          core,
-          acc,
-          results,
-          { source: 'joker', jokerUid: owner.uid, defId: owner.defId, cardId: card.id },
-          card.id,
-        );
-      });
+      if (sealDef?.onScored)
+        applyAll(core, acc, toResults(sealDef.onScored(core.cardCtx(card, layer))), meta, card.id);
+      core.eachJoker(
+        'onCardScored',
+        { card, isRetrigger: a > 0 },
+        (results, owner) => {
+          applyAll(
+            core,
+            acc,
+            results,
+            { source: 'joker', jokerUid: owner.uid, defId: owner.defId, cardId: card.id },
+            card.id,
+          );
+        },
+        layer,
+      );
     }
   }
 
@@ -284,10 +296,8 @@ export function scoreHand(core: GameCore, playedIds: readonly number[]): ScoreRe
     if (card.debuffed) continue;
     const enhDef = card.enhancement ? enh[card.enhancement] : undefined;
     const sealDef = card.seal ? reg.seals[card.seal] : undefined;
-    const cardCtx = (): CardCtx => extend(core.baseCtx('card'), info, { card });
     const activations = activationCount(
-      (sealDef?.retriggers ?? 0) +
-        core.sumJokers('retriggerHeld', withInfo(info, { card, isRetrigger: false })),
+      (sealDef?.retriggers ?? 0) + core.sumJokers('retriggerHeld', { card, isRetrigger: false }, layer),
     );
     for (let a = 0; a < activations; a++) {
       const meta: StepMeta = { source: 'held', cardId: card.id };
@@ -295,16 +305,22 @@ export function scoreHand(core: GameCore, playedIds: readonly number[]): ScoreRe
       if (a > 0) acc.steps.push({ ...meta, message: MSG.again, chipsAfter: acc.chips, multAfter: acc.mult });
       let any = false;
       // Bez `cardId`: `destroyCard` platí jen pro efekty skórující karty (EffectResult), ne pro kartu v ruce.
-      if (enhDef?.onHeld) any = applyAll(core, acc, toResults(enhDef.onHeld(cardCtx())), meta) || any;
-      core.eachJoker('onCardHeld', withInfo(info, { card, isRetrigger: a > 0 }), (results, owner) => {
-        const jokerMeta: StepMeta = {
-          source: 'joker',
-          jokerUid: owner.uid,
-          defId: owner.defId,
-          cardId: card.id,
-        };
-        if (applyAll(core, acc, results, jokerMeta)) any = true;
-      });
+      if (enhDef?.onHeld)
+        any = applyAll(core, acc, toResults(enhDef.onHeld(core.cardCtx(card, layer))), meta) || any;
+      core.eachJoker(
+        'onCardHeld',
+        { card, isRetrigger: a > 0 },
+        (results, owner) => {
+          const jokerMeta: StepMeta = {
+            source: 'joker',
+            jokerUid: owner.uid,
+            defId: owner.defId,
+            cardId: card.id,
+          };
+          if (applyAll(core, acc, results, jokerMeta)) any = true;
+        },
+        layer,
+      );
       if (!any) {
         // Karta v ruce nic nedělá → žádné opakování.
         acc.steps.length = startLen;
@@ -325,7 +341,13 @@ export function scoreHand(core: GameCore, playedIds: readonly number[]): ScoreRe
     if (ed?.effect && ed.jokerTiming !== 'after') applyResult(core, acc, ed.effect(), meta);
     const resolved = core.resolveCopy(owner, index);
     if (resolved?.def.hooks.onHandPlayed) {
-      const ctx = extend(core.jokerCtx(resolved.target, index, resolved.isCopy, resolved.def), info);
+      const ctx = core.jokerCtx(
+        resolved.target,
+        index,
+        resolved.isCopy,
+        resolved.def,
+        layer,
+      ) as JokerScoringCtx;
       const results = toResults(resolved.def.hooks.onHandPlayed(ctx));
       // Hook mohl změnit stav, na kterém závisí `passive` (další žolíci čtou aktuální modifikátory).
       core.invalidate();
@@ -339,7 +361,7 @@ export function scoreHand(core: GameCore, playedIds: readonly number[]): ScoreRe
   let score = Math.floor(safe(acc.chips * acc.mult));
   const bossNow = core.activeBoss();
   if (bossNow?.hooks.adjustHandScore) {
-    const raw = bossNow.hooks.adjustHandScore(extend(core.bossCtx(), info), score);
+    const raw = bossNow.hooks.adjustHandScore(bossScoringCtx(core, layer), score);
     const adjusted = Number.isNaN(raw) ? 0 : Math.max(0, Math.floor(safe(raw)));
     if (adjusted !== score) {
       acc.steps.push({
@@ -353,7 +375,7 @@ export function scoreHand(core: GameCore, playedIds: readonly number[]): ScoreRe
     }
   }
   const res = result(null, score);
-  core.eachJoker('afterHandScored', withInfo(info, { score: res.score }));
+  core.eachJoker('afterHandScored', { score: res.score }, undefined, layer);
   return res;
 }
 
@@ -374,11 +396,12 @@ export function afterScoredCards(core: GameCore, result: ScoreResult, flags: Han
     destroy: new Set(result.destroyedCardIds),
   };
   const info = makeInfo(core, result.hand, played, acc, flags);
+  const layer = core.ctxLayer(info);
   for (const card of info.scoring) {
     if (card.debuffed) continue;
     const def = card.enhancement ? enh[card.enhancement] : undefined;
     if (!def?.afterScored) continue;
-    const results = toResults(def.afterScored(extend(core.baseCtx('card'), info, { card })));
+    const results = toResults(def.afterScored(core.cardCtx(card, layer)));
     for (const r of results) {
       const limited: EffectResult = { message: r.message, money: r.money, destroyCard: r.destroyCard };
       applyResult(core, acc, limited, { source: 'card', cardId: card.id }, card.id);
@@ -388,7 +411,7 @@ export function afterScoredCards(core: GameCore, result: ScoreResult, flags: Han
   result.moneyEarned = acc.money;
 }
 
-/** Kontext = ScoringInfo (s živými gettery chips/mult) + další pole. */
-function withInfo(info: ScoringInfo, more: Record<string, unknown>): Record<string, unknown> {
-  return extend({} as Record<string, unknown>, info, more);
+/** Kontext šéfa ve skórování: `BossCtx` + ScoringInfo ruky (zděděná z vrstvy). */
+function bossScoringCtx(core: GameCore, layer: CtxLayer & ScoringInfo): BossCtx & ScoringInfo {
+  return core.bossCtx(layer) as BossCtx & ScoringInfo;
 }

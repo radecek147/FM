@@ -507,3 +507,178 @@ hook cíle s `ctx.self` = kopie cíle — hook, který „zničí sám sebe“ (
 
 **Proč:** ROADMAP fáze 1 („po dosažení 80 % pokrytí odstranit `continue-on-error`“), aby pokrytí enginu
 nemohlo nepozorovaně klesnout.
+
+## 2026-10-01 — Fáze 2: run loop a ukládání — opravy z testů, výkon kontextů hooků
+
+**Co:** (testy `tests/unit/game.test.ts`, `save.test.ts`, `run-determinism.test.ts`, `hook-context.test.ts`; každý
+bod před opravou selhal)
+
+- **Zahození: karty opustí ruku před hooky** (otevřený bod z ROADMAP). Šéf `onDiscard` dřív viděl zahazované karty
+  ještě v `round.hand` — nucené zahození (Tchyně na návštěvě, `api.discardFromHand`) mohlo vzít právě zahazovanou
+  kartu a její id pak bylo na odhazovací hromádce dvakrát. Nově se karty přesunou na hromádku, zahození se započte
+  (`discardsLeft`, statistiky) a pošle se `cardsDiscarded` ještě **před** hooky žolíků, pečetí a šéfa; obsah vidí
+  v ruce jen zbylé karty a UI dostane hráčovo zahození před reakcemi (peníze žolíka, nucené zahození).
+- **Malá a Velká mají různé štítky** (DESIGN 7). Dřív se losovaly nezávisle a mohly vyjít stejně; stejný štítek
+  dostanou jen tehdy, když je v poolu jediný.
+- **Úrok ze zůstatku v okamžiku výhry kola** (DESIGN 2.4.2) — zůstatek se zapamatuje před hooky `onRoundEnd`
+  (štítky, žolíci); peníze, které tyto hooky připíšou, se do úroku dřív započítaly.
+- **Rozpis odměn v celých korunách a v pořadí DESIGN:** nevyužité ruce/zahození i bonusy z obsahu se zaokrouhlují
+  dolů (dřív jen odměna za útratu a úrok), bonusy jdou v pořadí zlaté karty → žolíci (`roundEndMoney`) → balíček →
+  zapůjčení žolíci (dřív balíček před žolíky).
+- **`shopRerolled.cost` = zaplacená cena** (0 u bezplatného přehození); dřív nesla cenu _dalšího_ přehození (ta je
+  v `shop.rerollCost`), takže výpis „přehozeno za…“ i útrata za přehození v simulaci byly špatně.
+- **Validace akcí:** neznámý typ akce vracel `ok: true` bez změny, vstup, který není pole (`cardIds`, `uids`,
+  `targetIds`), shodil `dispatch` výjimkou — obojí je teď odmítnutá akce. `reorderHand`/`sortHand` jdou jen v kole
+  a v obálce (dřív i po výhře kola), `sortHand` s neznámým řazením je chyba, `reorderJokers` nejde po konci runu.
+- **Spotřebky:** `canUse` a `use` dostanou skutečnou instanci (dřív `canUse` vždy `edition: null`); `canUse` pracuje
+  na kopii, takže ji nezmění.
+- **Pool šéfů se obnovuje** (DESIGN 8.1 „když dojdou, pool se obnoví“): když jsou všichni šéfové poolu vidění,
+  vyškrtnou se z `bossesSeen` a losuje se znovu bez opakování. Dřív se po vyčerpání losovalo z celého poolu pořád
+  (šéf se mohl opakovat hned po sobě).
+- **Ukládání:** verze v obálce musí být kladné celé číslo (dřív prošlo `NaN` a migrace se tiše přeskočily), po
+  migracích se kontroluje tvar stavu (fáze, všech 9 RNG streamů po 4 číslech, pole, čísla) → `invalidFormat` místo
+  pádu uprostřed hry; migrace, která nevrátí objekt, je `migrationFailed`; `deserializeRun` nemění vstupní objekt,
+  doplní `version` na aktuální a umí vlastní tabulku migrací (`{ migrations, currentVersion }`) pro testy.
+  `SaveError.name = 'SaveError'`.
+- **Výkon skórování** (otevřený bod z ROADMAP): `extend()` kopíroval `ScoringInfo` (deskriptory, gettery) do kontextu
+  každého hooku dvakrát — ~45 % času. Nově je `ScoringInfo` ruky **sdílená vrstva** (`GameCore.ctxLayer`, prototyp),
+  kterou kontexty dědí; `state`/`mods`/`api` jsou gettery na společném prototypu, `extra` hooků se přiřadí hodnotami
+  (`Object.assign`), `ctx.rng` vzniká líně (obal mutuje pole stavu na místě, takže posloupnost je stejná; v `readOnly`
+  nad kopií) a `resolveCopy` u běžného žolíka nealokuje. Ruka s 8 žolíky: **0,72 → 0,14 ms** (5×), výsledky
+  i všechny testy beze změny.
+
+**Zvážené a ponechané:** `extend` zůstává pro jednorázové kontexty (gettery zachová). Kontext hooku už nemá všechna
+pole jako vlastní — obsah ho nesmí kopírovat spreadem (`{ ...ctx }`); přístup přes `ctx.x` i destrukturování
+(`const { chance, hand } = ctx`) funguje. Události z `Game.newRun` (`runStarted`) se dál nedoručují — UI se k busu
+přihlásí až po založení. Chyba posluchače busu propadne z `dispatch`, ale stav nevrací (akce proběhla).
+
+**Pokrytí po fázi 2 (řádky / větve):** `src/engine/run` 100 % / 94 % (`game.ts` 100 % / 95 %),
+`src/engine/save` 100 % / 100 %.
+
+**Proč:** DESIGN 2.4.2, 7, 8.1; ARCHITECTURE 2.2 (neplatná akce stav nemění), ROADMAP (otevřené body fáze 2).
+
+## 2026-10-01 — Fáze 2: simulace a boti, textový režim, obtížnosti „Síla piva“, první balíčky
+
+**Co:**
+
+- **`src/engine/sim/`** (čistý TS, bez DOM): rozhraní `Bot { name; decide(game): Action }`, runner `simulateRun` /
+  `simulateMany` (run `i` má seed `SIM-<prefix>-<i>`, pojistka `DEFAULT_MAX_ACTIONS` = 5 000, po 3 neplatných akcích
+  za sebou runner provede bezpečnou akci fáze a počítá je) a `summarizeRuns` (metriky DESIGN 12.3: výhry, dosažená
+  patra, prohry podle patra, příčiny, skóre, peníze při vstupu do Večerky, délka runu, síla žolíků „s ním / bez něj“).
+  Boti podle DESIGN 12.2: `max`, `flush`, `pairs`, `econ`, `random`, `nojoker` (aliasy `maxHand`, `flushChaser`,
+  `pairsJokers`, `economy`). Náhoda bota jde jen z vlastního RNG a bot nemá stav mimo `RunState` (viz revize
+  simulace níže) → stejné parametry = stejný výsledek.
+- **Hodnocení tahu bez 218 podmnožin:** `analyzeCards` staví nejlepší sadu karet pro každou kombinaci přímo (skupiny
+  hodnot, barvy, okna postupek; se `straightGaps`/`straightWrap` přes `straightKind` enginu). Kandidát se ověří náhledem
+  enginu (`Game.preview`: detekce, úroveň, `modifyBase` šéfa) a k základu se přičtou příspěvky skórujících karet
+  z `params` vylepšení, z `EditionDef.effect()` a z `SealDef.retriggers` (ocelové karty v ruce ×). Se žolíky nebo se
+  šéfem s `validateHand`/`adjustHandScore` se nejlepší kandidáti přepočítají přesně — tahem na kopii hry
+  s **přeseedovaným RNG** (bot nesmí znát skutečné budoucí hody, dostane jen vzorek). Testy: nejsilnější kombinace
+  z analýzy = detekce enginu na 1 500 náhodných rukou (i s modifikátory, divokými a kamennými kartami); odhad tahu
+  bez žolíků a náhody = skóre enginu.
+- **Zahazování:** když nejlepší ruka nestačí na zbytek cíle kola, bot porovná „honičky“ podle stylu (držet jádro
+  kombinace, barvu, postupku, páry) Monte Carlo odhadem po dobrání. Vzorky jsou ze **složení** dobíracího balíčku
+  (veřejné — UI ho ukazuje), pořadí bot nezná (míchá vlastním RNG); všechny možnosti dostanou **stejné vzorky**
+  (common random numbers) — s nezávislými 10 vzorky šum vedl k rozbití Dvou dvojic kvůli postupce na jednu kartu.
+  Užitek je oříznutý na zbývající cíl (u poslední ruky rozhoduje šance na výhru, ne průměr). Tah se doplní kartami
+  „na vyhození“, aby se protočil balíček.
+- **Večerka a obálky:** kupóny; žolíci podle `JokerDef.tags`, vzácnosti, edice, nálepek a stylu (`params` s kombinací
+  bota = synergie), při plných slotech prodej nejslabšího; pranostiky na vlastní kombinace (koupit a použít);
+  obálky; přehození jen s penězi ≥ 2× cena nad rezervou na úrok (DESIGN 12.2); `econ` drží rezervu na plný úrok;
+  žolíci se řadí +čipy/+mult vlevo, ×mult vpravo. Nejisté akce (spotřebka s `canUse`) bot ověří na kopii hry —
+  v testech mají všichni boti 0 neplatných akcí (obsah hry i testovací obsah se žolíky, šéfy, obálkami).
+- **`npm run simulate`** (`scripts/simulate.ts`): `--runs --stake --deck --bot|--strategy --seed-prefix --json [soubor]
+--max-actions`; výstup česky přes `src/i18n/cs/cli.ts` (`t()`, `plural`, formátování čísel), `--json` bez doby běhu
+  (deterministický). **`--play`** = textový hratelný režim (`node:readline`, příkazy `h`/`z`/`n`/`s`/`b`/`v`/`p`/`k`/
+  `ku`/`o`/`ul`/`r`/`d`/`u`/`pz`/`ps`/`m`/`l`/`?`/`q`; převod řádku na akci je v `sim/commands.ts`, texty ve skriptu),
+  `--script "…;…"` neinteraktivně. Test dohraje celý run textovými příkazy až do pitvy.
+- **Obsah:** 8 obtížností přesně podle DESIGN 10 (`src/content/stakes.ts`; čísla pro popisek nesou v `params` —
+  pole `StakeDef.params` přidala revize pravidel níže, dřív pomocný typ `StakeContent`). Balíčky Hospodský, Štamgastův,
+  Turistický, Mariášový, Obrázkový, Notářský, Zbohatlík a Dlužník (stačí modifikátory, startovní peníze a složení
+  karet). Úřednický, Babiččin, Vetešnický a Kalendářový potřebují kupóny, spotřebky a žolíky → fáze 7.
+
+**Kalibrace odložená:** obsah zatím nemá žolíky, takže žádný bot nevyhrává. 500 runů na Desítce: `nojoker` dosáhne
+patra 2 v 95 % a patra 3 v 5 % runů (medián prohry v patře 2; DESIGN 12.1 chce 3–4), nejlepší ruka v průměru ~560;
+`random` prohraje v patře 1 ve 100 % runů. Křivka cílů a čísla kombinací se ladí až se žolíky (fáze 4+, cílová pásma
+% výher ve fázi 10) — ladění bez žolíků by křivku posunulo špatným směrem. 500 runů jednoho bota trvá ~6 s.
+
+**Proč:** CLAUDE.md kap. 3 a 8, DESIGN 10 a 12 (boti, výstup simulace, determinismus), ROADMAP fáze 2.
+
+## 2026-10-01 — Revize pravidel runu (fáze 2): odměna na výběru útrat, Doppelbock, textový režim
+
+**Co:** (testy `tests/unit/review2-rules.test.ts`; každý před opravou selhal, `params` u obtížností typecheck)
+
+- **Odměna za útratu má jeden zdroj:** nový dotaz `Game.blindReward(kind, bossId)` (Malá 3 / Velká 4 / šéf
+  `BossDef.reward`, Malá 0 při `noSmallBlindReward`, × `blindRewardMult`, dolů na koruny) používá rozpis odměn
+  i výběr útrat. Textový režim dřív ukazoval jen základ — na Zbohatlíkovi „odměna 3 Kč“, ale vyplatilo se 6 Kč.
+- **Doppelbock: popisek ceny zapůjčeného žolíka** říkal 2 Kč, ve Večerce ale stojí 3 Kč — `RENTAL_BUY_PRICE`
+  nahrazuje jen základ a příplatek Jedenáctky (platí na Doppelbocku vždy) se přičte jako ke všemu (rozhodnutí
+  „Ceny ve Večerce“ výše). `params.price` se teď počítá vzorcem obchodu (`shopPrice`), ne z konstanty.
+- **`StakeDef.params`** (doporučení z minulého záznamu): obtížnosti nesou čísla pro popisek stejně jako balíčky;
+  pomocný typ `StakeContent` zmizel, registr je předá UI bez přetypování.
+- **Textový režim:** prázdná Večerka („Večerka zavřená – inventura“) i tehdy, když je všechno koupené (DESIGN 2.5.1
+  „vše koupeno“; dřív jen bez nabídky); pitva má hlášku podle příčiny (šéf `bosses.<id>.death`, jinak Malá/Velká
+  z DESIGN přílohy C, `cli.play.gameOver.death.*`); výhra ukáže statistiku runu; v nekonečném režimu záhlaví
+  „Patro 9 (nekonečný režim)“ místo „Patro 9/8“; nasbírané štítky jsou vidět (`Štítky: …`) na výběru útrat, v kole
+  i ve Večerce.
+
+**Zamítnuté / ponechané:** Ležák + Zbohatlík dá 1 Kč za nevyužitou ruku — implementace je podle DESIGN 10
+(`moneyPerUnusedHand −1`) a popisek Ležáku to říká („o 1 Kč méně, takže běžně nic“). Podíly nálepek na Doppelbocku
+(20 / 12 / 17 %) se liší od popisku „20 % / 15 %“ — popisek je text DESIGN 10, skutečné podíly DESIGN uvádí pod
+tabulkou. **Otevřené pro fázi 6:** DESIGN 2.4.2 krok 5 počítá v rozpisu odměn i s penězi ze štítků, `TagHooks`
+ale nemá obdobu `roundEndMoney` — štítek (Termínovaný vklad) by dnes peníze připsal v `onRoundEnd` mimo rozpis.
+Řešit spolu s obsahem štítků (pořadí vůči spotřebování štítku v `onRoundEnd`).
+
+**Proč:** CLAUDE.md kap. 3 (Run, Večerka, pitva), DESIGN 1.2, 2.4.2, 2.5.1, 4.6, 7, 10.
+
+## 2026-10-01 — Revize simulace, ukládání a determinismu (fáze 2): boti bez stavu mimo `RunState`
+
+**Co:** (testy `tests/unit/review2-sim-save.test.ts`; před opravou selhaly)
+
+- **Boti si drželi stav mimo `RunState`** — paměť svázanou s instancí `Game` (RNG `cyrb128('<seed>:bot:<jméno>')`
+  posouvaný každým rozhodnutím, poslední odhady skóre pro přeskočení útraty, počítadla kroků a přehození ve Večerce).
+  Dva runy prokládané jednou instancí bota (paměť se přepínala) i uložení a načtení uprostřed simulace (nová `Game`
+  = nová paměť) vedly k jinému runu: z 6 seedů se rozešlo 2–6 podle bota. **Oprava:** rozhodnutí je čistá funkce
+  stavu. RNG se pro každé rozhodnutí seeduje `cyrb128('<seed>:bot:<jméno>:<otisk stavu>')` (`decisionRng`; otisk =
+  fáze, patro, peníze, `nextUid`, statistiky, kolo, Večerka, obálka, žolíci), přehození se počítají
+  `ShopState.rerollsThisShop` (strop 3, náhodný bot 10), pojistky kroků zmizely (nákupy jsou omezené nabídkou, obálky
+  `picksLeft`, zacyklení chytí `DEFAULT_MAX_ACTIONS` runneru). Přeskočení útraty místo paměti odhadne **sílu buildu**:
+  4 ruce rozdané na kopii hry s přeseedovaným RNG, nejlepší tah vč. žolíků; přeskočí se při ≥ 4 zahraných rukách
+  a průměru × ruce ≥ 3× cíl Velké útraty (odhad jen tehdy, když na to stačí aspoň nejlepší ruka runu). Testy: nová
+  instance i opakované volání dají v každém kroku runu stejnou akci (všichni boti, obsah hry i testovací obsah),
+  uložení a načtení každých 5 akcí / po každé akci nezmění akce ani konečný stav, prokládané runy = runy zvlášť,
+  akce bota přehrané bez bota dají stejný stav (dotazy bota hru nemění).
+- **Výkon:** přesné přepočty tahů serializují stav jednou na rozhodnutí (`cloneGame(…, snapshot)`). 500 runů
+  jednoho bota na obsahu hry ~6 s (beze změny); na testovacím obsahu se žolíky ~0,7 ms na akci.
+- **Náhodné akce (fuzz, regresní test):** polovina akcí od bota, polovina náhodných (cizí id, neexistující sloty,
+  duplicity): neplatná akce nemění stav a na bus nedoručí nic, platná doručí přesně `res.events`, hra načtená
+  z uložení před akcí dá stejný výsledek i stav. Na 25 000 akcích chyba nenalezena.
+- **`npm run simulate`:** `--json -` (stdout) dřív skončilo chybou „Unexpected argument '-'“ a `--json=soubor`
+  „Unknown option“; obojí funguje. JSON výstup už neobsahuje cílovou cestu (`options.json`) — stejné parametry dají
+  stejné bajty, ať jde výstup do souboru, nebo na stdout.
+
+**Zkontrolováno bez nálezu:** stav runu je v každém kroku JSON-bezpečný (žádné `undefined`, `NaN`, nekonečno, `-0`
+ani třídy — procházka stavu v runech všech botů), uložení a načtení v každé fázi, migrace (`SaveError` kódy),
+determinismus CLI mezi procesy (stejný `--json`). `max` je výrazně lepší než hladový bot bez zahazování (průměrné
+patro 1,97 proti 1,35 na 200 runech) — rozhodování v kole je rozumné; že na obsahu bez žolíků a pranostik nikdo
+nevyhrává a `nojoker` končí v patře 2 (DESIGN 12.1 chce 3–4), je očekávané: kalibrace až s obsahem (záznam výše).
+
+**Proč:** CLAUDE.md kap. 2 a 8 (determinismus, stav jen v `RunState`), DESIGN 12.2 (simulace deterministická).
+
+## 2026-10-01 — Uzavření fáze 2: kalibrace křivky přesunutá, ověření
+
+**Co:**
+
+- Fáze 2 je uzavřená s 13 ze 14 podúkolů. Podúkol „První kalibrace křivky cílů simulací“ zůstává v ROADMAP
+  neodškrtnutý s poznámkou a přesouvá se do fáze 4–5: bot `nojoker` sice žolíky nekupuje, ale ladění podle DESIGN
+  12.4 (krok 1) počítá s pranostikami a vylepšeními ve Večerce, které obsah zatím nemá. Křivka cílů a čísla
+  kombinací v DESIGN 2.2–2.3 se do té doby nemění. Výchozí stav (100 runů, Desítka, obsah bez žolíků, šéfů
+  a spotřebek): všichni boti 0 % výher, průměrné patro `max` 1,9 a `nojoker` 2, `random` prohraje v patře 1 ve
+  100 % runů, 0 neplatných akcí.
+- Závěrečné ověření: `typecheck`, `lint`, `npm test` (26 souborů, 916 testů), `test:coverage`, `build`,
+  `test:e2e`, `npm run simulate -- --runs 100 --stake 1` a `--play --script` prošly. Pokrytí `src/engine`:
+  98 % řádků, 96 % příkazů, 90 % větví, 98 % funkcí (nejslabší `sim/bots.ts`: 90 % řádků, 73 % větví).
+- `docs/ARCHITECTURE.md` kap. 2.4 a 7 popisují soubory `engine/sim` a volby `npm run simulate` včetně `--play`
+  a `--script`.
+
+**Proč:** ROADMAP (definice hotovo, odškrtávat jen hotové), DESIGN 12.4 (pořadí ladění), CLAUDE.md kap. 8.

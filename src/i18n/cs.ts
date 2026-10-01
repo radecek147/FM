@@ -22,9 +22,12 @@
  * Konvence klíčů pro obsah viz komentář v `src/engine/content-types.ts`
  * (`jokers.<id>.name|desc|flavor`, `bosses.<id>.name|rule|intro|defeat|death` …).
  */
+import { cli } from './cs/cli';
+import { decks } from './cs/decks';
 import { hands } from './cs/hands';
 import { boss, joker, score, tag } from './cs/messages';
 import { editions, enhancements, seals } from './cs/modifiers';
+import { stakes } from './cs/stakes';
 import { interpolate, typo, type InterpolationParams } from './format';
 
 /** Strom textů: listy jsou řetězce nebo seznamy řetězců. */
@@ -152,6 +155,10 @@ export const cs = {
   boss,
   joker,
   tag,
+  decks,
+  stakes,
+  /** Texty skriptu `npm run simulate` (výstup simulace a textový režim `--play`). */
+  cli,
   /** Pangram s celou českou diakritikou — kontrola fontu (e2e test). */
   typoTest: 'Příliš žluťoučký kůň úpěl ďábelské ódy',
 } satisfies TextTree;

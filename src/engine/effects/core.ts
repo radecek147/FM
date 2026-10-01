@@ -7,6 +7,7 @@ import type {
   BaseCtx,
   BossCtx,
   BossDef,
+  CardCtx,
   ContentRegistry,
   EngineApi,
   HookResult,
@@ -43,6 +44,8 @@ const NO_ENHANCEMENTS: Readonly<Record<string, never>> = Object.freeze({});
 
 /**
  * Jako Object.assign, ale kopíruje deskriptory (gettery zůstávají živé — např. průběžné čipy/mult).
+ * Pomalé (deskriptory se alokují) — pro data sdílená mnoha kontexty (ScoringInfo ruky) použij vrstvu
+ * `GameCore.ctxLayer`, která se vytvoří jednou a kontexty ji dědí přes prototyp.
  */
 export function extend<T extends object, A extends object, B extends object = object>(
   target: T,
@@ -52,6 +55,15 @@ export function extend<T extends object, A extends object, B extends object = ob
   Object.defineProperties(target, Object.getOwnPropertyDescriptors(a));
   if (b) Object.defineProperties(target, Object.getOwnPropertyDescriptors(b));
   return target as T & A & B;
+}
+
+/**
+ * Vrstva kontextu (prototyp): vlastnosti sdílené mnoha kontexty hooků — typicky `ScoringInfo` jedné zahrané ruky,
+ * které dostane každý žolík u každé aktivace karty. Kontext ji zdědí místo kopírování (`extend` zabíral ~45 % času
+ * skórování). Vytváří ji jen `GameCore.ctxLayer`.
+ */
+export interface CtxLayer {
+  readonly __ctxLayer: true;
 }
 
 /** Normalizuje výsledek hooku na pole (prázdné položky pole — `null`, čísla… — z JS obsahu přeskočí). */
@@ -67,6 +79,22 @@ export function toResults(r: HookResult): EffectResult[] {
  */
 export const MAX_NESTED_HOOK_DEPTH = 3;
 
+/**
+ * Vnitřní pole kontextu (symboly — nejsou vidět v `Object.keys` ani `for…in`): stream, příznak dotazu bez vedlejších
+ * účinků (`readOnly` → RNG nad kopií streamu) a líně vytvořené RNG.
+ */
+const CTX_STREAM = Symbol('ctxStream');
+const CTX_DETACHED = Symbol('ctxDetached');
+const CTX_RNG = Symbol('ctxRng');
+
+interface CtxInternals {
+  [CTX_STREAM]: RngStreamName;
+  [CTX_DETACHED]: boolean;
+  [CTX_RNG]: Rng | null;
+  rng: Rng;
+  chance: BaseCtx['chance'];
+}
+
 export class GameCore {
   readonly bus = new EventBus<GameEvent>();
   readonly api: EngineApi;
@@ -77,12 +105,38 @@ export class GameCore {
   private detachedRng = 0;
   /** Aktuální hloubka vnoření jednotlivých hooků žolíků (`eachJoker`). */
   private hookDepth: Partial<Record<JokerHookName, number>> = {};
+  /**
+   * Společný prototyp všech kontextů hooků: živé `state` a `mods` (gettery) a `api`. Kontext je pak jen
+   * `Object.create` + pár vlastních polí (`rng`, `chance`, `self`…), bez kopírování getterů pro každé volání.
+   */
+  private readonly ctxRoot: object;
 
   constructor(
     public state: RunState,
     public readonly registry: ContentRegistry,
   ) {
     this.api = createApi(this);
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const core = this;
+    this.ctxRoot = Object.create(Object.prototype, {
+      state: { get: () => core.state, enumerable: true },
+      mods: { get: () => core.mods(), enumerable: true },
+      // Zapisovatelné: přiřazení `ctx.api = …` (testy) vytvoří vlastní pole kontextu, prototyp se nemění.
+      api: { value: this.api, enumerable: true, writable: true },
+      // RNG streamu vzniká až při prvním použití (většina hooků náhodu nepotřebuje). Obal mutuje pole stavu na místě,
+      // takže pozdější vytvoření dá stejnou posloupnost jako dřívější; v `readOnly` pracuje na kopii streamu.
+      rng: {
+        get(this: CtxInternals): Rng {
+          if (this[CTX_RNG]) return this[CTX_RNG];
+          const st = core.state.rng[this[CTX_STREAM]];
+          return (this[CTX_RNG] = rngFromState(this[CTX_DETACHED] ? [st[0], st[1], st[2], st[3]] : st));
+        },
+        set(this: CtxInternals, value: Rng) {
+          Object.defineProperty(this, 'rng', { value, writable: true, enumerable: true, configurable: true });
+        },
+        enumerable: true,
+      },
+    }) as object;
   }
 
   // ── události ──
@@ -211,21 +265,26 @@ export class GameCore {
     return rng.next() < p;
   }
 
-  baseCtx(stream: RngStreamName): BaseCtx {
-    const rng = this.rng(stream);
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const core = this;
-    return {
-      get state() {
-        return core.state;
-      },
-      api: this.api,
-      rng,
-      get mods() {
-        return core.mods();
-      },
-      chance: (n: number, d: number) => core.chance(n, d, rng),
-    };
+  /**
+   * Vrstva kontextu ze sdílených vlastností (gettery zůstávají živé). Vytvoří se jednou (např. `ScoringInfo` ruky)
+   * a kontexty vytvořené s ní (`baseCtx`, `jokerCtx`, `bossCtx`, `eachJoker`) ji dědí přes prototyp.
+   */
+  ctxLayer<T extends object>(props: T): CtxLayer & T {
+    return Object.create(this.ctxRoot, Object.getOwnPropertyDescriptors(props)) as CtxLayer & T;
+  }
+
+  /**
+   * Základní kontext hooku: `state`, `mods` a `api` (z prototypu), vlastní `rng` streamu a `chance`.
+   * `layer` = sdílená vrstva (ScoringInfo), kterou kontext zdědí.
+   */
+  baseCtx(stream: RngStreamName, layer?: CtxLayer): BaseCtx {
+    const ctx = Object.create(layer ?? this.ctxRoot) as CtxInternals;
+    ctx[CTX_STREAM] = stream;
+    // Kontext vytvořený v dotazu bez vedlejších účinků (`readOnly`) dostane RNG nad kopií streamu.
+    ctx[CTX_DETACHED] = this.detachedRng > 0;
+    ctx[CTX_RNG] = null;
+    ctx.chance = (n: number, d: number) => this.chance(n, d, ctx.rng);
+    return ctx as unknown as BaseCtx;
   }
 
   /**
@@ -233,20 +292,35 @@ export class GameCore {
    * čte její stav, ale změny `self.state`/`sellBonus` se zahodí — počítadla cíle se tak nenavýší dvakrát, ani když
    * hook `isCopy` nekontroluje (ARCHITECTURE 2.7).
    */
-  jokerCtx(joker: JokerInstance, index: number, isCopy: boolean, def?: JokerDef): JokerCtx {
+  jokerCtx(joker: JokerInstance, index: number, isCopy: boolean, def?: JokerDef, layer?: CtxLayer): JokerCtx {
     const d = def ?? this.jokerDef(joker);
     const self = isCopy ? (JSON.parse(JSON.stringify(joker)) as JokerInstance) : joker;
-    return Object.assign(this.baseCtx('joker'), { self, def: d, index, isCopy });
+    const ctx = this.baseCtx('joker', layer) as BaseCtx & {
+      self: JokerInstance;
+      def: JokerDef;
+      index: number;
+      isCopy: boolean;
+    };
+    ctx.self = self;
+    ctx.def = d;
+    ctx.index = index;
+    ctx.isCopy = isCopy;
+    return ctx;
   }
 
   tagCtx(tag: TagInstance): TagCtx {
     return Object.assign(this.baseCtx('tag'), { self: tag });
   }
 
-  bossCtx(): BossCtx {
+  bossCtx(layer?: CtxLayer): BossCtx {
     const round = this.state.round;
     if (!round) throw new Error('bossCtx: no active round');
-    return Object.assign(this.baseCtx('boss'), { round });
+    return Object.assign(this.baseCtx('boss', layer), { round });
+  }
+
+  /** Kontext efektu hrací karty (vylepšení, pečeť) — `layer` nese ScoringInfo ruky. */
+  cardCtx(card: Card, layer: CtxLayer): CardCtx {
+    return Object.assign(this.baseCtx('card', layer), { card }) as unknown as CardCtx;
   }
 
   // ── obsah ──
@@ -308,6 +382,8 @@ export class GameCore {
     let current = joker;
     const first = this.registry.jokers[current.defId];
     if (!first) return null;
+    // Běžný žolík (bez kopírování) — bez alokací, volá se pro každého žolíka u každého hooku.
+    if (!first.hooks.copyTarget) return { target: joker, def: first, isCopy: false };
     let def: JokerDef = first;
     const visited = new Set<number>([current.uid]);
     let isCopy = false;
@@ -333,11 +409,14 @@ export class GameCore {
    *
    * Po každém hooku se zneplatní cache modifikátorů (hook mohl změnit stav, na kterém závisí `passive` — další
    * žolíci i engine pak čtou aktuální hodnoty). Vnoření téhož hooku je omezené `MAX_NESTED_HOOK_DEPTH`.
+   * `layer` = sdílená vrstva kontextu (ScoringInfo ruky), kterou kontexty zdědí místo kopírování; `extra` se do
+   * kontextu kopíruje hodnotami (prostá data).
    */
   eachJoker<K extends JokerHookName>(
     hook: K,
     extra: Record<string, unknown> | ((owner: JokerInstance) => Record<string, unknown>),
     onResult?: (results: EffectResult[], owner: JokerInstance, index: number, value: unknown) => void,
+    layer?: CtxLayer,
   ): void {
     const depth = this.hookDepth[hook] ?? 0;
     if (depth >= MAX_NESTED_HOOK_DEPTH) return;
@@ -353,7 +432,11 @@ export class GameCore {
         const fn = resolved.def.hooks[hook] as ((ctx: unknown) => unknown) | undefined;
         if (!fn) return;
         const more = typeof extra === 'function' ? extra(owner) : extra;
-        const ctx = extend(this.jokerCtx(resolved.target, index, resolved.isCopy, resolved.def), more);
+        // `extra` jsou prostá data (kopírují se hodnoty); živé gettery patří do `layer`.
+        const ctx = Object.assign(
+          this.jokerCtx(resolved.target, index, resolved.isCopy, resolved.def, layer),
+          more,
+        );
         const value = fn(ctx);
         this.invalidate();
         onResult?.(typeof value === 'number' ? [] : toResults(value as HookResult), owner, index, value);
@@ -365,11 +448,16 @@ export class GameCore {
   }
 
   /** Součet číselných návratových hodnot hooku (např. retriggerScored, roundEndMoney). */
-  sumJokers<K extends JokerHookName>(hook: K, extra: Record<string, unknown>): number {
+  sumJokers<K extends JokerHookName>(hook: K, extra: Record<string, unknown>, layer?: CtxLayer): number {
     let total = 0;
-    this.eachJoker(hook, extra, (_r, _o, _i, value) => {
-      if (typeof value === 'number' && Number.isFinite(value)) total += value;
-    });
+    this.eachJoker(
+      hook,
+      extra,
+      (_r, _o, _i, value) => {
+        if (typeof value === 'number' && Number.isFinite(value)) total += value;
+      },
+      layer,
+    );
     return total;
   }
 

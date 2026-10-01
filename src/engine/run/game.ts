@@ -25,6 +25,7 @@ import type {
   BlindKind,
   BlindSlot,
   Card,
+  ConsumableInstance,
   GameEvent,
   HandPreview,
   Modifiers,
@@ -148,7 +149,7 @@ export class Game {
     const c = this.core.state.consumables.find((x) => x.uid === uid);
     if (!c) return false;
     try {
-      return this.consumableUsable(c.defId, c.uid, targetIds);
+      return this.consumableUsable(c, targetIds);
     } catch {
       return false;
     }
@@ -170,6 +171,23 @@ export class Game {
       bossMult: boss?.targetMult,
       targetMult: this.core.mods().targetMult,
     });
+  }
+
+  /**
+   * Odměna za útratu v aktuálním patře (DESIGN 2.4.2, položka 1) — stejné číslo pro výběr útrat i rozpis odměn:
+   * Malá 3 / Velká 4 / šéf `BossDef.reward` (výchozí 5) Kč, Malá 0 při `StakeDef.noSmallBlindReward`,
+   * × `blindRewardMult`, dolů na celé koruny. Pravidlo šéfa ve Velké útratě (Imperial) odměnu nemění.
+   */
+  blindReward(kind: BlindKind, bossId: string | null = null): number {
+    const reg = this.core.registry;
+    const boss = kind === 'boss' && bossId ? reg.bosses[bossId] : undefined;
+    let reward = kind === 'boss' ? (boss?.reward ?? BLIND_REWARDS.boss) : BLIND_REWARDS[kind];
+    if (
+      kind === 'small' &&
+      Object.values(reg.stakes).some((st) => st.level <= this.core.state.stake && st.noSmallBlindReward)
+    )
+      reward = 0;
+    return Math.floor(rewardAmount(reward) * this.core.mods().blindRewardMult);
   }
 
   dispatch(action: Action): ActionResult {
@@ -242,6 +260,9 @@ export class Game {
         return this.reorderJokers(a.uids);
       case 'continueEndless':
         return this.continueEndless();
+      default:
+        // Neznámá akce (chybný vstup z textového režimu, starší UI) — stav se nemění.
+        return fail('wrongPhase');
     }
   }
 
@@ -271,11 +292,18 @@ export class Game {
       .filter((t) => (t.minAnte ?? 1) <= s.ante)
       .map((t) => t.id)
       .sort();
-    const pickTag = () => (tags.length ? tagRng.pick(tags) : null);
+    // Malá a Velká mají různé štítky (DESIGN 7); stejný jen tehdy, když je v poolu jediný.
+    const pickTag = (exclude: string | null): string | null => {
+      const pool = tags.filter((t) => t !== exclude);
+      if (pool.length > 0) return tagRng.pick(pool);
+      return tags.length > 0 ? tagRng.pick(tags) : null;
+    };
+    const smallTag = pickTag(null);
+    const bigTag = pickTag(smallTag);
     s.blinds = BLIND_KINDS.map((kind): BlindSlot => ({
       kind,
       bossId: kind === 'boss' ? bossId : kind === 'big' ? bigBossId : null,
-      skipTagId: kind === 'boss' ? null : pickTag(),
+      skipTagId: kind === 'small' ? smallTag : kind === 'big' ? bigTag : null,
       status: kind === 'small' ? 'current' : 'upcoming',
     }));
     s.blindIndex = 0;
@@ -385,7 +413,7 @@ export class Game {
 
   private validateSelection(ids: readonly number[], pool: readonly number[]): void {
     const max = this.core.mods().maxSelect;
-    if (ids.length === 0 || ids.length > max) fail('invalidSelection');
+    if (!Array.isArray(ids) || ids.length === 0 || ids.length > max) fail('invalidSelection');
     if (new Set(ids).size !== ids.length) fail('invalidSelection');
     for (const id of ids) if (!pool.includes(id)) fail('invalidSelection');
   }
@@ -547,6 +575,17 @@ export class Game {
     const cards = cardIds.map((id) => core.mustCard(id));
     const firstDiscard = round.discardsUsed === 0;
 
+    // Karty opustí ruku ještě před hooky: obsah (šéf `onDiscard`, žolíci, pečetě) vidí v ruce jen zbylé karty a nucené
+    // zahození (`api.discardFromHand`, Tchyně na návštěvě) nevezme kartu, která se právě zahazuje — jinak by její id
+    // bylo na odhazovací hromádce dvakrát. Zahození se počítá hned (hooky vidí `discardsLeft` po něm).
+    round.hand = round.hand.filter((id) => !cardIds.includes(id));
+    round.discardPile.push(...cardIds);
+    round.discardsLeft--;
+    round.discardsUsed++;
+    s.stats.discardsUsed++;
+    s.stats.cardsDiscarded += cardIds.length;
+    core.emit({ type: 'cardsDiscarded', cardIds: [...cardIds] });
+
     core.eachJoker('onDiscard', { discarded: cards, firstDiscard }, (results, owner) => {
       for (const r of results) {
         if (r.money) core.api.addMoney(r.money, 'joker');
@@ -567,23 +606,25 @@ export class Game {
       core.invalidate();
       refreshBossDebuffs(core);
     }
-
-    round.hand = round.hand.filter((id) => !cardIds.includes(id));
-    round.discardPile.push(...cardIds.filter((id) => core.card(id)));
-    round.discardsLeft--;
-    round.discardsUsed++;
-    s.stats.discardsUsed++;
-    s.stats.cardsDiscarded += cardIds.length;
-    core.emit({ type: 'cardsDiscarded', cardIds: [...cardIds] });
     fillHand(core);
     this.checkOutOfCards();
   }
 
-  private reorderHand(cardIds: readonly number[]): void {
+  /** Ruka, kterou jde přeřadit: ruka kola (jen během kola) nebo ruka obálky. */
+  private sortableHand(): number[] {
     const s = this.core.state;
-    const target = s.phase === 'booster' && s.booster ? s.booster.hand : s.round?.hand;
-    if (!target) fail('wrongPhase');
-    if (cardIds.length !== target.length || new Set(cardIds).size !== cardIds.length)
+    if (s.phase === 'booster' && s.booster) return s.booster.hand;
+    if (s.phase === 'round' && s.round) return s.round.hand;
+    return fail('wrongPhase');
+  }
+
+  private reorderHand(cardIds: readonly number[]): void {
+    const target = this.sortableHand();
+    if (
+      !Array.isArray(cardIds) ||
+      cardIds.length !== target.length ||
+      new Set(cardIds).size !== cardIds.length
+    )
       fail('invalidSelection');
     for (const id of cardIds) if (!target.includes(id)) fail('invalidSelection');
     target.splice(0, target.length, ...cardIds);
@@ -591,9 +632,8 @@ export class Game {
 
   private sortHand(by: 'rank' | 'suit'): void {
     const core = this.core;
-    const s = core.state;
-    const target = s.phase === 'booster' && s.booster ? s.booster.hand : s.round?.hand;
-    if (!target) fail('wrongPhase');
+    const target = this.sortableHand();
+    if (by !== 'rank' && by !== 'suit') fail('invalidSelection');
     const enh = core.enhancements();
     target.sort((a, b) => compareCards(core.mustCard(a), core.mustCard(b), by, enh));
   }
@@ -605,26 +645,20 @@ export class Game {
    * bonusy (zlaté karty, žolíci, balíček), nakonec poplatky za zapůjčené žolíky. Poplatek, který nejde
    * zaplatit ani do dluhového limitu, se nestrhne a žolík se při výplatě vrátí do půjčovny.
    */
-  private computeRewards(opts: { noBlindReward?: boolean } = {}): RoundRewards {
+  private computeRewards(moneyAtWin: number, opts: { noBlindReward?: boolean } = {}): RoundRewards {
     const core = this.core;
     const s = core.state;
     const m = core.mods();
     const round = this.round();
     const reg = core.registry;
-    const boss = round.bossId ? reg.bosses[round.bossId] : undefined;
-    let blindReward =
-      round.blind === 'boss' ? (boss?.reward ?? BLIND_REWARDS.boss) : BLIND_REWARDS[round.blind];
-    if (opts.noBlindReward) blindReward = 0;
-    if (round.blind === 'small') {
-      const noReward = Object.values(reg.stakes).some((st) => st.level <= s.stake && st.noSmallBlindReward);
-      if (noReward) blindReward = 0;
-    }
-    blindReward = Math.floor(blindReward * m.blindRewardMult);
-    const unusedHands = round.handsLeft * m.moneyPerUnusedHand;
-    const unusedDiscards = round.discardsLeft * m.moneyPerUnusedDiscard;
+    // Všechny položky se zaokrouhlují dolů na celé koruny (DESIGN 2.4.2).
+    const blindReward = opts.noBlindReward ? 0 : this.blindReward(round.blind, round.bossId);
+    const unusedHands = Math.floor(round.handsLeft * m.moneyPerUnusedHand);
+    const unusedDiscards = Math.floor(round.discardsLeft * m.moneyPerUnusedDiscard);
+    // Úrok ze zůstatku v okamžiku výhry kola — před hooky konce kola a před výplatou (DESIGN 2.4.2).
     const interest =
-      s.money > 0
-        ? Math.floor(Math.min(m.interestCap, Math.floor(s.money / m.interestStep)) * m.interestMult)
+      moneyAtWin > 0
+        ? Math.floor(Math.min(m.interestCap, Math.floor(moneyAtWin / m.interestStep)) * m.interestMult)
         : 0;
     const extra: RoundRewards['extra'] = [];
     const ctx = core.baseCtx('misc');
@@ -641,17 +675,19 @@ export class Game {
       const seal = c.seal ? reg.seals[c.seal] : undefined;
       seal?.onRoundEndHeld?.(extend(core.baseCtx('card'), { card: c, lastHand }));
     }
+    // Bonusy v pořadí DESIGN 2.4.2: zlaté karty v ruce, žolíci (`roundEndMoney`), balíček.
+    heldMoney = Math.floor(heldMoney);
     if (heldMoney) extra.push({ source: 'held', amount: heldMoney });
-    const deckMoney = rewardAmount(reg.decks[s.deckId]?.roundEndMoney?.(ctx));
-    if (deckMoney) extra.push({ source: `deck:${s.deckId}`, amount: deckMoney });
     for (const j of [...s.jokers]) {
       // Aktuální pozice; zničený (efektem jiného žolíka) nebo neznámý žolík nic nedává.
       const i = s.jokers.indexOf(j);
       const def = core.registry.jokers[j.defId];
       if (i < 0 || j.debuffed || !def?.hooks.roundEndMoney) continue;
-      const amount = rewardAmount(def.hooks.roundEndMoney(core.jokerCtx(j, i, false, def)));
+      const amount = Math.floor(rewardAmount(def.hooks.roundEndMoney(core.jokerCtx(j, i, false, def))));
       if (amount) extra.push({ source: `joker:${j.defId}`, amount, jokerUid: j.uid });
     }
+    const deckMoney = Math.floor(rewardAmount(reg.decks[s.deckId]?.roundEndMoney?.(ctx)));
+    if (deckMoney) extra.push({ source: `deck:${s.deckId}`, amount: deckMoney });
     const sum = () =>
       blindReward + unusedHands + unusedDiscards + interest + extra.reduce((a, e) => a + e.amount, 0);
     // Krok 6: zapůjčení žolíci (i debuffnutí) — poplatek jen do výše dluhového limitu.
@@ -672,6 +708,7 @@ export class Game {
     const s = core.state;
     const round = this.round();
     const blind = this.currentBlind();
+    const moneyAtWin = s.money;
     blind.status = 'defeated';
     s.stats.roundsWon++;
     core.emit({
@@ -694,7 +731,7 @@ export class Game {
     }
     core.eachJoker('onRoundEnd', { blind: round.blind, bossId: round.bossId });
     core.eachTag('onRoundEnd');
-    const rewards = this.computeRewards(opts);
+    const rewards = this.computeRewards(moneyAtWin, opts);
     s.rewards = rewards;
     // Události nesdílí objekty se stavem (posluchač si je smí upravit, např. seřadit rozpis).
     core.emit({ type: 'roundRewards', ...rewards, extra: rewards.extra.map((e) => ({ ...e })) });
@@ -817,8 +854,7 @@ export class Game {
       core.emit({ type: 'itemBought', kind: 'joker', defId: item.joker.defId, price: item.price });
     } else if (item.kind === 'consumable') {
       if (use) {
-        if (!this.consumableUsable(item.consumable.defId, item.consumable.uid, targetIds ?? []))
-          fail('cannotUse');
+        if (!this.consumableUsable(item.consumable, targetIds ?? [])) fail('cannotUse');
         this.pay(item.price);
         item.sold = true;
         core.emit({
@@ -912,14 +948,16 @@ export class Game {
     const core = this.core;
     const s = core.state;
     const shop = this.shop();
+    // Zaplacená cena (0 = bezplatné přehození ze štítku); cena dalšího přehození je v `shop.rerollCost`.
+    let cost = 0;
     if (shop.freeRerolls > 0) {
       shop.freeRerolls--;
     } else {
-      this.pay(shop.rerollCost);
+      cost = shop.rerollCost;
+      this.pay(cost);
       shop.paidRerolls++;
     }
     refreshShopPrices(core, shop);
-    const cost = shop.rerollCost;
     shop.rerollsThisShop++;
     s.stats.rerolls++;
     shop.items = generateShopItems(core);
@@ -969,8 +1007,7 @@ export class Game {
       if (!consumableHasRoom(core, opt.consumable.edition)) fail('slotsFull');
       addConsumableInstance(core, opt.consumable, true);
     } else {
-      if (!this.consumableUsable(opt.consumable.defId, opt.consumable.uid, targetIds ?? []))
-        fail('cannotUse');
+      if (!this.consumableUsable(opt.consumable, targetIds ?? [])) fail('cannotUse');
       this.runConsumable(opt.consumable, targetIds ?? []);
     }
     b.options.splice(index, 1);
@@ -1035,17 +1072,17 @@ export class Game {
     return [];
   }
 
-  private consumableCtx(defId: string, uid: number, targetIds: readonly number[]): ConsumableCtx {
+  private consumableCtx(inst: ConsumableInstance, targetIds: readonly number[]): ConsumableCtx {
     const core = this.core;
     const targets = targetIds.map((id) => core.mustCard(id));
-    return extend(core.baseCtx('consumable'), { self: { uid, defId, edition: null }, targets });
+    return Object.assign(core.baseCtx('consumable'), { self: inst, targets });
   }
 
-  private consumableUsable(defId: string, uid: number, targetIds: readonly number[]): boolean {
-    const def = this.core.registry.consumables[defId];
+  private consumableUsable(inst: ConsumableInstance, targetIds: readonly number[]): boolean {
+    const def = this.core.registry.consumables[inst.defId];
     if (!def) return false;
     const pool = this.targetPool();
-    if (new Set(targetIds).size !== targetIds.length) return false;
+    if (!Array.isArray(targetIds) || new Set(targetIds).size !== targetIds.length) return false;
     for (const id of targetIds) if (!pool.includes(id)) return false;
     if (def.target) {
       if (targetIds.length < def.target.min || targetIds.length > def.target.max) return false;
@@ -1054,21 +1091,15 @@ export class Game {
     }
     // Dotaz bez vedlejších účinků: `canUse` nesmí posunout RNG (UI se ptá libovolně často).
     const canUse = def.canUse;
-    return canUse ? this.core.readOnly(() => canUse(this.consumableCtx(defId, uid, targetIds))) : true;
+    // Kopie instance: `canUse` je dotaz a instanci nesmí změnit.
+    return canUse ? this.core.readOnly(() => canUse(this.consumableCtx({ ...inst }, targetIds))) : true;
   }
 
-  private runConsumable(
-    inst: { uid: number; defId: string; edition: string | null },
-    targetIds: readonly number[],
-  ): void {
+  private runConsumable(inst: ConsumableInstance, targetIds: readonly number[]): void {
     const core = this.core;
     const s = core.state;
     const def = core.registry.consumables[inst.defId]!;
-    const ctx = extend(core.baseCtx('consumable'), {
-      self: inst,
-      targets: targetIds.map((id) => core.mustCard(id)),
-    });
-    def.use(ctx);
+    def.use(this.consumableCtx(inst, targetIds));
     s.stats.consumablesUsed++;
     s.lastConsumable = inst.defId;
     core.invalidate();
@@ -1081,15 +1112,17 @@ export class Game {
     const s = this.core.state;
     const c = s.consumables.find((x) => x.uid === uid);
     if (!c) fail('unknownItem');
-    if (!this.consumableUsable(c.defId, c.uid, targetIds)) fail('cannotUse');
+    if (!this.consumableUsable(c, targetIds)) fail('cannotUse');
     s.consumables = s.consumables.filter((x) => x !== c);
     this.core.invalidate();
     this.runConsumable(c, targetIds);
   }
 
   private reorderJokers(uids: readonly number[]): void {
+    this.requireActivePhase();
     const s = this.core.state;
-    if (uids.length !== s.jokers.length || new Set(uids).size !== uids.length) fail('invalidSelection');
+    if (!Array.isArray(uids) || uids.length !== s.jokers.length || new Set(uids).size !== uids.length)
+      fail('invalidSelection');
     const byUid = new Map(s.jokers.map((j) => [j.uid, j]));
     const next = uids.map((u) => byUid.get(u));
     if (next.some((j) => !j)) fail('invalidSelection');
