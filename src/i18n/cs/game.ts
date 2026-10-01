@@ -1,0 +1,310 @@
+/**
+ * Texty herní obrazovky (src/ui/screens/game/**, src/ui/present.ts): levý panel, řada žolíků a spotřebek,
+ * ruka, stůl, výběr útraty, konec kola, Večerka, obálka, pitva, výhra, Info o runu, pauza a hlášky animací.
+ * Klíče `game.*`. Hráči tykáme (rodově neutrálně), čísla dosazuj přes `{param}` — formátuje `format.ts`.
+ */
+
+/** Hlášky pitvy podle příčiny (DESIGN příloha C); šéfové mají vlastní `bosses.<id>.death`. Sdílí je i `cli.ts`. */
+export const DEATH_QUOTES = {
+  small: '„Na Malé útratě? To se stává. Málokomu.“',
+  big: '„Velká útrata, velké zklamání.“',
+  /** Šéf bez vlastní hlášky (obsah ji zatím nemá). */
+  boss: '„Šéf byl silnější. Tentokrát.“',
+};
+
+export const game = {
+  label: 'Herní stůl',
+  noGame: 'Žádná rozehraná hra. Stůl je uklizený a hostinský zívá.',
+
+  /** Levý panel. */
+  sidebar: {
+    label: 'Přehled kola',
+    phase: {
+      round: 'Kolo běží',
+      blind_select: 'Vyber útratu',
+      shop: 'Večerka',
+      booster: 'Otevřená obálka',
+      round_end: 'Kolo vyhráno',
+      game_over: 'Konec runu',
+      victory: 'Výhra',
+    },
+    nextBoss: 'Na konci patra čeká: {name}',
+    noRule: 'Bez zvláštního pravidla.',
+    bossDisabled: 'Pravidlo šéfa dnes neplatí.',
+    target: 'Dosáhni aspoň',
+    targetNone: 'Cíl se ukáže po výběru útraty.',
+    reward: 'Odměna {n|money}',
+    noReward: 'Bez odměny',
+    roundScore: 'Skóre kola',
+    hand: 'Kombinace',
+    handNone: 'Vyber karty',
+    handHidden: 'Lícem dolů – překvapení',
+    handNothing: 'Z toho nic nesložíš',
+    level: 'úr. {level}',
+    levelLabel: 'úroveň {level}',
+    chips: 'Čipy',
+    mult: 'Mult',
+    times: '×',
+    unknown: '?',
+    hands: 'Ruce',
+    discards: 'Zahození',
+    money: 'Peníze',
+    ante: 'Patro',
+    anteValue: '{ante}/{final}',
+    endless: 'nekonečný režim',
+    round: 'Kolo',
+    runInfo: 'Info o runu',
+    settings: 'Nastavení',
+    menu: 'Menu',
+    menuLabel: 'Pauza a menu (Esc)',
+  },
+
+  /** Řada žolíků a spotřebek nahoře. */
+  rows: {
+    jokers: 'Žolíci',
+    consumables: 'Spotřebky',
+    count: '{n}/{max}',
+    jokersLabel: 'Řada žolíků, {n} z {max}',
+    consumablesLabel: 'Spotřebky, {n} z {max}',
+    jokersEmpty: 'Žádní žolíci. Zatím.',
+    consumablesEmpty: 'Prázdná kapsa.',
+    dragHint: 'Pořadí žolíků změníš tažením nebo v detailu žolíka.',
+  },
+
+  /** Detail žolíka (klik v řadě). */
+  joker: {
+    sell: 'Prodat za {price|money}',
+    cannotSell: 'Přibitého žolíka prodat nejde.',
+    moveLeft: 'Posunout doleva',
+    moveRight: 'Posunout doprava',
+    position: 'Pozice {n} z {max}',
+    orderHint: 'Žolíci se vyhodnocují zleva doprava. +mult patří doleva, ×mult doprava.',
+    sold: 'Prodáno za {price|money}. Večerka si nechala zbytek.',
+  },
+
+  /** Detail spotřebky (klik ve slotu). */
+  consumable: {
+    use: 'Použít',
+    sell: 'Prodat za {price|money}',
+    targetsExact: 'Vyber v ruce {n|plural:kartu,karty,karet} jako cíl.',
+    targetsRange: 'Vyber v ruce {min} až {max|plural:kartu,karty,karet} jako cíle.',
+    selected: 'Vybráno: {n|plural:karta,karty,karet}.',
+    noTargets: 'Nepotřebuje žádné cíle.',
+    cannotUse: 'Teď to použít nejde. Zkontroluj vybrané karty.',
+    used: 'Použito: {name}.',
+  },
+
+  /** Ruka, stůl a balíček. */
+  hand: {
+    label: 'Tvoje ruka, {n|plural:karta,karty,karet}',
+    empty: 'Ruka je prázdná.',
+    play: 'Zahrát',
+    discard: 'Zahodit',
+    playLabel: 'Zahrát vybrané karty (Enter)',
+    discardLabel: 'Zahodit vybrané karty (X)',
+    sort: 'Seřadit',
+    sortRank: 'Hodnota',
+    sortSuit: 'Barva',
+    sortRankLabel: 'Seřadit ruku podle hodnoty (S)',
+    sortSuitLabel: 'Seřadit ruku podle barvy (B)',
+    selected: 'Vybráno {n}/{max}',
+    tableLabel: 'Stůl se zahranými kartami',
+    tableHint: 'Vyber až {max|plural:kartu,karty,karet} a zahraj je. Klávesy 1–8 vybírají, Enter hraje.',
+    boosterHint: 'Vyber v ruce cíle pro babskou radu nebo razítko.',
+  },
+
+  deck: {
+    title: 'Balíček',
+    label: 'Balíček: zbývá {left} z {total|plural:karty,karet,karet}. Otevřít náhled.',
+    count: '{left}/{total}',
+    remaining: 'Zbývá {left} z {total|plural:karty,karet,karet}.',
+    legend: 'Zašedlé karty už jsou venku – v ruce, na stole nebo v odpadu.',
+    suitCount: '{symbol} {n}',
+    stone: 'Bez hodnoty a barvy',
+    rankCount: '{rank}: {n}',
+    byRank: 'Zbývá podle hodnoty',
+  },
+
+  /** Výběr útraty. */
+  blinds: {
+    title: 'Kam dneska?',
+    subtitle: 'Vyber útratu. Malou a Velkou můžeš přeskočit za štítek, šéfa ne.',
+    target: 'Cíl',
+    reward: 'Odměna',
+    rewardValue: '{n|money}',
+    noReward: 'bez odměny',
+    select: 'Vybrat',
+    selectLabel: 'Vybrat útratu {name} (Enter)',
+    skip: 'Přeskočit',
+    skipTag: 'Za přeskočení štítek: {tag}',
+    skipNoTag: 'Za přeskočení nic nedostaneš. Štítky ještě nedovezli.',
+    bossNoRule: 'Šéf zatím nemá žádné zvláštní pravidlo. Užij si to, dokud to jde.',
+    extraRule: 'Pravidlo navíc: {rule}',
+    rerollBoss: 'Přelosovat šéfa',
+    status: {
+      current: 'Na řadě',
+      upcoming: 'Čeká',
+      defeated: 'Poraženo',
+      skipped: 'Přeskočeno',
+    },
+  },
+
+  /** Konec kola: rozpis odměn. */
+  roundEnd: {
+    title: 'Kolo vyhráno!',
+    score: 'Skóre {score} z cíle {target}',
+    blind: 'Odměna za útratu',
+    hands: 'Nevyužité ruce ({n})',
+    discards: 'Nevyužitá zahození ({n})',
+    interest: 'Úrok',
+    held: 'Zlaté karty v ruce',
+    rental: 'Poplatek za zapůjčení: {name}',
+    rentalReturned: 'Vrací se do půjčovny: {name}',
+    other: 'Ostatní',
+    total: 'Celkem',
+    amount: '{n|signed} Kč',
+    cashOut: 'Vyplatit {n|money}',
+    cashOutLabel: 'Vyplatit odměnu a jít do Večerky (Enter)',
+  },
+
+  /** Večerka. */
+  shop: {
+    title: 'Večerka',
+    subtitle: 'Otevřeno nonstop, ceny jak v centru.',
+    items: 'Zboží',
+    boosters: 'Obálky',
+    vouchers: 'Kupón',
+    buy: 'Koupit za {price|money}',
+    buyAndUse: 'Koupit a použít',
+    open: 'Otevřít za {price|money}',
+    redeem: 'Uplatnit za {price|money}',
+    sold: 'Vyprodáno',
+    reroll: 'Přehodit za {price|money}',
+    rerollFree: 'Přehodit zdarma',
+    rerollLabel: 'Přehodit nabídku zboží',
+    continue: 'Pokračovat',
+    continueLabel: 'Odejít z Večerky k výběru útraty',
+    empty: 'Večerka zavřená – inventura',
+    emptyHint: 'Přehoď nabídku, třeba něco najdou ve skladu. Nebo přijď po dalším kole.',
+    cantAfford: 'Na tohle nemáš.',
+    noRoom: 'Nemáš volný slot.',
+  },
+
+  /** Výběr z obálky. */
+  booster: {
+    pick: 'Vyber {n}',
+    take: 'Vzít',
+    use: 'Použít',
+    keep: 'Nechat si',
+    addCard: 'Do balíčku',
+    skip: 'Přeskočit',
+    skipLabel: 'Přeskočit zbytek obálky',
+    noRoom: 'Nemáš volný slot.',
+  },
+
+  /** Pitva (konec runu). */
+  gameOver: {
+    title: 'Pitva',
+    subtitle: 'Run skončil v patře {ante} – {blind}.',
+    quote: '„{text}“',
+    score: 'Skóre {score} z cíle {target}',
+    stats: 'Statistiky runu',
+    rounds: 'Vyhraná kola',
+    bestHand: 'Nejlepší ruka',
+    bestHandValue: '{score} ({hand})',
+    none: 'žádná',
+    handsPlayed: 'Zahrané ruce',
+    discardsUsed: 'Zahození',
+    cardsPlayed: 'Zahrané karty',
+    moneyEarned: 'Vyděláno',
+    moneySpent: 'Utraceno',
+    jokersBought: 'Koupení žolíci',
+    bosses: 'Poražení šéfové',
+    ante: 'Patro',
+    deck: 'Balíček',
+    stake: 'Síla piva',
+    seed: 'Seed',
+    copySeed: 'Kopírovat seed',
+    copied: 'Seed zkopírován. Pošli ho dál, ať trpí i ostatní.',
+    copyFailed: 'Kopírování nevyšlo. Seed si opiš: {seed}',
+    newGame: 'Nová hra',
+    menu: 'Hlavní menu',
+  },
+
+  /** Výhra. */
+  victory: {
+    title: 'Výhra!',
+    subtitle: 'Šéf osmého patra je poražený. Hospoda tleská, výčepní nalévá na účet podniku.',
+    creditsLabel: 'Titulky runu',
+    starring: 'V hlavní roli: ty a balíček {deck}',
+    stake: 'Síla piva: {stake}',
+    end: 'Konec',
+    endLabel: 'Ukončit run a vrátit se do menu',
+    endless: 'Nekonečný režim',
+    endlessHint: 'Cíle porostou rychleji než ceny v hospodě.',
+    endlessStarted: 'Nekonečný režim: cíle porostou ještě rychleji.',
+  },
+
+  /** Info o runu (dialog). */
+  runInfo: {
+    title: 'Info o runu',
+    sections: {
+      hands: 'Úrovně kombinací',
+      deck: 'Složení balíčku',
+      jokers: 'Žolíci',
+      tags: 'Štítky',
+      vouchers: 'Kupóny',
+      stake: 'Síla piva',
+      run: 'Run',
+    },
+    columns: {
+      hand: 'Kombinace',
+      level: 'Úroveň',
+      value: 'Čipy × mult',
+      played: 'Zahráno',
+    },
+    secret: '???',
+    secretLabel: 'Tajná kombinace, zatím neobjevená',
+    value: '{chips} × {mult}',
+    none: 'Zatím nic.',
+    cards: '{n|plural:karta,karty,karet}',
+    modsLine: '{name}: {n}',
+    deckName: 'Balíček: {name}',
+    seed: 'Seed: {seed}',
+    stakeLevel: '{name} (úroveň {level})',
+    item: '{name}: {desc}',
+  },
+
+  /** Pauza (Esc). */
+  pause: {
+    title: 'Pauza',
+    hint: 'Run se ukládá po každém tahu. Klidně si dojdi pro pivo.',
+    resume: 'Pokračovat',
+    settings: 'Nastavení',
+    menu: 'Hlavní menu',
+  },
+
+  /** Hlášky událostí (oznámení, bubliny). */
+  events: {
+    skipped: 'Útrata přeskočena.',
+    skippedTag: 'Útrata přeskočena. Štítek: {tag}.',
+    leveled: '{hand} je teď na úrovni {level}.',
+    discovered: 'Objev! {hand} je ve hře.',
+    ante: 'Patro {ante}. Cíle rostou, pivo dochází.',
+    roundWon: 'Kolo vyhráno!',
+    blocked: 'Ruka se nepočítá: {reason}',
+    scoredLive: '{hand}: {score|plural:bod,body,bodů}. Skóre kola {round}.',
+    bigScore: 'To je rána!',
+  },
+
+  /** Bubliny při skórování. */
+  bubble: {
+    chips: '{n|signed}',
+    mult: '{n|signed} mult',
+    xmult: '{n|x} mult',
+    money: '{n|signed} Kč',
+    score: '{n}',
+  },
+
+  death: DEATH_QUOTES,
+};

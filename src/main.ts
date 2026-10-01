@@ -1,67 +1,78 @@
 /**
- * Vstupní bod aplikace. Zatím vykreslí provizorní titulní obrazovku (fáze 0);
- * router obrazovek (`src/ui/app.ts`) přijde ve fázi 3.
+ * Vstupní bod aplikace: fonty a styly, aplikace (router, úložiště, registr obsahu), načtení ikon
+ * (samostatný chunk), registrace obrazovek, globální ošetření chyb a první obrazovka (menu, nebo `#gallery`).
  */
 import './assets/fonts/fonts.css';
 import './ui/styles/base.css';
-import { version } from '../package.json';
-import { t, tList } from './i18n/cs';
+import './ui/styles/screens.css';
+import { registry } from './content';
+import { t } from './i18n/cs';
+import type { ScreenId } from './ui/app';
+import { App } from './ui/app';
+import { loadIcons } from './ui/art/icons';
+import { toast } from './ui/components/toast';
 import { h, mount, qs } from './ui/dom';
+import { creditsScreen } from './ui/screens/credits';
+import { galleryScreen } from './ui/screens/gallery';
+import { gameScreen } from './ui/screens/game';
+import { menuScreen } from './ui/screens/menu';
+import { newGameScreen } from './ui/screens/newGame';
+import { settingsScreen } from './ui/screens/settings';
+import { browserStore } from './ui/storage';
 
-function randomTip(): string | null {
-  const tips = tList('loadingTips');
-  if (tips.length === 0) return null;
-  // UI smí použít Math.random — náhoda enginu jde výhradně přes seedovaný RNG.
-  return tips[Math.floor(Math.random() * tips.length)] ?? null;
+/** Vývojářská galerie grafiky (`#gallery`) — není běžná obrazovka menu, router ji zná jen pod tímto id. */
+const GALLERY = 'gallery' as ScreenId;
+const GALLERY_HASH = '#gallery';
+/** Nejvýš jedno chybové oznámení za tuto dobu (ať chyba ve smyčce nezaplaví obrazovku). */
+const ERROR_TOAST_GAP_MS = 3000;
+
+/** Neošetřené chyby: do konzole celé, hráči vtipná hláška místo tichého zamrznutí. */
+function installErrorHandlers(): void {
+  let last = -Infinity;
+  const report = (label: string, err: unknown): void => {
+    console.error(`[karban] ${label}`, err);
+    const now = performance.now();
+    if (now - last < ERROR_TOAST_GAP_MS) return;
+    last = now;
+    try {
+      toast(t('errors.generic'), { kind: 'error', testId: 'toast-crash' });
+    } catch {
+      // DOM ještě není připravený — zůstane jen záznam v konzoli.
+    }
+  };
+  window.addEventListener('error', (e) => {
+    // Šum prohlížeče, ne chyba hry.
+    if (typeof e.message === 'string' && e.message.includes('ResizeObserver loop')) return;
+    report('Neošetřená chyba', e.error ?? e.message);
+  });
+  window.addEventListener('unhandledrejection', (e) => report('Neošetřený slib', e.reason));
 }
 
-function titleScreen(): HTMLElement {
-  const tip = randomTip();
-  return h(
-    'main',
-    { class: 'title-screen', 'aria-labelledby': 'game-title' },
-    h(
-      'header',
-      { class: 'title-screen__logo' },
-      h('h1', { id: 'game-title', class: 'title-screen__title' }, t('app.title')),
-      h('p', { class: 'title-screen__subtitle' }, t('app.subtitle')),
-      h('p', { class: 'title-screen__tagline' }, t('app.tagline')),
-    ),
-    h(
-      'nav',
-      { class: 'title-screen__menu', 'aria-label': t('menu.label') },
-      h(
-        'button',
-        {
-          type: 'button',
-          class: 'btn',
-          disabled: true,
-          title: t('menu.comingSoon', { phase: 3 }),
-          'data-testid': 'menu-new-game',
-        },
-        t('menu.newGame.label'),
-      ),
-    ),
-    tip &&
-      h(
-        'aside',
-        { class: 'title-screen__tip', 'aria-label': t('app.tipLabel') },
-        h('span', { class: 'title-screen__tip-label' }, t('app.tipLabel')),
-        h('span', { 'data-testid': 'loading-tip' }, tip),
-      ),
-    h('p', { class: 'title-screen__typo', lang: 'cs', 'data-testid': 'typo-test' }, t('typoTest')),
-    h(
-      'footer',
-      { class: 'title-screen__footer' },
-      h('span', { 'data-testid': 'version' }, t('app.version', { version })),
-      h('span', null, t('app.footerNote')),
-    ),
-  );
-}
-
-function start(): void {
+async function boot(): Promise<void> {
+  installErrorHandlers();
   document.title = t('app.documentTitle');
-  mount(qs('#app'), titleScreen());
+  const root = qs('#app');
+  mount(root, h('p', { class: 'boot-loading', role: 'status' }, t('app.loading')));
+
+  const app = new App(root, browserStore(), registry());
+  app.register('menu', menuScreen);
+  app.register('newGame', newGameScreen);
+  app.register('game', gameScreen);
+  app.register('settings', settingsScreen);
+  app.register('credits', creditsScreen);
+  app.register(GALLERY, galleryScreen);
+
+  // Ikony (~355 kB) jsou samostatný chunk; chyba načtení hru nezastaví (náhradní glyfy).
+  await loadIcons();
+
+  window.addEventListener('hashchange', () => {
+    if (location.hash === GALLERY_HASH) app.go(GALLERY);
+    else if (app.screenId === GALLERY) app.go('menu');
+  });
+  app.go(location.hash === GALLERY_HASH ? GALLERY : 'menu');
 }
 
-start();
+boot().catch((err: unknown) => {
+  console.error('[karban] Start aplikace selhal', err);
+  toast(t('errors.generic'), { kind: 'error', duration: 0, testId: 'toast-crash' });
+});

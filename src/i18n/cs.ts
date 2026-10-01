@@ -22,13 +22,16 @@
  * Konvence klíčů pro obsah viz komentář v `src/engine/content-types.ts`
  * (`jokers.<id>.name|desc|flavor`, `bosses.<id>.name|rule|intro|defeat|death` …).
  */
+import { art } from './cs/art';
 import { cli } from './cs/cli';
 import { decks } from './cs/decks';
+import { game } from './cs/game';
 import { hands } from './cs/hands';
 import { jokers } from './cs/jokers';
 import { boss, joker, score, tag } from './cs/messages';
 import { editions, enhancements, seals } from './cs/modifiers';
 import { stakes } from './cs/stakes';
+import { common, credits, menu, newGame, settings } from './cs/ui';
 import { interpolate, typo, type InterpolationParams } from './format';
 
 /** Strom textů: listy jsou řetězce nebo seznamy řetězců. */
@@ -51,20 +54,7 @@ const app = {
   footerNote: 'Při výrobě nebyl zraněn žádný žolík.',
 };
 
-// ─────────────────────────── Hlavní menu ───────────────────────────
-
-const menu = {
-  label: 'Hlavní menu',
-  newGame: { label: 'Nová hra', hint: 'Zamíchat, rozdat a jde se na to.' },
-  continue: { label: 'Pokračovat', hint: 'Dohraj rozehranou hru. Karty ještě nevychladly.' },
-  challenges: { label: 'Výzvy', hint: 'Runy se zvláštními pravidly. Pro ty, kterým normální hra nestačí.' },
-  daily: { label: 'Denní run', hint: 'Stejné karty pro celou republiku. Kdo prohraje, platí rundu.' },
-  collection: { label: 'Sbírka', hint: 'Všichni žolíci, šéfové a pranostiky, které ti prošly rukama.' },
-  stats: { label: 'Statistiky', hint: 'Čísla, kterými se můžeš chlubit. Nebo je radši nikomu neukazuj.' },
-  settings: { label: 'Nastavení', hint: 'Hlasitost, rychlost a další šroubky.' },
-  credits: { label: 'Titulky', hint: 'Kdo za to všechno může a odkud jsou ikony.' },
-  comingSoon: 'Už brzy – ve fázi {phase}',
-};
+// Hlavní menu, nová hra, nastavení, titulky a společné popisky UI žijí v ./cs/ui.ts.
 
 // ─────────────────────────── Karty ───────────────────────────
 
@@ -143,7 +133,13 @@ const loadingTips = [
 
 export const cs = {
   app,
+  common,
   menu,
+  newGame,
+  settings,
+  credits,
+  /** Herní obrazovka: levý panel, ruka, výběr útraty, Večerka, obálka, pitva, výhra (src/ui/screens/game). */
+  game,
   suits,
   ranks,
   hands,
@@ -159,6 +155,8 @@ export const cs = {
   decks,
   stakes,
   jokers,
+  /** Grafika, názvy karet, vzácnosti, tooltipy a galerie (src/ui/art, src/ui/describe.ts). */
+  art,
   /** Texty skriptu `npm run simulate` (výstup simulace a textový režim `--play`). */
   cli,
   /** Pangram s celou českou diakritikou — kontrola fontu (e2e test). */

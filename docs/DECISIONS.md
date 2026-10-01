@@ -682,3 +682,168 @@ nevyhrává a `nojoker` končí v patře 2 (DESIGN 12.1 chce 3–4), je očekáv
   a `--script`.
 
 **Proč:** ROADMAP (definice hotovo, odškrtávat jen hotové), DESIGN 12.4 (pořadí ladění), CLAUDE.md kap. 8.
+
+## 2026-10-01 — Běžní žolíci fáze 4 (č. 1–15): výklad mechanik
+
+**Co:** `src/content/jokers/common.ts`, texty `src/i18n/cs/jokers/common.ts`, testy `tests/unit/jokers-common.test.ts`.
+Čísla beze změny proti DESIGN 4.7. Výklad míst, která tabulka nechává otevřená:
+
+- **Pokladnička:** `onRoundEnd` počítá dokončená kola (běží před rozpisem odměn), `roundEndMoney` vyplácí +2 Kč;
+  po 8. kole vrátí 2 + 8 Kč (v rozpisu jedna položka „+10 Kč“) a rovnou se zničí (`destroyJoker`, důvod `broken`,
+  hláška `jokers.piggy_bank.broken`). Zničení hned v rozpisu, ne až ve Večerce — rozbitou pokladničku tak nejde
+  ještě prodat. Debuffnuté kolo se nepočítá (debuffnutý žolík hooky nevolá). Popisek ukazuje zbývající kola.
+- **Ekonomičtí žolíci** (Zahrádkář, Pokladnička, Bazarník) mají `copyable: false`: engine kopírujícím žolíkům
+  `roundEndMoney` nepočítá, kopie by nedala nic (DESIGN 4.4/7 — efekt mimo skórování). Plus `noRental` (4.4/12),
+  Pokladnička i `noEternal`.
+- **Švejk:** slabá ruka = `skóre × 100 < cíl × 10` (přesně 10 % nestačí; bez desetinných čísel). Počítadlo `used`
+  se nuluje v `onRoundStart` i `onRoundEnd` (popisek ve Večerce ukazuje plný počet). Kopie (`isCopy`) stav nemění
+  a přidá zahození právě tehdy, když ho v téže ruce dá i originál (`firedAt` = index ruky) — kopie vlevo i vpravo
+  tak efekt zdvojí stejně (nejvýš 2× za kolo každý). Ruka zakázaná šéfem (`validateHand`) `afterHandScored` nevolá,
+  a tedy se nepočítá.
+- **Křižák:** počítají se jen nedebuffnuté skórující ♣ (debuffnutá karta „nedává nic“); divoká je i ♣.
+- **Klenotník:** +3 čipy se zapíšou do karty (`bonusChips`) hned v `onCardScored` — v téže aktivaci už se čipy
+  karty započítaly, opakovaná aktivace (červená pečeť) ale vyleštěnou kartu vidí. Bublina `jokers.jeweler.polished`.
+- **Golem:** 2 kamenné karty s náhodnou hodnotou a barvou (stream `joker`; projeví se jen při vypnutých
+  vylepšeních). +20 čipů jen za kamennou kartu, když vylepšení platí (Bílá hora → obyčejná karta).
+- **Zahrádkář:** počítá karty, které po vítězné ruce zůstaly v ruce (engine po výhře nedobírá) — při 8 kartách
+  a 5 zahraných 1 Kč, při 1–2 zahraných 2 Kč. Pod pásmem 2–3 Kč/kolo z DESIGN 4.3; ladit simulací (`cards`).
+- **Párty pro dva:** „obsahuje Dvojici“ = `hand.contains` (i Dvě dvojice, Trojice, Full house, Čtveřice).
+  `params.hand = 'pair'` čtou boti při nákupu, v popisku není.
+- **Meteorolog** čte úroveň v okamžiku skórování (po případném zvýšení v `beforeScoring`).
+
+**Proč:** DESIGN 4.4 (jedna přesná věta, stav vidět v popisku, disciplína hooků, nálepky), ARCHITECTURE 2.7.
+
+## 2026-10-01 — Vzácní a epičtí žolíci fáze 4 (č. 16–30): výklad mechanik
+
+**Co:** `src/content/jokers/rare.ts` a `epic.ts`, texty `src/i18n/cs/jokers/rare.ts` a `epic.ts`, testy
+`tests/unit/jokers-rare.test.ts` a `jokers-epic.test.ts`. Ceny, vzácnosti a čísla mechanik beze změny proti DESIGN 4.7.
+Výklad míst, která tabulka nechává otevřená:
+
+- **Babiččina truhla:** „×1,3 mult za každou spotřebku“ = **násobí se** — n spotřebek ve slotech dá ×1,3ⁿ (1 → ×1,3,
+  2 → ×1,69, 3 → ×2,197), ne 1 + 0,3 n. Každá spotřebka je samostatný krok ×1,3 (UI je přehraje jako „tik tik“).
+  Počítají se všechny spotřebky ve slotech (i s negativní edicí), bez spotřebek nic. Se 2 výchozími sloty je strop
+  ×1,69 (v R1 pod dolní hranicí epického ×1,8, v R2 v pásmu ×1,45–2,1), se sloty navíc ×2,2–2,9 — ladit simulací.
+- **Napodobitel:** cíl si vybírá v `copyTarget`, ne ve vlastním `onRoundStart` — engine u kopírujícího žolíka volá
+  hooky **cíle** (`GameCore.resolveCopy`), vlastní `onRoundStart` by se nikdy nezavolal. `copyTarget` se ale volá
+  v každém průchodu žolíků, i v `onBlindSelect`/`onRoundStart` při výběru útraty: první volání ve fázi `blind_select`
+  s už založeným kolem je začátek kola, kolo se pozná podle `stats.roundsWon`. Náhoda přes `ctx.rng` (stream `joker`),
+  stav `target` (uid) a `round`. Vybírá jen z jiných žolíků, které nejsou jiný Napodobitel, nejsou trvale debuffnutí
+  (zvětralí) a nemají `copyable: false` — hook k registru přístup nemá, proto se nekopírovatelnost čte ze statických
+  polí obsahu (žolík mimo obsah hry pohlídá engine: kopie nedá nic). Kopíruje jen v kole (od výběru útraty po
+  vyplacení, tedy i v `onRoundEnd`/`onBossDefeated`), ve Večerce ne. Zmizí-li cíl, do konce kola nekopíruje nic;
+  Napodobitel získaný během kola začne kopírovat od dalšího kola. Sám `copyable: false`. Popisek cíl neukazuje
+  (`describe` nemá texty) — UI ho může zvýraznit podle `state.target`. Čistší cesta do budoucna (příloha B): vlastní
+  hook kopírujícího žolíka volaný i při kopírování, nebo dotaz `EngineApi` na kopírovatelnost žolíka.
+- **Zpožděný rychlík:** `params` jako u Skleněné (`{chance} z {odds}`); `probabilityMult` násobí čitatel všech
+  pravděpodobností (DESIGN 0.1), tady tedy zvyšuje šanci na zpoždění. Při zpoždění jen bublina
+  `jokers.late_train.delay`, edice žolíka platí dál (DESIGN 3.2).
+- **Sněhulák:** stav `xmult`, −0,25 v `onRoundEnd` (kopie nic nemění ani neničí — `self.uid` je i v kopii uid cíle);
+  při ×1 `destroyJoker(…, 'melted')` a hláška `jokers.snowman.melted` (jen když opravdu zmizel). Vydrží 6 kol
+  (×2,5 … ×1,25). `noEternal`; vynuceně přibitý zůstane na ×1 a nic nedělá.
+- **Sběrač hub:** počítá každé `api.destroyCard` (prasklé sklo, spotřebky, šéfové) od vstupu do slotu; ×(1 + 0,15 n)
+  jedním krokem, při n = 0 žádný krok.
+- **Hostinský:** `round.discardsUsed === 0` — jen zahození hráčem, zahození efektem (`discardFromHand`) se nepočítá.
+- **Kolotoč:** „každá Postupka“ = zahraná ruka Postupku obsahuje (`hand.contains`, tedy i Postupka v barvě
+  a Královská). `params.hand = 'straight'` čtou boti, v popisku není. Kopie dá jen +6 mult (`passive` se nekopíruje).
+- **Sekera:** `debtLimit` +15 se sčítá (dvě Sekery −30 Kč); +8 mult při `money < 0` v kroku 4 (peníze z karet téže ruky
+  už se započítaly). Kopírovatelná a bez `noRental` — není čistě ekonomická.
+- **Ozvěna:** poslední karta v `scoring` (pořadí zahrání), neskórující „kopy“ se nepočítají; debuffnutá poslední
+  karta se přeskočí celá. **Šťastná sedmička:** kamenná karta s hodnotou 7 se neopakuje (nemá hodnotu; pozná se přes
+  `api.hasSuit(card, card.suit)`). U obou platí strop `MAX_ACTIVATIONS_PER_CARD`.
+- **Stálý host** počítá dokončená (vyhraná nebo zachráněná) kola, přeskočené útraty ne; **Pivní břicho** přičítá
+  v `afterHandScored` (první ruka +0, ruka zakázaná šéfem se nepočítá). Oba mají `noPerishable` — rostou časem ve
+  slotu (`JokerDef.noPerishable`). **Kořenářka** reaguje jen na `kind === 'rada'`. **Pan vrchní** počítá všechny
+  zahrané karty (i neskórující), **Stará garda** úroveň v okamžiku skórování.
+- Texty: flavor Pana vrchního „Platím! – Za tři.“ s krátkou pomlčkou (dlouhá je v textech hry zakázaná).
+
+**Proč:** DESIGN 4.4 (jedna přesná věta s čísly z `params`, stav v popisku, disciplína hooků, nálepky), ARCHITECTURE
+2.7 (kopírování), CONTENT-GUIDE kap. 2–3.
+
+## 2026-10-01 — Ladění žolíků fáze 4 podle hodnoty 4.3 (měření `scripts/joker-value.ts`)
+
+**Co — měřicí nástroj** `npx tsx scripts/joker-value.ts [--runs 100] [--joker id,…] [--json soubor]` (testy
+`tests/unit/jokers-value.test.ts`). Pro každého žolíka a seed `JV-<prefix>-<i>`:
+
+1. Základní run bota „vhodné strategie“ (štítek `suit` → `flush`, `params.hand` z rodiny Dvojice → `pairs`, jinak
+   `max`) a větev téhož runu, kde se žolík na začátku patra 1 (škálující na začátku patra 2, DESIGN 4.2) vloží do
+   volného slotu. Prvních 6 kol ho bot nesmí prodat (přibitý; žolíci s `noEternal` přes obal bota — pravidlo 4:
+   „ve slotu aspoň 6 kol“), pak s ním zachází jako s kterýmkoli jiným.
+2. Každá ruka větve (karty v ruce, když bot hrál) se přepočítá na kopiích stavu se stejným RNG: **nejlepší tah
+   jen se žolíkem proti nejlepšímu tahu bez žolíků** (kandidáti = skutečný tah + nejlepší odhady `planCandidates`).
+   Bez toho by se do hodnoty míchal vliv ostatních žolíků bota na výběr tahu (Pivní tácek s Panem vrchním mění
+   Trojici za Full house) a žolíci, kvůli kterým bot hraje jinak (Kolotoč), by dostali hodnotu tahu, který by bez
+   nich nikdo nezahrál. Bez žolíka chybí i karty, které přinesl (Golem), a čipy, které kartám přidal (Klenotník —
+   sleduje se rozdíl čipů karet světa se žolíkem a bez něj).
+3. Izolovaný efekt (Δčipy, Δmult; u štítku `xmult` poměr multu) se promítne na referenční ruce 4.2:
+   `(Rč + Δč)(Rm + Δm)·× / (Rč·Rm) − 1`. **R1** = ruce pater 1–3 s úrovněmi kombinací střídavě 1 a 2 (definice R1).
+   **R2** = všechny ruce větve (runy patra 6–8 zatím skoro nedosáhnou), úroveň všech kombinací 4 (předpoklad do
+   fáze 5 — bez pranostik zůstávají úrovně na 1; jinak by Meteorolog a Stará garda měly vždy 0) a škálující žolíci
+   se stavem lineárně extrapolovaným na 16 dokončených kol od koupě (koupě v patře 2, průměr pater 6–8: počítadla
+   žolíka i čipy karet z růstu za kolo sdruženého přes seedy). Kopírující žolík se izolovat nedá — měří se poměr
+   skóre skutečné sestavy s ním / bez něj.
+4. Ekonomika = Kč z rozpisu odměn připsané žolíkovi / kola ve slotu. Simulace = párový rozdíl dosaženého patra,
+   vyhraných kol a výher větve proti základnímu runu (jen runy, které bodu koupě dosáhly).
+5. Hodnocení (`verdict`): pravidlo 1 (dolní hranice aspoň v jednom okně), pravidlo 2 (horní v žádném), pravidlo 3
+   — **špička = 95. percentil rukou okna R2** nejvýš 2× horní hranice R2. Maximum jedné ruky je jen šum vzorku
+   a v R1 „plný build“ není: i Srdcař z ukázky 4.3 má s pěti ♥ vůči slabé ruce R1 +219 %.
+
+**Co — boti** (`src/engine/sim/bots.ts`, `hand-eval.ts`): nákup a hra podle `JokerDef.tags` a nečíselných `params`.
+
+- Barevní žolíci dostali `params.suit` (`H`/`S`/`D`/`C`, Srdcař, Hrobník, Klenotník, Křižák) a Meteorolog
+  `params.level = 2` (první úroveň, za kterou něco dá; Stará garda už `level` měla) — nápověda pro boty, popisky
+  ji nečtou, hooky čtou tytéž konstanty.
+- Bot honí barvu, kterou chtějí jeho žolíci (+1,5 karty k počtu barvy za žolíka, v balíčku ×4), a kombinace
+  z `params.hand` (preference ×1,2 pro celou „rodinu“ — Dvojice → vše s Dvojicí, `straight` → Postupky).
+- Hodnocení nákupu: spotřebkový žolík (`consumable`) bez spotřebek v obsahu ×0,25, žolík na úroveň (`params.level`)
+  bez možnosti úrovně zvyšovat ×0,25 (s pranostikami ×0,8, dokud úrovně nedosáhne), kopírující žolík s méně než
+  2 jinými žolíky ×0,6, barevný žolík na barvu, kterou už chce jiný žolík, ×1,25. Žolíka koupí i do mínusu, když to
+  dluhový limit dovolí (ne `econ`). Přehazování do dluhu jsem zkusil a vrátil — nepomohlo (Sekera Δ −1,2 kola
+  proti −0,9 bez něj).
+- Zahazování: když bot drží žolíka se štítkem `discard`, spočítá přesně na kopii, kolik skóre tahu zbude po
+  zahození (Hostinský ×2,5 → 0,4), a zahodí jen tehdy, když to Monte Carlo odhad i po tomto trestu vyhrává.
+- Řazení: kopírující žolík (`copy`) stojí tam, kam patří jeho cíl (`state.target`); +čipy/+mult vlevo, ×mult vpravo
+  platí dál. `cloneGame`/`exactPlayScore` mají volitelné `mutate` (otázka „co kdyby“ na kopii stavu).
+- Účinek (200 runů, stejné seedy a obsah, boti před/po, před změnou čísel): průměrné patro max 3,4 → 3,5,
+  flush 3,3 → 3,5, pairs 3,4 → 3,6, nejlepší ruka +15–23 %; doba simulace +15 %. Neplatné akce 0.
+
+**Co — změny čísel** (staré → nové; naměřeno R1 / R2 v %, nebo Kč/kolo; 100 seedů, stejná metodika):
+
+| Žolík                      | Číslo                      | Před: naměřeno | Po: naměřeno | Důvod                                                                                |
+| -------------------------- | -------------------------- | -------------- | ------------ | ------------------------------------------------------------------------------------ |
+| Klenotník (`jeweler`)      | `chips` 3 → 5              | 3,1 / 6,2      | 6,0 / 14,3   | pod dolní hranicí v obou oknech (běžný R2 ≥ 8)                                       |
+| Křižák (`crusader`)        | `mult` 8 → 12              | 32,8 / 6,2     | 51,3 / 9,4   | pod dolní hranicí; podmínka 2 ♣ platí jen ve ~35 % rukou                             |
+| Ranní ptáče (`early_bird`) | `mult` 12 → 8              | 125,9 / 23,2   | 79,3 / 14,7  | R1 nad horní hranicí 100 (první ruka = 80 % rukou pater 1–3)                         |
+| Zahrádkář (`gardener`)     | `money` 1 → 2 (za 3 karty) | 1,0 Kč         | 2,1 Kč       | pod 2–3 Kč/kolo; po vítězné ruce zbývají typicky 3–5 karet                           |
+| Bazarník (`flea_trader`)   | `money` 1 → 3              | 0,9 Kč         | 2,1 Kč       | pod 2–3 Kč/kolo; bot sloty rychle zaplní                                             |
+| Kolotoč (`carousel`)       | `mult` 6 → 14              | 25,6 / 5,8     | 58,7 / 12,0  | pod dolní hranicí; Postupka jen ve ~28 % rukou, špička R2 38 % < 120 %               |
+| Ozvěna (`echo`)            | `retriggers` 1 → 4         | 14,8 / 4,5     | 64,3 / 20,9  | pod dolní hranicí; při 3 opakováních R1 47,7 % (těsně pod 50); flavor o ozvěnu delší |
+| Hostinský (`innkeeper`)    | `xmult` 2 → 2,5            | 41,9 / 38,9    | 83,4 / 78,2  | pod dolní hranicí; bez zahození jen ~40–55 % rukou i s trestem za zahození u bota    |
+
+Texty čtou `params`, takže se změnily samy; DESIGN 4.7 (tabulka + poznámka pod ní) a testy upravené.
+
+**Mimo pásmo bez změny čísla** (číslem to spravit nejde nebo by to porušilo jiné pravidlo):
+
+- **Noční směna** (17,9 / 4,6): poslední ruka kola je jen 7–9 % rukou. Strop pravidla 3 (špička R2 ≤ 60 % → nejvýš
+  +24 mult) by dal jen R2 5,6 %. Přitom má v simulaci +0,6 vyhraného kola, mezi nejlepšími běžnými, protože efekt
+  padne právě v ruce, která rozhoduje kolo. Nechávám 20; mechanika k revizi ve fázi 7 (např. „poslední 2 ruce“).
+- **Šťastná sedmička** (8,2 / 2,6): sedmička je 1/13 karet. Bez úprav balíčku (fáze 5 a 7) to číslo nespraví;
+  flavor „do třetice“ = 2 opakování. Přeměřit po fázi 5.
+- **Sekera** (3,9 / 0,7, Δ −0,8 kola): dluh rozumný bot drží jen krátce po nákupu na dluh. Hodnota je hlavně
+  ekonomická; mechanika k revizi ve fázi 7.
+- **Napodobitel** (skutečná sestava 25,6 / 29,5): nemá čísla. Kopie náhodného žolíka ≈ průměrný žolík sestavy, což je
+  pod epickým pásmem ×1,8–2,8. Revize mechaniky ve fázi 7, třeba „kopíruje souseda“.
+- **Kořenářka, Sběrač hub, Babiččina truhla:** dnes 0. V obsahu nejsou babské rady, spotřebky ani ničení karet.
+  Změřit ve fázi 5 a čísla do té doby neměnit.
+- **Švejk:** užitkový, hodnotí se simulací (Δ ≈ 0 kol).
+
+V pásmu podle R2 (pravidlo 1) jsou i Meteorolog a Stará garda. Obě hodnoty stojí na předpokladu úrovně 4 v R2
+a přeměří se ve fázi 5 s pranostikami.
+
+**Stav simulace** (`npm run simulate -- --runs 300 --stake 1 --bot all`, po změnách): `max`, `flush` i `pairs`
+mají 0 % výher a průměrné patro 3,8. Prohry vrcholí v patře 4 (~49 %), patra 6 dosáhne 0,3–2,3 % runů.
+`nojoker` je na 2,0, `econ` 2,5 a `random` prohraje vždy v patře 1. Bez pranostik, kupónů, obálek a šéfů zatím
+cílových 25–35 % výher dosáhnout nejde. Kalibrace cílů je odložená na fázi 5–6/10. Sloupec „Δ výher“ z tabulky 4.3
+proto dnes nahrazuje Δ vyhraných kol: u všech změřených žolíků je mezi −0,8 a +2,2.
+
+**Proč:** DESIGN 4.2–4.4 a 12.4 krok 3 (ladit `params`, ne mechaniku), CLAUDE.md kap. 8 (žádný bezcenný ani
+auto-win žolík).

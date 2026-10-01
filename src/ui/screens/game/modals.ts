@@ -1,0 +1,498 @@
+/**
+ * Dialogy herní obrazovky: Info o runu, náhled balíčku, pauza (Esc), detail žolíka (Prodat, posun)
+ * a detail spotřebky (Použít s vybranými kartami jako cíli, Prodat). Vše přes `openModal` (focus trap,
+ * Esc, návrat focusu) a akce controlleru.
+ */
+import type { Card, HandType, Suit } from '../../../engine';
+import { HAND_TYPES, RANKS, SUITS, handValueAtLevel } from '../../../engine';
+import { t } from '../../../i18n/cs';
+import { formatNumber } from '../../../i18n/format';
+import { button } from '../../components/button';
+import { createCardView } from '../../components/card';
+import { createConsumableCard } from '../../components/consumableCard';
+import { createJokerCard } from '../../components/jokerCard';
+import { openModal } from '../../components/modal';
+import { hideTooltip, richText } from '../../components/tooltip';
+import {
+  consumableTexts,
+  deckTexts,
+  isRanklessCard,
+  jokerTexts,
+  stakeTexts,
+  tagTexts,
+  voucherTexts,
+} from '../../describe';
+import { h } from '../../dom';
+import { openSettingsModal } from '../settings';
+import type { GameCtx } from './shared';
+import { copySeed } from './shared';
+
+// ─────────────────────────── Info o runu ───────────────────────────
+
+function infoSection(title: string, ...children: (Node | null)[]): HTMLElement {
+  return h('section', { class: 'run-info__section' }, h('h3', { class: 'run-info__title' }, title), children);
+}
+
+function textList(items: string[]): HTMLElement {
+  if (items.length === 0) return h('p', { class: 'run-info__none' }, t('game.runInfo.none'));
+  return h(
+    'ul',
+    { class: 'run-info__list', role: 'list' },
+    items.map((text) => h('li', null, richText(text))),
+  );
+}
+
+function handsTable(ctx: GameCtx): HTMLElement {
+  const s = ctx.controller.state;
+  const rows = HAND_TYPES.map((type: HandType) => {
+    const def = ctx.registry.handTypes[type];
+    const hl = s.handLevels[type] ?? { level: 1, played: 0 };
+    const secret = def.secret && !s.discoveredHands.includes(type);
+    if (secret) {
+      return h(
+        'tr',
+        { class: 'is-secret', 'aria-label': t('game.runInfo.secretLabel') },
+        h('th', { scope: 'row' }, t('game.runInfo.secret')),
+        h('td', null, t('game.runInfo.secret')),
+        h('td', null, t('game.runInfo.secret')),
+        h('td', null, t('game.runInfo.secret')),
+      );
+    }
+    const v = handValueAtLevel(def, hl.level);
+    return h(
+      'tr',
+      { 'data-hand': type },
+      h('th', { scope: 'row' }, t(`hands.${type}.name`)),
+      h('td', null, formatNumber(hl.level)),
+      h(
+        'td',
+        { class: 'run-info__value' },
+        h('span', { class: 'hl-chips' }, formatNumber(v.chips)),
+        ' × ',
+        h('span', { class: 'hl-mult' }, formatNumber(v.mult)),
+      ),
+      h('td', null, formatNumber(hl.played)),
+    );
+  });
+  return h(
+    'table',
+    { class: 'run-info__hands', 'data-testid': 'run-info-hands' },
+    h(
+      'thead',
+      null,
+      h(
+        'tr',
+        null,
+        h('th', { scope: 'col' }, t('game.runInfo.columns.hand')),
+        h('th', { scope: 'col' }, t('game.runInfo.columns.level')),
+        h('th', { scope: 'col' }, t('game.runInfo.columns.value')),
+        h('th', { scope: 'col' }, t('game.runInfo.columns.played')),
+      ),
+    ),
+    h('tbody', null, rows),
+  );
+}
+
+function countBy<T>(items: readonly T[], key: (x: T) => string | null): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const it of items) {
+    const k = key(it);
+    if (k !== null) out.set(k, (out.get(k) ?? 0) + 1);
+  }
+  return out;
+}
+
+function deckSummary(ctx: GameCtx): HTMLElement {
+  const deck = ctx.controller.state.deck;
+  const suits = countBy(deck, (c) => (isRanklessCard(c, ctx.registry) ? null : c.suit));
+  const line = (ns: string, counts: Map<string, number>): string[] =>
+    [...counts].map(([id, n]) => t('game.runInfo.modsLine', { name: t(`${ns}.${id}.name`), n }));
+  return h(
+    'div',
+    { class: 'run-info__deck' },
+    h('p', { class: 'run-info__deck-total' }, t('game.runInfo.cards', { n: deck.length })),
+    h(
+      'p',
+      { class: 'run-info__suits' },
+      SUITS.map((suit) =>
+        h(
+          'span',
+          { class: ['run-info__suit', `suit-${suit}`] },
+          t('game.deck.suitCount', { symbol: t(`suits.${suit}.symbol`), n: suits.get(suit) ?? 0 }),
+        ),
+      ),
+    ),
+    textList([
+      ...line(
+        'enhancements',
+        countBy(deck, (c) => c.enhancement),
+      ),
+      ...line(
+        'seals',
+        countBy(deck, (c) => c.seal),
+      ),
+      ...line(
+        'editions',
+        countBy(deck, (c) => c.edition),
+      ),
+    ]),
+  );
+}
+
+export function openRunInfo(ctx: GameCtx): void {
+  // Bublina s detailem karty pod dialogem by překážela.
+  hideTooltip();
+  const c = ctx.controller;
+  const s = c.state;
+  const opts = { registry: ctx.registry, mods: c.engine.modifiers() };
+  const stake = Object.values(ctx.registry.stakes).find((x) => x.level === s.stake);
+  const stakeRules = Object.values(ctx.registry.stakes)
+    .filter((x) => x.level <= s.stake)
+    .sort((a, b) => a.level - b.level)
+    .map((x) => {
+      const tx = stakeTexts(x, opts);
+      return t('game.runInfo.item', { name: tx.name, desc: tx.desc });
+    });
+  const deck = ctx.registry.decks[s.deckId] ? deckTexts(s.deckId, opts) : null;
+  const copy = button({
+    label: t('game.gameOver.copySeed'),
+    variant: 'paper',
+    size: 'small',
+    testId: 'run-info-copy-seed',
+    onClick: () => void copySeed(s.seed),
+  });
+
+  openModal({
+    title: t('game.runInfo.title'),
+    size: 'large',
+    className: 'modal--run-info',
+    testId: 'run-info-modal',
+    body: h(
+      'div',
+      { class: 'run-info' },
+      infoSection(t('game.runInfo.sections.hands'), handsTable(ctx)),
+      h(
+        'div',
+        { class: 'run-info__columns' },
+        infoSection(t('game.runInfo.sections.deck'), deckSummary(ctx)),
+        infoSection(
+          t('game.runInfo.sections.jokers'),
+          textList(
+            s.jokers.map((j) => {
+              const tx = jokerTexts(j.defId, j, opts);
+              return t('game.runInfo.item', { name: tx.name, desc: tx.desc });
+            }),
+          ),
+        ),
+        infoSection(
+          t('game.runInfo.sections.tags'),
+          textList(
+            s.tags.map((tag) => {
+              const tx = tagTexts(tag.defId, opts);
+              return t('game.runInfo.item', { name: tx.name, desc: tx.desc });
+            }),
+          ),
+        ),
+        infoSection(
+          t('game.runInfo.sections.vouchers'),
+          textList(
+            s.vouchers.map((id) => {
+              const tx = voucherTexts(id, opts);
+              return t('game.runInfo.item', { name: tx.name, desc: tx.desc });
+            }),
+          ),
+        ),
+        infoSection(
+          t('game.runInfo.sections.stake'),
+          stake
+            ? h(
+                'p',
+                { class: 'run-info__stake' },
+                t('game.runInfo.stakeLevel', { name: t(`stakes.${stake.id}.name`), level: stake.level }),
+              )
+            : null,
+          textList(stakeRules),
+        ),
+        infoSection(
+          t('game.runInfo.sections.run'),
+          deck ? h('p', null, t('game.runInfo.deckName', { name: deck.name })) : null,
+          deck ? h('p', { class: 'run-info__muted' }, deck.desc) : null,
+          h(
+            'p',
+            { class: 'run-info__seed' },
+            h('span', { 'data-testid': 'run-info-seed' }, t('game.runInfo.seed', { seed: s.seed })),
+            ' ',
+            copy,
+          ),
+        ),
+      ),
+    ),
+    actions: [{ label: t('common.close'), variant: 'primary', autofocus: true, testId: 'run-info-close' }],
+  });
+}
+
+// ─────────────────────────── Náhled balíčku ───────────────────────────
+
+export function openDeckPreview(ctx: GameCtx): void {
+  // Bublina s detailem karty pod dialogem by překážela.
+  hideTooltip();
+  const c = ctx.controller;
+  const s = c.state;
+  const round = s.round;
+  const inRound = !!round && (s.phase === 'round' || s.phase === 'round_end');
+  const remaining = new Set(inRound ? round.drawPile : s.deck.map((x) => x.id));
+  const left = remaining.size;
+  const byRank = (a: Card, b: Card): number => b.rank - a.rank;
+  const mini = (card: Card): HTMLElement =>
+    createCardView(card, {
+      registry: ctx.registry,
+      className: remaining.has(card.id) ? 'deck-mini' : 'deck-mini is-out',
+    });
+
+  const stones = s.deck.filter((x) => isRanklessCard(x, ctx.registry));
+  const suitRow = (suit: Suit): HTMLElement => {
+    const cards = s.deck.filter((x) => x.suit === suit && !isRanklessCard(x, ctx.registry)).sort(byRank);
+    const n = cards.filter((x) => remaining.has(x.id)).length;
+    return h(
+      'div',
+      { class: 'deck-preview__row', 'data-suit': suit },
+      h(
+        'p',
+        { class: ['deck-preview__suit', `suit-${suit}`] },
+        t('game.deck.suitCount', { symbol: t(`suits.${suit}.symbol`), n }),
+      ),
+      h('div', { class: 'deck-preview__cards' }, cards.map(mini)),
+    );
+  };
+  const rankCounts = RANKS.slice()
+    .reverse()
+    .map((rank) => {
+      const n = s.deck.filter(
+        (x) => x.rank === rank && remaining.has(x.id) && !isRanklessCard(x, ctx.registry),
+      ).length;
+      return h('li', null, t('game.deck.rankCount', { rank: t(`ranks.${rank}.short`), n }));
+    });
+
+  openModal({
+    title: t('game.deck.title'),
+    size: 'large',
+    className: 'modal--deck',
+    testId: 'deck-modal',
+    description: t('game.deck.remaining', { left, total: s.deck.length }),
+    body: h(
+      'div',
+      { class: 'deck-preview' },
+      SUITS.map(suitRow),
+      stones.length > 0
+        ? h(
+            'div',
+            { class: 'deck-preview__row' },
+            h('p', { class: 'deck-preview__suit' }, t('game.deck.stone')),
+            h('div', { class: 'deck-preview__cards' }, stones.map(mini)),
+          )
+        : null,
+      h('p', { class: 'deck-preview__label' }, t('game.deck.byRank')),
+      h('ul', { class: 'deck-preview__ranks', role: 'list' }, rankCounts),
+      h('p', { class: 'deck-preview__legend' }, t('game.deck.legend')),
+    ),
+    actions: [{ label: t('common.close'), variant: 'primary', autofocus: true, testId: 'deck-close' }],
+  });
+}
+
+// ─────────────────────────── Pauza ───────────────────────────
+
+export async function openPauseMenu(ctx: GameCtx): Promise<void> {
+  // Bublina s detailem karty pod dialogem by překážela.
+  hideTooltip();
+  const m = openModal<'resume' | 'settings' | 'menu'>({
+    title: t('game.pause.title'),
+    description: t('game.pause.hint'),
+    size: 'small',
+    className: 'modal--pause',
+    testId: 'pause-modal',
+    actions: [
+      {
+        label: t('game.pause.resume'),
+        value: 'resume',
+        variant: 'primary',
+        autofocus: true,
+        testId: 'pause-resume',
+      },
+      { label: t('game.pause.settings'), value: 'settings', variant: 'paper', testId: 'pause-settings' },
+      { label: t('game.pause.menu'), value: 'menu', variant: 'ghost', testId: 'pause-menu' },
+    ],
+  });
+  const choice = await m.closed;
+  if (choice === 'settings') openSettingsModal(ctx.app);
+  else if (choice === 'menu') ctx.app.go('menu');
+}
+
+// ─────────────────────────── Detail žolíka ───────────────────────────
+
+export function openJokerDetail(ctx: GameCtx, uid: number): void {
+  // Bublina s detailem karty pod dialogem by překážela.
+  hideTooltip();
+  const c = ctx.controller;
+  const find = () => c.state.jokers.find((j) => j.uid === uid);
+  const joker = find();
+  if (!joker) return;
+  const opts = { registry: ctx.registry, mods: c.engine.modifiers() };
+  const tx = jokerTexts(joker.defId, joker, opts);
+  const position = h('p', { class: 'detail__position', 'data-testid': 'joker-position' });
+  const eternal = joker.stickers.includes('eternal');
+  const sellValue = c.engine.sellValue(uid);
+
+  const move = async (delta: number): Promise<void> => {
+    const list = c.state.jokers.map((j) => j.uid);
+    const i = list.indexOf(uid);
+    const j = i + delta;
+    if (i < 0 || j < 0 || j >= list.length) return;
+    [list[i], list[j]] = [list[j]!, list[i]!];
+    await ctx.act({ type: 'reorderJokers', uids: list });
+    refresh();
+  };
+  const left = button({
+    label: t('game.joker.moveLeft'),
+    variant: 'paper',
+    size: 'small',
+    testId: 'joker-move-left',
+    onClick: () => void move(-1),
+  });
+  const right = button({
+    label: t('game.joker.moveRight'),
+    variant: 'paper',
+    size: 'small',
+    testId: 'joker-move-right',
+    onClick: () => void move(1),
+  });
+  const refresh = (): void => {
+    const list = c.state.jokers;
+    const i = list.findIndex((j) => j.uid === uid);
+    position.textContent = t('game.joker.position', { n: i + 1, max: list.length });
+    left.disabled = i <= 0;
+    right.disabled = i < 0 || i >= list.length - 1;
+  };
+  refresh();
+
+  const m = openModal<'sell'>({
+    title: tx.name,
+    size: 'medium',
+    className: 'modal--detail',
+    testId: 'joker-detail',
+    body: h(
+      'div',
+      { class: 'detail' },
+      h(
+        'div',
+        { class: 'detail__card' },
+        createJokerCard(joker, { registry: ctx.registry, tooltip: false, mods: opts.mods }),
+      ),
+      h(
+        'div',
+        { class: 'detail__text' },
+        h('p', { class: ['detail__kind', `rarity-${tx.rarityId}`] }, tx.rarity),
+        h('p', { class: 'detail__desc' }, richText(tx.desc)),
+        tx.edition
+          ? h('p', { class: 'detail__line' }, richText(`${tx.edition.name}: ${tx.edition.desc}`))
+          : null,
+        tx.stickers.map((line) => h('p', { class: 'detail__line detail__line--muted' }, line)),
+        tx.flavor ? h('p', { class: 'detail__flavor' }, t('art.tooltip.flavor', { text: tx.flavor })) : null,
+        position,
+        h('p', { class: 'detail__hint' }, t('game.joker.orderHint')),
+        h('div', { class: 'detail__moves' }, left, right),
+      ),
+    ),
+    actions: [
+      { label: t('common.close'), variant: 'ghost', testId: 'joker-close' },
+      {
+        label: eternal ? t('game.joker.cannotSell') : t('game.joker.sell', { price: sellValue }),
+        value: 'sell',
+        variant: 'danger',
+        testId: 'joker-sell',
+        onClick: () => (eternal ? false : undefined),
+      },
+    ],
+  });
+  if (eternal) {
+    const sell = m.dialog.querySelector<HTMLButtonElement>('[data-testid="joker-sell"]');
+    if (sell) sell.disabled = true;
+  }
+  void m.closed.then(async (choice) => {
+    if (choice !== 'sell' || !find()) return;
+    await ctx.act({ type: 'sellJoker', uid });
+  });
+}
+
+// ─────────────────────────── Detail spotřebky ───────────────────────────
+
+export function openConsumableDetail(ctx: GameCtx, uid: number): void {
+  // Bublina s detailem karty pod dialogem by překážela.
+  hideTooltip();
+  const c = ctx.controller;
+  const item = c.state.consumables.find((x) => x.uid === uid);
+  if (!item) return;
+  const opts = { registry: ctx.registry, mods: c.engine.modifiers() };
+  const tx = consumableTexts(item.defId, opts);
+  const def = ctx.registry.consumables[item.defId];
+  const targets = c.selectedInHandOrder();
+  const canUse = c.engine.canUseConsumable(uid, targets);
+  const range = def?.target;
+  const targetHint = range
+    ? range.min === range.max
+      ? t('game.consumable.targetsExact', { n: range.min })
+      : t('game.consumable.targetsRange', { min: range.min, max: range.max })
+    : t('game.consumable.noTargets');
+  const sellValue = c.engine.sellValue(uid);
+
+  const m = openModal<'use' | 'sell'>({
+    title: tx.name,
+    size: 'medium',
+    className: 'modal--detail',
+    testId: 'consumable-detail',
+    body: h(
+      'div',
+      { class: 'detail' },
+      h(
+        'div',
+        { class: 'detail__card' },
+        createConsumableCard(item, { registry: ctx.registry, tooltip: false, mods: opts.mods }),
+      ),
+      h(
+        'div',
+        { class: 'detail__text' },
+        h('p', { class: ['detail__kind', `kind-${tx.kindId}`] }, tx.kind),
+        h('p', { class: 'detail__desc' }, richText(tx.desc)),
+        tx.flavor ? h('p', { class: 'detail__flavor' }, t('art.tooltip.flavor', { text: tx.flavor })) : null,
+        h('p', { class: 'detail__hint' }, targetHint),
+        range
+          ? h('p', { class: 'detail__hint' }, t('game.consumable.selected', { n: targets.length }))
+          : null,
+        canUse ? null : h('p', { class: 'detail__warning' }, t('game.consumable.cannotUse')),
+      ),
+    ),
+    actions: [
+      {
+        label: t('game.consumable.sell', { price: sellValue }),
+        value: 'sell',
+        variant: 'danger',
+        testId: 'consumable-sell',
+      },
+      {
+        label: t('game.consumable.use'),
+        value: 'use',
+        variant: 'primary',
+        testId: 'consumable-use',
+        autofocus: canUse,
+        onClick: () => (canUse ? undefined : false),
+      },
+    ],
+  });
+  const useBtn = m.dialog.querySelector<HTMLButtonElement>('[data-testid="consumable-use"]');
+  if (useBtn) useBtn.disabled = !canUse;
+  void m.closed.then(async (choice) => {
+    if (choice === 'sell') await ctx.act({ type: 'sellConsumable', uid });
+    else if (choice === 'use') {
+      if (await ctx.act({ type: 'useConsumable', uid, targetIds: targets })) c.clearSelection();
+    }
+  });
+}

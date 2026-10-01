@@ -864,7 +864,8 @@ describe('scripts/simulate – volby a výstup', () => {
     expect(text).toContain('Dosažená patra:');
     expect(text).toContain('Nejčastější příčina prohry:');
     expect(text).toContain('Nejlepší rozumná strategie');
-    expect(text).toContain(t('cli.sim.calibration'));
+    // Obsah už má žolíky → poznámka o odložené kalibraci se nezobrazuje.
+    expect(text).not.toContain(t('cli.sim.calibration'));
   });
 
   it('výstup se žolíky ukáže nejsilnější žolíky (testovací obsah)', () => {

@@ -18,6 +18,7 @@ export {
 export {
   DEFAULT_MAX_ACTIONS,
   fallbackAction,
+  MAX_CONSECUTIVE_INVALID,
   simSeed,
   simulateMany,
   simulateRun,

@@ -414,10 +414,12 @@ const RNG_STREAM_NAMES: readonly RngStreamName[] = [
 
 /**
  * Kopie hry s RNG přeseedovaným z náhody bota (bot nesmí znát skutečné budoucí hody). `snapshot` = už
- * serializovaný `JSON.stringify(game.state)` (víc kopií téhož stavu se pak serializuje jen jednou).
+ * serializovaný `JSON.stringify(game.state)` (víc kopií téhož stavu se pak serializuje jen jednou); `mutate`
+ * smí kopii stavu před vytvořením hry upravit (otázka „co kdyby“, např. po zahození).
  */
-export function cloneGame(game: Game, rng: Rng, snapshot?: string): Game {
+export function cloneGame(game: Game, rng: Rng, snapshot?: string, mutate?: (state: RunState) => void): Game {
   const state = JSON.parse(snapshot ?? JSON.stringify(game.state)) as RunState;
+  mutate?.(state);
   for (const name of RNG_STREAM_NAMES) {
     state.rng[name] = [
       (Math.floor(rng.next() * 4294967296) | 1) >>> 0,
@@ -433,8 +435,14 @@ export function cloneGame(game: Game, rng: Rng, snapshot?: string): Game {
  * Skóre tahu se vším všudy (žolíci, šéfova pravidla, `validateHand`) — zahraje ho na kopii hry. Vrací −1,
  * když engine tah odmítne.
  */
-export function exactPlayScore(game: Game, ids: readonly number[], rng: Rng, snapshot?: string): number {
-  const res = cloneGame(game, rng, snapshot).dispatch({ type: 'play', cardIds: [...ids] });
+export function exactPlayScore(
+  game: Game,
+  ids: readonly number[],
+  rng: Rng,
+  snapshot?: string,
+  mutate?: (state: RunState) => void,
+): number {
+  const res = cloneGame(game, rng, snapshot, mutate).dispatch({ type: 'play', cardIds: [...ids] });
   if (!res.ok) return -1;
   for (const e of res.events) if (e.type === 'handPlayed') return e.result.score;
   return 0;

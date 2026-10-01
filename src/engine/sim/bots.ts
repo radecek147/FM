@@ -5,9 +5,13 @@
  * - kolo: zahraje kandidáta s nejvyšším odhadem skóre (náhled enginu + příspěvky karet; se žolíky nebo pravidlem
  *   šéfa přesně na kopii hry), a když ruka nestačí na zbytek cíle, zahazuje — vybírá z několika „honiček“
  *   (držet jádro kombinace, barvu, postupku, páry) tu s nejlepším Monte Carlo odhadem po dobrání;
- * - Večerka: kupóny, žolíci podle `JokerDef.tags`, vzácnosti, edice a stylu (při plných slotech prodá nejslabšího),
- *   pranostiky na své kombinace (koupit a hned použít), obálky, přehození jen s penězi nad rezervou na úrok;
- * - spotřebky ve slotech použije (pranostiky jen na své kombinace), žolíky řadí +čipy/+mult vlevo, ×mult vpravo.
+ * - Večerka: kupóny, žolíci podle `JokerDef.tags`, nečíselných `params` (`suit`, `hand`, `level`), vzácnosti, edice
+ *   a stylu (při plných slotech prodá nejslabšího; s dluhovým limitem i na dluh), pranostiky na své kombinace (koupit
+ *   a hned použít), obálky, přehození jen s penězi nad rezervou na úrok;
+ * - kolo podle vlastních žolíků: honí barvu a kombinace, které chtějí (`params.suit`, `params.hand`), a zahazuje
+ *   jen tehdy, když zahození nevezme víc, než přinese (žolíci se štítkem `discard`, např. Hostinský);
+ * - spotřebky ve slotech použije (pranostiky jen na své kombinace), žolíky řadí +čipy/+mult vlevo, ×mult vpravo,
+ *   kopírujícího žolíka k jeho cíli.
  *
  * Boti používají jen veřejné informace: ruku, složení (ne pořadí) dobíracího balíčku, nabídku a pravidla.
  *
@@ -90,6 +94,17 @@ const FLUSH_FAMILY: readonly HandType[] = [
 ];
 const PAIR_FAMILY: readonly HandType[] = ['pair', 'two_pair', 'three', 'full_house', 'four', 'five'];
 
+/** Kombinace, které „obsahují“ kombinaci z `params.hand` žolíka (DESIGN 2.2.3, zjednodušeně po rodinách). */
+const HAND_FAMILY: Readonly<Record<string, readonly HandType[]>> = {
+  pair: [...PAIR_FAMILY, 'flush_house', 'flush_five'],
+  two_pair: ['two_pair', 'full_house', 'flush_house'],
+  three: ['three', 'full_house', 'four', 'five', 'flush_house', 'flush_five'],
+  straight: ['straight', 'straight_flush', 'royal_flush'],
+  flush: FLUSH_FAMILY,
+};
+/** Násobek preference kombinace, kterou chce vlastní žolík. */
+const JOKER_HAND_PREF = 1.2;
+
 const prefFor = (types: readonly HandType[], mult: number): Partial<Record<HandType, number>> =>
   Object.fromEntries(types.map((t) => [t, mult]));
 
@@ -147,6 +162,8 @@ const TAG_VALUE: Readonly<Partial<Record<JokerTag, number>>> = {
   economy: 1,
   utility: 0.95,
 };
+/** Násobek hodnocení žolíka, který za současného obsahu/stavu runu nic nedá. */
+const DEAD_JOKER_VALUE = 0.25;
 const EDITION_VALUE: Readonly<Record<string, number>> = { foil: 1.1, holo: 1.2, poly: 1.4, negative: 1.5 };
 const STICKER_VALUE: Readonly<Record<string, number>> = { eternal: 0.95, perishable: 0.6, rental: 0.55 };
 
@@ -157,6 +174,34 @@ function jokerOrderKey(tags: readonly JokerTag[]): number {
   if (tags.includes('mult')) return 1;
   return 2;
 }
+
+/**
+ * Klíč pořadí žolíka ve slotech. Kopírující žolík (štítek `copy`) se vyhodnotí na svém místě, takže patří tam,
+ * kam patří jeho aktuální cíl (veřejný stav `state.target` = uid kopírovaného žolíka, pokud ho žolík má).
+ */
+function slotOrderKey(game: Game, j: JokerInstance): number {
+  const reg = game.registry;
+  const tags = reg.jokers[j.defId]?.tags ?? [];
+  if (tags.includes('copy')) {
+    const target = game.state.jokers.find((x) => x.uid === j.state.target && x.uid !== j.uid);
+    if (target) return jokerOrderKey(reg.jokers[target.defId]?.tags ?? []);
+  }
+  return jokerOrderKey(tags);
+}
+
+/** Barvy, které chtějí vlastní žolíci (`params.suit`, např. Srdcař ♥): bonus k počtu karet barvy na bit barvy. */
+function suitFavor(game: Game): number[] {
+  const favor = [0, 0, 0, 0];
+  for (const j of game.state.jokers) {
+    const suit = game.registry.jokers[j.defId]?.params?.suit;
+    const bit = typeof suit === 'string' ? (SUITS as readonly string[]).indexOf(suit) : -1;
+    if (bit >= 0 && !j.debuffed) favor[bit]! += SUIT_FAVOR_PER_JOKER;
+  }
+  return favor;
+}
+
+/** O kolik karet „víc“ bot počítá barvu, kterou chce jeden jeho žolík (honí ji i při mírné převaze jiné barvy). */
+const SUIT_FAVOR_PER_JOKER = 1.5;
 
 // ─────────────────────────── Náhoda rozhodnutí ───────────────────────────
 
@@ -230,6 +275,18 @@ function canPay(game: Game, price: number): boolean {
   return game.state.money - price >= -game.modifiers().debtLimit;
 }
 
+/** Nejvyšší úroveň kombinace v runu. */
+function maxHandLevel(game: Game): number {
+  let max = 1;
+  for (const hl of Object.values(game.state.handLevels)) if (hl && hl.level > max) max = hl.level;
+  return max;
+}
+
+/** Jde v tomto obsahu zvyšovat úrovně kombinací (spotřebky s `hand` — pranostiky)? */
+function canLevelUp(game: Game): boolean {
+  return Object.values(game.registry.consumables).some((c) => Boolean(c.hand));
+}
+
 /** Nejhranější kombinace runu (při shodě silnější). */
 function mostPlayed(game: Game, n: number): HandType[] {
   const counts = game.state.stats.handTypeCounts;
@@ -246,8 +303,11 @@ function mainDeckSuit(game: Game): number {
     const v = cardValue(c, env);
     for (let bit = 0; bit < SUITS.length; bit++) if (v.suitMask & (1 << bit)) counts[bit]!++;
   }
+  // Barva, kterou chtějí žolíci, má přednost i při mírně menším počtu karet v balíčku.
+  const favor = suitFavor(game);
+  const weight = (bit: number): number => counts[bit]! + 4 * (favor[bit] ?? 0);
   let best = 0;
-  for (let bit = 1; bit < counts.length; bit++) if (counts[bit]! > counts[best]!) best = bit;
+  for (let bit = 1; bit < counts.length; bit++) if (weight(bit) > weight(best)) best = bit;
   return best;
 }
 
@@ -259,7 +319,7 @@ interface DrawInfo {
   straight: Set<number>;
 }
 
-function drawInfo(hand: readonly CardValue[]): DrawInfo {
+function drawInfo(hand: readonly CardValue[], favor: readonly number[] = [0, 0, 0, 0]): DrawInfo {
   const ranked = hand.filter((c) => !c.stone && !c.faceDown);
   const rankCounts = new Map<number, number>();
   const suitCounts = [0, 0, 0, 0];
@@ -272,11 +332,13 @@ function drawInfo(hand: readonly CardValue[]): DrawInfo {
         suitWorth[bit]! += c.worth;
       }
   }
+  // Hlavní barva: nejvíc karet (+ bonus za barvu, kterou chtějí žolíci), při shodě nejcennější.
+  const weight = (bit: number): number => suitCounts[bit]! + (favor[bit] ?? 0);
   let mainSuit = 0;
   for (let bit = 1; bit < 4; bit++) {
     if (
-      suitCounts[bit]! > suitCounts[mainSuit]! ||
-      (suitCounts[bit] === suitCounts[mainSuit] && suitWorth[bit]! > suitWorth[mainSuit]!)
+      weight(bit) > weight(mainSuit) ||
+      (weight(bit) === weight(mainSuit) && suitWorth[bit]! > suitWorth[mainSuit]!)
     )
       mainSuit = bit;
   }
@@ -335,7 +397,7 @@ class StrategyBot implements Bot {
     // Pořadí: +čipy/+mult vlevo, ×mult vpravo (stabilně podle dosavadního pořadí).
     if (s.jokers.length > 1) {
       const order = s.jokers
-        .map((j, i) => ({ uid: j.uid, i, key: jokerOrderKey(reg.jokers[j.defId]?.tags ?? []) }))
+        .map((j, i) => ({ uid: j.uid, i, key: slotOrderKey(game, j) }))
         .sort((a, b) => a.key - b.key || a.i - b.i);
       if (order.some((o, i) => o.i !== i)) return { type: 'reorderJokers', uids: order.map((o) => o.uid) };
     }
@@ -359,6 +421,22 @@ class StrategyBot implements Bot {
     return null;
   }
 
+  /**
+   * Preference kombinací: styl bota × kombinace, které chtějí jeho žolíci (`params.hand`, např. Párty pro dva →
+   * vše, co obsahuje Dvojici; Kolotoč → Postupky). Ovlivní výběr kandidátů tahu a honičku při zahazování.
+   */
+  private handPref(game: Game): Partial<Record<HandType, number>> {
+    const pref: Partial<Record<HandType, number>> = { ...this.style.pref };
+    const favored = new Set<HandType>();
+    for (const j of game.state.jokers) {
+      if (j.debuffed) continue;
+      for (const v of Object.values(game.registry.jokers[j.defId]?.params ?? {}))
+        if (typeof v === 'string') for (const t of HAND_FAMILY[v] ?? []) favored.add(t);
+    }
+    for (const t of favored) pref[t] = (pref[t] ?? 1) * JOKER_HAND_PREF;
+    return pref;
+  }
+
   /** Kombinace, na kterou se vyplatí pranostika / žolík: oblíbená stylem nebo nejhranější v runu. */
   private wantsHand(game: Game, hand: HandType): boolean {
     if (this.style.favorHands.includes(hand)) return true;
@@ -369,7 +447,7 @@ class StrategyBot implements Bot {
   /** Cíle spotřebky: nejcennější karty (vylepšení/pečeti dávají smysl na kartách, které bot hraje). */
   private pickTargets(game: Game, def: ConsumableDef, pool: readonly number[]): number[] | null {
     if (!def.target) return [];
-    const env = makeEnv(game, this.style.pref);
+    const env = makeEnv(game, this.handPref(game));
     const cards = cardsOf(game, pool)
       .filter((c) => !c.faceDown)
       .map((c) => cardValue(c, env))
@@ -411,9 +489,9 @@ class StrategyBot implements Bot {
       const clone = cloneGame(game, rng);
       const round = clone.dispatch({ type: 'selectBlind' }).ok ? clone.state.round : null;
       if (!round || clone.state.phase !== 'round') return 0;
-      const env = makeEnv(clone, this.style.pref);
+      const env = makeEnv(clone, this.handPref(clone));
       const hand = cardsOf(clone, round.hand).map((c) => cardValue(c, env));
-      sum += this.rankedPlays(clone, rng, env, hand, drawInfo(hand), true)[0]?.raw ?? 0;
+      sum += this.rankedPlays(clone, rng, env, hand, drawInfo(hand, suitFavor(clone)), true)[0]?.raw ?? 0;
     }
     return sum / STRENGTH_SAMPLES;
   }
@@ -457,9 +535,9 @@ class StrategyBot implements Bot {
   private roundAction(game: Game, rng: Rng): Action {
     const s = game.state;
     const round = s.round as RoundState;
-    const env = makeEnv(game, this.style.pref);
+    const env = makeEnv(game, this.handPref(game));
     const hand = cardsOf(game, round.hand).map((c) => cardValue(c, env));
-    const info = drawInfo(hand);
+    const info = drawInfo(hand, suitFavor(game));
     const need = Math.max(0, round.target - round.score);
     const cands = this.rankedPlays(game, rng, env, hand, info);
     if (cands.length === 0) {
@@ -469,7 +547,9 @@ class StrategyBot implements Bot {
     }
     const best = cands[0]!;
     if (best.raw < need && round.discardsLeft > 0) {
-      const discard = this.chooseDiscard(game, rng, env, hand, info, need);
+      const discard = this.chooseDiscard(game, rng, env, hand, info, need, () =>
+        this.discardPenalty(game, rng, best.ids),
+      );
       if (discard) return { type: 'discard', cardIds: discard };
     }
     return { type: 'play', cardIds: best.ids };
@@ -565,8 +645,26 @@ class StrategyBot implements Bot {
   }
 
   /**
+   * Kolik skóre ruky zbude po zahození (0–1): žolíci se štítkem `discard` mohou zahazování trestat (Hostinský
+   * násobí, jen dokud se v kole nezahazovalo). Přesně na kopii hry: nejlepší tah teď a po jednom zahození.
+   */
+  private discardPenalty(game: Game, rng: Rng, ids: readonly number[]): number {
+    const reg = game.registry;
+    if (!game.state.jokers.some((j) => !j.debuffed && reg.jokers[j.defId]?.tags.includes('discard')))
+      return 1;
+    const snapshot = JSON.stringify(game.state);
+    const seed = cyrb128(`${rng.next()}`);
+    const now = exactPlayScore(game, ids, rngFromState([...seed]), snapshot);
+    const after = exactPlayScore(game, ids, rngFromState([...seed]), snapshot, (st) => {
+      if (st.round) st.round.discardsUsed++;
+    });
+    return now > 0 && after >= 0 ? Math.min(1, after / now) : 1;
+  }
+
+  /**
    * Zahodit? Porovná užitek nejlepší kombinace teď s Monte Carlo odhadem po zahození a dobrání (vzorky
-   * z veřejného složení dobíracího balíčku, zamíchané RNG bota). Vrací id karet, nebo null (radši hrát).
+   * z veřejného složení dobíracího balíčku, zamíchané RNG bota), sníženým o trest za zahození (`penalty`, počítá
+   * se až když zahození vychází). Vrací id karet, nebo null (radši hrát).
    */
   private chooseDiscard(
     game: Game,
@@ -575,6 +673,7 @@ class StrategyBot implements Bot {
     hand: readonly CardValue[],
     info: DrawInfo,
     need: number,
+    penalty: () => number = () => 1,
   ): number[] | null {
     const round = game.state.round as RoundState;
     const options = this.discardOptions(hand, info, env);
@@ -609,7 +708,8 @@ class StrategyBot implements Bot {
       const ev = p.sum / this.style.samples;
       if (!best || ev > best.ev) best = { ids: p.opt.map((c) => c.id), ev };
     }
-    return best && best.ev > now * 1.05 ? best.ids : null;
+    if (!best || best.ev <= now * 1.05) return null;
+    return best.ev * penalty() > now * 1.05 ? best.ids : null;
   }
 
   // ── Večerka ──
@@ -627,9 +727,22 @@ class StrategyBot implements Bot {
     return canPay(game, price) && game.state.money - price >= this.reserve(game) + extra;
   }
 
-  /** Hodnocení žolíka (vzácnost × kategorie × synergie se stylem × edice × nálepky). */
+  /**
+   * Žolíka smí koupit i do mínusu, když to dluhový limit dovolí (Sekera, Dlužník): žolík je síla hned, úrok
+   * z rezervy jen pomalu. Bot `econ` (drží plnou rezervu) se zadlužovat nechce.
+   */
+  private debtAffordable(game: Game, price: number): boolean {
+    return !this.style.fullReserve && game.modifiers().debtLimit > 0 && canPay(game, price);
+  }
+
+  /**
+   * Hodnocení žolíka (vzácnost × kategorie × synergie se stylem × edice × nálepky). Štítky a nečíselné `params`
+   * (`suit`, `hand`, `level`) říkají, kdy žolík nic nedá: spotřebkový žolík bez spotřebek v obsahu, žolík na úroveň
+   * kombinace, kterou nejde zvýšit, kopírující žolík bez žolíků ke kopírování.
+   */
   private jokerRating(game: Game, joker: JokerInstance): number {
-    const def = game.registry.jokers[joker.defId];
+    const reg = game.registry;
+    const def = reg.jokers[joker.defId];
     if (!def) return 0;
     if (joker.perishRounds === 0) return 0;
     let r = RARITY_VALUE[def.rarity] ?? 1;
@@ -637,13 +750,28 @@ class StrategyBot implements Bot {
     for (const tag of def.tags) tagMult = Math.max(tagMult, TAG_VALUE[tag] ?? 1);
     r *= tagMult;
     const ante = game.state.ante;
+    const params = def.params ?? {};
     const onlyChips = def.tags.includes('chips') && !def.tags.includes('mult') && !def.tags.includes('xmult');
     if (onlyChips && ante >= 5) r *= 0.8;
     if (def.tags.includes('economy')) r *= ante <= 3 ? (this.style.fullReserve ? 1.4 : 1.1) : 0.8;
-    const handParams = Object.values(def.params ?? {}).filter((v): v is string => typeof v === 'string');
+    const handParams = Object.values(params).filter((v): v is string => typeof v === 'string');
     if (handParams.some((h) => this.wantsHand(game, h as HandType))) r *= 1.4;
     if (this.style.suitFocus && def.tags.includes('suit')) r *= 1.35;
+    // Barevný žolík na barvu, kterou už chtějí jiní žolíci (nebo hlavní barvu balíčku u stylu `flush`).
+    const suit = typeof params.suit === 'string' ? (SUITS as readonly string[]).indexOf(params.suit) : -1;
+    if (suit >= 0) {
+      const favored = suitFavor(game)[suit]! > 0 || (this.style.suitFocus && mainDeckSuit(game) === suit);
+      if (favored) r *= 1.25;
+    }
     if (this.style.rankFocus && (def.tags.includes('rank') || def.tags.includes('hand'))) r *= 1.15;
+    // Spotřebkový žolík bez spotřebek v obsahu hry nic nedá.
+    if (def.tags.includes('consumable') && Object.keys(reg.consumables).length === 0) r *= DEAD_JOKER_VALUE;
+    // Žolík na úroveň kombinace (`params.level`): bez možnosti úrovně zvyšovat a pod tou úrovní nic nedá.
+    if (typeof params.level === 'number' && maxHandLevel(game) < params.level)
+      r *= canLevelUp(game) ? 0.8 : DEAD_JOKER_VALUE;
+    // Kopírující žolík potřebuje aspoň dva jiné žolíky, aby měl z čeho vybírat.
+    if (def.tags.includes('copy') && game.state.jokers.filter((j) => j.uid !== joker.uid).length < 2)
+      r *= 0.6;
     if (joker.edition) r *= EDITION_VALUE[joker.edition] ?? 1;
     for (const st of joker.stickers) r *= STICKER_VALUE[st] ?? 1;
     return r;
@@ -701,7 +829,8 @@ class StrategyBot implements Bot {
       for (const o of offers) {
         if (o.rating < this.style.minJokerRating) continue;
         if (jokerRoom(game, o.joker)) {
-          if (this.affordable(game, o.it.price)) return { type: 'buy', slot: o.i };
+          if (this.affordable(game, o.it.price) || this.debtAffordable(game, o.it.price))
+            return { type: 'buy', slot: o.i };
           continue;
         }
         const worst = this.worstJoker(game);
@@ -762,7 +891,7 @@ class StrategyBot implements Bot {
     const skip: Action = { type: 'skipBooster' };
     if (!b) return skip;
     const reg = game.registry;
-    const env = makeEnv(game, this.style.pref);
+    const env = makeEnv(game, this.handPref(game));
     const mainSuit = this.style.suitFocus ? mainDeckSuit(game) : -1;
     let best: { score: number; action: Action } | null = null;
     const offer = (score: number, action: Action): void => {

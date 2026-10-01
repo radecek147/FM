@@ -1,0 +1,567 @@
+/*
+ * Karty a obrázky obsahu: hrací karty (components/card.ts), žolíci a spotřebky (jokerCard.ts, consumableCard.ts),
+ * tooltip (tooltip.ts) a vývojářská galerie (screens/gallery.ts).
+ *
+ * Velikost řídí CSS proměnná --card-w (šířka; výška plyne z poměru 5 : 7). Animuje se jen transform/opacity
+ * (hover, náklon, výběr = posun nahoru, třpyt edic). Barvy karet: --suit-* (base.css), barvoslepý režim
+ * = třída .colorblind (na <html> z nastavení, nebo na libovolném kontejneru — galerie).
+ */
+
+:root {
+  --card-w: 90px;
+  --card-radius: calc(var(--card-w) * 0.072);
+  --card-lift: calc(var(--card-w) * -0.24);
+  --card-hover-lift: calc(var(--card-w) * -0.06);
+  --font-card: var(--font-game);
+  --suit-diamonds-4c: #1f63c6;
+  --suit-clubs-4c: #1d8442;
+}
+
+@media (max-width: 600px) {
+  :root {
+    --card-w: 62px;
+  }
+}
+
+/* ─────────────────────────── Barvoslepý režim (4 barvy) ─────────────────────────── */
+
+/* ♠ černá, ♥ červená, ♦ modrá, ♣ zelená (+ symbol barvy je vždy u indexu). :root.colorblind přebije :root z base.css. */
+:root.colorblind,
+.colorblind {
+  --suit-spades: #1e1b16;
+  --suit-hearts: #c8372d;
+  --suit-diamonds: var(--suit-diamonds-4c);
+  --suit-clubs: var(--suit-clubs-4c);
+}
+
+/* Vynucené klasické barvy uvnitř barvoslepého režimu (galerie porovnává oba styly). */
+.classic-suits {
+  --suit-spades: #1e1b16;
+  --suit-hearts: #c8372d;
+  --suit-diamonds: #c8372d;
+  --suit-clubs: #1e1b16;
+}
+
+/* ─────────────────────────── Společné: karta ─────────────────────────── */
+
+.pcard,
+.kcard {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: var(--card-w);
+  height: calc(var(--card-w) * 1.4);
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  text-align: left;
+  vertical-align: bottom;
+  background: none;
+  border: 0;
+  border-radius: var(--card-radius);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+  touch-action: manipulation;
+  transition: transform var(--t-fast) ease-out;
+}
+
+.kcard--round {
+  height: var(--card-w);
+  border-radius: 50%;
+}
+
+.pcard__inner,
+.kcard__inner {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  border-radius: inherit;
+  box-shadow:
+    0 3px 0 rgb(0 0 0 / 22%),
+    0 8px 18px rgb(0 0 0 / 28%);
+  transform: perspective(700px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+  transition: transform var(--t-fast) ease-out;
+}
+
+.kcard--round .kcard__inner,
+.kcard--consumable .kcard__inner,
+.kcard--voucher .kcard__inner,
+.kcard--booster .kcard__inner {
+  box-shadow: none;
+  filter: drop-shadow(0 4px 6px rgb(0 0 0 / 35%));
+}
+
+.pc-svg,
+.art-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.pc-svg text {
+  font-family: var(--font-card);
+}
+
+/* Hover (jen zařízení s myší) a výběr = posun nahoru. */
+@media (hover: hover) {
+  button.pcard:hover:not(:disabled),
+  button.kcard:hover:not(:disabled) {
+    transform: translateY(var(--card-hover-lift));
+  }
+}
+
+.pcard.is-selected,
+button.pcard.is-selected:hover {
+  transform: translateY(var(--card-lift));
+}
+
+.pcard.is-selected .pcard__inner,
+.kcard.is-selected .kcard__inner {
+  box-shadow:
+    0 0 0 3px var(--accent),
+    0 10px 22px rgb(0 0 0 / 35%);
+}
+
+.kcard--round.is-selected .kcard__inner,
+.kcard--consumable.is-selected .kcard__inner,
+.kcard--voucher.is-selected .kcard__inner,
+.kcard--booster.is-selected .kcard__inner {
+  box-shadow: none;
+  filter: drop-shadow(0 0 3px var(--accent)) drop-shadow(0 0 3px var(--accent));
+}
+
+.pcard:focus-visible,
+.kcard:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: var(--card-radius);
+}
+
+button.pcard,
+button.kcard {
+  cursor: pointer;
+}
+
+button.kcard[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
+/* Klávesová zkratka pod kartou (1–8). */
+.pcard__key {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  line-height: 1;
+  color: var(--on-felt-muted);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.pcard__key:empty {
+  display: none;
+}
+
+/* Mimo provoz: zašedlá + přeškrtnutá. */
+.is-debuffed .pcard__inner > svg,
+.is-debuffed .kcard__inner > svg {
+  filter: grayscale(1) brightness(0.78) contrast(0.9);
+}
+
+.is-debuffed .pcard__inner::after,
+.is-debuffed .kcard__inner::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: '';
+  background:
+    linear-gradient(
+      to top right,
+      transparent calc(50% - 2.5px),
+      rgb(200 55 45 / 90%) calc(50% - 2.5px),
+      rgb(200 55 45 / 90%) calc(50% + 2.5px),
+      transparent calc(50% + 2.5px)
+    ),
+    linear-gradient(
+      to top left,
+      transparent calc(50% - 2.5px),
+      rgb(200 55 45 / 90%) calc(50% - 2.5px),
+      rgb(200 55 45 / 90%) calc(50% + 2.5px),
+      transparent calc(50% + 2.5px)
+    );
+}
+
+/* ─────────────────────────── Edice (třpyt přes transform/opacity) ─────────────────────────── */
+
+.kshine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -100%;
+  width: 300%;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.ed-foil .kshine,
+.ed-holo .kshine,
+.ed-poly .kshine {
+  opacity: 1;
+  animation: kshine-sweep calc(5s / var(--speed)) ease-in-out infinite alternate;
+}
+
+/* Lesklá: stříbrný odlesk. */
+.ed-foil .kshine {
+  background: linear-gradient(
+    110deg,
+    transparent 30%,
+    rgb(255 255 255 / 0%) 38%,
+    rgb(255 255 255 / 55%) 44%,
+    rgb(220 232 255 / 25%) 48%,
+    transparent 54%,
+    rgb(255 255 255 / 35%) 62%,
+    transparent 68%
+  );
+  mix-blend-mode: screen;
+}
+
+/* Holografická: růžovo-tyrkysové pruhy. */
+.ed-holo .kshine {
+  background: repeating-linear-gradient(
+    125deg,
+    rgb(255 120 200 / 40%) 0 6%,
+    rgb(120 230 255 / 40%) 6% 12%,
+    rgb(255 255 160 / 30%) 12% 18%
+  );
+  mix-blend-mode: color-dodge;
+  opacity: 0.75;
+}
+
+/* Duhová: celé spektrum přes barvu obrázku. */
+.ed-poly .kshine {
+  background: linear-gradient(
+    100deg,
+    #ff4d4d,
+    #ffb84d,
+    #f5ff4d,
+    #4dff88,
+    #4dd2ff,
+    #8a4dff,
+    #ff4dd2,
+    #ff4d4d,
+    #ffb84d,
+    #f5ff4d
+  );
+  mix-blend-mode: color;
+  opacity: 0.55;
+}
+
+/* Negativní: převrácené barvy (staticky). */
+.ed-negative .pcard__inner > svg,
+.ed-negative .kcard__inner > svg {
+  filter: invert(1) hue-rotate(180deg) saturate(1.2);
+}
+
+@keyframes kshine-sweep {
+  from {
+    transform: translateX(-28%);
+  }
+  to {
+    transform: translateX(28%);
+  }
+}
+
+.no-anim .kshine,
+.no-anim .pcard,
+.no-anim .kcard,
+.no-anim .pcard__inner,
+.no-anim .kcard__inner {
+  animation: none !important;
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kshine {
+    animation: none !important;
+  }
+
+  .pcard__inner,
+  .kcard__inner {
+    transform: none;
+  }
+}
+
+/* ─────────────────────────── Doplňky karet obsahu ─────────────────────────── */
+
+.price-tag {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  z-index: 1;
+  padding: 0.05em 0.5em;
+  margin-bottom: 0.2rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ink);
+  white-space: nowrap;
+  background: var(--money);
+  border-radius: 999px;
+  box-shadow: 0 2px 0 var(--accent-dark);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.kcard__name {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: max-content;
+  max-width: calc(var(--card-w) * 1.2);
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  line-height: 1.15;
+  color: var(--on-felt);
+  text-align: center;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.kstickers {
+  position: absolute;
+  top: 3%;
+  right: 3%;
+  z-index: 1;
+  display: flex;
+  gap: 2px;
+  pointer-events: none;
+}
+
+.ksticker {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  min-width: 1.35em;
+  height: 1.35em;
+  padding: 0 0.2em;
+  font-size: max(0.6rem, calc(var(--card-w) * 0.1));
+  line-height: 1;
+  color: var(--paper);
+  background: var(--ink);
+  border: 1px solid var(--paper);
+  border-radius: 999px;
+}
+
+.ksticker .icon {
+  width: 1em;
+  height: 1em;
+}
+
+.ksticker--eternal {
+  background: #6b4f2a;
+}
+
+.ksticker--perishable {
+  background: #5a6b2f;
+}
+
+.ksticker--rental {
+  background: #7a2e3a;
+}
+
+.icon {
+  display: inline-block;
+  flex: none;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+}
+
+/* ─────────────────────────── Tooltip ─────────────────────────── */
+
+.ktip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2000;
+  max-width: min(20rem, calc(100vw - 16px));
+  padding: 0.6rem 0.8rem 0.65rem;
+  font-size: 0.9rem;
+  line-height: 1.3;
+  color: var(--ink);
+  pointer-events: none;
+  background: var(--paper);
+  border: 2px solid var(--wood);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  opacity: 0;
+  transition: opacity var(--t-fast) ease-out;
+}
+
+.ktip.is-visible {
+  opacity: 1;
+}
+
+.ktip__title {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.ktip__subtitle {
+  margin-top: 0.1rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+}
+
+.ktip__subtitle.rarity-common {
+  color: #56616b;
+}
+
+.ktip__subtitle.rarity-rare {
+  color: #2f6fb5;
+}
+
+.ktip__subtitle.rarity-epic {
+  color: #7b3fb5;
+}
+
+.ktip__subtitle.rarity-legendary {
+  color: #9a6d08;
+}
+
+.ktip__subtitle.kind-pranostika {
+  color: #35648f;
+}
+
+.ktip__subtitle.kind-rada {
+  color: #5d7a2e;
+}
+
+.ktip__subtitle.kind-razitko,
+.ktip__subtitle.kind-boss {
+  color: #a3272f;
+}
+
+.ktip__line {
+  margin-top: 0.35rem;
+}
+
+.ktip__line--muted {
+  color: var(--ink-soft);
+}
+
+.ktip__flavor {
+  margin-top: 0.45rem;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+.ktip__footer {
+  padding-top: 0.35rem;
+  margin-top: 0.45rem;
+  font-weight: 700;
+  color: var(--accent-dark);
+  border-top: 1px dashed var(--paper-shade);
+}
+
+.hl-chips {
+  font-weight: 700;
+  color: var(--chips);
+}
+
+.hl-mult {
+  font-weight: 700;
+  color: var(--mult);
+}
+
+.hl-xmult {
+  padding: 0 0.2em;
+  font-weight: 700;
+  color: #fff;
+  background: var(--mult);
+  border-radius: 4px;
+}
+
+.hl-money {
+  font-weight: 700;
+  color: #8a6408;
+}
+
+/* ─────────────────────────── Vývojářská galerie ─────────────────────────── */
+
+.gallery {
+  max-width: 1440px;
+  padding: 1.25rem 1rem 3rem;
+  margin: 0 auto;
+}
+
+.gallery__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.gallery__title {
+  font-size: 2rem;
+}
+
+.gallery__intro {
+  max-width: 48rem;
+  color: var(--on-felt-muted);
+}
+
+.gallery__section {
+  padding: 1rem;
+  margin-top: 1.25rem;
+  background: rgb(0 0 0 / 14%);
+  border-radius: var(--radius);
+}
+
+.gallery__section h2 {
+  margin-bottom: 0.85rem;
+  font-size: 1.2rem;
+  color: var(--accent);
+}
+
+.gallery__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.6rem 0.6rem;
+  align-items: flex-end;
+  padding-top: 1.4rem;
+}
+
+.gallery__grid--tight {
+  gap: 0.6rem 0.35rem;
+  padding-top: 0;
+}
+
+.gallery__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: center;
+  max-width: calc(var(--card-w) * 1.5);
+  font-size: 0.75rem;
+  line-height: 1.15;
+  color: var(--on-felt-muted);
+  text-align: center;
+}
+
+.gallery__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.gallery__note {
+  color: var(--on-felt-muted);
+}

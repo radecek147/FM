@@ -1,0 +1,1750 @@
+/*
+ * Herní obrazovka (src/ui/screens/game, src/ui/present.ts): levý panel, řada žolíků a spotřebek, stůl,
+ * ruka, balíček, panely fází (výběr útraty, konec kola, Večerka, obálka, pitva, výhra), bubliny skórování
+ * a dialogy (Info o runu, balíček, detail).
+ *
+ * Primárně desktop ≥ 1024 px (obrazovka se vejde do okna bez posouvání), tablet s dotykem plně, telefon
+ * „best effort“ (jeden sloupec, posouvání). Animuje se jen transform/opacity, rychlost podle --speed,
+ * `html.no-anim` a prefers-reduced-motion animace vypínají.
+ */
+
+.game {
+  --sidebar-w: clamp(13.5rem, 21vw, 18.5rem);
+  --game-card-w: clamp(
+    52px,
+    min(calc((100vw - var(--sidebar-w) - 7rem) / 9.6), calc((100dvh - 11rem) / 4.6)),
+    108px
+  );
+  --card-w: var(--game-card-w);
+  --card-lift: calc(var(--card-w) * -0.22);
+
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  gap: 0.6rem;
+  height: 100vh;
+  height: 100dvh;
+  padding: 0.6rem;
+  overflow: hidden;
+}
+
+.game-main {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0.4rem;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Během animace nejde klikat na akce (klávesy blokuje controller). */
+.game.is-busy .game-panel-host button,
+.game.is-busy .gb-controls button,
+.game.is-busy .gs-buttons button,
+.game.is-busy .game-top button,
+.game.is-busy .gb-hand {
+  pointer-events: none;
+}
+
+.game.is-busy .gb-controls .btn {
+  opacity: 0.55;
+}
+
+.game.is-busy .gb-selected {
+  visibility: hidden;
+}
+
+/* ─────────────────────────── Levý panel ─────────────────────────── */
+
+.game-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 0;
+  padding: 0.65rem;
+  overflow: auto;
+  background: var(--wood-grain), var(--board-bg);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 0 0 2px var(--wood-dark),
+    0 10px 24px rgb(0 0 0 / 35%);
+  scrollbar-width: thin;
+}
+
+.gs-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--on-felt-muted);
+}
+
+.gs-blind {
+  display: grid;
+  grid-template-columns: 3.4rem minmax(0, 1fr);
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.55rem 0.6rem;
+  color: var(--chalk);
+  background: var(--chalkboard);
+  border-radius: var(--radius);
+  box-shadow:
+    inset 0 0 0 3px rgb(255 255 255 / 6%),
+    0 3px 0 rgb(0 0 0 / 30%);
+}
+
+.gs-blind[data-blind='boss'] {
+  box-shadow:
+    inset 0 0 0 3px var(--danger),
+    0 3px 0 rgb(0 0 0 / 30%);
+}
+
+.gs-blind__token {
+  width: 3.4rem;
+  height: 3.4rem;
+}
+
+.gs-blind__token .art-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.gs-blind__name {
+  font-size: 1.15rem;
+  color: var(--paper);
+}
+
+.gs-blind__rule {
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+  line-height: 1.25;
+  color: var(--on-felt-muted);
+}
+
+.gs-box {
+  padding: 0.45rem 0.6rem;
+  background: rgb(0 0 0 / 30%);
+  border-radius: var(--radius);
+  box-shadow: inset 0 2px 6px rgb(0 0 0 / 35%);
+}
+
+.gs-target__value {
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.gs-target__reward {
+  font-size: 0.8rem;
+  color: var(--money);
+}
+
+.gs-score__value {
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--paper);
+  font-variant-numeric: tabular-nums;
+}
+
+.gs-hand__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem;
+  min-height: 1.5em;
+}
+
+.gs-hand__name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--paper);
+}
+
+.gs-hand__level {
+  font-size: 0.8rem;
+  color: var(--on-felt-muted);
+}
+
+.gs-hand__calc {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 0.35rem;
+  align-items: center;
+  margin-top: 0.3rem;
+}
+
+.gs-hand__chips,
+.gs-hand__mult {
+  display: block;
+  padding: 0.2rem 0.4rem;
+  overflow: hidden;
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.15;
+  color: #fff;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: var(--radius-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.gs-hand__chips {
+  background: var(--chips);
+  box-shadow: 0 3px 0 #23589c;
+}
+
+.gs-hand__mult {
+  background: var(--mult);
+  box-shadow: 0 3px 0 #96301f;
+}
+
+.gs-hand__times {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--paper);
+}
+
+.gs-hand.is-scoring {
+  box-shadow:
+    inset 0 2px 6px rgb(0 0 0 / 35%),
+    0 0 0 2px var(--accent);
+}
+
+.gs-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.gs-stat {
+  padding: 0.3rem 0.5rem;
+  color: var(--ink);
+  text-align: center;
+  background: var(--paper);
+  border-radius: var(--radius-small);
+  box-shadow: 0 3px 0 var(--paper-shade);
+}
+
+.gs-stat--wide {
+  grid-column: 1 / -1;
+}
+
+.gs-stat__label {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  justify-content: center;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.gs-stat__note {
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--danger);
+}
+
+.gs-stat__value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.gs-stat__value--hands {
+  color: var(--chips);
+}
+
+.gs-stat__value--discards {
+  color: var(--mult);
+}
+
+.gs-stat__value--money {
+  color: #8a6408;
+}
+
+.gs-stat__value--money.is-negative {
+  color: var(--danger);
+}
+
+.gs-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-top: auto;
+}
+
+.gs-buttons .btn {
+  min-height: 2.3rem;
+  padding-inline: 0.4em;
+  font-size: 0.85rem;
+}
+
+.gs-buttons .btn:last-child {
+  grid-column: 1 / -1;
+}
+
+/* ─────────────────────────── Horní řada: žolíci a spotřebky ─────────────────────────── */
+
+.game-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.6rem;
+}
+
+.gt-group {
+  --card-w: max(56px, calc(var(--game-card-w) * 0.8));
+
+  position: relative;
+  min-width: 0;
+  padding: 0.3rem 0.6rem 0.45rem;
+  background: rgb(0 0 0 / 20%);
+  border-radius: var(--radius);
+  box-shadow: inset 0 2px 8px rgb(0 0 0 / 35%);
+}
+
+.gt-group--consumables {
+  min-width: calc(var(--card-w) * 2 + 2rem);
+}
+
+.gt-title {
+  display: flex;
+  gap: 0.4rem;
+  align-items: baseline;
+  margin-bottom: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--on-felt-muted);
+}
+
+.gt-count {
+  font-weight: 700;
+  color: var(--paper);
+  letter-spacing: 0;
+}
+
+.gt-row {
+  display: flex;
+  gap: 0.5rem;
+  min-height: calc(var(--card-w) * 1.4);
+  padding: 0;
+  margin: 0;
+}
+
+.gt-item {
+  flex: none;
+  touch-action: manipulation;
+}
+
+.gt-row--jokers .gt-item {
+  touch-action: none;
+}
+
+.gt-item.is-shifting {
+  transition: transform var(--t-fast) ease-out;
+}
+
+.gt-item.is-dragging {
+  position: relative;
+  z-index: 5;
+  cursor: grabbing;
+}
+
+.gt-item.is-dragging .kcard__inner {
+  box-shadow:
+    0 0 0 3px var(--accent),
+    0 16px 30px rgb(0 0 0 / 45%);
+}
+
+.gt-row--jokers.is-sorting .kcard {
+  pointer-events: none;
+}
+
+.gt-empty {
+  position: absolute;
+  inset: 1.4rem 0.6rem 0.45rem;
+  display: grid;
+  place-items: center start;
+  font-size: 0.9rem;
+  color: var(--on-felt-muted);
+  pointer-events: none;
+}
+
+/* ─────────────────────────── Stůl a panely ─────────────────────────── */
+
+.game-stage {
+  position: relative;
+  display: grid;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.game-stage > * {
+  grid-area: 1 / 1;
+}
+
+/* Šéf: stůl lehce zčervená (statický stín, žádná animace). */
+.game.is-boss .game-stage {
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 120px rgb(200 55 45 / 20%);
+}
+
+.game-table {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  min-height: calc(var(--card-w) * 1.6);
+  padding-top: calc(var(--card-w) * 0.2);
+}
+
+.game-table .pcard {
+  translate: 0 0;
+  transition: translate var(--t-med) ease-out;
+}
+
+.game-table .pcard.is-scoring {
+  translate: 0 calc(var(--card-w) * -0.16);
+}
+
+.game-table .pcard.is-played:not(.is-scoring) .pcard__inner {
+  opacity: 0.6;
+}
+
+.game-table__hint {
+  align-self: center;
+  justify-self: center;
+  max-width: 30rem;
+  padding: 0 1rem;
+  font-size: 0.95rem;
+  color: var(--on-felt-muted);
+  text-align: center;
+  pointer-events: none;
+}
+
+.game-panel-host {
+  align-self: start;
+  min-width: 0;
+  padding: 0.25rem 0.25rem 0.75rem;
+}
+
+.game-panel {
+  width: min(100%, 64rem);
+  margin: 0 auto;
+}
+
+.game-panel.paper {
+  padding: 1rem 1.25rem 1.25rem;
+  box-shadow:
+    var(--frame-shadow),
+    0 18px 40px rgb(0 0 0 / 45%);
+}
+
+.game-panel__header {
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+
+.game-panel__title {
+  font-size: 1.8rem;
+  color: var(--paper);
+  text-shadow:
+    0 3px 0 var(--wood),
+    0 6px 14px rgb(0 0 0 / 40%);
+}
+
+.paper .game-panel__title {
+  color: var(--wood);
+  text-shadow: none;
+}
+
+.game-panel__subtitle {
+  margin-top: 0.2rem;
+  color: var(--on-felt-muted);
+}
+
+.paper .game-panel__subtitle {
+  color: var(--ink-soft);
+}
+
+.game-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+/* ─────────────────────────── Výběr útraty ─────────────────────────── */
+
+.blind-select__cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+  align-items: stretch;
+}
+
+.blind-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  align-items: center;
+  padding: 0.8rem 0.8rem 0.9rem;
+  color: var(--ink);
+  text-align: center;
+  background: var(--paper);
+  border-radius: 12px;
+  box-shadow:
+    0 4px 0 var(--paper-shade),
+    0 10px 22px rgb(0 0 0 / 30%);
+  transition:
+    transform var(--t-med) ease-out,
+    opacity var(--t-med) ease-out;
+}
+
+.blind-card.is-current {
+  box-shadow:
+    0 0 0 3px var(--accent),
+    0 4px 0 var(--accent-dark),
+    0 14px 28px rgb(0 0 0 / 40%);
+  transform: translateY(-6px);
+}
+
+.blind-card.is-defeated,
+.blind-card.is-skipped {
+  opacity: 0.55;
+}
+
+.blind-card.is-upcoming {
+  opacity: 0.88;
+}
+
+.blind-card__status {
+  align-self: stretch;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--paper);
+  background: var(--ink-soft);
+  border-radius: 999px;
+}
+
+.blind-card.is-current .blind-card__status {
+  color: var(--ink);
+  background: var(--accent);
+}
+
+.blind-card--boss .blind-card__status {
+  background: var(--danger);
+}
+
+.blind-card__token {
+  width: clamp(3.5rem, 7vw, 5rem);
+  height: clamp(3.5rem, 7vw, 5rem);
+}
+
+.blind-card__token .art-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.blind-card__name {
+  font-size: 1.3rem;
+  color: var(--wood);
+}
+
+.blind-card__rule {
+  font-size: 0.85rem;
+  line-height: 1.3;
+  color: var(--danger-dark);
+}
+
+.blind-card__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+  align-self: stretch;
+}
+
+.blind-card__fact {
+  padding: 0.3rem;
+  background: var(--paper-shade);
+  border-radius: var(--radius-small);
+}
+
+.blind-card__fact dt {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.blind-card__target {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--danger-dark);
+  font-variant-numeric: tabular-nums;
+}
+
+.blind-card__reward {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #8a6408;
+}
+
+.blind-card__tag {
+  --card-w: 3rem;
+
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  align-self: stretch;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.8rem;
+  line-height: 1.25;
+  text-align: left;
+  border: 2px dashed var(--paper-shade);
+  border-radius: var(--radius-small);
+}
+
+.blind-card__tag--none {
+  justify-content: center;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.blind-card__tag-name {
+  font-weight: 700;
+}
+
+.blind-card__tag-desc {
+  color: var(--ink-soft);
+}
+
+.blind-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: auto;
+}
+
+.blind-card__select {
+  min-width: 8rem;
+}
+
+.blind-card .btn--ghost {
+  color: var(--ink);
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--ink-soft);
+}
+
+/* ─────────────────────────── Konec kola ─────────────────────────── */
+
+.round-end {
+  width: min(100%, 34rem);
+}
+
+.round-end__lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.round-end__line {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  font-size: 1.05rem;
+  animation: line-in calc(260ms / var(--speed)) ease-out both;
+  animation-delay: calc(var(--i, 0) * 170ms / var(--speed));
+}
+
+.round-end__dots {
+  flex: 1;
+  min-width: 1rem;
+  border-bottom: 2px dotted var(--paper-shade);
+}
+
+.round-end__amount {
+  font-weight: 700;
+  color: #8a6408;
+  font-variant-numeric: tabular-nums;
+}
+
+.round-end__line.is-negative .round-end__amount {
+  color: var(--danger);
+}
+
+.round-end__line--total {
+  padding-top: 0.4rem;
+  margin-top: 0.2rem;
+  font-size: 1.3rem;
+  border-top: 2px solid var(--ink-soft);
+}
+
+.round-end .game-panel__actions {
+  animation: line-in calc(260ms / var(--speed)) ease-out both;
+  animation-delay: calc(var(--i, 0) * 170ms / var(--speed));
+}
+
+@keyframes line-in {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+}
+
+/* ─────────────────────────── Večerka ─────────────────────────── */
+
+.shop__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+}
+
+.shop__sign {
+  padding: 0.35rem 1rem 0.5rem;
+  background: var(--wood-grain), var(--board-bg);
+  border-radius: var(--radius);
+  box-shadow:
+    inset 0 0 0 2px var(--wood-dark),
+    0 6px 16px rgb(0 0 0 / 35%);
+}
+
+.shop__title {
+  color: var(--accent);
+  text-shadow:
+    0 0 10px rgb(232 169 42 / 55%),
+    0 2px 0 var(--wood-dark);
+}
+
+.shop__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.shop__bar .btn {
+  min-width: 0;
+  font-size: 1.05rem;
+}
+
+.shop__shelves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.shop-section {
+  flex: 1 1 auto;
+  padding: 0.5rem 0.75rem 0.75rem;
+  background: rgb(0 0 0 / 22%);
+  border-radius: var(--radius);
+  box-shadow: inset 0 2px 8px rgb(0 0 0 / 35%);
+}
+
+.shop-section--items {
+  flex-basis: 100%;
+}
+
+.shop-section__title {
+  margin-bottom: 0.3rem;
+  font-size: 0.85rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--on-felt-muted);
+}
+
+.shop-section__slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+}
+
+.shop-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: center;
+  width: calc(var(--card-w) * 1.6);
+  padding-top: 1.4rem;
+}
+
+.shop-slot__card {
+  position: relative;
+}
+
+.shop-slot__playing {
+  position: relative;
+}
+
+.shop-slot__name {
+  font-size: 0.85rem;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.shop-slot__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: stretch;
+  width: 100%;
+}
+
+.shop-slot__actions .btn {
+  min-height: 2.2rem;
+  padding-inline: 0.5em;
+  font-size: 0.85rem;
+}
+
+.shop-slot.is-sold {
+  justify-content: center;
+}
+
+.shop-slot__sold {
+  display: grid;
+  place-items: center;
+  width: var(--card-w);
+  height: calc(var(--card-w) * 1.4);
+  font-size: 0.8rem;
+  color: var(--on-felt-muted);
+  text-align: center;
+  border: 2px dashed rgb(244 236 216 / 35%);
+  border-radius: var(--card-radius);
+}
+
+.shop-empty {
+  width: min(100%, 26rem);
+  padding: 1rem 1.25rem;
+  margin: 1rem auto;
+  text-align: center;
+  transform: rotate(-1.5deg);
+}
+
+.shop-empty__title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--danger);
+}
+
+.shop-empty__hint {
+  margin-top: 0.3rem;
+  color: var(--ink-soft);
+}
+
+/* ─────────────────────────── Obálka ─────────────────────────── */
+
+.booster__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.1rem;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+}
+
+.booster-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: center;
+  width: calc(var(--card-w) * 1.6);
+}
+
+.booster-option__name {
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.booster-option__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.booster-option__actions .btn {
+  min-height: 2.2rem;
+  font-size: 0.85rem;
+}
+
+.booster__picks {
+  font-size: 1.2rem;
+  color: var(--accent);
+}
+
+/* ─────────────────────────── Pitva a výhra ─────────────────────────── */
+
+/* Konec runu: panel dostane celou výšku (řada žolíků a ruka už nejsou potřeba). */
+.game.is-ended .game-top,
+.game.is-ended .game-bottom {
+  display: none;
+}
+
+.game.is-ended .game-main {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.game-over,
+.victory {
+  width: min(100%, 40rem);
+}
+
+.game-panel__icon {
+  display: block;
+  margin: 0 auto 0.15rem;
+  font-size: 2.6rem;
+  color: var(--danger-dark);
+}
+
+.victory .game-panel__icon {
+  color: var(--accent-dark);
+}
+
+.game-over .game-panel__title {
+  color: var(--danger-dark);
+}
+
+.game-over__quote {
+  margin: 0.25rem 0 0.75rem;
+  font-size: 1.35rem;
+  line-height: 1.3;
+  color: var(--wood);
+  text-align: center;
+}
+
+.game-over__score {
+  margin-bottom: 0.5rem;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+.game-over__stats-title {
+  margin: 0.6rem 0 0.4rem;
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.game-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.3rem 1.25rem;
+}
+
+.game-stats--meta {
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+  border-top: 2px dotted var(--paper-shade);
+}
+
+.game-stat {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+  font-size: 0.95rem;
+}
+
+.game-stat__label {
+  color: var(--ink-soft);
+}
+
+.game-stat__value {
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.game-seed {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  margin-top: 0.75rem;
+  background: var(--paper-shade);
+  border-radius: var(--radius-small);
+}
+
+.game-seed__label {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.game-seed__value {
+  font-family: inherit;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  user-select: all;
+}
+
+.victory__title {
+  color: var(--accent-dark);
+}
+
+.paper .victory__title {
+  color: var(--accent-dark);
+}
+
+.victory__credits {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: center;
+  text-align: center;
+}
+
+.victory__line,
+.victory__stats {
+  animation: credits-in calc(500ms / var(--speed)) ease-out both;
+  animation-delay: calc(var(--i, 0) * 350ms / var(--speed));
+}
+
+.victory__line {
+  font-size: 1.1rem;
+}
+
+.victory__stats {
+  align-self: stretch;
+  margin-top: 0.5rem;
+}
+
+.victory__hint {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+@keyframes credits-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+
+/* ─────────────────────────── Dole: ruka, ovládání, balíček ─────────────────────────── */
+
+.game-bottom {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.6rem;
+  align-items: end;
+}
+
+.game-bottom.is-empty {
+  pointer-events: none;
+}
+
+.game-bottom.is-empty .gb-deck {
+  pointer-events: auto;
+}
+
+.gb-hand-wrap {
+  min-width: 0;
+}
+
+.gb-hand {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: calc(var(--card-w) * 1.4);
+  padding: calc(var(--card-w) * 0.26) 0.25rem 1.05rem;
+}
+
+.gb-hand > .pcard + .pcard {
+  margin-left: min(0.55rem, calc((100% - var(--hand-n) * var(--card-w)) / (var(--hand-n) - 1)));
+}
+
+.gb-hand > .pcard:hover,
+.gb-hand > .pcard:focus-visible,
+.gb-hand > .pcard.is-selected {
+  z-index: 2;
+}
+
+.gb-hint {
+  margin-bottom: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--on-felt-muted);
+  text-align: center;
+}
+
+.gb-controls {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.gb-play {
+  justify-self: end;
+  min-width: 9rem;
+}
+
+.gb-discard {
+  justify-self: start;
+  min-width: 9rem;
+}
+
+.gb-mid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.gb-sort {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.gb-sort__label {
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--on-felt-muted);
+}
+
+.gb-sort .btn {
+  min-height: 2.1rem;
+  padding: 0.3em 0.8em;
+  font-size: 0.85rem;
+}
+
+.gb-selected {
+  font-size: 0.8rem;
+  color: var(--on-felt-muted);
+}
+
+.gb-deck {
+  --card-w: calc(var(--game-card-w) * 0.8);
+
+  grid-column: 2;
+
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  margin-bottom: 0.25rem;
+  border-radius: var(--radius);
+  transition: transform var(--t-fast) ease-out;
+}
+
+.gb-deck .pcard {
+  box-shadow:
+    3px 3px 0 rgb(0 0 0 / 25%),
+    6px 6px 0 rgb(0 0 0 / 15%);
+  border-radius: var(--card-radius);
+}
+
+.gb-deck__count {
+  padding: 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--paper);
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (hover: hover) {
+  .gb-deck:hover {
+    transform: translateY(-3px);
+  }
+}
+
+/* ─────────────────────────── Bubliny skórování ─────────────────────────── */
+
+.game-fx {
+  position: fixed;
+  inset: 0;
+  z-index: 800;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.game-bubble {
+  position: absolute;
+  top: 0;
+  left: 0;
+  animation: bubble-life calc(900ms / var(--speed)) linear forwards;
+}
+
+.game-bubble__text {
+  position: absolute;
+  bottom: 0.25rem;
+  left: 0;
+  padding: 0.1em 0.5em;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #fff;
+  white-space: nowrap;
+  background: var(--ink);
+  border-radius: 999px;
+  box-shadow: 0 3px 0 rgb(0 0 0 / 35%);
+  transform: translateX(-50%);
+  animation: bubble-rise calc(900ms / var(--speed)) cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.game-bubble--chips .game-bubble__text {
+  background: var(--chips);
+}
+
+.game-bubble--mult .game-bubble__text {
+  background: var(--mult);
+}
+
+.game-bubble--xmult .game-bubble__text {
+  color: var(--paper);
+  background: #8f241c;
+  box-shadow:
+    0 0 0 2px var(--mult),
+    0 3px 0 rgb(0 0 0 / 35%);
+}
+
+.game-bubble--money .game-bubble__text {
+  color: var(--ink);
+  background: var(--money);
+}
+
+.game-bubble--message .game-bubble__text {
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.game-bubble--bad .game-bubble__text {
+  background: var(--danger);
+}
+
+.game-bubble--score .game-bubble__text {
+  color: var(--ink);
+  background: var(--accent);
+}
+
+.game-bubble--big {
+  animation-duration: calc(1300ms / var(--speed));
+}
+
+.game-bubble--big .game-bubble__text {
+  bottom: auto;
+  padding: 0.15em 0.7em;
+  font-size: 2rem;
+  transform: translate(-50%, -50%);
+  animation-name: bubble-pop;
+  animation-duration: calc(1300ms / var(--speed));
+}
+
+@keyframes bubble-life {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes bubble-rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 10px) scale(0.7);
+  }
+
+  18% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.08);
+  }
+
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -18px) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -34px) scale(0.96);
+  }
+}
+
+@keyframes bubble-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.12);
+  }
+
+  75% {
+    opacity: 1;
+    transform: translate(-50%, -60%) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -80%) scale(0.95);
+  }
+}
+
+/* ─────────────────────────── Dialogy ─────────────────────────── */
+
+.modal--run-info .modal__body,
+.modal--deck .modal__body {
+  padding-top: 0.25rem;
+}
+
+.run-info {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 1rem 1.75rem;
+  align-items: start;
+}
+
+.run-info__columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.9rem 1.25rem;
+}
+
+.run-info__title {
+  margin-bottom: 0.4rem;
+  font-size: 1.05rem;
+  color: var(--wood);
+}
+
+.run-info__hands {
+  width: 100%;
+  font-size: 0.95rem;
+  border-collapse: collapse;
+}
+
+.run-info__hands th,
+.run-info__hands td {
+  padding: 0.15rem 0.4rem;
+  text-align: left;
+  border-bottom: 1px solid var(--paper-shade);
+}
+
+.run-info__hands thead th {
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.run-info__hands td {
+  font-variant-numeric: tabular-nums;
+}
+
+.run-info__hands tr.is-secret {
+  color: var(--ink-soft);
+}
+
+.run-info__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+
+.run-info__none,
+.run-info__muted {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.run-info__suits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0.2rem 0 0.4rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.suit-S {
+  color: var(--suit-spades);
+}
+
+.suit-H {
+  color: var(--suit-hearts);
+}
+
+.suit-D {
+  color: var(--suit-diamonds);
+}
+
+.suit-C {
+  color: var(--suit-clubs);
+}
+
+.run-info__seed {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.4rem;
+}
+
+.deck-preview {
+  --card-w: 38px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.deck-preview__row {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.deck-preview__suit {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.deck-preview__cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.deck-mini.is-out {
+  opacity: 0.28;
+  filter: grayscale(1);
+}
+
+.deck-preview__label {
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.deck-preview__ranks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  padding: 0;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.deck-preview__legend {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.detail {
+  --card-w: 8rem;
+
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1rem 1.25rem;
+  align-items: start;
+}
+
+.detail__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.detail__kind {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.detail__kind.rarity-rare {
+  color: #2f6fb5;
+}
+
+.detail__kind.rarity-epic {
+  color: #7b3fb5;
+}
+
+.detail__kind.rarity-legendary {
+  color: #9b7310;
+}
+
+.detail__desc {
+  font-size: 1.05rem;
+}
+
+.detail__line--muted,
+.detail__hint,
+.detail__position {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.detail__flavor {
+  font-style: italic;
+  color: var(--wood);
+}
+
+.detail__warning {
+  font-size: 0.9rem;
+  color: var(--danger);
+}
+
+.detail__moves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.modal--pause .modal__actions {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* ─────────────────────────── Vypnuté animace ─────────────────────────── */
+
+.no-anim .round-end__line,
+.no-anim .round-end .game-panel__actions,
+.no-anim .victory__line,
+.no-anim .victory__stats,
+.no-anim .game-bubble,
+.no-anim .game-bubble__text {
+  animation: none;
+}
+
+.no-anim .blind-card,
+.no-anim .game-table .pcard,
+.no-anim .gt-item.is-shifting,
+.no-anim .gb-deck {
+  transition: none;
+}
+
+/* ─────────────────────────── Menší obrazovky ─────────────────────────── */
+
+@media (max-width: 960px) {
+  .run-info {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1100px) {
+  .game {
+    --sidebar-w: 13rem;
+  }
+
+  .gs-target__value,
+  .gs-score__value {
+    font-size: 1.45rem;
+  }
+
+  .gs-hand__chips,
+  .gs-hand__mult {
+    font-size: 1.2rem;
+  }
+}
+
+/* Tablet na výšku a menší: levý panel se složí nad stůl (kompaktní mřížka), hra zůstává v okně. */
+@media (max-width: 900px) {
+  .game {
+    --game-card-w: clamp(40px, min(calc((100vw - 8rem) / 8.6), calc((100dvh - 24rem) / 4.4)), 96px);
+
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .game-sidebar {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.4rem;
+    padding: 0.5rem;
+    overflow: visible;
+  }
+
+  .gs-blind,
+  .gs-hand,
+  .gs-stats {
+    grid-column: span 2;
+  }
+
+  .gs-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.3rem;
+  }
+
+  .gs-stat--wide {
+    grid-column: auto;
+  }
+
+  .gs-stat {
+    padding: 0.2rem 0.3rem;
+  }
+
+  .gs-stat__value {
+    font-size: 1.05rem;
+  }
+
+  .gs-buttons {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: 0;
+  }
+
+  .gs-buttons .btn:last-child {
+    grid-column: auto;
+  }
+
+  .gs-target__value,
+  .gs-score__value {
+    font-size: 1.35rem;
+  }
+
+  .gb-controls {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .gb-mid {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    flex-direction: row;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+
+  .gb-play,
+  .gb-discard {
+    justify-self: stretch;
+    min-width: 0;
+  }
+
+  .shop__header {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .blind-select__cards {
+    gap: 0.5rem;
+  }
+
+  .blind-card {
+    padding: 0.6rem 0.5rem 0.7rem;
+  }
+
+  .blind-card__facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Telefon („best effort“): jeden sloupec, stránka se posouvá. */
+@media (max-width: 600px) {
+  .blind-select__cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .game {
+    --game-card-w: clamp(36px, calc((100vw - 2rem) / 8.6), 64px);
+
+    height: auto;
+    min-height: 100dvh;
+    padding: 0.4rem;
+    overflow: visible;
+  }
+
+  .game-main {
+    grid-template-rows: auto auto auto;
+  }
+
+  .game-sidebar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gs-blind,
+  .gs-hand,
+  .gs-stats,
+  .gs-buttons {
+    grid-column: 1 / -1;
+  }
+
+  .gs-stats {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .gs-stat__label {
+    font-size: 0.6rem;
+  }
+
+  .gs-stat__value {
+    font-size: 0.95rem;
+  }
+
+  .game-stage {
+    min-height: calc(var(--card-w) * 2.2);
+    overflow: visible;
+  }
+
+  .game-bottom {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gb-deck {
+    grid-column: auto;
+    grid-template-columns: auto auto;
+    align-items: center;
+    justify-self: end;
+  }
+
+  .detail {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .deck-preview {
+    --card-w: 30px;
+  }
+
+  .deck-preview__row {
+    grid-template-columns: 3rem minmax(0, 1fr);
+  }
+}
+
+@media (hover: none) {
+  .gb-deck:hover {
+    transform: none;
+  }
+}

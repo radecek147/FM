@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 const PANGRAM = 'Příliš žluťoučký kůň úpěl ďábelské ódy';
 
-test('titulní obrazovka se načte bez chyb a vykreslí češtinu fontem Pixelify Sans', async ({ page }) => {
+test('hlavní menu se načte bez chyb a vykreslí češtinu fontem Pixelify Sans', async ({ page }) => {
   // CLAUDE.md kap. 8: konzole bez chyb a varování (včetně chybějících i18n klíčů „[i18n] …“).
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -25,9 +25,11 @@ test('titulní obrazovka se načte bez chyb a vykreslí češtinu fontem Pixelif
 
   await expect(page).toHaveTitle(/Karban/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Karban');
+  await expect(page.locator('#app')).toHaveAttribute('data-screen', 'menu');
   await expect(page.getByTestId('typo-test')).toContainText(PANGRAM);
-  await expect(page.getByTestId('menu-new-game')).toBeDisabled();
+  await expect(page.getByTestId('menu-new-game')).toBeEnabled();
   await expect(page.getByTestId('loading-tip')).not.toBeEmpty();
+  await expect(page.getByTestId('version')).toContainText('verze');
 
   const fonts = await page.evaluate(async (text) => {
     await document.fonts.ready;

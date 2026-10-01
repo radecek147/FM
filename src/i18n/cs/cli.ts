@@ -2,6 +2,8 @@
  * Texty skriptu `npm run simulate` (scripts/simulate.ts): výstup simulace botů (docs/DESIGN.md kap. 12.3)
  * a textový hratelný režim `--play`. Klíče `cli.*`.
  */
+import { DEATH_QUOTES } from './game';
+
 export const cli = {
   usage:
     'Použití: npm run simulate -- [--runs 500] [--stake 1] [--deck pub] [--bot all|max,flush,…] [--seed-prefix A] [--json [soubor]]\n' +
@@ -181,11 +183,8 @@ export const cli = {
       cause: 'Příčina: {cause}',
       stats: 'Vyhraná kola: {rounds} · nejlepší ruka: {best} ({hand})',
       noHand: 'žádná',
-      /** Hláška pitvy podle příčiny (DESIGN příloha C); šéfové mají vlastní `bosses.<id>.death`. */
-      death: {
-        small: '„Na Malé útratě? To se stává. Málokomu.“',
-        big: '„Velká útrata, velké zklamání.“',
-      },
+      /** Hláška pitvy podle příčiny (DESIGN příloha C) — sdílená s herní obrazovkou (`game.death`). */
+      death: { small: DEATH_QUOTES.small, big: DEATH_QUOTES.big },
     },
     victory: {
       title: 'výhra',
