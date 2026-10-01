@@ -25,6 +25,7 @@
 import { cli } from './cs/cli';
 import { decks } from './cs/decks';
 import { hands } from './cs/hands';
+import { jokers } from './cs/jokers';
 import { boss, joker, score, tag } from './cs/messages';
 import { editions, enhancements, seals } from './cs/modifiers';
 import { stakes } from './cs/stakes';
@@ -157,6 +158,7 @@ export const cs = {
   tag,
   decks,
   stakes,
+  jokers,
   /** Texty skriptu `npm run simulate` (výstup simulace a textový režim `--play`). */
   cli,
   /** Pangram s celou českou diakritikou — kontrola fontu (e2e test). */
