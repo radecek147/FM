@@ -8,7 +8,7 @@ import type { RunState, RunStats } from '../types';
 /** Aktuální verze formátu uloženého runu (viz engine/save/migrations.ts). */
 export const RUN_STATE_VERSION = 1;
 
-export const STARTING_MONEY = 4;
+export const STARTING_MONEY = 5;
 
 export function emptyStats(money: number): RunStats {
   return {

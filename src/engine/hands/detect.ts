@@ -26,10 +26,9 @@ export interface DetectOptions {
   enhancements: EnhancementLookup;
 }
 
-const HAND_STRENGTH: Record<HandType, number> = Object.fromEntries(HAND_TYPES.map((h, i) => [h, i])) as Record<
-  HandType,
-  number
->;
+const HAND_STRENGTH: Record<HandType, number> = Object.fromEntries(
+  HAND_TYPES.map((h, i) => [h, i]),
+) as Record<HandType, number>;
 
 /** Kladné, pokud je `a` silnější kombinace než `b`. */
 export function compareHandTypes(a: HandType, b: HandType): number {
@@ -111,7 +110,11 @@ function findFlush(cards: readonly Card[], need: number, opts: DetectOptions): C
     const matching = cards.filter((c) => cardHasSuit(c, suit, opts.mods, opts.enhancements));
     if (matching.length < need) continue;
     const natural = matching.filter((c) => !isWild(c, opts.enhancements)).length;
-    if (!best || matching.length > best.cards.length || (matching.length === best.cards.length && natural > best.natural)) {
+    if (
+      !best ||
+      matching.length > best.cards.length ||
+      (matching.length === best.cards.length && natural > best.natural)
+    ) {
       best = { cards: matching, natural };
     }
   }
@@ -157,7 +160,8 @@ export function detectHand(played: readonly Card[], opts: DetectOptions): Detect
   const straightCards = straight ? ranked.filter((c) => straight.ranks.has(c.rank)) : null;
 
   const flushSet = new Set(flushCards ?? []);
-  const fiveIsFlush = fiveGroup !== null && flushCards !== null && fiveGroup.cards.every((c) => flushSet.has(c));
+  const fiveIsFlush =
+    fiveGroup !== null && flushCards !== null && fiveGroup.cards.every((c) => flushSet.has(c));
   const fhIsFlush = fullHouse !== null && flushCards !== null && fullHouse.every((c) => flushSet.has(c));
 
   let type: HandType;
@@ -221,7 +225,9 @@ export function detectHand(played: readonly Card[], opts: DetectOptions): Detect
   };
   for (const h of HAND_TYPES) if (has[h]) contains.push(h);
 
-  const scoringSet = new Set<number>(opts.mods.allCardsScore ? played.map((c) => c.id) : [...core, ...stones].map((c) => c.id));
+  const scoringSet = new Set<number>(
+    opts.mods.allCardsScore ? played.map((c) => c.id) : [...core, ...stones].map((c) => c.id),
+  );
   const scoringIds = played.filter((c) => scoringSet.has(c.id)).map((c) => c.id);
   return { type, scoringIds, contains };
 }

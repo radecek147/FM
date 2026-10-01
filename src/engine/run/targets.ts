@@ -11,27 +11,39 @@ export const TARGET_CURVES: readonly (readonly number[])[] = [
 export const BLIND_TARGET_MULT: Record<Exclude<BlindKind, 'boss'>, number> = { small: 1, big: 1.5 };
 export const DEFAULT_BOSS_TARGET_MULT = 2;
 
-/** Zaokrouhlí na „hezké“ číslo: pod 1000 na desítky, jinak na 3 platné číslice (2 nad milion). */
+/** Růst nekonečného režimu: g(a) = ENDLESS_GROWTH_BASE + ENDLESS_GROWTH_STEP × (a − 9). */
+export const ENDLESS_GROWTH_BASE = 2.2;
+export const ENDLESS_GROWTH_STEP = 0.15;
+
+/**
+ * „Hezké“ zaokrouhlení cílů (docs/DESIGN.md kap. 2.3.2): pod 100 na násobek 5, jinak na 2 platné
+ * číslice; začíná-li číslo jedničkou, na 3 platné s krokem 5 (14 250 → 14 500, 375 → 380).
+ */
 export function niceRound(x: number): number {
   if (!Number.isFinite(x)) return Number.MAX_VALUE;
-  if (x < 1000) return Math.max(10, Math.round(x / 10) * 10);
-  const digits = Math.floor(Math.log10(x)) + 1;
-  const sig = x >= 1e6 ? 2 : 3;
-  const factor = 10 ** (digits - sig);
-  return Math.round(x / factor) * factor;
+  if (x <= 0) return 0;
+  if (x < 100) return Math.round(x / 5) * 5;
+  let e = Math.floor(Math.log10(x));
+  // Pojistka proti nepřesnosti log10 na hranách mocnin deseti.
+  if (10 ** e > x) e--;
+  else if (10 ** (e + 1) <= x) e++;
+  let step = 10 ** (e - 1);
+  if (Math.floor(x / 10 ** e) === 1) step /= 2;
+  const out = Math.round(x / step) * step;
+  return Number.isFinite(out) ? out : Number.MAX_VALUE;
 }
 
-/** Základ patra. Patro < 1 (kupón „o patro zpět“) = 40 % prvního patra. Nekonečný režim od patra 9. */
+/**
+ * Základ patra. Patro < 1 (kupón „o patro zpět“) = 40 % prvního patra.
+ * Nekonečný režim (patro a ≥ 9): base(a) = nice(base(8) × g(a)^(a − 8)), g(a) = 2,2 + 0,15 × (a − 9).
+ */
 export function anteBase(ante: number, curve: number): number {
   const c = TARGET_CURVES[Math.max(0, Math.min(TARGET_CURVES.length - 1, curve - 1))]!;
   if (ante < 1) return niceRound(c[0]! * 0.4);
   if (ante <= c.length) return c[ante - 1]!;
-  let v = c[c.length - 1]!;
-  for (let a = c.length + 1; a <= ante; a++) {
-    v *= 2.2 + 0.15 * (a - (c.length + 1));
-    if (!Number.isFinite(v)) return Number.MAX_VALUE;
-  }
-  return niceRound(v);
+  const last = c.length;
+  const g = ENDLESS_GROWTH_BASE + ENDLESS_GROWTH_STEP * (ante - (last + 1));
+  return niceRound(c[last - 1]! * g ** (ante - last));
 }
 
 /** Cíl útraty: základ × násobek útraty (šéf: vlastní násobek) × Modifiers.targetMult. */

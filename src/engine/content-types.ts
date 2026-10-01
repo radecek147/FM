@@ -112,7 +112,10 @@ export interface EngineApi {
   addCard(spec: CardSpec, opts?: { toHand?: boolean; source?: string }): Card;
   copyCard(cardId: number, opts?: { toHand?: boolean }): Card | null;
   destroyCard(cardId: number, reason: string): void;
-  modifyCard(cardId: number, patch: Partial<Pick<Card, 'suit' | 'rank' | 'enhancement' | 'seal' | 'edition' | 'bonusChips'>>): void;
+  modifyCard(
+    cardId: number,
+    patch: Partial<Pick<Card, 'suit' | 'rank' | 'enhancement' | 'seal' | 'edition' | 'bonusChips'>>,
+  ): void;
   addTag(defId: string): void;
   disableBoss(): void;
   message(key: string, params?: Record<string, string | number>): void;
@@ -192,7 +195,9 @@ export interface JokerHooks {
   onHandPlayed?(ctx: JokerScoringCtx): HookResult;
   /** Po sečtení skóre ruky — aktualizace stavu (počítadla), peníze. */
   afterHandScored?(ctx: JokerScoringCtx & { readonly score: number }): void;
-  onDiscard?(ctx: JokerCtx & { readonly discarded: readonly Card[]; readonly firstDiscard: boolean }): HookResult;
+  onDiscard?(
+    ctx: JokerCtx & { readonly discarded: readonly Card[]; readonly firstDiscard: boolean },
+  ): HookResult;
   onRoundEnd?(ctx: JokerCtx & { readonly blind: RoundState['blind']; readonly bossId: string | null }): void;
   /** Peníze navíc v rozpisu odměn na konci kola. */
   roundEndMoney?(ctx: JokerCtx): number;
@@ -365,7 +370,10 @@ export interface BossHooks {
   /** Vrátí i18n klíč důvodu, proč ruka neskóruje, nebo null. Ruka se tím spotřebuje. */
   validateHand?(ctx: BossCtx & ScoringInfo): string | null;
   /** Úprava základu kombinace před skórováním (např. poloviční čipy i mult). */
-  modifyBase?(ctx: BossCtx & ScoringInfo, base: { chips: number; mult: number }): { chips: number; mult: number };
+  modifyBase?(
+    ctx: BossCtx & ScoringInfo,
+    base: { chips: number; mult: number },
+  ): { chips: number; mult: number };
   /** Po zahrání ruky (ztráta peněz, zahození náhodných karet…). */
   afterHandPlayed?(ctx: BossCtx & ScoringInfo): void;
   onDiscard?(ctx: BossCtx & { readonly discarded: readonly Card[] }): void;

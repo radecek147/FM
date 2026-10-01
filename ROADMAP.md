@@ -7,29 +7,20 @@
 
 _Aktualizováno: 2026-10-01_
 
-**Fáze 0 (Založení) je rozpracovaná.**
+**Fáze 0 (Založení) je hotová** (typecheck, lint, 160 unit testů, build, e2e smoke zelené; commit `chore/docs: phase 0`).
 
-Hotovo (čeká na ověření a commit):
+**Fáze 1–2 jsou rozpracované:** kód enginu existuje a projde kouřovou simulací (bot bez žolíků dojde do patra 2),
+ale chybí úplné testy (pokrytí enginu < 80 %) a revize proti DESIGN.md.
 
-- `package.json` se skripty `dev`, `build`, `preview`, `test`, `test:e2e`, `typecheck`, `lint`, `format`,
-  `fetch-assets`, `simulate`, `deploy`; nainstalované závislosti (Vite 8, Vitest 5, TypeScript 5.9,
-  ESLint 9 + typescript-eslint, Prettier 3, Playwright 1.56, tsx, `@fontsource/pixelify-sans`,
-  `@iconify-json/game-icons`).
-- `tsconfig.json` (strict, `noUncheckedIndexedAccess`, `verbatimModuleSyntax`), `vite.config.ts`
-  (Vitest: `tests/unit/**/*.test.ts`), `playwright.config.ts`, `eslint.config.js` (hlídá, že engine
-  nesahá na DOM ani UI), `.prettierrc.json`, `.editorconfig`, `.gitignore`.
-- Kostra složek `src/engine/*`, `src/content`, `src/ui`, `src/i18n`, `src/assets`, `scripts`, `tests`.
-- Závazné typy enginu: `src/engine/types.ts`, `src/engine/content-types.ts`; seedovaný RNG
-  `src/engine/rng/rng.ts`; typovaný `src/engine/events.ts`; základní hodnoty kombinací
-  `src/content/hands.ts`.
-- Dokumentace: `docs/ARCHITECTURE.md`, `ROADMAP.md`, `docs/DECISIONS.md`, `docs/CONTENT-GUIDE.md`,
-  `docs/IDEAS.md`. Název hry zvolen: **Karban** (viz DECISIONS).
+- Hotové moduly: `src/engine/cards/cards.ts`, `hands/{detect,levels}.ts`, `effects/{core,api,modifiers}.ts`,
+  `scoring/score.ts`, `run/{game,init,draw,targets}.ts`, `shop/{shop,pool}.ts`, `save/save.ts`, `index.ts`.
+- Obsah: `src/content/{hands,modifiers,index}.ts` + prázdné soubory pro ostatní typy obsahu.
+- Engine vyžaduje seed od volajícího (UI generuje `generateSeed(Math.random)`); `Math.random`/`Date.now` jsou
+  v `src/engine/**` zakázané ESLintem.
 
-Zbývá ve fázi 0: `docs/DESIGN.md`, CI workflow, skelet `scripts/fetch-assets.ts` + `ASSETS.md`,
-`src/i18n/format.ts` + `src/i18n/cs.ts`, minimální spustitelná stránka, první testy, ověření a commit.
-
-**Další krok:** dokončit zbývající podúkoly fáze 0 → `npm run typecheck && npm run lint && npm test && npm run build`
-→ commit → odškrtnout fázi 0 → pokračovat **Fází 1 (Engine jádra)**.
+**Další krok:** Fáze 1 — testy detekce kombinací, skórování a pořadí efektů (fixture registr), doladění enginu podle
+DESIGN.md (kap. 2.4–2.10, příloha B podle potřeby), pokrytí enginu ≥ 80 %. Pak Fáze 2 — testy run loopu,
+save/load roundtrip, determinismus, `npm run simulate` s boty.
 
 ## Jak pokračovat v nové session
 
@@ -55,24 +46,24 @@ Fáze se smí odškrtnout, až když platí **všechno**:
 
 ## Fáze 0 — Založení
 
-- [ ] Vite + TypeScript (strict, `noUncheckedIndexedAccess`, `verbatimModuleSyntax`), ESM, Node 20+
-- [ ] ESLint (typescript-eslint, `consistent-type-imports`, zákaz DOM a importu UI v `src/engine/**`) + Prettier
-- [ ] Vitest (`tests/unit/**`) s pokrytím (`npm run test:coverage`)
-- [ ] Playwright (`tests/e2e/**`, build + preview na portu 4173, Chromium) + první smoke test
-- [ ] CI: GitHub Actions (typecheck, lint, test, build, e2e) + workflow pro deploy na GitHub Pages (`base` ve `vite.config.ts`)
-- [ ] Struktura složek dle `CLAUDE.md` kap. 2 (`src/engine/{cards,hands,scoring,run,shop,effects,rng,save,sim,meta}`, `src/content`, `src/ui`, `src/i18n`, `src/assets`, `scripts`, `tests/{unit,e2e}`, `docs`)
-- [ ] Závazné typy (`types.ts`, `content-types.ts`), seedovaný RNG (xoshiro128\*\* + cyrb128, streamy), `EventBus`
-- [ ] `docs/ARCHITECTURE.md` (vrstvy, engine, pořadí skórování, modifikátory, hooky, ukládání, testy)
-- [ ] `docs/DESIGN.md` — kompletní herní design včetně tabulek čísel: čipy/mult a přírůstky úrovní kombinací, křivka cílů pater, odměny, ceny ve Večerce, cílové hodnoty vzácností žolíků
-- [ ] `ROADMAP.md` se všemi fázemi a podúkoly
-- [ ] `docs/DECISIONS.md`, `docs/CONTENT-GUIDE.md`, `docs/IDEAS.md`
-- [ ] Název hry: 5 návrhů → vybrán „Karban“, zdůvodnění v DECISIONS, pracovní název nahrazen (`CLAUDE.md`, `package.json`, dokumentace)
-- [ ] Skelet `scripts/fetch-assets.ts` (font z `@fontsource/pixelify-sans`, ikony z `@iconify-json/game-icons`) + generovaný `ASSETS.md`
-- [ ] `src/i18n/format.ts` — vlastní formátování čísel (NBSP tisíce, desetinná čárka, `×1,5`, `5 Kč`, vědecký zápis nad 1e15) + `plural()` + testy
-- [ ] `src/i18n/cs.ts` — vstupní bod textů (`cs` + `t(key, params)`), podmoduly `src/i18n/cs/*.ts`
-- [ ] Skelety `scripts/simulate.ts` a `scripts/deploy.ts` (npm skripty nesmí padat na chybějícím souboru)
-- [ ] Minimální `index.html` + `src/main.ts`: úvodní obrazovka s názvem hry ve fontu Pixelify Sans (ověřit české znaky)
-- [ ] Testy: RNG determinismus, formátování čísel, `plural()`; e2e: stránka se načte a vykreslí „Příliš žluťoučký kůň úpěl ďábelské ódy“
+- [x] Vite + TypeScript (strict, `noUncheckedIndexedAccess`, `verbatimModuleSyntax`), ESM, Node 20+
+- [x] ESLint (typescript-eslint, `consistent-type-imports`, zákaz DOM a importu UI v `src/engine/**`) + Prettier
+- [x] Vitest (`tests/unit/**`) s pokrytím (`npm run test:coverage`)
+- [x] Playwright (`tests/e2e/**`, build + preview na portu 4173, Chromium) + první smoke test
+- [x] CI: GitHub Actions (typecheck, lint, test, build, e2e) + workflow pro deploy na GitHub Pages (`base` ve `vite.config.ts`)
+- [x] Struktura složek dle `CLAUDE.md` kap. 2 (`src/engine/{cards,hands,scoring,run,shop,effects,rng,save,sim,meta}`, `src/content`, `src/ui`, `src/i18n`, `src/assets`, `scripts`, `tests/{unit,e2e}`, `docs`)
+- [x] Závazné typy (`types.ts`, `content-types.ts`), seedovaný RNG (xoshiro128\*\* + cyrb128, streamy), `EventBus`
+- [x] `docs/ARCHITECTURE.md` (vrstvy, engine, pořadí skórování, modifikátory, hooky, ukládání, testy)
+- [x] `docs/DESIGN.md` — kompletní herní design včetně tabulek čísel: čipy/mult a přírůstky úrovní kombinací, křivka cílů pater, odměny, ceny ve Večerce, cílové hodnoty vzácností žolíků
+- [x] `ROADMAP.md` se všemi fázemi a podúkoly
+- [x] `docs/DECISIONS.md`, `docs/CONTENT-GUIDE.md`, `docs/IDEAS.md`
+- [x] Název hry: 5 návrhů → vybrán „Karban“, zdůvodnění v DECISIONS, pracovní název nahrazen (`CLAUDE.md`, `package.json`, dokumentace)
+- [x] Skelet `scripts/fetch-assets.ts` (font z `@fontsource/pixelify-sans`, ikony z `@iconify-json/game-icons`) + generovaný `ASSETS.md`
+- [x] `src/i18n/format.ts` — vlastní formátování čísel (NBSP tisíce, desetinná čárka, `×1,5`, `5 Kč`, vědecký zápis nad 1e15) + `plural()` + testy
+- [x] `src/i18n/cs.ts` — vstupní bod textů (`cs` + `t(key, params)`), podmoduly `src/i18n/cs/*.ts`
+- [x] Skelety `scripts/simulate.ts` a `scripts/deploy.ts` (npm skripty nesmí padat na chybějícím souboru)
+- [x] Minimální `index.html` + `src/main.ts`: úvodní obrazovka s názvem hry ve fontu Pixelify Sans (ověřit české znaky)
+- [x] Testy: RNG determinismus, formátování čísel, `plural()`; e2e: stránka se načte a vykreslí „Příliš žluťoučký kůň úpěl ďábelské ódy“
 
 **Hotovo, když:** projde `typecheck` + `lint` + `test` + `build`; `npm run dev` ukáže úvodní obrazovku
 „Karban“ s diakritikou; CI workflow existuje; commit `chore: project scaffold…`; fáze odškrtnutá.
@@ -94,6 +85,8 @@ Fáze se smí odškrtnout, až když platí **všechno**:
 - [ ] Minimální testovací `ContentRegistry` v `tests/unit/fixtures/` (pár testovacích žolíků, vylepšení, pečetí)
 - [ ] Texty kombinací `hands.<type>.name|desc` v `src/i18n/cs/hands.ts`
 - [ ] Testy: každá kombinace + hraniční případy, pořadí vyhodnocení (karta → vylepšení → edice → pečeť → žolíci), úrovně, modifikátory, determinismus míchání; pokrytí enginu ≥ 80 %
+- [ ] CI: po dosažení 80 % pokrytí odstranit `continue-on-error` u kroku „Coverage“ v `.github/workflows/ci.yml` (a samostatný krok `npm test`)
+- [ ] `src/engine/constants.ts` podle `docs/DESIGN.md` kap. 2.10 (sjednotit `STARTING_MONEY`, `BLIND_REWARDS`, `RARITY_WEIGHTS`, nálepky, `BASE_CARD_PRICE`…) a dorovnat zbylé rozdíly enginu vůči DESIGN (vzorec ceny s `round` + `shopPriceAdd`, úrok ze zůstatku před výplatou, šance edic u hracích karet, vylepšení Ohmataná, rozšíření z přílohy B)
 
 **Hotovo, když:** všechny testy kombinací a skórování zelené, pokrytí `src/engine` ≥ 80 %, build
 projde, hra se pořád spustí; commit `feat(engine): …`; fáze odškrtnutá.
@@ -110,7 +103,7 @@ projde, hra se pořád spustí; commit `feat(engine): …`; fáze odškrtnutá.
 - [ ] Večerka jako zástupná fáze („Večerka zavřená — inventura“ → pokračovat)
 - [ ] Všechny `GameEvent` emitované na `bus` i vrácené v `ActionResult.events`; neplatná akce stav nemění
 - [ ] `engine/save`: serializace `RunState`, obálka `{ format: 'karban-save', kind, version, data }`, rámec migrací + test
-- [ ] `engine/sim`: bot „max. kombinace“ + `scripts/simulate.ts` (`--runs`, `--stake`, `--deck`, `--strategy`, `--seed`); výstup: % výher podle patra, průměrné skóre, příčiny prohry
+- [ ] `engine/sim`: bot „max. kombinace“ + `scripts/simulate.ts` (`--runs`, `--stake`, `--deck`, `--strategy`, `--seed-prefix`, `--json`); výstup: % výher podle patra, průměrné skóre, příčiny prohry
 - [ ] Textový headless režim hratelný bez UI (`npm run simulate -- --play`): výpis ruky, zadávání akcí v terminálu
 - [ ] První kalibrace křivky cílů simulací, čísla zapsaná do `docs/DESIGN.md`
 - [ ] Testy: stejný seed + stejné akce = identický stav, odměny a úrok, výhra/prohra, save/load roundtrip, migrace, simulace jako smoke test
@@ -163,7 +156,7 @@ podle pořadí; každý žolík má test; kontroly zelené; commit `feat: jokers
 - [ ] **4 pečetě** (zlatá: peníze při zahrání, červená: skóruje 2×, modrá: vytvoří pranostiku, fialová: vytvoří babskou radu)
 - [ ] **Edice** pro karty a žolíky: lesklá, holografická, duhová (+ negativní jen pro žolíky)
 - [ ] Engine spotřebek: sloty (2, upravitelné), použití s výběrem cílů, `canUse`, prodej
-- [ ] **13 pranostik** (jedna na každou kombinaci, vč. tajných) — `src/content/pranostiky.ts`
+- [ ] **13 pranostik** (jedna na každou kombinaci, vč. tajných) — `src/content/pranostiky.ts` (`consumables.ts` spojí všechny tři typy)
 - [ ] **22 babských rad** — `src/content/rady.ts`
 - [ ] **16 úředních razítek** — `src/content/razitka.ts`
 - [ ] Rozhodnout o případném 4. typu spotřebky (zapsat do DECISIONS)
@@ -195,7 +188,7 @@ přeskočení útraty dá štítek s funkčním bonusem; kontroly zelené; commi
 
 - [ ] Žolíci na **100+**, z toho **6+ legendárních**; rozložení vzácností a cen dle `docs/DESIGN.md`; každý s testem a rozpoznatelným artem
 - [ ] **12 startovních balíčků** (`src/content/decks.ts`), každý mění pravidla (např. Mariášový s 32 kartami, jen figury, náhodné pečetě, Dlužník se záporným zůstatkem a 2× úrokem)
-- [ ] **8 obtížností „Síla piva“** (Desítka, Jedenáctka, Dvanáctka, Speciál, Ležák, Bock, Doppelbock, Imperial) — kumulativní ztížení, nálepky žolíků (věčný, kazící se, zapůjčený)
+- [ ] **8 obtížností „Síla piva“** (Desítka, Jedenáctka, Dvanáctka, Speciál, Ležák, Bock, Doppelbock, Imperial) — kumulativní ztížení, nálepky žolíků (přibitý, zvětrávající, zapůjčený)
 - [ ] Odemykání vyšší obtížnosti výhrou na nižší
 - [ ] Tajné kombinace v UI skryté do prvního zahrání (pranostiky pro ně jen po objevu)
 - [ ] Nekonečný režim: exponenciální cíle, finálový šéf každé 8. patro, statistika nejvyššího patra

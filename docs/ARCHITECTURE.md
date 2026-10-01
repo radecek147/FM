@@ -24,6 +24,8 @@ Pravidla závislostí (hlídá ESLint `no-restricted-imports` / `no-restricted-g
 - `content` importuje jen typy a pomocné funkce z `engine` (nikdy UI).
 - `ui` čte stav jen přes snapshot (`Readonly<RunState>`) a mění ho jen akcemi (`game.dispatch(action)`).
 - Texty jsou výhradně v `src/i18n/cs.ts` (+ podmoduly `src/i18n/cs/*.ts`). Engine emituje klíče a čísla.
+  I statické `index.html` (titulek, meta popis, `<noscript>`) má jen zástupné symboly `{{t:klíč}}`, které při
+  buildu/dev dosadí plugin `karban-i18n-html` ve `vite.config.ts`.
 
 ## 2. Engine
 
@@ -36,7 +38,7 @@ uložení. Definice obsahu se ve stavu odkazují přes `defId`.
 ### 2.2 Akce a události
 
 ```ts
-const game = Game.newRun({ deckId: 'red', stake: 1, seed: 'ABCD1234' }, registry);
+const game = Game.newRun({ deckId: 'pub', stake: 1, seed: 'ABCD2345' }, registry);
 game.bus.on('handPlayed', (e) => ui.animateScore(e.result));
 const res = game.dispatch({ type: 'play', cardIds: [12, 7, 3] });
 if (!res.ok) ui.toast(t(`errors.${res.error}`));
@@ -58,21 +60,21 @@ Denní run: `dailySeed(date)` = `DEN-YYYYMMDD` (UTC).
 
 ### 2.4 Moduly
 
-| Modul | Odpovědnost |
-| --- | --- |
-| `engine/types.ts` | datové typy stavu, akcí, událostí |
-| `engine/content-types.ts` | rozhraní definic obsahu, hooků, `EngineApi`, `ContentRegistry` |
-| `engine/rng/` | seedovaný RNG |
-| `engine/events.ts` | typovaný `EventBus` |
-| `engine/cards/` | tvorba karet, standardní balíček, čipy karty, barvy (divoká/kamenná) |
-| `engine/hands/` | detekce kombinací (vč. tajných, divokých karet, modifikátorů 4 prstů/mezer/kolem dokola) |
-| `engine/scoring/` | skórovací pipeline → `ScoreResult` s kroky pro animaci |
-| `engine/effects/` | skládání `Modifiers`, volání hooků žolíků/šéfů/štítků, implementace `EngineApi` |
-| `engine/run/` | `Game` — stavový automat runu (útraty, kola, odměny, konec, nekonečný režim), cíle |
-| `engine/shop/` | generování obchodu a boosterů, ceny, přehození, prodej |
-| `engine/save/` | serializace, verze formátu, migrace |
-| `engine/meta/` | profil hráče: odemykání, statistiky, achievementy, historie (fáze 8) |
-| `engine/sim/` | boti a headless simulace (`npm run simulate`) |
+| Modul                     | Odpovědnost                                                                              |
+| ------------------------- | ---------------------------------------------------------------------------------------- |
+| `engine/types.ts`         | datové typy stavu, akcí, událostí                                                        |
+| `engine/content-types.ts` | rozhraní definic obsahu, hooků, `EngineApi`, `ContentRegistry`                           |
+| `engine/rng/`             | seedovaný RNG                                                                            |
+| `engine/events.ts`        | typovaný `EventBus`                                                                      |
+| `engine/cards/`           | tvorba karet, standardní balíček, čipy karty, barvy (divoká/kamenná)                     |
+| `engine/hands/`           | detekce kombinací (vč. tajných, divokých karet, modifikátorů 4 prstů/mezer/kolem dokola) |
+| `engine/scoring/`         | skórovací pipeline → `ScoreResult` s kroky pro animaci                                   |
+| `engine/effects/`         | skládání `Modifiers`, volání hooků žolíků/šéfů/štítků, implementace `EngineApi`          |
+| `engine/run/`             | `Game` — stavový automat runu (útraty, kola, odměny, konec, nekonečný režim), cíle       |
+| `engine/shop/`            | generování obchodu a boosterů, ceny, přehození, prodej                                   |
+| `engine/save/`            | serializace, verze formátu, migrace                                                      |
+| `engine/meta/`            | profil hráče: odemykání, statistiky, achievementy, historie (fáze 8)                     |
+| `engine/sim/`             | boti a headless simulace (`npm run simulate`)                                            |
 
 ### 2.5 Skórování (pořadí je závazné a otestované)
 
@@ -102,6 +104,7 @@ vypnutý). Čísla se sčítají, pole končící na `Mult` se násobí, boolean
 ### 2.7 Hooky obsahu
 
 Viz `JokerHooks`, `BossHooks`, `TagHooks` v `content-types.ts`. Hooky smí:
+
 - číst stav (`ctx.state`, `ctx.api.*` dotazy),
 - měnit **pouze** `ctx.self.state` (žolíci/štítky) a stav přes `ctx.api` příkazy,
 - pro náhodu používat výhradně `ctx.rng` / `ctx.chance(n, d)`.
@@ -145,6 +148,7 @@ flavor a že texty dodržují typografii.
 
 ## 7. Skripty
 
-- `npm run simulate -- --runs 500 --stake 1 [--deck red] [--strategy all]` — headless boti.
+- `npm run simulate -- --runs 500 --stake 1 [--deck pub] [--strategy all] [--seed-prefix A] [--json out.json]`
+  — headless boti (seed runu `i` = `SIM-<prefix>-<i>`, viz `docs/DESIGN.md` kap. 12).
 - `npm run fetch-assets` — stáhne/extrahuje volně licencované assety a přegeneruje `ASSETS.md`.
 - `npm run deploy` — build pro GitHub Pages (`BASE_PATH=/<repo>/`).

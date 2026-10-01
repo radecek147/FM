@@ -243,7 +243,13 @@ export interface RoundState {
 
 export type ShopItem =
   | { kind: 'joker'; joker: JokerInstance; price: number; sold: boolean }
-  | { kind: 'consumable'; consumable: ConsumableInstance; consumableKind: ConsumableKind; price: number; sold: boolean }
+  | {
+      kind: 'consumable';
+      consumable: ConsumableInstance;
+      consumableKind: ConsumableKind;
+      price: number;
+      sold: boolean;
+    }
   | { kind: 'card'; card: Card; price: number; sold: boolean };
 
 export interface ShopBooster {
@@ -280,25 +286,10 @@ export interface BoosterState {
 
 // ─────────────────────────── Run ───────────────────────────
 
-export type RunPhase =
-  | 'blind_select'
-  | 'round'
-  | 'round_end'
-  | 'shop'
-  | 'booster'
-  | 'game_over'
-  | 'victory';
+export type RunPhase = 'blind_select' | 'round' | 'round_end' | 'shop' | 'booster' | 'game_over' | 'victory';
 
 export type RngStreamName =
-  | 'deck'
-  | 'shop'
-  | 'booster'
-  | 'boss'
-  | 'tag'
-  | 'joker'
-  | 'card'
-  | 'consumable'
-  | 'misc';
+  'deck' | 'shop' | 'booster' | 'boss' | 'tag' | 'joker' | 'card' | 'consumable' | 'misc';
 
 export type RngState = [number, number, number, number];
 
@@ -442,16 +433,7 @@ export type ActionResult = { ok: true; events: GameEvent[] } | { ok: false; erro
 // ─────────────────────────── Skórování ───────────────────────────
 
 export type ScoreSourceKind =
-  | 'hand'
-  | 'card'
-  | 'held'
-  | 'joker'
-  | 'boss'
-  | 'deck'
-  | 'consumable'
-  | 'tag'
-  | 'voucher'
-  | 'stake';
+  'hand' | 'card' | 'held' | 'joker' | 'boss' | 'deck' | 'consumable' | 'tag' | 'voucher' | 'stake';
 
 export interface ScoreStep {
   source: ScoreSourceKind;
@@ -513,7 +495,12 @@ export type GameEvent =
   | { type: 'shopEntered' }
   | { type: 'shopRerolled'; cost: number }
   | { type: 'shopLeft' }
-  | { type: 'itemBought'; kind: 'joker' | 'consumable' | 'card' | 'booster' | 'voucher'; defId: string; price: number }
+  | {
+      type: 'itemBought';
+      kind: 'joker' | 'consumable' | 'card' | 'booster' | 'voucher';
+      defId: string;
+      price: number;
+    }
   | { type: 'jokerAdded'; uid: number; defId: string }
   | { type: 'jokerSold'; uid: number; defId: string; price: number }
   | { type: 'jokerDestroyed'; uid: number; defId: string; reason: string }

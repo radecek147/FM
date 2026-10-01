@@ -23,11 +23,15 @@ export function newJokerInstance(
     stickers: [...stickers],
     debuffed: false,
   };
-  if (stickers.includes('perishable')) j.perishRounds = 5;
+  if (stickers.includes('perishable')) j.perishRounds = 6; // DESIGN 2.10 PERISH_ROUNDS
   return j;
 }
 
-export function newConsumableInstance(core: GameCore, defId: string, edition: EditionId | null = null): ConsumableInstance {
+export function newConsumableInstance(
+  core: GameCore,
+  defId: string,
+  edition: EditionId | null = null,
+): ConsumableInstance {
   if (!core.registry.consumables[defId]) throw new Error(`Unknown consumable ${defId}`);
   return { uid: core.uid(), defId, edition };
 }

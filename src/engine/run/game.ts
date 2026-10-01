@@ -4,10 +4,14 @@
  */
 import type { BaseCtx, ConsumableCtx, ContentRegistry, NewRunOptions } from '../content-types';
 import { compareCards } from '../cards/cards';
-import { addConsumableInstance, addJokerInstance, newConsumableInstance, newJokerInstance } from '../effects/api';
+import {
+  addConsumableInstance,
+  addJokerInstance,
+  newConsumableInstance,
+  newJokerInstance,
+} from '../effects/api';
 import { GameCore, extend } from '../effects/core';
 import type { EventBus } from '../events';
-import { generateSeed } from '../rng/rng';
 import { previewHand, scoreHand } from '../scoring/score';
 import {
   consumablePrice,
@@ -59,7 +63,9 @@ export class Game {
   // ─────────────────────────── Vytvoření ───────────────────────────
 
   static newRun(opts: NewRunOptions, registry: ContentRegistry): Game {
-    const seed = (opts.seed ?? generateSeed(Math.random)).trim().toUpperCase();
+    // Seed generuje volající (UI/simulace) — engine nesmí používat Math.random.
+    if (!opts.seed) throw new Error('Game.newRun: seed is required');
+    const seed = opts.seed.trim().toUpperCase();
     const state = createRunState({ ...opts, seed }, registry);
     const game = new Game(new GameCore(state, registry));
     game.initRun(opts);
@@ -86,7 +92,8 @@ export class Game {
       for (const j of ch.startingJokers ?? []) {
         addJokerInstance(core, newJokerInstance(core, j.defId, j.edition ?? null, j.stickers ?? []), true);
       }
-      for (const c of ch.startingConsumables ?? []) addConsumableInstance(core, newConsumableInstance(core, c), true);
+      for (const c of ch.startingConsumables ?? [])
+        addConsumableInstance(core, newConsumableInstance(core, c), true);
       for (const v of ch.startingVouchers ?? []) this.redeemVoucher(v);
       ch.onRunStart?.(ctx);
     }
@@ -252,14 +259,12 @@ export class Game {
       .map((t) => t.id)
       .sort();
     const pickTag = () => (tags.length ? tagRng.pick(tags) : null);
-    s.blinds = BLIND_KINDS.map(
-      (kind): BlindSlot => ({
-        kind,
-        bossId: kind === 'boss' ? bossId : null,
-        skipTagId: kind === 'boss' ? null : pickTag(),
-        status: kind === 'small' ? 'current' : 'upcoming',
-      }),
-    );
+    s.blinds = BLIND_KINDS.map((kind): BlindSlot => ({
+      kind,
+      bossId: kind === 'boss' ? bossId : null,
+      skipTagId: kind === 'boss' ? null : pickTag(),
+      status: kind === 'small' ? 'current' : 'upcoming',
+    }));
     s.blindIndex = 0;
     s.anteVouchers = rollAnteVouchers(core);
   }
@@ -335,7 +340,8 @@ export class Game {
     // Hodnoty se mohly změnit hooky začátku kola (štítky/šéf).
     const m2 = core.mods();
     if (m2.hands !== m.hands) round.handsLeft = Math.max(1, round.handsLeft + (m2.hands - m.hands));
-    if (m2.discards !== m.discards) round.discardsLeft = Math.max(0, round.discardsLeft + (m2.discards - m.discards));
+    if (m2.discards !== m.discards)
+      round.discardsLeft = Math.max(0, round.discardsLeft + (m2.discards - m.discards));
     fillHand(core);
   }
 
@@ -362,9 +368,10 @@ export class Game {
     const left = typeof s.flags.bossRerolls === 'number' ? s.flags.bossRerolls : 0;
     const unlimited = s.flags.bossRerollUnlimited === true;
     if (!unlimited && left <= 0) fail('cannotUse');
-    const cost = typeof s.flags.bossRerollCost === 'number' ? s.flags.bossRerollCost : DEFAULT_BOSS_REROLL_COST;
+    const cost =
+      typeof s.flags.bossRerollCost === 'number' ? s.flags.bossRerollCost : DEFAULT_BOSS_REROLL_COST;
     const bossSlot = s.blinds.find((b) => b.kind === 'boss');
-    if (!bossSlot || bossSlot.status !== 'upcoming' && bossSlot.status !== 'current') fail('cannotUse');
+    if (!bossSlot || (bossSlot.status !== 'upcoming' && bossSlot.status !== 'current')) fail('cannotUse');
     this.pay(cost);
     if (!unlimited) s.flags.bossRerolls = left - 1;
     const id = this.pickBoss(bossSlot.bossId ? [bossSlot.bossId] : []);
@@ -486,7 +493,8 @@ export class Game {
     core.eachJoker('onDiscard', { discarded: cards, firstDiscard }, (results, owner) => {
       for (const r of results) {
         if (r.money) core.api.addMoney(r.money, 'joker');
-        if (r.message) core.emit({ type: 'jokerTriggered', uid: owner.uid, defId: owner.defId, message: r.message });
+        if (r.message)
+          core.emit({ type: 'jokerTriggered', uid: owner.uid, defId: owner.defId, message: r.message });
       }
     });
     for (const c of cards) {
@@ -510,7 +518,8 @@ export class Game {
     const s = this.core.state;
     const target = s.phase === 'booster' && s.booster ? s.booster.hand : s.round?.hand;
     if (!target) fail('wrongPhase');
-    if (cardIds.length !== target.length || new Set(cardIds).size !== cardIds.length) fail('invalidSelection');
+    if (cardIds.length !== target.length || new Set(cardIds).size !== cardIds.length)
+      fail('invalidSelection');
     for (const id of cardIds) if (!target.includes(id)) fail('invalidSelection');
     target.splice(0, target.length, ...cardIds);
   }
@@ -533,7 +542,8 @@ export class Game {
     const round = this.round();
     const reg = core.registry;
     const boss = round.bossId ? reg.bosses[round.bossId] : undefined;
-    let blindReward = round.blind === 'boss' ? (boss?.reward ?? BLIND_REWARDS.boss) : BLIND_REWARDS[round.blind];
+    let blindReward =
+      round.blind === 'boss' ? (boss?.reward ?? BLIND_REWARDS.boss) : BLIND_REWARDS[round.blind];
     if (round.blind === 'small') {
       const noReward = Object.values(reg.stakes).some((st) => st.level <= s.stake && st.noSmallBlindReward);
       if (noReward) blindReward = 0;
@@ -541,7 +551,10 @@ export class Game {
     blindReward = Math.floor(blindReward * m.blindRewardMult);
     const unusedHands = round.handsLeft * m.moneyPerUnusedHand;
     const unusedDiscards = round.discardsLeft * m.moneyPerUnusedDiscard;
-    const interest = s.money > 0 ? Math.floor(Math.min(m.interestCap, Math.floor(s.money / m.interestStep)) * m.interestMult) : 0;
+    const interest =
+      s.money > 0
+        ? Math.floor(Math.min(m.interestCap, Math.floor(s.money / m.interestStep)) * m.interestMult)
+        : 0;
     const extra: RoundRewards['extra'] = [];
     const ctx = core.baseCtx('misc');
     // zlaté karty v ruce, modré pečetě
@@ -551,7 +564,8 @@ export class Game {
       const c = core.mustCard(id);
       if (c.debuffed) continue;
       const enh = c.enhancement ? reg.enhancements[c.enhancement] : undefined;
-      if (enh?.roundEndHeldMoney) heldMoney += enh.roundEndHeldMoney(extend(core.baseCtx('card'), { card: c }));
+      if (enh?.roundEndHeldMoney)
+        heldMoney += enh.roundEndHeldMoney(extend(core.baseCtx('card'), { card: c }));
       const seal = c.seal ? reg.seals[c.seal] : undefined;
       seal?.onRoundEndHeld?.(extend(core.baseCtx('card'), { card: c, lastHand }));
     }
@@ -563,9 +577,10 @@ export class Game {
       const def = core.jokerDef(j);
       const amount = def.hooks.roundEndMoney?.(core.jokerCtx(j, i, false, def)) ?? 0;
       if (amount) extra.push({ source: `joker:${j.defId}`, amount });
-      if (j.stickers.includes('rental')) extra.push({ source: `rental:${j.defId}`, amount: -3 });
+      if (j.stickers.includes('rental')) extra.push({ source: `rental:${j.defId}`, amount: -2 }); // RENTAL_FEE
     });
-    const total = blindReward + unusedHands + unusedDiscards + interest + extra.reduce((a, e) => a + e.amount, 0);
+    const total =
+      blindReward + unusedHands + unusedDiscards + interest + extra.reduce((a, e) => a + e.amount, 0);
     return { blindReward, unusedHands, unusedDiscards, interest, extra, total };
   }
 
@@ -576,7 +591,13 @@ export class Game {
     const blind = this.currentBlind();
     blind.status = 'defeated';
     s.stats.roundsWon++;
-    core.emit({ type: 'roundWon', ante: s.ante, blind: round.blind, score: round.score, target: round.target });
+    core.emit({
+      type: 'roundWon',
+      ante: s.ante,
+      blind: round.blind,
+      score: round.score,
+      target: round.target,
+    });
     if (round.blind === 'boss') {
       s.stats.bossesDefeated++;
       if (round.bossId) {
@@ -694,18 +715,31 @@ export class Game {
       core.emit({ type: 'itemBought', kind: 'joker', defId: item.joker.defId, price: item.price });
     } else if (item.kind === 'consumable') {
       if (use) {
-        if (!this.consumableUsable(item.consumable.defId, item.consumable.uid, targetIds ?? [])) fail('cannotUse');
+        if (!this.consumableUsable(item.consumable.defId, item.consumable.uid, targetIds ?? []))
+          fail('cannotUse');
         this.pay(item.price);
         item.sold = true;
-        core.emit({ type: 'itemBought', kind: 'consumable', defId: item.consumable.defId, price: item.price });
+        core.emit({
+          type: 'itemBought',
+          kind: 'consumable',
+          defId: item.consumable.defId,
+          price: item.price,
+        });
         this.runConsumable(item.consumable, targetIds ?? []);
       } else {
-        const extra = item.consumable.edition ? (core.registry.editions[item.consumable.edition]?.extraSlots ?? 0) : 0;
+        const extra = item.consumable.edition
+          ? (core.registry.editions[item.consumable.edition]?.extraSlots ?? 0)
+          : 0;
         if (s.consumables.length >= core.mods().consumableSlots + extra) fail('slotsFull');
         this.pay(item.price);
         item.sold = true;
         addConsumableInstance(core, item.consumable, true);
-        core.emit({ type: 'itemBought', kind: 'consumable', defId: item.consumable.defId, price: item.price });
+        core.emit({
+          type: 'itemBought',
+          kind: 'consumable',
+          defId: item.consumable.defId,
+          price: item.price,
+        });
       }
     } else {
       if (use) fail('cannotUse');
@@ -713,7 +747,14 @@ export class Game {
       item.sold = true;
       const c = item.card;
       core.api.addCard(
-        { suit: c.suit, rank: c.rank, enhancement: c.enhancement, seal: c.seal, edition: c.edition, bonusChips: c.bonusChips },
+        {
+          suit: c.suit,
+          rank: c.rank,
+          enhancement: c.enhancement,
+          seal: c.seal,
+          edition: c.edition,
+          bonusChips: c.bonusChips,
+        },
         { source: 'shop' },
       );
       core.emit({ type: 'itemBought', kind: 'card', defId: `${c.rank}${c.suit}`, price: item.price });
@@ -811,12 +852,20 @@ export class Game {
     } else if (opt.kind === 'card') {
       const c = opt.card;
       core.api.addCard(
-        { suit: c.suit, rank: c.rank, enhancement: c.enhancement, seal: c.seal, edition: c.edition, bonusChips: c.bonusChips },
+        {
+          suit: c.suit,
+          rank: c.rank,
+          enhancement: c.enhancement,
+          seal: c.seal,
+          edition: c.edition,
+          bonusChips: c.bonusChips,
+        },
         { source: 'booster' },
       );
     } else {
       // Spotřebky z boosteru se použijí hned.
-      if (!this.consumableUsable(opt.consumable.defId, opt.consumable.uid, targetIds ?? [])) fail('cannotUse');
+      if (!this.consumableUsable(opt.consumable.defId, opt.consumable.uid, targetIds ?? []))
+        fail('cannotUse');
       this.runConsumable(opt.consumable, targetIds ?? []);
     }
     b.options.splice(index, 1);
@@ -900,7 +949,10 @@ export class Game {
     return def.canUse ? def.canUse(this.consumableCtx(defId, uid, targetIds)) : true;
   }
 
-  private runConsumable(inst: { uid: number; defId: string; edition: string | null }, targetIds: readonly number[]): void {
+  private runConsumable(
+    inst: { uid: number; defId: string; edition: string | null },
+    targetIds: readonly number[],
+  ): void {
     const core = this.core;
     const s = core.state;
     const def = core.registry.consumables[inst.defId]!;

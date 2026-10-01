@@ -1,4 +1,4 @@
-/** Základní hodnoty kombinací (vlastní čísla; laděno simulací — viz docs/DESIGN.md). */
+/** Základní hodnoty kombinací (vlastní čísla; tabulka v docs/DESIGN.md kap. 2.2.1, laděno simulací). */
 import type { HandType, HandTypeDef } from '../engine/types';
 
 const def = (
@@ -11,17 +11,17 @@ const def = (
 ): HandTypeDef => ({ type, baseChips, baseMult, chipsPerLevel, multPerLevel, secret });
 
 export const HAND_TYPE_DEFS: Record<HandType, HandTypeDef> = {
-  high_card: def('high_card', 5, 1, 10, 1),
-  pair: def('pair', 10, 2, 15, 1),
-  two_pair: def('two_pair', 20, 2, 20, 1),
-  three: def('three', 25, 3, 20, 2),
+  high_card: def('high_card', 6, 1, 12, 1),
+  pair: def('pair', 12, 2, 14, 1),
+  two_pair: def('two_pair', 24, 2, 18, 1),
+  three: def('three', 28, 3, 22, 2),
   straight: def('straight', 35, 4, 25, 2),
-  flush: def('flush', 40, 4, 15, 2),
-  full_house: def('full_house', 45, 4, 25, 2),
-  four: def('four', 60, 6, 30, 3),
-  straight_flush: def('straight_flush', 90, 8, 40, 3),
-  royal_flush: def('royal_flush', 120, 9, 45, 3),
-  five: def('five', 110, 11, 35, 3, true),
-  flush_house: def('flush_house', 130, 13, 40, 4, true),
-  flush_five: def('flush_five', 150, 15, 50, 3, true),
+  flush: def('flush', 40, 4, 18, 2),
+  full_house: def('full_house', 45, 5, 28, 2),
+  four: def('four', 65, 6, 35, 3),
+  straight_flush: def('straight_flush', 90, 9, 40, 3),
+  royal_flush: def('royal_flush', 120, 10, 45, 3),
+  five: def('five', 110, 11, 40, 3, true),
+  flush_house: def('flush_house', 130, 13, 45, 4, true),
+  flush_five: def('flush_five', 150, 15, 55, 3, true),
 };

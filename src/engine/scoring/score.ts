@@ -69,7 +69,13 @@ function applyResult(core: GameCore, acc: Acc, res: EffectResult, meta: StepMeta
   acc.steps.push(step);
 }
 
-function applyAll(core: GameCore, acc: Acc, results: EffectResult[], meta: StepMeta, cardId?: number): boolean {
+function applyAll(
+  core: GameCore,
+  acc: Acc,
+  results: EffectResult[],
+  meta: StepMeta,
+  cardId?: number,
+): boolean {
   for (const r of results) applyResult(core, acc, r, meta, cardId);
   return results.length > 0;
 }
@@ -95,7 +101,12 @@ export function previewHand(core: GameCore, cardIds: readonly number[]): HandPre
   return { hand, chips, mult, level };
 }
 
-function makeInfo(core: GameCore, hand: DetectedHand, played: readonly Card[], acc: { chips: number; mult: number }): ScoringInfo {
+function makeInfo(
+  core: GameCore,
+  hand: DetectedHand,
+  played: readonly Card[],
+  acc: { chips: number; mult: number },
+): ScoringInfo {
   const round = core.state.round!;
   const scoringSet = new Set(hand.scoringIds);
   const playedIds = new Set(played.map((c) => c.id));
@@ -172,33 +183,56 @@ export function scoreHand(core: GameCore, playedIds: readonly number[]): ScoreRe
     chipsAfter: acc.chips,
     multAfter: acc.mult,
   });
-  for (const b of before) applyAll(core, acc, b.results, { source: 'joker', jokerUid: b.uid, defId: b.defId });
+  for (const b of before)
+    applyAll(core, acc, b.results, { source: 'joker', jokerUid: b.uid, defId: b.defId });
 
   // 2. skórující karty
   for (const card of info.scoring) {
     if (card.debuffed) {
-      acc.steps.push({ source: 'card', cardId: card.id, message: 'score.debuffed', chipsAfter: acc.chips, multAfter: acc.mult });
+      acc.steps.push({
+        source: 'card',
+        cardId: card.id,
+        message: 'score.debuffed',
+        chipsAfter: acc.chips,
+        multAfter: acc.mult,
+      });
       continue;
     }
     const enhDef = card.enhancement ? reg.enhancements[card.enhancement] : undefined;
     const sealDef = card.seal ? reg.seals[card.seal] : undefined;
     const edDef = card.edition ? reg.editions[card.edition] : undefined;
     const cardCtx = (): CardCtx => extend(core.baseCtx('card'), info, { card });
-    const extra = (sealDef?.retriggers ?? 0) + core.sumJokers('retriggerScored', withInfo(info, { card, isRetrigger: false }));
+    const extra =
+      (sealDef?.retriggers ?? 0) +
+      core.sumJokers('retriggerScored', withInfo(info, { card, isRetrigger: false }));
     const activations = 1 + Math.max(0, Math.floor(extra));
     for (let a = 0; a < activations; a++) {
       const meta: StepMeta = { source: 'card', cardId: card.id };
-      if (a > 0) acc.steps.push({ ...meta, message: 'score.again', chipsAfter: acc.chips, multAfter: acc.mult });
+      if (a > 0)
+        acc.steps.push({ ...meta, message: 'score.again', chipsAfter: acc.chips, multAfter: acc.mult });
       const chips = cardChips(card, reg.enhancements);
       if (chips) applyResult(core, acc, { chips }, meta, card.id);
       if (enhDef?.onScored) applyAll(core, acc, toResults(enhDef.onScored(cardCtx())), meta, card.id);
       if (edDef?.effect) applyResult(core, acc, edDef.effect(), meta, card.id);
       if (sealDef?.onScored) applyAll(core, acc, toResults(sealDef.onScored(cardCtx())), meta, card.id);
       core.eachJoker('onCardScored', withInfo(info, { card, isRetrigger: a > 0 }), (results, owner) => {
-        applyAll(core, acc, results, { source: 'joker', jokerUid: owner.uid, defId: owner.defId, cardId: card.id }, card.id);
+        applyAll(
+          core,
+          acc,
+          results,
+          { source: 'joker', jokerUid: owner.uid, defId: owner.defId, cardId: card.id },
+          card.id,
+        );
       });
     }
-    if (enhDef?.afterScored) applyAll(core, acc, toResults(enhDef.afterScored(cardCtx())), { source: 'card', cardId: card.id }, card.id);
+    if (enhDef?.afterScored)
+      applyAll(
+        core,
+        acc,
+        toResults(enhDef.afterScored(cardCtx())),
+        { source: 'card', cardId: card.id },
+        card.id,
+      );
   }
 
   // 3. karty držené v ruce
@@ -207,16 +241,29 @@ export function scoreHand(core: GameCore, playedIds: readonly number[]): ScoreRe
     const enhDef = card.enhancement ? reg.enhancements[card.enhancement] : undefined;
     const sealDef = card.seal ? reg.seals[card.seal] : undefined;
     const cardCtx = (): CardCtx => extend(core.baseCtx('card'), info, { card });
-    const extra = (sealDef?.retriggers ?? 0) + core.sumJokers('retriggerHeld', withInfo(info, { card, isRetrigger: false }));
+    const extra =
+      (sealDef?.retriggers ?? 0) +
+      core.sumJokers('retriggerHeld', withInfo(info, { card, isRetrigger: false }));
     const activations = 1 + Math.max(0, Math.floor(extra));
     for (let a = 0; a < activations; a++) {
       const meta: StepMeta = { source: 'held', cardId: card.id };
       const startLen = acc.steps.length;
-      if (a > 0) acc.steps.push({ ...meta, message: 'score.again', chipsAfter: acc.chips, multAfter: acc.mult });
+      if (a > 0)
+        acc.steps.push({ ...meta, message: 'score.again', chipsAfter: acc.chips, multAfter: acc.mult });
       let any = false;
-      if (enhDef?.onHeld) any = applyAll(core, acc, toResults(enhDef.onHeld(cardCtx())), meta, card.id) || any;
+      if (enhDef?.onHeld)
+        any = applyAll(core, acc, toResults(enhDef.onHeld(cardCtx())), meta, card.id) || any;
       core.eachJoker('onCardHeld', withInfo(info, { card, isRetrigger: a > 0 }), (results, owner) => {
-        if (applyAll(core, acc, results, { source: 'joker', jokerUid: owner.uid, defId: owner.defId, cardId: card.id }, card.id)) any = true;
+        if (
+          applyAll(
+            core,
+            acc,
+            results,
+            { source: 'joker', jokerUid: owner.uid, defId: owner.defId, cardId: card.id },
+            card.id,
+          )
+        )
+          any = true;
       });
       if (!any) {
         // Karta v ruce nic nedělá → žádné opakování.

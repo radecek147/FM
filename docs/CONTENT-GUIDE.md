@@ -35,11 +35,15 @@ dodržují typografii. Engine obsah nikdy neimportuje — dostává ho přes reg
 | Vylepšení / pečeť / edice | `src/content/modifiers.ts`    | `EnhancementDef` / `SealDef` / `EditionDef` | `enhancements.<id>…`, `seals.<id>…`, `editions.<id>…` |
 | Achievement               | `src/content/achievements.ts` | `AchievementDef` (vznikne ve fázi 8)        | `achievements.<id>.name\|desc\|flavor`                |
 
+Spotřebky mají tři soubory podle `CLAUDE.md` kap. 2 (`pranostiky.ts`, `rady.ts`, `razitka.ts`);
+`src/content/consumables.ts` je jen spojí do jednoho pole `CONSUMABLES` pro registr.
+
 ## 2. Společná pravidla pro všechny položky
 
-- **`id`** — `snake_case`, jen ASCII bez diakritiky, unikátní v rámci typu. Smí to být přepis českého
-  názvu (`kronikar`, `uredni_hodiny`) — je to datový klíč, ne identifikátor kódu. **Po vydání se `id`
-  nikdy nemění** (ukládá se do savu a profilu); přejmenovává se jen text.
+- **`id`** — `snake_case`, jen ASCII, unikátní v rámci typu, **anglicky** jako ostatní identifikátory
+  (`CLAUDE.md` kap. 1) a jako v `docs/DESIGN.md` (`beer_mat`, `office_hours`, `tax_audit`). Vlastní jména
+  a česká slova bez překladu se píšou ASCII přepisem (`svejk`, `libuse`, `desitka`, `marias`). **Po vydání se
+  `id` nikdy nemění** (ukládá se do savu a profilu); přejmenovává se jen text.
 - **Čísla jen na jednom místě.** Hodnoty mechaniky dej do konstant a ty použij v `params` (pro popisek)
   i v hooku. Popisek čte čísla přes `{param}`, nikdy je nepiš do textu natvrdo.
 - **Determinismus.** Náhoda výhradně přes `ctx.rng` nebo `ctx.chance(čitatel, jmenovatel)` (respektuje
@@ -50,7 +54,7 @@ dodržují typografii. Engine obsah nikdy neimportuje — dostává ho přes reg
   jinak by se počítadla navyšovala dvakrát.
 - **Modifikátory se skládají.** Delty `Modifiers` se sčítají (pole končící na `Mult` se násobí,
   booleany ORují) — `0` tedy neznamená „vypnout“, ale „beze změny“. Na „−1 zahození“ vrať `discards: -1`.
-- **Žádné texty v obsahu.** Definice obsahuje jen i18n klíče (např. `message: 'jokers.kronikar.note'`).
+- **Žádné texty v obsahu.** Definice obsahuje jen i18n klíče (např. `message: 'jokers.chronicler.note'`).
 - **Ceny a vzácnost** podle tabulek v `docs/DESIGN.md`. Čísla jsou vlastní, ne převzatá odjinud.
 - **`unlock`** — podmínka odemčení (`UnlockCondition`); bez ní je položka odemčená od začátku. Ať je
   podmínka tematicky spřízněná s položkou (žolík na Postupky se odemkne zahráním Postupek).
@@ -68,17 +72,17 @@ dodržují typografii. Engine obsah nikdy neimportuje — dostává ho přes reg
 // src/content/jokers.ts
 import type { JokerDef } from '../engine/content-types';
 
-const OFFICE_CARDS = 3;
-const OFFICE_XMULT = 1.5;
+const SHORT_ORDER_CARDS = 3;
+const SHORT_ORDER_XMULT = 1.5;
 
-export const uredniHodiny: JokerDef = {
-  id: 'uredni_hodiny',
+export const shortOrder: JokerDef = {
+  id: 'short_order',
   rarity: 'common',
   cost: 5, // podle tabulky cen v docs/DESIGN.md
   tags: ['xmult', 'hand'],
-  params: { cards: OFFICE_CARDS, xmult: OFFICE_XMULT },
+  params: { cards: SHORT_ORDER_CARDS, xmult: SHORT_ORDER_XMULT },
   hooks: {
-    onHandPlayed: (ctx) => (ctx.played.length === OFFICE_CARDS ? { xmult: OFFICE_XMULT } : null),
+    onHandPlayed: (ctx) => (ctx.played.length === SHORT_ORDER_CARDS ? { xmult: SHORT_ORDER_XMULT } : null),
   },
   art: { icon: 'stopwatch', bg: '#2b3a55', fg: '#f2e8c9', pattern: 'grid' },
 };
@@ -90,15 +94,15 @@ export const uredniHodiny: JokerDef = {
 import type { JokerDef } from '../engine/content-types';
 import type { JokerInstance } from '../engine/types';
 
-const CHRONICLE_MULT = 3;
+const CHRONICLE_MULT = 2;
 
 function seenHands(self: JokerInstance): string[] {
   const v = self.state.seen;
   return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
 }
 
-export const kronikar: JokerDef = {
-  id: 'kronikar',
+export const chronicler: JokerDef = {
+  id: 'chronicler',
   rarity: 'rare',
   cost: 7,
   tags: ['mult', 'scaling', 'hand'],
@@ -142,14 +146,14 @@ Další pole: `copyable: false` (nejde kopírovat), `noShop: true` (jen ze speci
 ```ts
 // src/i18n/cs/jokers.ts
 export const jokers = {
-  uredni_hodiny: {
-    name: 'Úřední hodiny',
+  short_order: {
+    name: 'Na minutku',
     desc: 'Když zahraješ přesně {cards} karty, ×{xmult} mult.',
-    flavor: 'Po–St 8:00–11:30. V pátek nestránkový den.',
+    flavor: 'Hotovo za minutku. Minutka tu má dvacet minut.',
   },
-  kronikar: {
+  chronicler: {
     name: 'Kronikář',
-    desc: 'Za každou kombinaci, kterou od koupě zahraješ poprvé, trvale +{mult} mult (teď +{current} mult).',
+    desc: 'Za každou kombinaci, kterou od jeho koupě zahraješ poprvé, trvale +{mult} mult (teď +{current} mult).',
     flavor: 'Zapsal to do kroniky. Krasopisně a s chybou.',
   },
 };
@@ -168,15 +172,15 @@ navíc kopie (`isCopy`) a save/load. Testovací helpery (`tests/unit/helpers.ts`
 schematicky:
 
 ```ts
-// tests/unit/jokers/kronikar.test.ts
+// tests/unit/jokers/chronicler.test.ts
 import { describe, expect, it } from 'vitest';
 import { playHand, setupRun } from '../helpers';
 
 describe('Kronikář', () => {
-  it('za každou novou kombinaci přidá +3 mult', () => {
-    const game = setupRun({ jokers: ['kronikar'], hand: ['AS', 'AH', 'KC', 'KD', '7S', '2H', '9C', '4D'] });
-    expect(playHand(game, ['AS', 'AH']).jokerMult('kronikar')).toBe(3); // Dvojice poprvé
-    expect(playHand(game, ['KC', 'KD']).jokerMult('kronikar')).toBe(3); // Dvojice podruhé — beze změny
+  it('za každou novou kombinaci přidá +2 mult', () => {
+    const game = setupRun({ jokers: ['chronicler'], hand: ['AS', 'AH', 'KC', 'KD', '7S', '2H', '9C', '4D'] });
+    expect(playHand(game, ['AS', 'AH']).jokerMult('chronicler')).toBe(2); // Dvojice poprvé
+    expect(playHand(game, ['KC', 'KD']).jokerMult('chronicler')).toBe(2); // Dvojice podruhé — beze změny
   });
 
   it('kopie nenavyšuje počítadlo dvakrát', () => {
@@ -194,16 +198,18 @@ describe('Kronikář', () => {
 // src/content/bosses.ts
 import type { BossDef } from '../engine/content-types';
 
-export const revizor: BossDef = {
-  id: 'revizor',
+const MANDATORY_KIT_CARDS = 4;
+
+// Šéf z rezervy pro patche (docs/DESIGN.md, příloha D).
+export const mandatoryKit: BossDef = {
+  id: 'mandatory_kit',
   minAnte: 2,
   color: '#7a2e3a',
   hooks: {
-    // první ruka kola bez ♦ („jízdenky“) neskóruje
-    validateHand: (ctx) =>
-      ctx.firstHand && !ctx.played.some((c) => ctx.api.hasSuit(c, 'D')) ? 'bosses.revizor.reject' : null,
+    // ruka s méně než 4 kartami neskóruje
+    validateHand: (ctx) => (ctx.played.length < MANDATORY_KIT_CARDS ? 'bosses.mandatory_kit.reject' : null),
   },
-  art: { icon: 'ticket', bg: '#2d1b20', fg: '#f0d7a1', pattern: 'checker' },
+  art: { icon: 'traffic-cone', bg: '#2d1b20', fg: '#f0d7a1', pattern: 'checker' },
 };
 ```
 
@@ -211,20 +217,20 @@ export const revizor: BossDef = {
 - `final: true` = finálový šéf jen pro patro 8 (a každé 8. patro nekonečného režimu) — těžší.
 - `minAnte`, `targetMult` (default 2), `reward` (default 5) a `color` volitelně.
 - Texty: `name`, `rule`, `intro` (hláška při příchodu), `defeat` (při porážce), `death` (hláška do
-  „pitvy“, když na něm run skončí). Plus klíče vlastních zpráv (`bosses.revizor.reject`).
+  „pitvy“, když na něm run skončí). Plus klíče vlastních zpráv (`bosses.mandatory_kit.reject`).
 
 ```ts
-revizor: {
-  name: 'Revizor',
-  rule: 'První ruka kola bez kárové karty neskóruje.',
-  intro: 'Dobrý den, přepravní kontrola. Jízdenky, prosím.',
-  defeat: 'No dobře. Ale příště si to označte.',
-  death: 'Pokuta na místě, nebo složenkou?',
-  reject: 'Bez jízdenky? To bude pokuta.',
+mandatory_kit: {
+  name: 'Povinná výbava',
+  rule: 'Ruka s méně než 4 kartami neskóruje.',
+  intro: 'Silniční kontrola. Lékárničku, vestu a čtyři karty, prosím.',
+  defeat: 'Výbava kompletní. Šťastnou cestu.',
+  death: 'Bez povinné výbavy dál nepojedete.',
+  reject: 'Chybí povinná výbava. Aspoň čtyři karty!',
 },
 ```
 
-Test: pravidlo platí (ruka bez ♦ neskóruje, s ♦ ano) a po `disableBoss` přestane platit.
+Test: pravidlo platí (ruka ze 3 karet neskóruje, ze 4 ano) a po `disableBoss` přestane platit.
 
 ## 5. Jak přidat spotřebku
 
@@ -239,11 +245,12 @@ Tři typy, všechny `ConsumableDef` s `use(ctx)` a volitelným `canUse(ctx)`:
   (každé razítko něco stojí: peníze, ruku, slot, kartu…).
 
 ```ts
-export const hermankovyObklad: ConsumableDef = {
-  id: 'hermankovy_obklad',
+// src/content/rady.ts — Heřmánkový čaj (docs/DESIGN.md kap. 5.3)
+export const chamomile: ConsumableDef = {
+  id: 'chamomile',
   kind: 'rada',
-  cost: 3,
-  target: { min: 1, max: 2 },
+  cost: 4,
+  target: { min: 1, max: 3 },
   use: (ctx) => {
     for (const card of ctx.targets) ctx.api.modifyCard(card.id, { enhancement: 'bonus' });
   },
@@ -253,11 +260,11 @@ export const hermankovyObklad: ConsumableDef = {
 
 Texty (`consumables.<id>`):
 
-- Pranostika: **Svatý Martin** — Full house +1 úroveň. _Přijel na bílém koni, odjel s full housem._
-- Babská rada: **Heřmánkový obklad** — Až 2 vybrané karty se stanou bonusovými. _Na všechno pomůže
-  heřmánek. Na zbytek slivovice._
-- Razítko: **Ověřená kopie** — Zdvojí vybraného žolíka; kopie se po 5 kolech rozpadne. _Kolek, okénko
-  číslo 7, přijďte zítra._
+- Pranostika: **Martin na koni** — Full house +1 úroveň. _Martin přijel na bílém koni a chalupa je plná._
+- Babská rada: **Heřmánkový čaj** — Až 3 vybrané karty dostanou vylepšení Prémiová (+25 čipů). _Na všechno
+  pomůže heřmánek._
+- Razítko: **Ověřená kopie** — Zkopíruje žolíka nejvíc vlevo; všichni ostatní žolíci (kromě přibitých) se zničí.
+  _Kopie souhlasí s originálem. Originály skartovány._
 
 Test: efekt na cílech, `canUse` při špatném počtu cílů vrací `false`, cena razítka se opravdu zaplatí.
 
@@ -267,11 +274,11 @@ Kupóny jsou **páry**: základ (`tier: 1`) a vylepšení (`tier: 2`, `requires:
 trvalý na celý run — obvykle `passive` (delta `Modifiers`), jednorázové věci v `onRedeem`.
 
 ```ts
-const DISCOUNT_BASE = 15;
-const DISCOUNT_GOLD = 30;
+const DISCOUNT_BASE = 20;
+const DISCOUNT_GOLD = 40;
 
-export const vernostniKarta: VoucherDef = {
-  id: 'vernostni_karta',
+export const loyaltyCard: VoucherDef = {
+  id: 'loyalty_card',
   tier: 1,
   cost: 10,
   params: { pct: DISCOUNT_BASE },
@@ -279,20 +286,20 @@ export const vernostniKarta: VoucherDef = {
   art: { icon: 'ticket', bg: '#1f3b3a', fg: '#e8f1d4', pattern: 'dots' },
 };
 
-export const zlataVernostniKarta: VoucherDef = {
-  id: 'zlata_vernostni_karta',
+export const goldLoyalty: VoucherDef = {
+  id: 'gold_loyalty',
   tier: 2,
-  requires: 'vernostni_karta',
-  cost: 10,
+  requires: 'loyalty_card',
+  cost: 13,
   params: { pct: DISCOUNT_GOLD },
-  // modifikátory se sčítají: 15 + 15 = 30 %
+  // modifikátory se sčítají: 20 + 20 = 40 %
   passive: () => ({ shopDiscountPct: DISCOUNT_GOLD - DISCOUNT_BASE }),
   art: { icon: 'ticket', bg: '#3b2f12', fg: '#ffe9a8', pattern: 'rays' },
 };
 ```
 
-Text: **Věrnostní karta** — Všechno ve Večerce je o {pct} % levnější. _Desáté razítko a rohlík máš
-zdarma._ Test: cena ve Večerce po uplatnění, tier 2 nejde koupit bez tier 1.
+Text: **Věrnostní karta** — Všechno ve Večerce je o {pct} % levnější. _Sbíráte body? — Ne. — Tak je máte._
+Test: cena ve Večerce po uplatnění, tier 2 nejde koupit bez tier 1.
 
 ## 7. Jak přidat štítek
 
@@ -301,23 +308,24 @@ zdarma._ Test: cena ve Večerce po uplatnění, tier 2 nejde koupit bez tier 1.
 odebere). `passive` mění generování Večerky, dokud štítek trvá. `minAnte` = od kterého patra se nabízí.
 
 ```ts
-const COASTER_MONEY = 8;
+const COAT_CHANGE_MONEY = 6;
 
-export const pivniTacek: TagDef = {
-  id: 'pivni_tacek',
-  params: { money: COASTER_MONEY },
+// Drobné v kabátě (docs/DESIGN.md kap. 7) — spotřebuje se hned po získání.
+export const coatChange: TagDef = {
+  id: 'coat_change',
+  params: { money: COAT_CHANGE_MONEY },
   hooks: {
-    onShopEnter: (ctx) => {
-      ctx.api.addMoney(COASTER_MONEY, 'tag');
+    onAdded: (ctx) => {
+      ctx.api.addMoney(COAT_CHANGE_MONEY, 'tag');
       return true;
     },
   },
-  art: { icon: 'beer-stein', bg: '#3a2a14', fg: '#f7e7c3', pattern: 'waves' },
+  art: { icon: 'wallet', bg: '#3a2a14', fg: '#f7e7c3', pattern: 'waves' },
 };
 ```
 
-Text (`desc: 'Při příchodu do Večerky dostaneš {money}\u00a0Kč.'`): **Pivní tácek** — Při příchodu do
-Večerky dostaneš 8 Kč. _Čárky se počítají až při placení._ Test: peníze přibudou a štítek zmizí.
+Text (`desc: 'Dostaneš {money|money}.'`): **Drobné v kabátě** — Dostaneš 6 Kč. _Z loňské zimy, ještě
+s účtenkou._ Test: peníze přibudou a štítek zmizí.
 
 ## 8. Jak přidat balíček
 
@@ -328,8 +336,8 @@ složení), `passive` (delta `Modifiers`), `onRunStart` (startovní žolíci, sp
 `roundEndMoney`, `startingMoney`.
 
 ```ts
-export const chalupar: DeckDef = {
-  id: 'chalupar',
+export const cottage: DeckDef = {
+  id: 'cottage',
   passive: () => ({ jokerSlots: 1, discards: -1 }),
   art: { icon: 'house', bg: '#2f3d2a', fg: '#efe3c2', pattern: 'zigzag' },
   unlock: { type: 'winsTotal', count: 1 },
@@ -354,11 +362,11 @@ Výzva = předpřipravený run se zvláštními pravidly (`ChallengeDef`): `deck
 nejdou vyjádřit modifikátory ani zákazy, se vynucují v `onRunStart` nebo přes hooky.
 
 ```ts
-export const tydenBezInternetu: ChallengeDef = {
-  id: 'tyden_bez_internetu',
-  deckId: 'red',
+export const offlineWeek: ChallengeDef = {
+  id: 'offline_week',
+  deckId: 'pub',
   extraModifiers: { shopCardSlots: -1, rerollCostStep: 2 },
-  bannedVouchers: ['vernostni_karta'],
+  bannedVouchers: ['loyalty_card'],
   ruleKeys: ['fewerSlots', 'pricierReroll', 'noLoyalty'],
   art: { icon: 'old-lantern', bg: '#1d2430', fg: '#dfe6f0', pattern: 'grid' },
 };
@@ -389,8 +397,8 @@ export interface AchievementDef {
 }
 ```
 
-Texty `achievements.<id>.name|desc|flavor`. Příklad: **Ranní ptáče** — Vyhraj Malou útratu první
-rukou. _…dál doskáče. Hlavně do večerky._ Název je pointa, popis je přesná podmínka. Test: splní se
+Texty `achievements.<id>.name|desc|flavor`. Příklad (docs/DESIGN.md kap. 11.2): **Jednou ranou** — Poraz
+šéfa první rukou. _Sedm jich bylo. Šéf jen jeden._ Název je pointa, popis je přesná podmínka. Test: splní se
 přesně při podmínce a ne dřív.
 
 ## 11. Tón humoru
@@ -404,8 +412,8 @@ Shrnutí `CLAUDE.md` kap. 5 vlastními slovy:
   revizor, štamgast, večerka, diskont.
 - **Vtip patří do názvu a flavoru, mechanika je vždy suchá a přesná.** Hráč musí z popisku pochopit
   efekt bez přemýšlení nad slovní hříčkou.
-- **Mechanika sedí na téma.** Kronikář sbírá nové kombinace, Revizor chce „jízdenku“, Chalupář má víc
-  místa a míň času.
+- **Mechanika sedí na téma.** Kronikář sbírá nové kombinace, Povinná výbava chce „čtyři karty jako
+  lékárničku“, Chalupář má víc místa a míň času.
 - **Krátce.** Flavor je jedna hláška (ideálně do ~90 znaků). Nevysvětluj vtip a neopakuj pointu, kterou
   už má jiná položka.
 - Reálie, ze kterých čerpat: pranostiky a přísloví, úřední čeština, hospoda a čárky na tácku, panelák,
@@ -415,28 +423,36 @@ Shrnutí `CLAUDE.md` kap. 5 vlastními slovy:
 
 Osvědčené vzorce (vlastní příklady formátu **Název** — mechanika. _Flavor._):
 
-| Vzorec                            | Příklad                                                                                                                     |
-| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Úřední čeština v absurdní situaci | **Přepážka č. 7** — Musíš zahrát přesně tolik karet, kolik ti zbývá rukou. _Tady jste špatně, to je o patro výš._           |
-| Přísloví s twistem                | **Svatý Martin** — Full house +1 úroveň. _Přijel na bílém koni, odjel s full housem._                                       |
-| Hospodská moudrost                | **Pivní tácek** — Ve Večerce dostaneš 8 Kč. _Čárky se počítají až při placení._                                             |
-| Pověst a dějiny                   | **Vodník** — +1 mult za každou kartu zničenou v tomto runu. _Dušičky pod pokličkou. Jako koníček._                          |
-| Domácí realita                    | **Tchyně na návštěvě** — Ruka bez srdcové karty nedá čipy z karet. _Neříkám, že to děláš špatně. Jen bych to dělala jinak._ |
+| Vzorec                            | Příklad                                                                                                                                   |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Úřední čeština v absurdní situaci | **Přepážka č. 7** — Musíš zahrát přesně tolik karet, kolik ti zbývá rukou. _Tady jste špatně, to je o patro výš._                         |
+| Přísloví s twistem                | **Martin na koni** — Full house +1 úroveň. _Martin přijel na bílém koni a chalupa je plná._                                               |
+| Hospodská moudrost                | **Pivní tácek** — +10 čipů a +2 mult. _Každá čárka se počítá._                                                                            |
+| Pověst a dějiny                   | **Vodník** — Každá zahozená kárová karta mu trvale dá +1 mult. _Dušičky pod pokličkou. Jako koníček._                                     |
+| Domácí realita                    | **Tchyně na návštěvě** — Každé zahození ti navíc zahodí 1 náhodnou kartu z ruky. _Neříkám, že to děláš špatně. Jen bych to dělala jinak._ |
 
 ## 12. Čeština a typografie
 
 - **Všechny texty jen v `src/i18n`**, diakritika všude správně, hráči **tykáme**.
+- **Rodově neutrálně:** hráč může být kdokoli, takže žádný minulý čas ani přídavná jména v 2. osobě
+  („jsi zahrál“, „kdybys dupal“, „jsi hrdý“). Použij rozkazovací způsob, přítomný/budoucí čas nebo neosobní
+  tvar: „Dokud se v tomto kole nezahazovalo…“, „Zatím se ti neukázal.“ Postavy (šéfové, žolíci) mluví, jak chtějí.
+- Předložka **s/z** se před slovem na s-, z-, š-, ž- vokalizuje: „se žolíky“, „ze stolu“, „se sekerou“.
 - **Uvozovky:** české „takhle“ (U+201E a U+201C), vnořené ‚takhle‘. Nikdy rovné `"` v textu pro hráče.
-- **Nezlomitelná mezera (NBSP, U+00A0)** — v kódu ji piš jako ` `:
-  - po jednopísmenných předložkách a spojkách: `k`, `s`, `v`, `z`, `o`, `u`, `a`, `i` („v ruce“),
+- **Nezlomitelná mezera (NBSP, U+00A0)** — v kódu ji piš jako `\u00a0` (nikdy jako neviditelný znak):
+  - po jednopísmenných předložkách a spojkách: `k`, `s`, `v`, `z`, `o`, `u`, `a`, `i` („v ruce“),
   - v číslech jako oddělovač tisíců: `1 340 000`,
-  - mezi číslem a jednotkou: `5 Kč`, `10 %`, `+30 čipů`.
+  - mezi číslem a jednotkou: `5 Kč`, `10 %`, `+30 čipů`,
+  - před větnou pomlčkou (pomlčka nesmí začínat řádek).
+    `t()` to doplní automaticky (`typo()` v `src/i18n/format.ts`: jednopísmenná slova, číslo + slovo/jednotka,
+    mezera před `–`) a čísla z `{param}` formátuje `format.ts` — v textech tedy stačí obyčejné mezery.
 - **Desetinná čárka**: `×1,5`, `2,5 Kč`. Znak násobení je `×` (U+00D7), ne písmeno `x`.
 - **Velká čísla** nad 1e15 vědecky s čárkou: `1,23e16` (dělá `format.ts`).
-- **Pomlčky:** rozsah bez mezer `2–4`, `Po–St`; větná pomlčka s mezerami `–`; zápor ve statickém textu
-  `−1 zahození` (U+2212). Trojtečka `…` (U+2026).
-- **Velká písmena:** v názvech jen první slovo a vlastní jména („Zlatá věrnostní karta“, „Svatý
-  Martin“). Herní pojmy s velkým písmenem jako v UI: názvy kombinací (Dvojice, Full house), útrat
+- **Pomlčky:** rozsah bez mezer `2–4`, `Po–St`; větná pomlčka je **krátká** `–` (U+2013) s mezerami — dlouhá
+  `—` (U+2014) se v české sazbě nepoužívá a v textech hry být nesmí (hlídá to `tests/unit/i18n.test.ts`);
+  zápor ve statickém textu `−1 zahození` (U+2212). Trojtečka `…` (U+2026). (Dokumentace v `docs/` smí `—` používat.)
+- **Velká písmena:** v názvech jen první slovo a vlastní jména („Zlatá věrnostní“, „Martin na koni“,
+  „Svatý Václav“). Herní pojmy s velkým písmenem jako v UI: názvy kombinací (Dvojice, Full house), útrat
   (Malá útrata, Velká útrata, Šéf), Večerka. Figury a barvy v textu malými („za každého krále“, „kárová
   karta“).
 - **Jednotky hry:** `+4 mult`, `×2 mult` („mult“ se neskloňuje), `+30 čipů`, peníze vždy `Kč`.
@@ -484,7 +500,8 @@ Před commitem projdi u každé nové položky:
 - [ ] **Art** (`ArtSpec`) — rozpoznatelný, ikona z povoleného zdroje se záznamem v `ASSETS.md`
 - [ ] `tags` vyplněné (simulace, filtry ve sbírce)
 - [ ] **Test**: efekt nastane / nenastane / hraniční případ; u stavu i `isCopy` a save/load
-- [ ] Typografie: NBSP, české uvozovky, desetinná čárka, `×`, `plural()` u proměnných čísel
+- [ ] Typografie: NBSP, české uvozovky, krátká pomlčka, desetinná čárka, `×`, `plural()` u proměnných čísel
+- [ ] Hráč je oslovený rodově neutrálně (žádné „jsi zahrál“)
 - [ ] Žádný zakázaný obsah (kap. 13)
 - [ ] `npm test` zelené, `npm run simulate` neukazuje, že je položka bezcenná ani „auto-win“
 - [ ] Commit `content: add <typ> <id>` (anglicky), větší změna čísel zapsaná do `docs/DESIGN.md`

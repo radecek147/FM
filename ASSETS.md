@@ -1,0 +1,47 @@
+# Assety a licence — Karban
+
+> Vygenerováno skriptem `scripts/fetch-assets.ts` (`npm run fetch-assets`). Ruční úpravy se při dalším
+> běhu přepíšou — měň skript. Build nezávisí na síti: všechny použité soubory jsou v `src/assets/`.
+> Žádný asset nepochází z Balatra ani jiné komerční hry.
+
+## Přehled
+
+| Soubor / skupina                                                                                                       | Zdroj                                                                                                                                | Autor                                                                                                                    | Licence                                                                                                                              | Úprava                                                                                    |
+| ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| Písmo Pixelify Sans: `src/assets/fonts/pixelify-sans-{latin-ext,latin}-{400,700}-normal.woff2`, `fonts.css`, `OFL.txt` | https://fonts.google.com/specimen/Pixelify+Sans přes npm `@fontsource/pixelify-sans@5.3.0` (https://github.com/eifetx/Pixelify-Sans) | Stefie Justprince — Copyright 2021 The Pixelify Sans Project Authors (https://github.com/eifetx/Pixelify-Sans)           | SIL Open Font License 1.1 (`OFL-1.1`), text v `src/assets/fonts/OFL.txt`                                                             | beze změny glyfů; vybrány subsety latin-ext + latin a váhy 400 a 700, vlastní `fonts.css` |
+| Ikony (222): `src/assets/icons/*.svg`, `src/assets/icons/index.ts`                                                     | https://game-icons.net přes npm `@iconify-json/game-icons@1.2.4` (https://github.com/game-icons/icons)                               | GameIcons — Delapouite, Lorc, Skoll, Sbed, Caro Asercion, Faithtoken, Guard13007, Cathelineau, Willdabeast (rozpis níže) | CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/), podmínky sady: https://github.com/game-icons/icons/blob/master/license.txt | přebarvení na `currentColor`, kompozice do procedurálních obrázků karet (`src/ui/art`)    |
+| Hrací karty, obrázky žolíků, šéfů, spotřebek, kupónů, štítků, pozadí a UI grafika                                      | vlastní procedurální SVG, kód v `src/ui/art`                                                                                         | autoři projektu Karban                                                                                                   | licence projektu                                                                                                                     | — (ikony výše se do nich jen vkládají)                                                    |
+| Zvukové efekty a hudba                                                                                                 | syntetizováno ve Web Audio API, kód v `src/ui/audio`                                                                                 | autoři projektu Karban                                                                                                   | licence projektu                                                                                                                     | — (žádné nahrávky)                                                                        |
+
+## Nedostupné a nepoužité zdroje
+
+Vývojové prostředí (sandbox), ve kterém hra vzniká, blokuje kenney.nl, opengameart.org, game-icons.net, wikimedia, freesound
+a fonts.google.com. Písmo a ikony se proto berou z npm balíčků (stejné soubory, stejné licence) a vše
+ostatní je vlastní procedurální grafika nebo syntetizovaný zvuk.
+
+| Zdroj                       | URL                                         | Licence | Stav                                                                                           |
+| --------------------------- | ------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------- |
+| Kenney — Playing Cards Pack | https://kenney.nl/assets/playing-cards-pack | CC0 1.0 | nedostupné (HTTP 403), nahrazeno procedurálním SVG: vlastní SVG hrací karty v `src/ui/art`     |
+| Kenney — Boardgame Pack     | https://kenney.nl/assets/boardgame-pack     | CC0 1.0 | nedostupné (HTTP 403), nahrazeno procedurálním SVG: vlastní SVG žetony a kostky v `src/ui/art` |
+
+## Povinné atribuce pro Titulky
+
+- **Písmo „Pixelify Sans“** — Stefie Justprince, Copyright 2021 The Pixelify Sans Project Authors (https://github.com/eifetx/Pixelify-Sans). Licence SIL Open Font License 1.1 (https://openfontlicense.org).
+- **Ikony** — Icons made by Delapouite, Lorc, Skoll, Sbed, Caro Asercion, Faithtoken, Guard13007, Cathelineau, Willdabeast from https://game-icons.net. Licence CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/). Upraveno: přebarveno a zkombinováno do obrázků karet.
+
+V kódu jsou tyto údaje dostupné jako `ICON_ATTRIBUTION` a `ICON_CREDITS` v `src/assets/icons/index.ts`.
+
+## Ikony podle autorů
+
+Autor každé ikony je dohledán podle složky v repozitáři https://github.com/game-icons/icons (cache `src/assets/icons/authors.json`).
+Metadata balíčku uvádí souhrnně „GameIcons“ (https://github.com/game-icons/icons).
+
+- **Delapouite** (112): `alarm-clock`, `anticlockwise-rotation`, `bank`, `banknote`, `barrel`, `bathtub`, `beer-bottle`, `beer-horn`, `bread`, `brick-wall`, `bus`, `cabbage`, `calendar`, `canoe`, `card-joker`, `chef-toque`, `cherry`, `chicken`, `church`, `cigar`, `city-car`, `clown`, `coins`, `coins-pile`, `contract`, `cow`, `devil-mask`, `drum`, `duck`, `dutch-bike`, `dynamite`, `exit-door`, `eyepatch`, `factory`, `farm-tractor`, `farmer`, `flail`, `flat-tire`, `fried-eggs`, `full-pizza`, `garlic`, `gingerbread-man`, `glass-celebration`, `golem-head`, `honey-jar`, `hot-dog`, `house`, `imperial-crown`, `jester-hat`, `ladder`, `laptop`, `magic-hat`, `megaphone`, `microphone`, `miner`, `money-stack`, `monkey-wrench`, `musical-notes`, `mustache`, `newspaper`, `old-lantern`, `old-wagon`, `padlock-open`, `piggy-bank`, `pirate-hat`, `post-stamp`, `potato`, `present`, `pretzel`, `rabbit`, `receive-money`, `rolling-dices`, `rooster`, `round-star`, `sausage`, `save`, `sheep`, `shop`, `shopping-cart`, `sitting-dog`, `smoking-pipe`, `sparkles`, `speaker`, `speaker-off`, `stamper`, `stars-stack`, `steam-locomotive`, `sunflower`, `sunglasses`, `take-my-money`, `tap`, `tavern-sign`, `thumb-down`, `thumb-up`, `ticket`, `toolbox`, `traffic-cone`, `tropical-fish`, `trumpet`, `tv`, `two-coins`, `upgrade`, `vampire-dracula`, `wallet`, `warhammer`, `watering-can`, `wheelbarrow`, `windmill`, `window`, `wine-bottle`, `wizard-face`, `wood-cabin`
+- **Lorc** (79): `alien-stare`, `anchor`, `angel-wings`, `anvil`, `battle-axe`, `beard`, `bee`, `beer-stein`, `brain`, `broadsword`, `broken-bottle`, `cake-slice`, `candle-light`, `castle`, `cat`, `cheese-wedge`, `claw-hammer`, `cog`, `crossed-swords`, `crown`, `crown-coin`, `crowned-skull`, `crystal-ball`, `cycle`, `dragon-head`, `drama-masks`, `drill`, `eyeball`, `firework-rocket`, `flower-pot`, `fluffy-cloud`, `footprint`, `fox-head`, `frog`, `gavel`, `ghost`, `glass-shot`, `guitar`, `hourglass`, `king`, `lantern`, `light-bulb`, `lightning-storm`, `linden-leaf`, `locked-chest`, `magnifying-glass`, `moon`, `mountains`, `mushroom`, `open-book`, `owl`, `padlock`, `papers`, `pine-tree`, `poker-hand`, `quill-ink`, `raining`, `ringing-bell`, `roast-chicken`, `robot-golem`, `rocket`, `scales`, `screwdriver`, `scroll-unfurled`, `scythe`, `shiny-apple`, `snowflake-1`, `snowman`, `spectacles`, `stone-block`, `sun`, `tooth`, `top-hat`, `tornado`, `trophy`, `umbrella`, `unlit-bomb`, `wheat`, `wine-glass`
+- **Skoll** (11): `airplane`, `clubs`, `diamonds`, `fist`, `goat`, `ham-shank`, `hearts`, `pig`, `smartphone`, `spades`, `stopwatch`
+- **Sbed** (8): `cancel`, `clover`, `death-skull`, `fire`, `hand`, `help`, `key`, `shield`
+- **Caro Asercion** (5): `accordion`, `coinflip`, `dumpling`, `rotary-phone`, `subway-train`
+- **Faithtoken** (3): `card-discard`, `card-draw`, `card-random`
+- **Guard13007** (2): `pause-button`, `play-button`
+- **Cathelineau** (1): `witch-face`
+- **Willdabeast** (1): `gold-bar`

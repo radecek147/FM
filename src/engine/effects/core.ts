@@ -221,7 +221,10 @@ export class GameCore {
   }
 
   /** Žolík, jehož schopnost `joker` efektivně používá (sleduje řetěz kopírování). */
-  resolveCopy(joker: JokerInstance, index: number): { target: JokerInstance; def: JokerDef; isCopy: boolean } | null {
+  resolveCopy(
+    joker: JokerInstance,
+    index: number,
+  ): { target: JokerInstance; def: JokerDef; isCopy: boolean } | null {
     let current = joker;
     let def = this.jokerDef(current);
     const visited = new Set<number>([current.uid]);

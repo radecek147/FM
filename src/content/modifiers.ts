@@ -64,8 +64,8 @@ export const ENHANCEMENTS: EnhancementDef[] = [
 export const SEALS: SealDef[] = [
   {
     id: 'gold',
-    params: { money: 3 },
-    onScored: () => ({ money: 3 }),
+    params: { money: 2 },
+    onScored: () => ({ money: 2 }),
     art: { icon: 'coins', bg: '#b8860b', fg: '#fff8dc' },
   },
   {
@@ -78,7 +78,7 @@ export const SEALS: SealDef[] = [
     onRoundEndHeld: (ctx) => {
       if (ctx.lastHand) ctx.api.createConsumable({ forHand: ctx.lastHand });
     },
-    art: { icon: 'cloud', bg: '#1d4ed8', fg: '#eff6ff' },
+    art: { icon: 'fluffy-cloud', bg: '#1d4ed8', fg: '#eff6ff' },
   },
   {
     id: 'purple',
@@ -90,8 +90,32 @@ export const SEALS: SealDef[] = [
 ];
 
 export const EDITIONS: EditionDef[] = [
-  { id: 'foil', params: { chips: 50 }, effect: () => ({ chips: 50 }), jokerTiming: 'before', priceAdd: 2, weight: 2.5, forCards: true },
-  { id: 'holo', params: { mult: 10 }, effect: () => ({ mult: 10 }), jokerTiming: 'before', priceAdd: 3, weight: 1.5, forCards: true },
-  { id: 'poly', params: { xmult: 1.5 }, effect: () => ({ xmult: 1.5 }), jokerTiming: 'after', priceAdd: 5, weight: 0.4, forCards: true },
-  { id: 'negative', params: { slots: 1 }, extraSlots: 1, priceAdd: 5, weight: 0.3, forCards: false },
+  {
+    id: 'foil',
+    params: { chips: 50 },
+    effect: () => ({ chips: 50 }),
+    jokerTiming: 'before',
+    priceAdd: 1,
+    weight: 2.5,
+    forCards: true,
+  },
+  {
+    id: 'holo',
+    params: { mult: 10 },
+    effect: () => ({ mult: 10 }),
+    jokerTiming: 'before',
+    priceAdd: 2,
+    weight: 1.5,
+    forCards: true,
+  },
+  {
+    id: 'poly',
+    params: { xmult: 1.5 },
+    effect: () => ({ xmult: 1.5 }),
+    jokerTiming: 'after',
+    priceAdd: 4,
+    weight: 0.4,
+    forCards: true,
+  },
+  { id: 'negative', params: { slots: 1 }, extraSlots: 1, priceAdd: 6, weight: 0.25, forCards: false },
 ];

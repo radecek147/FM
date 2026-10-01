@@ -70,7 +70,12 @@ export function unwrap(input: string | unknown, kind: SaveKind): SaveEnvelope<Re
   }
   if (!obj || typeof obj !== 'object') throw new SaveError('invalidFormat');
   const env = obj as Partial<SaveEnvelope>;
-  if (env.format !== SAVE_FORMAT || typeof env.version !== 'number' || !env.data || typeof env.data !== 'object') {
+  if (
+    env.format !== SAVE_FORMAT ||
+    typeof env.version !== 'number' ||
+    !env.data ||
+    typeof env.data !== 'object'
+  ) {
     throw new SaveError('invalidFormat');
   }
   if (env.kind !== kind) throw new SaveError('wrongKind');

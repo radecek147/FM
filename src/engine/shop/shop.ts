@@ -15,7 +15,7 @@ import type {
 } from '../types';
 import { pickConsumableDefId, pickJokerDefId, rollEdition } from './pool';
 
-export const BASE_CARD_PRICE = 1;
+export const BASE_CARD_PRICE = 2;
 
 /** Cena po slevě (Modifiers.shopDiscountPct), nejméně 0. */
 export function discounted(core: GameCore, price: number): number {
@@ -47,7 +47,7 @@ export function rollStickers(core: GameCore, rng: Rng): StickerId[] {
 }
 
 export function jokerPrice(core: GameCore, joker: JokerInstance): number {
-  if (joker.stickers.includes('rental')) return 1;
+  if (joker.stickers.includes('rental')) return 2; // DESIGN 2.10 RENTAL_BUY_PRICE
   const def = core.registry.jokers[joker.defId];
   const ed = joker.edition ? (core.registry.editions[joker.edition]?.priceAdd ?? 0) : 0;
   return discounted(core, (def?.cost ?? 0) + ed);
@@ -60,7 +60,7 @@ export function consumablePrice(core: GameCore, defId: string): number {
 export function cardPrice(core: GameCore, card: Card): number {
   let price = BASE_CARD_PRICE;
   if (card.enhancement) price += 1;
-  if (card.seal) price += 1;
+  if (card.seal) price += 2;
   if (card.edition) price += core.registry.editions[card.edition]?.priceAdd ?? 0;
   return discounted(core, price);
 }
@@ -86,7 +86,8 @@ type SlotKind = 'joker' | ConsumableKind | 'card';
 function generateItem(core: GameCore, rng: Rng, takenJokers: string[]): ShopItem | null {
   const m = core.mods();
   const reg = core.registry;
-  const hasConsumable = (k: ConsumableKind) => Object.values(reg.consumables).some((c) => c.kind === k && !c.noShop);
+  const hasConsumable = (k: ConsumableKind) =>
+    Object.values(reg.consumables).some((c) => c.kind === k && !c.noShop);
   const weights: { item: SlotKind; weight: number }[] = [
     { item: 'joker' as const, weight: Object.keys(reg.jokers).length ? m.shopWeightJoker : 0 },
     { item: 'pranostika' as const, weight: hasConsumable('pranostika') ? m.shopWeightPranostika : 0 },
@@ -110,7 +111,13 @@ function generateItem(core: GameCore, rng: Rng, takenJokers: string[]): ShopItem
   const defId = pickConsumableDefId(core, rng, kind);
   if (!defId) return null;
   const consumable = newConsumableInstance(core, defId);
-  return { kind: 'consumable', consumable, consumableKind: kind, price: consumablePrice(core, defId), sold: false };
+  return {
+    kind: 'consumable',
+    consumable,
+    consumableKind: kind,
+    price: consumablePrice(core, defId),
+    sold: false,
+  };
 }
 
 /** Vygeneruje kartové sloty obchodu. */
@@ -208,21 +215,35 @@ export function generateBoosterOptions(core: GameCore, boosterId: string): Boost
       const defId = pickJokerDefId(core, rng, { exclude: taken });
       if (!defId) break;
       taken.push(defId);
-      out.push({ kind: 'joker', joker: newJokerInstance(core, defId, rollEdition(core, rng, false), rollStickers(core, rng)) });
+      out.push({
+        kind: 'joker',
+        joker: newJokerInstance(core, defId, rollEdition(core, rng, false), rollStickers(core, rng)),
+      });
     } else if (def.kind === 'card') {
-      out.push({ kind: 'card', card: randomPlayingCard(core, rng, { enhancement: 0.4, seal: 0.15, edition: true }) });
+      out.push({
+        kind: 'card',
+        card: randomPlayingCard(core, rng, { enhancement: 0.4, seal: 0.15, edition: true }),
+      });
     } else {
       const defId = pickConsumableDefId(core, rng, def.kind, { exclude: taken });
       if (!defId) break;
       taken.push(defId);
-      out.push({ kind: 'consumable', consumable: newConsumableInstance(core, defId), consumableKind: def.kind });
+      out.push({
+        kind: 'consumable',
+        consumable: newConsumableInstance(core, defId),
+        consumableKind: def.kind,
+      });
     }
   }
   return out;
 }
 
 /** Otevře booster (stav + případná ruka pro cílení babských rad/razítek). */
-export function openBooster(core: GameCore, boosterId: string, returnTo: BoosterState['returnTo']): BoosterState {
+export function openBooster(
+  core: GameCore,
+  boosterId: string,
+  returnTo: BoosterState['returnTo'],
+): BoosterState {
   const def = core.registry.boosters[boosterId]!;
   const needsHand = def.kind === 'rada' || def.kind === 'razitko';
   let hand: number[] = [];

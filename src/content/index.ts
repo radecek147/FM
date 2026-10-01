@@ -46,21 +46,28 @@ export function buildRegistry(): ContentRegistry {
 export function validateRegistry(reg: ContentRegistry): string[] {
   const problems: string[] = [];
   for (const v of Object.values(reg.vouchers)) {
-    if (v.requires && !reg.vouchers[v.requires]) problems.push(`voucher ${v.id} requires unknown ${v.requires}`);
+    if (v.requires && !reg.vouchers[v.requires])
+      problems.push(`voucher ${v.id} requires unknown ${v.requires}`);
     if (v.tier === 2 && !v.requires) problems.push(`voucher ${v.id} is tier 2 without requires`);
   }
   for (const c of Object.values(reg.challenges)) {
     if (!reg.decks[c.deckId]) problems.push(`challenge ${c.id} uses unknown deck ${c.deckId}`);
-    for (const j of c.startingJokers ?? []) if (!reg.jokers[j.defId]) problems.push(`challenge ${c.id}: unknown joker ${j.defId}`);
-    for (const j of c.bannedJokers ?? []) if (!reg.jokers[j]) problems.push(`challenge ${c.id}: unknown banned joker ${j}`);
-    for (const v of c.startingVouchers ?? []) if (!reg.vouchers[v]) problems.push(`challenge ${c.id}: unknown voucher ${v}`);
-    for (const v of c.startingConsumables ?? []) if (!reg.consumables[v]) problems.push(`challenge ${c.id}: unknown consumable ${v}`);
+    for (const j of c.startingJokers ?? [])
+      if (!reg.jokers[j.defId]) problems.push(`challenge ${c.id}: unknown joker ${j.defId}`);
+    for (const j of c.bannedJokers ?? [])
+      if (!reg.jokers[j]) problems.push(`challenge ${c.id}: unknown banned joker ${j}`);
+    for (const v of c.startingVouchers ?? [])
+      if (!reg.vouchers[v]) problems.push(`challenge ${c.id}: unknown voucher ${v}`);
+    for (const v of c.startingConsumables ?? [])
+      if (!reg.consumables[v]) problems.push(`challenge ${c.id}: unknown consumable ${v}`);
   }
   for (const c of Object.values(reg.consumables)) {
     if (c.kind === 'pranostika' && !c.hand) problems.push(`pranostika ${c.id} has no hand`);
     if (c.hand && !reg.handTypes[c.hand]) problems.push(`consumable ${c.id}: unknown hand ${c.hand}`);
   }
-  const levels = Object.values(reg.stakes).map((s) => s.level).sort((a, b) => a - b);
+  const levels = Object.values(reg.stakes)
+    .map((s) => s.level)
+    .sort((a, b) => a - b);
   levels.forEach((l, i) => {
     if (l !== i + 1) problems.push(`stake levels must be 1..N contiguous (got ${levels.join(',')})`);
   });

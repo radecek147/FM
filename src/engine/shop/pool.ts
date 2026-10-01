@@ -4,7 +4,7 @@ import type { GameCore } from '../effects/core';
 import type { ConsumableKind, EditionId } from '../types';
 
 /** Váhy vzácností žolíků v obchodě/boosterech (legendární jen speciálně). */
-export const RARITY_WEIGHTS: Record<JokerRarity, number> = { common: 70, rare: 25, epic: 5, legendary: 0 };
+export const RARITY_WEIGHTS: Record<JokerRarity, number> = { common: 68, rare: 26, epic: 6, legendary: 0 };
 
 function jokerAllowed(core: GameCore, def: JokerDef): boolean {
   const s = core.state;
@@ -73,7 +73,9 @@ export function pickConsumableDefId(
  * `baseChance` je celková šance na jakoukoli edici při násobiči 1 (součet vah se škáluje na ni).
  */
 export function rollEdition(core: GameCore, rng: Rng, forCards: boolean, rateMult = 1): EditionId | null {
-  const eds = Object.values(core.registry.editions).filter((e) => (forCards ? e.forCards : true) && e.weight > 0);
+  const eds = Object.values(core.registry.editions).filter(
+    (e) => (forCards ? e.forCards : true) && e.weight > 0,
+  );
   if (eds.length === 0) return null;
   const mult = core.mods().editionRateMult * rateMult;
   // Váhy edic jsou v procentech (např. 2,5 = 2,5 %).

@@ -16,12 +16,28 @@ export default tseslint.config(
     },
   },
   {
-    // Engine nesmí sahat na DOM ani na UI.
+    // Engine nesmí sahat na DOM, UI, obsah ani texty (obsah dostává přes ContentRegistry, texty jsou jen klíče).
     files: ['src/engine/**/*.ts'],
     languageOptions: { globals: { ...globals.es2022 } },
     rules: {
-      'no-restricted-globals': ['error', 'window', 'document', 'localStorage', 'navigator', 'requestAnimationFrame'],
-      'no-restricted-imports': ['error', { patterns: ['**/ui/**', '../ui/*'] }],
+      'no-restricted-globals': [
+        'error',
+        'window',
+        'document',
+        'localStorage',
+        'navigator',
+        'requestAnimationFrame',
+      ],
+      'no-restricted-imports': [
+        'error',
+        { patterns: ['**/ui/**', '../ui/*', '**/content/**', '../content/*', '**/i18n/**', '../i18n/*'] },
+      ],
+      // Veškerá náhoda musí jít přes seedované RNG streamy (determinismus).
+      'no-restricted-properties': [
+        'error',
+        { object: 'Math', property: 'random', message: 'Použij seedovaný RNG (core.rng / ctx.rng).' },
+        { object: 'Date', property: 'now', message: 'Engine musí být deterministický.' },
+      ],
     },
   },
   {
