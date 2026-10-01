@@ -37,6 +37,10 @@ export default tseslint.config(
         'error',
         { object: 'Math', property: 'random', message: 'Použij seedovaný RNG (core.rng / ctx.rng).' },
         { object: 'Date', property: 'now', message: 'Engine musí být deterministický.' },
+        {
+          property: 'localeCompare',
+          message: 'Řazení závisí na jazyce prostředí (stejný seed ≠ stejný run) — použij compareIds.',
+        },
       ],
     },
   },

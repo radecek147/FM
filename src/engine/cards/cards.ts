@@ -43,8 +43,16 @@ export function isWild(card: Card, enh: EnhancementLookup): boolean {
   return card.enhancement !== null && enh[card.enhancement]?.allSuits === true;
 }
 
-/** Základní čipy karty bez efektů vylepšení: kamenná 0, jinak podle hodnoty + bonusChips. */
-export function cardChips(card: Card, enh: EnhancementLookup): number {
+/**
+ * Základní čipy karty bez efektů vylepšení: kamenná 0, jinak podle hodnoty; + trvalé `bonusChips`.
+ * Při `fixedCardChips > 0` (Normalizace) dává každá karta právě tolik čipů (hodnota i `bonusChips` se ignorují).
+ */
+export function cardChips(
+  card: Card,
+  enh: EnhancementLookup,
+  mods?: Pick<Modifiers, 'fixedCardChips'>,
+): number {
+  if (mods && mods.fixedCardChips > 0) return mods.fixedCardChips;
   return (hasNoRankSuit(card, enh) ? 0 : rankChips(card.rank)) + card.bonusChips;
 }
 

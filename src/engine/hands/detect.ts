@@ -1,20 +1,33 @@
 /**
- * Detekce pokerových kombinací.
+ * Detekce pokerových kombinací (docs/DESIGN.md kap. 2.2.2–2.2.4).
  *
+ * Princip: projdou se všechny podmnožiny zahraných karet s hodnotou o 1–5 kartách a u každé se určí,
+ * kterými kombinacemi „přesně je“ (všechny její karty jsou součástí kombinace). Vyhodnocená kombinace je
+ * nejlepší varianta podle pravidla z DESIGN 2.2.2:
+ *   1. nejsilnější typ (pořadí `HAND_TYPES`),
+ *   2. více skórujících karet,
+ *   3. vyšší součet čipů skórujících karet (`cardChips`; u Vysoké karty rozhoduje hodnota karty),
+ *   4. karty zahrané víc vlevo.
+ *
+ * Pravidla:
+ * - Kombinace má nejvýš 5 karet (i při `maxSelect` > 5); ostatní zahrané karty jsou „kopy“ a neskórují.
  * - Kamenné karty (bez hodnoty a barvy) se do kombinace nepočítají, ale vždy skórují.
- * - Divoké karty patří do všech barev.
- * - Debuffnuté a zakryté karty se do kombinace počítají normálně.
- * - Postupka: A-2-3-4-5 i 10-J-Q-K-A ano; „kolem dokola“ (Q-K-A-2-3) jen s `straightWrap`.
- * - `fourCardStraightFlush`: Postupka i Barva stačí ze 4 karet.
- * - `straightGaps`: mezi sousedními hodnotami Postupky smí chybět jedna hodnota.
- * - Postupka v barvě = v zahrané ruce je zároveň Postupka i Barva (skórují karty obou).
- * - Královská postupka = Postupka v barvě, jejíž postupka obsahuje jen 10–A a končí esem.
+ * - Divoké karty patří do všech barev; `mergedSuits` slučuje ♥ = ♦ a ♠ = ♣.
+ * - Debuffnuté a zakryté karty se do kombinace počítají normálně (detekce tyto příznaky nečte).
+ * - Postupka: různé po sobě jdoucí hodnoty; A-2-3-4-5 i 10-J-Q-K-A ano; „kolem dokola“ (Q-K-A-2-3)
+ *   jen s `straightWrap`. U duplicitní hodnoty skóruje jen jedna z karet (podle bodu 3 a 4 výše).
+ * - `fourCardStraightFlush`: Postupka i Barva stačí ze 4 karet (5 karet má přednost — víc skórujících).
+ * - `straightGaps`: mezi sousedními hodnotami Postupky smí chybět nejvýš jedna hodnota.
+ * - Postupka v barvě = Postupka, jejíž karty mají všechny jednu barvu (ne „Postupka + Barva z různých karet“).
+ * - Královská postupka = Postupka v barvě bez přetočení „kolem dokola“, jejíž nejvyšší karta je vysoké Eso.
+ * - `contains` = vyhodnocená kombinace + všechny kombinace, které tvoří některá podmnožina zahraných karet;
+ *   Vysoká karta je v `contains` jen tehdy, když je to vyhodnocená kombinace.
  * - `allCardsScore`: skórují všechny zahrané karty.
  */
-import type { Card, DetectedHand, HandType, Modifiers, Rank, Suit } from '../types';
+import type { Card, DetectedHand, HandType, Modifiers, Rank } from '../types';
 import { HAND_TYPES, SUITS } from '../types';
 import type { EnhancementLookup } from '../cards/cards';
-import { cardHasSuit, hasNoRankSuit, isWild } from '../cards/cards';
+import { cardChips, cardHasSuit, hasNoRankSuit } from '../cards/cards';
 
 export type DetectModifiers = Pick<
   Modifiers,
@@ -26,6 +39,9 @@ export interface DetectOptions {
   enhancements: EnhancementLookup;
 }
 
+/** Největší počet karet (bez kamenných), které tvoří kombinaci. */
+export const MAX_HAND_CARDS = 5;
+
 const HAND_STRENGTH: Record<HandType, number> = Object.fromEntries(
   HAND_TYPES.map((h, i) => [h, i]),
 ) as Record<HandType, number>;
@@ -35,205 +51,188 @@ export function compareHandTypes(a: HandType, b: HandType): number {
   return HAND_STRENGTH[a] - HAND_STRENGTH[b];
 }
 
-interface StraightInfo {
-  ranks: Set<Rank>;
-  royal: boolean;
-}
+/** Druh postupky: `aceHigh` = bez přetočení a nejvyšší karta je vysoké Eso (základ Královské). */
+export type StraightKind = 'normal' | 'aceHigh';
 
-/**
- * Najde nejlepší postupku mezi různými hodnotami. Vrací množinu hodnot postupky (nebo null).
- * Hrubou silou přes podmnožiny — karet je málo (typicky ≤ 5, max ~8).
- */
-export function findStraight(
-  ranksPresent: readonly Rank[],
-  need: number,
-  gaps: boolean,
-  wrap: boolean,
-): StraightInfo | null {
-  const distinct = [...new Set(ranksPresent)].sort((a, b) => a - b);
-  if (distinct.length < need) return null;
-  const maxStep = gaps ? 2 : 1;
-  let best: { ranks: Rank[]; score: number } | null = null;
-  const n = distinct.length;
-  for (let mask = 1; mask < 1 << n; mask++) {
-    const subset: Rank[] = [];
-    for (let i = 0; i < n; i++) if (mask & (1 << i)) subset.push(distinct[i]!);
-    if (subset.length < need) continue;
-    if (!isValidStraight(subset, maxStep, wrap)) continue;
-    // Preferuj delší postupku, pak vyšší hodnoty.
-    const score = subset.length * 1000 + subset.reduce((s, r) => s + r, 0);
-    if (!best || score > best.score) best = { ranks: subset, score };
-  }
-  if (!best) return null;
-  const set = new Set(best.ranks);
-  const royal = set.has(14) && best.ranks.every((r) => r >= 10);
-  return { ranks: set, royal };
-}
-
-function linearOk(positions: number[], maxStep: number): boolean {
-  const sorted = [...positions].sort((a, b) => a - b);
-  for (let i = 1; i < sorted.length; i++) {
-    const d = sorted[i]! - sorted[i - 1]!;
+/** Jsou pozice (seřazené vzestupně, různé) postupkou s kroky 1…maxStep? */
+function linearOk(sortedPositions: readonly number[], maxStep: number): boolean {
+  for (let i = 1; i < sortedPositions.length; i++) {
+    const d = sortedPositions[i]! - sortedPositions[i - 1]!;
     if (d < 1 || d > maxStep) return false;
   }
   return true;
 }
 
-/** Hodnoty seřazené vzestupně, různé. */
-function isValidStraight(ranks: Rank[], maxStep: number, wrap: boolean): boolean {
-  // pozice 0..12 (2..A)
-  const pos = ranks.map((r) => r - 2);
-  if (wrap) {
-    // Na kruhu 13 pozic: odstraníme největší mezeru (to je „vnějšek“), zbytek musí být v mezích.
-    const sorted = [...pos].sort((a, b) => a - b);
-    const gapsList: number[] = [];
-    for (let i = 0; i < sorted.length; i++) {
-      const next = i + 1 < sorted.length ? sorted[i + 1]! : sorted[0]! + 13;
-      gapsList.push(next - sorted[i]!);
-    }
-    const maxIdx = gapsList.indexOf(Math.max(...gapsList));
-    return gapsList.every((g, i) => i === maxIdx || (g >= 1 && g <= maxStep));
+/**
+ * Tvoří různé hodnoty `ranks` postupku? Nekontroluje počet karet (to dělá volající).
+ * Vrací druh postupky, nebo null.
+ */
+export function straightKind(ranks: readonly Rank[], gaps: boolean, wrap: boolean): StraightKind | null {
+  const sorted = [...ranks].sort((a, b) => a - b);
+  for (let i = 1; i < sorted.length; i++) if (sorted[i] === sorted[i - 1]) return null;
+  const maxStep = gaps ? 2 : 1;
+  // Pozice 0..12 = hodnoty 2..A.
+  const pos = sorted.map((r) => r - 2);
+  if (linearOk(pos, maxStep)) return sorted.includes(14) ? 'aceHigh' : 'normal';
+  if (sorted.includes(14)) {
+    // Eso jako jednička (pozice −1) — jen A-2-3-4-5 a podobné; Eso pak není nejvyšší karta.
+    const low = [-1, ...pos.filter((p) => p !== 12)];
+    if (linearOk(low, maxStep)) return 'normal';
   }
-  if (linearOk(pos, maxStep)) return true;
-  // Eso jako jednička (pozice −1).
-  if (ranks.includes(14)) {
-    const low = pos.map((p) => (p === 12 ? -1 : p));
-    if (linearOk(low, maxStep)) return true;
+  if (wrap && pos.length > 1) {
+    // Kruh 13 pozic: největší mezera je „vnějšek“ postupky, ostatní musí být v mezích.
+    const circular = pos.map((p, i) => (i + 1 < pos.length ? pos[i + 1]! : pos[0]! + 13) - p);
+    const outer = circular.indexOf(Math.max(...circular));
+    if (circular.every((g, i) => i === outer || g <= maxStep)) return 'normal';
   }
-  return false;
+  return null;
 }
 
-/** Najde barvu s nejvíce kartami. Vrací karty té barvy (včetně divokých), pokud jich je ≥ need. */
-function findFlush(cards: readonly Card[], need: number, opts: DetectOptions): Card[] | null {
-  let best: { cards: Card[]; natural: number } | null = null;
-  for (const suit of SUITS as readonly Suit[]) {
-    const matching = cards.filter((c) => cardHasSuit(c, suit, opts.mods, opts.enhancements));
-    if (matching.length < need) continue;
-    const natural = matching.filter((c) => !isWild(c, opts.enhancements)).length;
-    if (
-      !best ||
-      matching.length > best.cards.length ||
-      (matching.length === best.cards.length && natural > best.natural)
-    ) {
-      best = { cards: matching, natural };
-    }
+/** Bitmaska barev, do kterých karta patří (bit i = `SUITS[i]`): divoká do všech, kamenná do žádné. */
+function suitMask(card: Card, opts: DetectOptions): number {
+  let mask = 0;
+  SUITS.forEach((suit, i) => {
+    if (cardHasSuit(card, suit, opts.mods, opts.enhancements)) mask |= 1 << i;
+  });
+  return mask;
+}
+
+const ALL_SUITS = (1 << SUITS.length) - 1;
+
+/** Bit kombinace v masce (bit i = `HAND_TYPES[i]`). */
+const BIT = Object.fromEntries(HAND_TYPES.map((h, i) => [h, 1 << i])) as Record<HandType, number>;
+
+const typesOf = (mask: number): HandType[] => HAND_TYPES.filter((h) => (mask & BIT[h]) !== 0);
+
+/** Index nejsilnější kombinace v masce (nejvyšší nastavený bit). */
+const strongest = (mask: number): number => 31 - Math.clz32(mask);
+
+/** Velikost dvou největších skupin karet stejné hodnoty (karet je nejvýš 5). */
+function topGroups(ranks: readonly Rank[]): [number, number] {
+  let top = 0;
+  let second = 0;
+  for (let i = 0; i < ranks.length; i++) {
+    if (ranks.indexOf(ranks[i]!) !== i) continue; // hodnota už započítaná
+    let n = 0;
+    for (let j = i; j < ranks.length; j++) if (ranks[j] === ranks[i]) n++;
+    if (n > top) [top, second] = [n, top];
+    else if (n > second) second = n;
   }
-  return best ? best.cards : null;
+  return [top, second];
+}
+
+/**
+ * Maska kombinací, kterými podmnožina karet přesně je (každá její karta je součástí kombinace).
+ * `suitAnd` = průnik masek barev všech karet podmnožiny.
+ */
+function typeMask(ranks: readonly Rank[], suitAnd: number, opts: DetectOptions): number {
+  const k = ranks.length;
+  const need = opts.mods.fourCardStraightFlush ? 4 : 5;
+  const [top, second] = topGroups(ranks);
+  const flush = k >= need && suitAnd !== 0;
+  const straight =
+    k >= need && top === 1 ? straightKind(ranks, opts.mods.straightGaps, opts.mods.straightWrap) : null;
+  const fullHouse = k === 5 && top === 3 && second === 2;
+  const five = k === 5 && top === 5;
+
+  let mask = 0;
+  if (k === 1) mask |= BIT.high_card;
+  if (k === 2 && top === 2) mask |= BIT.pair;
+  if (k === 4 && top === 2 && second === 2) mask |= BIT.two_pair;
+  if (k === 3 && top === 3) mask |= BIT.three;
+  if (straight) mask |= BIT.straight;
+  if (flush) mask |= BIT.flush;
+  if (fullHouse) mask |= BIT.full_house;
+  if (k === 4 && top === 4) mask |= BIT.four;
+  if (straight && flush) mask |= BIT.straight_flush;
+  if (straight === 'aceHigh' && flush) mask |= BIT.royal_flush;
+  if (five) mask |= BIT.five;
+  if (fullHouse && flush) mask |= BIT.flush_house;
+  if (five && flush) mask |= BIT.flush_five;
+  return mask;
+}
+
+/**
+ * Všechny kombinace, kterými podmnožina karet s hodnotou přesně je (každá její karta je součástí
+ * kombinace), seřazené podle síly. Např. 10-J-Q-K-A v jedné barvě → Postupka, Barva, Postupka v barvě,
+ * Královská; 9-9-K → nic (K do Dvojice nepatří).
+ */
+export function exactHandTypes(cards: readonly Card[], opts: DetectOptions): HandType[] {
+  if (cards.length === 0 || cards.length > MAX_HAND_CARDS) return [];
+  // Kamenná karta nemá hodnotu ani barvu — podmnožina s ní „přesně není“ žádnou kombinací (DESIGN 2.2.2).
+  if (cards.some((c) => hasNoRankSuit(c, opts.enhancements))) return [];
+  const suitAnd = cards.reduce((m, c) => m & suitMask(c, opts), ALL_SUITS);
+  return typesOf(
+    typeMask(
+      cards.map((c) => c.rank),
+      suitAnd,
+      opts,
+    ),
+  );
 }
 
 export function detectHand(played: readonly Card[], opts: DetectOptions): DetectedHand | null {
   if (played.length === 0) return null;
   const enh = opts.enhancements;
-  const stones = played.filter((c) => hasNoRankSuit(c, enh));
   const ranked = played.filter((c) => !hasNoRankSuit(c, enh));
-  const need = opts.mods.fourCardStraightFlush ? 4 : 5;
+  const n = ranked.length;
+  const ranks = ranked.map((c) => c.rank);
+  const suits = ranked.map((c) => suitMask(c, opts));
+  const chips = ranked.map((c) => cardChips(c, enh));
 
-  // Skupiny podle hodnoty, seřazené: větší skupina, pak vyšší hodnota.
-  const byRank = new Map<Rank, Card[]>();
-  for (const c of ranked) {
-    const g = byRank.get(c.rank);
-    if (g) g.push(c);
-    else byRank.set(c.rank, [c]);
-  }
-  const groups = [...byRank.entries()]
-    .map(([rank, cards]) => ({ rank, cards }))
-    .sort((a, b) => b.cards.length - a.cards.length || b.rank - a.rank);
+  // Průchod všemi podmnožinami o 1–5 kartách (indexy vzestupně = pořadí zahrání).
+  const idx: number[] = [];
+  const subRanks: Rank[] = [];
+  let found = 0;
+  let bestType = -1;
+  let bestValue = 0;
+  let bestIdx: number[] = [];
 
-  const g0 = groups[0];
-  const g1 = groups[1];
-  const fiveGroup = g0 && g0.cards.length >= 5 ? g0 : null;
-  const fourGroup = g0 && g0.cards.length >= 4 ? g0 : null;
-  const threeGroup = g0 && g0.cards.length >= 3 ? g0 : null;
-  const pairGroups = groups.filter((g) => g.cards.length >= 2);
-  const fullHouse = threeGroup && g1 && g1.cards.length >= 2 ? [...threeGroup.cards, ...g1.cards] : null;
-
-  const flushCards = ranked.length >= need ? findFlush(ranked, need, opts) : null;
-  const straight =
-    ranked.length >= need
-      ? findStraight(
-          ranked.map((c) => c.rank),
-          need,
-          opts.mods.straightGaps,
-          opts.mods.straightWrap,
-        )
-      : null;
-  const straightCards = straight ? ranked.filter((c) => straight.ranks.has(c.rank)) : null;
-
-  const flushSet = new Set(flushCards ?? []);
-  const fiveIsFlush =
-    fiveGroup !== null && flushCards !== null && fiveGroup.cards.every((c) => flushSet.has(c));
-  const fhIsFlush = fullHouse !== null && flushCards !== null && fullHouse.every((c) => flushSet.has(c));
-
-  let type: HandType;
-  let core: Card[];
-  if (fiveGroup && fiveIsFlush) {
-    type = 'flush_five';
-    core = union(fiveGroup.cards, flushCards!);
-  } else if (fullHouse && fhIsFlush) {
-    type = 'flush_house';
-    core = union(fullHouse, flushCards!);
-  } else if (fiveGroup) {
-    type = 'five';
-    core = fiveGroup.cards;
-  } else if (straight && flushCards && straight.royal) {
-    type = 'royal_flush';
-    core = union(straightCards!, flushCards);
-  } else if (straight && flushCards) {
-    type = 'straight_flush';
-    core = union(straightCards!, flushCards);
-  } else if (fourGroup) {
-    type = 'four';
-    core = fourGroup.cards;
-  } else if (fullHouse) {
-    type = 'full_house';
-    core = fullHouse;
-  } else if (flushCards) {
-    type = 'flush';
-    core = flushCards;
-  } else if (straight) {
-    type = 'straight';
-    core = straightCards!;
-  } else if (threeGroup) {
-    type = 'three';
-    core = threeGroup.cards;
-  } else if (pairGroups.length >= 2) {
-    type = 'two_pair';
-    core = [...pairGroups[0]!.cards, ...pairGroups[1]!.cards];
-  } else if (pairGroups.length === 1) {
-    type = 'pair';
-    core = pairGroups[0]!.cards;
-  } else {
-    type = 'high_card';
-    core = g0 ? [g0.cards[0]!] : [];
-  }
-
-  const contains: HandType[] = [];
-  const has: Record<HandType, boolean> = {
-    high_card: true,
-    pair: pairGroups.length >= 1,
-    two_pair: pairGroups.length >= 2,
-    three: threeGroup !== null,
-    straight: straight !== null,
-    flush: flushCards !== null,
-    full_house: fullHouse !== null,
-    four: fourGroup !== null,
-    straight_flush: straight !== null && flushCards !== null,
-    royal_flush: straight !== null && flushCards !== null && straight.royal,
-    five: fiveGroup !== null,
-    flush_house: fhIsFlush,
-    flush_five: fiveIsFlush,
+  /** Je aktuální podmnožina lepší varianta než dosud nejlepší (DESIGN 2.2.2 „Výběr mezi variantami“)? */
+  const better = (type: number, value: number): boolean => {
+    if (type !== bestType) return type > bestType;
+    if (idx.length !== bestIdx.length) return idx.length > bestIdx.length;
+    if (value !== bestValue) return value > bestValue;
+    // Víc vlevo = lexikograficky menší posloupnost indexů.
+    for (let i = 0; i < idx.length; i++) if (idx[i] !== bestIdx[i]) return idx[i]! < bestIdx[i]!;
+    return false;
   };
-  for (const h of HAND_TYPES) if (has[h]) contains.push(h);
 
-  const scoringSet = new Set<number>(
-    opts.mods.allCardsScore ? played.map((c) => c.id) : [...core, ...stones].map((c) => c.id),
-  );
-  const scoringIds = played.filter((c) => scoringSet.has(c.id)).map((c) => c.id);
+  const visit = (start: number, suitAnd: number, chipSum: number): void => {
+    for (let i = start; i < n; i++) {
+      idx.push(i);
+      subRanks.push(ranks[i]!);
+      const and = suitAnd & suits[i]!;
+      const sum = chipSum + chips[i]!;
+      const mask = typeMask(subRanks, and, opts);
+      if (mask !== 0) {
+        found |= mask;
+        // Slabší typy téže podmnožiny by nikdy nevyhrály — stačí nejsilnější.
+        const type = strongest(mask);
+        // Bod 3: součet čipů; u Vysoké karty (1 karta) rozhoduje hodnota.
+        const value = HAND_TYPES[type] === 'high_card' ? ranks[i]! : sum;
+        if (better(type, value)) {
+          bestType = type;
+          bestValue = value;
+          bestIdx = [...idx];
+        }
+      }
+      if (idx.length < MAX_HAND_CARDS) visit(i + 1, and, sum);
+      idx.pop();
+      subRanks.pop();
+    }
+  };
+  visit(0, ALL_SUITS, 0);
+
+  // Jen kamenné karty → Vysoká karta, skórují jen kamenné.
+  const type: HandType = bestType >= 0 ? HAND_TYPES[bestType]! : 'high_card';
+  found |= BIT[type];
+  if (type !== 'high_card') found &= ~BIT.high_card;
+  const contains = typesOf(found);
+
+  const core = new Set<Card>(bestIdx.map((i) => ranked[i]!));
+  const scoringIds = played
+    .filter((c) => opts.mods.allCardsScore || core.has(c) || hasNoRankSuit(c, enh))
+    .map((c) => c.id);
   return { type, scoringIds, contains };
-}
-
-function union(a: readonly Card[], b: readonly Card[]): Card[] {
-  const out = [...a];
-  for (const c of b) if (!out.includes(c)) out.push(c);
-  return out;
 }

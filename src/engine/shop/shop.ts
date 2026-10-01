@@ -1,29 +1,32 @@
-/** Večerka: generování nabídky, ceny, kupóny, boostery. */
-import type { Rng } from '../content-types';
-import { standardDeckSpecs, createCard } from '../cards/cards';
+/** Večerka: generování nabídky, nálepky, kupóny, obálky (boostery). Ceny viz shop/prices.ts. */
+import type { CardSpec, Rng } from '../content-types';
+import { BOOSTER_CARD_ENHANCE_CHANCE, BOOSTER_CARD_SEAL_CHANCE } from '../constants';
+import { createCard } from '../cards/cards';
 import { newConsumableInstance, newJokerInstance } from '../effects/api';
 import type { GameCore } from '../effects/core';
+import { cyrb128, rngFromState } from '../rng/rng';
+import { startingDeckSpecs } from '../run/init';
 import type {
   BoosterOption,
   BoosterState,
   Card,
   ConsumableKind,
-  JokerInstance,
   ShopItem,
   ShopState,
   StickerId,
 } from '../types';
-import { pickConsumableDefId, pickJokerDefId, rollEdition } from './pool';
+import { compareIds, pickConsumableDefId, pickJokerDefId, rollEdition } from './pool';
+import {
+  boosterPrice,
+  cardPrice,
+  consumablePrice,
+  jokerPrice,
+  refreshShopPrices,
+  rerollPrice,
+  voucherPrice,
+} from './prices';
 
-export const BASE_CARD_PRICE = 2;
-
-/** Cena po slevě (Modifiers.shopDiscountPct), nejméně 0. */
-export function discounted(core: GameCore, price: number): number {
-  const pct = core.mods().shopDiscountPct;
-  return Math.max(0, Math.floor((price * (100 - pct)) / 100));
-}
-
-/** Kumulativní hodnota z obtížností ≤ aktuální úroveň. */
+/** Kumulativní šance nálepek z obtížností ≤ aktuální úroveň (maximum přes úrovně). */
 export function stakeStickerChance(core: GameCore): Partial<Record<StickerId, number>> {
   const out: Partial<Record<StickerId, number>> = {};
   for (const st of Object.values(core.registry.stakes)) {
@@ -35,49 +38,55 @@ export function stakeStickerChance(core: GameCore): Partial<Record<StickerId, nu
   return out;
 }
 
-export function rollStickers(core: GameCore, rng: Rng): StickerId[] {
+/** Pořadí hodů na nálepky (DESIGN 4.6): první úspěšný hod vyhrává, žolík má nejvýš jednu nálepku. */
+const STICKER_ORDER: readonly StickerId[] = ['eternal', 'rental', 'perishable'];
+
+/**
+ * Vylosuje nálepku pro žolíka z obchodu/obálky: přibitý → zapůjčený → zvětrávající, každý vlastním hodem
+ * se šancí podle síly piva; nálepky zakázané v definici žolíka (`noEternal`…) se přeskočí bez hodu.
+ */
+export function rollStickers(core: GameCore, rng: Rng, defId?: string): StickerId[] {
   const ch = stakeStickerChance(core);
-  const out: StickerId[] = [];
-  // Věčný a kazící se se vylučují.
-  const r = rng.next();
-  if (ch.eternal && r < ch.eternal) out.push('eternal');
-  else if (ch.perishable && r < (ch.eternal ?? 0) + ch.perishable) out.push('perishable');
-  if (ch.rental && rng.next() < ch.rental) out.push('rental');
-  return out;
+  const def = defId ? core.registry.jokers[defId] : undefined;
+  const blocked: Record<StickerId, boolean> = {
+    eternal: def?.noEternal === true,
+    rental: def?.noRental === true,
+    perishable: def?.noPerishable === true,
+  };
+  for (const sticker of STICKER_ORDER) {
+    const p = ch[sticker] ?? 0;
+    if (p <= 0 || blocked[sticker]) continue;
+    if (rng.next() < p) return [sticker];
+  }
+  return [];
 }
 
-export function jokerPrice(core: GameCore, joker: JokerInstance): number {
-  if (joker.stickers.includes('rental')) return 2; // DESIGN 2.10 RENTAL_BUY_PRICE
-  const def = core.registry.jokers[joker.defId];
-  const ed = joker.edition ? (core.registry.editions[joker.edition]?.priceAdd ?? 0) : 0;
-  return discounted(core, (def?.cost ?? 0) + ed);
+/**
+ * Výchozí složení startovního balíčku runu (pro hodnoty a barvy hracích karet v obchodě a obálkách).
+ * Počítá se stejně jako při založení runu (stejný seed streamu `deck`), takže vyjde stejné složení.
+ */
+export function defaultDeckComposition(core: GameCore): CardSpec[] {
+  const s = core.state;
+  return startingDeckSpecs(core.registry, s.deckId, s.challengeId, rngFromState(cyrb128(`${s.seed}:deck`)));
 }
 
-export function consumablePrice(core: GameCore, defId: string): number {
-  return discounted(core, core.registry.consumables[defId]?.cost ?? 0);
-}
-
-export function cardPrice(core: GameCore, card: Card): number {
-  let price = BASE_CARD_PRICE;
-  if (card.enhancement) price += 1;
-  if (card.seal) price += 2;
-  if (card.edition) price += core.registry.editions[card.edition]?.priceAdd ?? 0;
-  return discounted(core, price);
-}
-
-/** Náhodná hrací karta (pro obchod a karetní boostery). Karta není v balíčku, dokud se nekoupí. */
+/**
+ * Náhodná hrací karta (pro obchod a karetní obálky): hodnota a barva rovnoměrně z výchozího složení
+ * startovního balíčku, pak vylepšení, pečeť a edice (DESIGN 2.6) s danými šancemi. Karta není v balíčku,
+ * dokud se nekoupí/nevybere.
+ */
 export function randomPlayingCard(
   core: GameCore,
   rng: Rng,
-  chances: { enhancement: number; seal: number; edition: boolean },
+  chances: { enhancement: number; seal: number },
 ): Card {
-  const spec = rng.pick(standardDeckSpecs());
+  const base = rng.pick(defaultDeckComposition(core));
+  const card = createCard(core.uid(), { suit: base.suit, rank: base.rank });
   const enhancements = Object.keys(core.registry.enhancements).sort();
   const seals = Object.keys(core.registry.seals).sort();
-  const card = createCard(core.uid(), spec);
   if (enhancements.length && rng.next() < chances.enhancement) card.enhancement = rng.pick(enhancements);
   if (seals.length && rng.next() < chances.seal) card.seal = rng.pick(seals);
-  if (chances.edition) card.edition = rollEdition(core, rng, true);
+  card.edition = rollEdition(core, rng, 'card');
   return card;
 }
 
@@ -101,11 +110,19 @@ function generateItem(core: GameCore, rng: Rng, takenJokers: string[]): ShopItem
     const defId = pickJokerDefId(core, rng, { exclude: takenJokers });
     if (!defId) return null;
     takenJokers.push(defId);
-    const joker = newJokerInstance(core, defId, rollEdition(core, rng, false), rollStickers(core, rng));
+    const joker = newJokerInstance(
+      core,
+      defId,
+      rollEdition(core, rng, 'joker'),
+      rollStickers(core, rng, defId),
+    );
     return { kind: 'joker', joker, price: jokerPrice(core, joker), sold: false };
   }
   if (kind === 'card') {
-    const card = randomPlayingCard(core, rng, { enhancement: 0.3, seal: 0.1, edition: true });
+    const card = randomPlayingCard(core, rng, {
+      enhancement: m.playingCardEnhanceChance,
+      seal: m.playingCardSealChance,
+    });
     return { kind: 'card', card, price: cardPrice(core, card), sold: false };
   }
   const defId = pickConsumableDefId(core, rng, kind);
@@ -115,12 +132,12 @@ function generateItem(core: GameCore, rng: Rng, takenJokers: string[]): ShopItem
     kind: 'consumable',
     consumable,
     consumableKind: kind,
-    price: consumablePrice(core, defId),
+    price: consumablePrice(core, consumable),
     sold: false,
   };
 }
 
-/** Vygeneruje kartové sloty obchodu. */
+/** Vygeneruje kartové sloty obchodu (stream `shop`). */
 export function generateShopItems(core: GameCore): ShopItem[] {
   const rng = core.rng('shop');
   const items: ShopItem[] = [];
@@ -138,16 +155,35 @@ function boosterAllowed(core: GameCore, id: string): boolean {
   return !pool || pool.includes(id);
 }
 
-export function generateShopBoosters(core: GameCore): ShopState['boosters'] {
+/** Normální Žolíková obálka pro první Večerku runu (první podle id), nebo null, když v registru není. */
+export function firstShopBoosterId(core: GameCore): string | null {
+  const ids = Object.values(core.registry.boosters)
+    .filter((b) => b.kind === 'joker' && b.size === 'normal' && boosterAllowed(core, b.id))
+    .map((b) => b.id)
+    .sort();
+  return ids[0] ?? null;
+}
+
+/**
+ * Obálky ve Večerce (vážené losování, stream `shop`). První Večerka runu má v prvním slotu vždy normální
+ * Žolíkovou obálku (DESIGN 2.5.1), pokud v registru je.
+ */
+export function generateShopBoosters(
+  core: GameCore,
+  opts: { firstShop?: boolean } = {},
+): ShopState['boosters'] {
   const rng = core.rng('shop');
   const defs = Object.values(core.registry.boosters)
     .filter((b) => b.weight > 0 && boosterAllowed(core, b.id))
-    .sort((a, b) => a.id.localeCompare(b.id));
-  if (defs.length === 0) return [];
+    .sort((a, b) => compareIds(a.id, b.id));
   const out: ShopState['boosters'] = [];
+  const guaranteed = opts.firstShop ? firstShopBoosterId(core) : null;
   for (let i = 0; i < core.mods().shopBoosterSlots; i++) {
-    const def = rng.weighted(defs.map((d) => ({ item: d, weight: d.weight })));
-    out.push({ boosterId: def.id, price: discounted(core, def.cost), sold: false });
+    let id: string | null = null;
+    if (i === 0 && guaranteed) id = guaranteed;
+    else if (defs.length > 0) id = rng.weighted(defs.map((d) => ({ item: d.id, weight: d.weight })));
+    if (!id) break;
+    out.push({ boosterId: id, price: boosterPrice(core, id), sold: false });
   }
   return out;
 }
@@ -186,24 +222,29 @@ export function rollAnteVouchers(core: GameCore): string[] {
 export function voucherOffers(core: GameCore): ShopState['vouchers'] {
   return core.state.anteVouchers
     .filter((id) => !core.state.vouchers.includes(id) && core.registry.vouchers[id])
-    .map((id) => ({ voucherId: id, price: discounted(core, core.registry.vouchers[id]!.cost), sold: false }));
+    .map((id) => ({ voucherId: id, price: voucherPrice(core, id), sold: false }));
 }
 
-export function generateShop(core: GameCore): ShopState {
+/** Nová Večerka (při vstupu). `firstShop` = první Večerka runu (zaručená Žolíková obálka). */
+export function generateShop(core: GameCore, opts: { firstShop?: boolean } = {}): ShopState {
   const freeRerolls = typeof core.state.flags.freeRerolls === 'number' ? core.state.flags.freeRerolls : 0;
   core.state.flags.freeRerolls = 0;
-  return {
+  const shop: ShopState = {
     items: generateShopItems(core),
-    boosters: generateShopBoosters(core),
+    boosters: generateShopBoosters(core, opts),
     vouchers: voucherOffers(core),
-    rerollCost: discounted(core, core.mods().rerollBaseCost),
+    rerollCost: rerollPrice(core.mods(), 0),
     rerollsThisShop: 0,
+    paidRerolls: 0,
     freeRerolls,
   };
+  refreshShopPrices(core, shop);
+  return shop;
 }
 
-// ─────────────────────────── Boostery ───────────────────────────
+// ─────────────────────────── Obálky ───────────────────────────
 
+/** Možnosti v obálce (stream `booster`). Možnosti v jedné obálce se neopakují. */
 export function generateBoosterOptions(core: GameCore, boosterId: string): BoosterOption[] {
   const def = core.registry.boosters[boosterId];
   if (!def) throw new Error(`Unknown booster ${boosterId}`);
@@ -217,16 +258,19 @@ export function generateBoosterOptions(core: GameCore, boosterId: string): Boost
       taken.push(defId);
       out.push({
         kind: 'joker',
-        joker: newJokerInstance(core, defId, rollEdition(core, rng, false), rollStickers(core, rng)),
+        joker: newJokerInstance(core, defId, rollEdition(core, rng, 'joker'), rollStickers(core, rng, defId)),
       });
     } else if (def.kind === 'card') {
       out.push({
         kind: 'card',
-        card: randomPlayingCard(core, rng, { enhancement: 0.4, seal: 0.15, edition: true }),
+        card: randomPlayingCard(core, rng, {
+          enhancement: BOOSTER_CARD_ENHANCE_CHANCE,
+          seal: BOOSTER_CARD_SEAL_CHANCE,
+        }),
       });
     } else {
       const defId = pickConsumableDefId(core, rng, def.kind, { exclude: taken });
-      if (!defId) break;
+      if (!defId || taken.includes(defId)) break;
       taken.push(defId);
       out.push({
         kind: 'consumable',
@@ -238,7 +282,7 @@ export function generateBoosterOptions(core: GameCore, boosterId: string): Boost
   return out;
 }
 
-/** Otevře booster (stav + případná ruka pro cílení babských rad/razítek). */
+/** Otevře obálku (stav + případná ruka pro cílení babských rad/razítek). */
 export function openBooster(
   core: GameCore,
   boosterId: string,

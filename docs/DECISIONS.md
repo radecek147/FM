@@ -210,3 +210,300 @@ zabrání duplicitám typu `kronikar` × `chronicler`. Tři soubory drží přeh
 
 **Proč:** Pravidlo „žádné texty natvrdo“ platí i pro statické HTML, které se zobrazí dřív, než naběhne JavaScript
 (a `<noscript>` jindy ani zobrazit nejde).
+
+## 2026-10-01 — Detekce kombinací: varianty, nejvýš 5 karet, upřesnění hraničních případů
+
+**Co:** Detekce (`src/engine/hands/detect.ts`) projde všechny podmnožiny zahraných karet s hodnotou o 1–5
+kartách, u každé určí, kterými kombinacemi „přesně je“, a vybere nejlepší variantu podle `docs/DESIGN.md`
+2.2.2 (typ → počet skórujících karet → součet čipů → víc vlevo). Upřesnění míst, která DESIGN neřeší výslovně:
+
+- **Kombinace má nejvýš 5 karet** i při `maxSelect` > 5. Další karty jsou kopy (šestá karta Barvy, šestá
+  stejné hodnoty, třetí dvojice…). Kamenné karty skórují vždy navíc.
+- **Součet čipů** pro výběr varianty = `cardChips` bez modifikátorů (hodnota + `bonusChips`). Debuff ani
+  Normalizace (`fixedCardChips`) výběr nemění. U Vysoké karty rozhoduje hodnota (K > Q, i když mají stejně čipů).
+- **Postupka s duplicitní hodnotou** (např. 5-6-7-8-8 s `fourCardStraightFlush`): skóruje jen jedna karta
+  každé hodnoty, podle čipů, pak ta víc vlevo. Dřív skórovaly obě osmičky.
+- **Postupka v barvě** = Postupka, jejíž karty mají všechny jednu barvu. Postupka a Barva složené z různých
+  karet nestačí. Dřív se Postupka v barvě uznala, kdykoli byla v ruce zvlášť Postupka a zvlášť Barva
+  (se 4 kartami např. 5♥ 6♥ 7♥ 2♥ 8♠). Skórují jen karty postupky. Pátá karta stejné barvy mimo postupku
+  (5♥ 6♥ 7♥ 8♥ + 2♥) je kop.
+- **Královská postupka** = Postupka v barvě bez přetočení „kolem dokola“, jejíž nejvyšší karta je vysoké Eso.
+  Se `straightGaps` je proto Královská i 9-J-Q-K-A v jedné barvě (doslovné znění DESIGN 2.2.2). Dřív musely být
+  všechny karty 10–A.
+- **`contains`** = vyhodnocená kombinace + každá kombinace, kterou tvoří některá podmnožina zahraných karet.
+  U běžných 5 karet to přesně odpovídá tabulce DESIGN 2.2.3. Navíc se objeví jen to, co v kartách opravdu je
+  (např. Dvojice v Postupce 5-6-7-8-8 se 4 kartami, Barva vedle Full housu ze 7 karet). **Vysoká karta** je
+  v `contains` jen tehdy, když je vyhodnocenou kombinací. Dřív tam byla vždy, což odporovalo DESIGN 2.2.3.
+
+**Proč:** Jedno obecné pravidlo místo zvláštních větví pro každý případ. Detekce je deterministická,
+odpovídá textu DESIGN 2.2.2 („skórující karta = součást vyhodnocené kombinace“, „5 karet“) a stačí na libovolný
+`maxSelect` (12 karet ≈ 0,7 ms). Pokrývají ji testy `tests/unit/detect.test.ts`.
+
+## 2026-10-01 — Konstanty enginu v `src/engine/constants.ts`
+
+**Co:** Čísla z `docs/DESIGN.md` kap. 2.10 (a další pevná čísla pravidel z kap. 2.4–2.9 a 4.6) žijí v jediném
+souboru `src/engine/constants.ts`: `STARTING_MONEY`, `BLIND_REWARDS`, `BLIND_TARGET_MULT`, `FINAL_ANTE`,
+`RARITY_WEIGHTS`, `PERISH_ROUNDS`, `RENTAL_BUY_PRICE`, `RENTAL_FEE`, `RENTAL_SELL_PRICE`, `MAX_ACTIVATIONS_PER_CARD`,
+`SEED_ALPHABET`/`SEED_LENGTH`, ceny hracích karet, šance karetní obálky, `FALLBACK_JOKER_ID` a i18n klíče hlášek
+`MSG`. `BASE_MODIFIERS` zůstává v `effects/modifiers.ts`. Staré exporty (`BLIND_REWARDS`/`FINAL_ANTE` z `run/game.ts`,
+`STARTING_MONEY` z `run/init.ts`, `RARITY_WEIGHTS` ze `shop/pool.ts`, `BLIND_TARGET_MULT` z `run/targets.ts`) jsou
+re-exporty. Výchozí cena přelosování šéfa (`BOSS_REROLL_COST`) je 0 — v 1.0 ho povoluje jen Známý na úřadě zdarma.
+
+**Proč:** Jedno místo pro čísla pravidel = žádné rozjeté kopie; test `modifiers.test.ts` hlídá shodu s tabulkou.
+
+## 2026-10-01 — Ceny ve Večerce a prodej (`src/engine/shop/prices.ts`)
+
+**Co:** Přesně podle DESIGN 2.5.2: `max(1, round((základ + příplatky) × (100 − sleva) / 100)) + shopPriceAdd`,
+round = polovina nahoru (počítá se v celých číslech, bez chyb doublu). Upřesnění:
+
+- **Zdarma** je položka s příznakem `free` (štítky, efekty) nebo se základem ≤ 0 — cena 0 i při `shopPriceAdd`.
+- **Zapůjčený žolík**: `RENTAL_BUY_PRICE` (2 Kč) nahrazuje základ, sleva a `shopPriceAdd` se pak uplatní jako
+  u čehokoli jiného („ve Večerce stojí všechno o 1 Kč víc“).
+- **Přehození** = `rerollBaseCost + rerollCostStep × placená přehození + shopPriceAdd`; bezplatné přehození cenu
+  nezvedá a `ShopState.rerollCost` ukazuje 0, dokud nějaké zbývá.
+- Ceny všech neprodaných položek se **přepočítají po každé úspěšné akci** ve Večerce (koupě kupónu se slevou platí
+  hned, i na už vystavené zboží).
+- **Prodej**: žolík `max(1, floor((cena + edice) / 2)) + sellBonus`, zapůjčený 1 Kč, přibitý nejde; spotřebka
+  `max(1, floor((cena + edice) / 2))`.
+
+**Proč:** DESIGN dává vzorec; zbylé body jsou okraje, které musí být deterministické a stejné pro UI i simulaci.
+
+## 2026-10-01 — Edice: šance pro žolíky a karty, negativní zvlášť
+
+**Co:** `EditionDef.weight` = šance v % u žolíka, nové `weightCard` = šance v % u hrací karty (0 = nikdy),
+`separateRoll` = samostatný hod před ostatními, jen u žolíků, bez `editionRateMult` (negativní). Zbylé edice
+jedním hodem `r` proti kumulativním šancím **od nejvzácnější** (duhová → holografická → lesklá; řazeno podle šance).
+Pole `forCards` zaniklo (nahradil ho `weightCard`).
+
+**Proč:** DESIGN 2.6 má pro karty jiné šance a negativní edici vyjímá z násobiče; řazení podle šance odpovídá
+pořadí v DESIGN a funguje i pro další edice bez zvláštního kódu.
+
+## 2026-10-01 — Krok 5 skórování: `afterScored` až po šéfovi, Ohmataná karta
+
+**Co:** `EnhancementDef.afterScored` se volá až po `BossHooks.afterHandPlayed` (funkce `afterScoredCards` ve
+`scoring/score.ts`, volá ji run loop), **jednou za ruku** pro každou skórující nedebuffnutou kartu, a smí vrátit jen
+zprávu, peníze a `destroyCard` (skóre už je dané). Ohmataná (`worn`) v něm přes `api.modifyCard` trvale přičte
++3 `bonusChips`. Nové `BossHooks.adjustHandScore` upraví skóre hned po `floor(čipy × mult)` (před `afterHandScored`),
+výsledek se ořízne na konečné číslo ≥ 0. Strop opakování `MAX_ACTIVATIONS_PER_CARD` = 10 platí pro skórující
+i držené karty.
+
+**Proč:** Pořadí z DESIGN 3.1 krok 5. Dřív běžel `afterScored` uprostřed kroku 2, takže by Ohmataná ovlivnila
+žolíky v kroku 4 téže ruky.
+
+## 2026-10-01 — Bílá hora a Normalizace v enginu
+
+**Co:** `Modifiers.disableEnhancements` → `GameCore.enhancements()` vrací prázdný registr a karta se chová, jako by
+vylepšení neměla: žádné efekty (ani zlatá karta na konci kola), **kamenná má zase hodnotu a barvu**, divoká jen svou
+barvu (detekce, čipy, barvy, figury, řazení). `Modifiers.fixedCardChips > 0` nahradí čipy hodnoty **i** `bonusChips`
+každé karty, včetně kamenné (ta pak dá pevné čipy + svých +50 z vylepšení).
+
+**Proč:** „Vylepšení nefungují“ nejčistěji znamená „karta bez vylepšení“; „každá skórující karta dává právě 5 čipů
+(vylepšení a edice fungují)“ znamená, že pevné jsou jen vlastní čipy karty.
+
+## 2026-10-01 — Klíče hlášek enginu v jednotném čísle
+
+**Co:** Obecné hlášky mají jmenné prostory v jednotném čísle — `joker.saved`, `joker.perished`,
+`joker.rentalReturned`, `boss.disabled`, `tag.saved` — a bubliny skórování `score.*`. Množné `jokers.<id>`,
+`bosses.<id>`, `tags.<id>` patří obsahu podle id. Engine dřív emitoval `jokers.saved`; přejmenováno. Všechny klíče
+jsou v `MSG` (`engine/constants.ts`), texty v `src/i18n/cs/messages.ts`, test hlídá úplnost.
+
+**Proč:** `jokers.saved` by kolidoval se žolíkem s id `saved` a s budoucím `src/i18n/cs/jokers.ts`.
+
+## 2026-10-01 — Nálepky, zapůjčení a zvětrávající žolíci
+
+**Co:** Žolík má nejvýš jednu nálepku; hody v pořadí přibitý → zapůjčený → zvětrávající, každý vlastním hodem
+(DESIGN 4.6), nálepku zakázanou v definici (`noEternal`/`noRental`/`noPerishable`) engine přeskočí bez hodu.
+Poplatky za zapůjčené žolíky se v rozpisu odměn počítají **až nakonec** (krok 6), i za debuffnuté; poplatek, který by
+zůstatek po výplatě dostal pod `−debtLimit`, se nestrhne (`rentalReturned:<id>`, 0 Kč) a žolík se při `cashOut` zničí.
+Zvětralý žolík pošle `jokerTriggered` s `joker.perished`.
+
+**Proč:** Dřív se losovalo přibitý/zvětrávající jedním hodem a zapůjčený nezávisle (mohl mít dvě nálepky)
+a vracení do půjčovny chybělo.
+
+## 2026-10-01 — Peníze: srážky jen do dluhového limitu, `setMoney` přesně
+
+**Co:** `api.addMoney` se zápornou částkou strhne nejvýš do `−debtLimit` (pod limitem už nic). `api.setMoney(n)`
+nastaví přesně `n` bez ořezu (Daňové přiznání si samo hlídá, že dluh zůstane). Nákupy se dál ověřují předem.
+
+**Proč:** DESIGN 2.4.3 — „srážka od šéfa se provede jen do výše dluhového limitu“.
+
+## 2026-10-01 — Záchrana prohraného kola a prohra z nedostatku karet
+
+**Co:** Když kolo skončí pod cílem, ptají se nejdřív **štítky** (`TagHooks.onRoundLost`; záchrana = kolo vyhrané
+**bez odměny za útratu**, štítek se spotřebuje), pak žolíci (`preventGameOver`, plná odměna). Prázdná ruka i prázdný
+dobírací balíček po zahrání nebo zahození = prohra (DESIGN 1.2), se stejnou šancí na záchranu.
+
+**Proč:** Štítek je jednorázový a hráč si ho pořídil právě na příští kolo — nemá zbytečně spálit žolíka. Odměnu
+ruší jen štítek, protože to výslovně říká Lékařské potvrzení.
+
+## 2026-10-01 — Imperial: šéf ve Velké útratě
+
+**Co:** `StakeDef.bigBlindBoss` → při vstupu do patra se Velké útratě vylosuje `BlindSlot.bossId` (stream `boss`):
+běžný šéf, `minAnte ≤ patro`, jiný než šéf patra a jen šéf, který má aspoň jeden hook (šéfové jen s vyšším cílem,
+např. Šanon na šanonu, se tím vyloučí bez zvláštního příznaku). Do `bossesSeen` se nezapisuje. Cíl se počítá jako
+u Velké (1,5×), odměna 4 Kč; prohra má jako příčinu id šéfa.
+
+**Proč:** DESIGN kap. 10; odvození z hooků nevyžaduje další pole v `BossDef`.
+
+## 2026-10-01 — Dočasné stavy kola: debuffy žolíků a velikost ruky
+
+**Co:** `RoundState.jokerDebuffs` (uid) drží dočasné debuffy z `api.setJokerDebuffed` — platí do konce kola
+**včetně výpočtu odměn**, ruší je `disableBoss` a konec kola; zvětralého žolíka zrušení neoživí.
+`RoundState.handSizeDelta` drží `api.addRoundHandSize` (skládá se do `Modifiers.handSize`), zaniká s kolem.
+
+**Proč:** Typovaná pole místo volných `flags` — engine je čte při skládání modifikátorů a úklidu kola.
+
+## 2026-10-01 — Změna patra a přelosování šéfa
+
+**Co:** `api.changeAnte(delta)` nejníž na patro 1 (DESIGN 6: „−1 patro (min. 1)“); rozehrané útraty patra pokračují
+a šéf se přelosuje, jen když pro nové patro neplatí (finálový × běžný, `minAnte`). Větev `anteBase` pro patro < 1
+zůstává jen jako pojistka. `api.rerollBoss()` přelosuje šéfa zdarma, jen dokud jeho kolo nezačalo.
+
+**Proč:** Úřední škrt i Amnestie mají jen posunout číslo patra, ne zahodit nabídku patra.
+
+## 2026-10-01 — Večerka a obálky: zaručená Žolíková obálka, Pivní tácek, hrací karty, váhy spotřebek
+
+**Co:**
+
+- První Večerka runu (`RunStats.shopsEntered === 0`) má v prvním slotu obálek normální Žolíkovou obálku (první
+  podle id), pokud v registru je.
+- Žolík v nabídce: jen nevlastněný a ne už nabízený; vyčerpaný pool → `beer_mat` (Pivní tácek), který se smí
+  opakovat vždy (i vlastněný). Bez něj v registru zůstane slot prázdný.
+- Hrací karty v obchodě a karetní obálce: hodnota a barva rovnoměrně z **výchozího složení** startovního balíčku —
+  počítá se znovu stejným seedem streamu `deck` jako při založení runu, takže vyjde totéž složení i u náhodných
+  balíčků. Šance vylepšení/pečeti: obchod z `Modifiers.playingCardEnhanceChance`/`SealChance` (20 % / 0 %),
+  obálka konstanty 40 % / 15 %. Kartářka (`0,5` / `0,2` v DESIGN) se zapíše jako delta `+0,3` / `+0,2`.
+- `ConsumableDef.weight` (výchozí 1) váží každé losování spotřebky (obchod, obálka, `createConsumable`) — Výjimka
+  z vyhlášky 0,25.
+- `pickBooster` má `keep?: boolean`: vybraná spotřebka se uloží do volného slotu místo použití.
+
+**Proč:** DESIGN 2.5.1, 2.5.3 a 2.9.
+
+## 2026-10-01 — Drobnosti z DESIGN kap. 2.1 a 2.2.4
+
+**Co:** Karta lícem dolů se při zahrání otočí; náhled s takovou kartou vrací `hidden: true`. Debuffnutá karta
+nespouští ani fialovou pečeť při zahození. `RunState.discoveredHands` zapisuje každou kombinaci při prvním zahrání
+v runu (`handDiscovered` jen u tajných); pranostiky tajných kombinací se nabízejí až po objevu. `onAcquire` se volá
+při koupi, výběru z obálky a `createJoker`, ne u startovních žolíků výzvy (Kamenolom má 64 karet i s Golemem).
+Názvy pečetí obsahují slovo „pečeť“ (Zlatá pečeť × vylepšení Zlatá).
+
+**Proč:** Přímo z textu DESIGN; názvy pečetí kvůli jednoznačnosti v UI.
+
+## 2026-10-01 — Skórování: krok = jedna změna, pracovní příklad, kopírování, přetečení
+
+**Co:**
+
+- `ScoreStep` nese vždy **jednu** změnu (čipy, mult, ×mult nebo peníze, v tomto pořadí). Efekt `{ chips, mult }`
+  dá dva kroky; zpráva efektu patří k jeho prvnímu kroku, efekt jen se zprávou dá krok bez změny. Dřív jeden efekt
+  = jeden krok se všemi poli a průběžné hodnoty jen po celém efektu.
+- DESIGN 3.2: pracovní příklad počítal Full house se základním multem 4, tabulka 2.2.1 (a `src/content/hands.ts`)
+  má 5. Na úrovni 2 je tedy mult 7, výsledek `floor(218 × 236,25) = 51 502` (se „zpožděním“ 34 335) místo
+  48 559 / 32 373. Opraven dokument, přesné pořadí kroků hlídá test.
+- Kopírující žolík: při `isCopy` dostane hook cíle **kopii** instance (změny `self.state` a `sellBonus` se zahodí),
+  takže počítadla cíle nenaroste dvakrát ani u hooku, který `isCopy` nekontroluje. V řetězu kopírujících žolíků
+  dostane každý článek do `copyTarget` svou vlastní pozici (dřív pozici prvního, takže „kopíruj souseda vpravo“
+  v řetězu nefungoval a v cyklu kopíroval špatného žolíka).
+- Přetečení: skóre kola se ořízne na `Number.MAX_VALUE` (nekonečno by se v JSON uložení změnilo na `null`),
+  NaN ve výsledku efektu se ignoruje (dřív vynuloval mult), nekonečné peníze také.
+- `BossHooks.modifyBase` se ptá na aktivního šéfa až po `beforeScoring` — žolík, který šéfa vypne, už základ
+  nezmenší. Žolík zničený během kroku 4 (efektem jiného žolíka) už neskóruje.
+- Peníze z efektu ve skórování se do `ScoreStep.money` a `moneyEarned` zapíšou ve **skutečně připsané** výši
+  (srážku ořízne dluhový limit).
+- `api.disableBoss` (Odvolání) vrátí i ruce a zahození, které pravidlo šéfa ubralo (rozdíl modifikátorů; ruce
+  nejníž 1, aby kolo neuvázlo). Dřív Odvolání na Polední pauze ruce nevrátilo.
+- `JokerHooks.onSell`: prodávaný žolík dostane `isSelf = true` (dřív vždy `false`); `GameCore.eachJoker` umí
+  `extra` jako funkci vlastníka slotu.
+- `api.modifyCard` mění jen `suit`, `rank`, `enhancement`, `seal`, `edition`, `bonusChips` a ignoruje `undefined`.
+  `TagHooks.passive` dostává `tagCtx` (stream `tag`) místo rozbaleného kontextu.
+- Testovací obsah pro skórování a API je v `tests/unit/fixtures/registry.ts` (žolík/šéf/štítek na každý hook).
+
+**Proč:** DESIGN 3.1 („každé jako samostatný ScoreStep s průběžnými hodnotami“) a 1.3 (přetečení), ARCHITECTURE 2.7
+(kopírující žolíci); nalezeno testy fáze 1.
+
+## 2026-10-01 — Revize správnosti enginu (fáze 1): debuffy z `round.flags`, pozice žolíka, `destroyCard`
+
+**Co:** (testy v `tests/unit/review-correctness.test.ts`)
+
+- **Debuffy karet od šéfa se přepočítávají průběžně.** Příloha B DESIGN ukládá dočasné debuffy (Černá kočka) do
+  `round.flags` a `isCardDebuffed` je čte. Engine ale počítal `Card.debuffed` jen při líznutí, změně karty a vypnutí
+  šéfa, takže prokletí karet, které už byly v ruce, nikdy neplatilo. Nově `refreshBossDebuffs` (`run/draw.ts`)
+  přepočítá debuffy celého balíčku po `onRoundStart`, `onDiscard` a `onDraw` šéfa a po **každé** zahrané ruce (po
+  `afterHandPlayed` a `afterScored`, aby zahrané karty dohrály ruku ve stavu, v jakém skórovaly) — jen když šéf má
+  `isCardDebuffed`. Jiný zdroj debuffu hracích karet než šéf není.
+- **`JokerCtx.index` je aktuální pozice.** `eachJoker` i krok 4 skórování předávaly pozici ze snímku na začátku
+  průchodu; když hook zničil jiného žolíka (Sněhulák roztaje v `onRoundEnd`), kopírující „souseda“ za ním (Archivář)
+  dostal starou pozici a kopíroval sám sebe nebo špatného žolíka.
+- **`EffectResult.destroyCard` jen u skórující karty**, jak říká rozhraní: efekt držené karty (`onHeld`, `onCardHeld`)
+  kartu v ruce nezničí (dřív zničil).
+- `exactHandTypes` vrací pro podmnožinu s kamennou kartou prázdný seznam (kamenná karta nemá hodnotu, dřív ji
+  počítalo podle `rank`).
+
+Zvážené a ponechané: negativní edice dává slot i debuffnutému/zvětralému žolíkovi („nefunguje on ani jeho edice“
+v DESIGN 4.6 se týká efektů ve skórování — bez slotu by žolíci přetekli sloty). Engine sleduje řetěz kopírujících
+žolíků (ARCHITECTURE 2.7); DESIGN 4.4/7 („kopie kopie max. 1 úroveň“) zajistí obsah tím, že kopírující žolíci mají
+`copyable: false`.
+
+**Proč:** DESIGN příloha B, ARCHITECTURE 2.7 (pozice v řadě), rozhraní `EffectResult` a DESIGN 2.2.2 (kamenná karta).
+Detekce i skórování (vylepšení, edice, pečetě, debuffy, ocelové karty v ruce, úrovně) byly navíc porovnány
+s nezávislým referenčním výpočtem na 300 000 náhodných rukou, resp. 3 000 náhodných kolech — bez rozdílu.
+
+## 2026-10-01 — Revize robustnosti enginu (fáze 1): determinismus, cache modifikátorů, okrajové stavy
+
+**Co:** (testy v `tests/unit/review-robustness.test.ts`, každý před opravou selhal)
+
+- **Řazení nezávislé na jazyce prostředí.** Losování spotřebek, edic a obálek řadilo id přes `localeCompare` bez
+  locale — v prohlížeči s češtinou se „ch“ řadí až za „h“, takže stejný seed (i denní run) dal jiný obchod než jinde.
+  Nově `compareIds` (kódové jednotky, jako `.sort()`) v `shop/pool.ts`; ESLint v enginu `localeCompare` zakazuje.
+- **Dotazy nemění stav.** `passive` (skládání modifikátorů), náhled ruky (`modifyBase` šéfa) a `canUse` spotřebky běží
+  v `GameCore.readOnly`: RNG v jejich kontextech pracuje na kopii streamu. Dřív `ctx.chance` v `passive` posunulo stav
+  RNG při každém přepočtu cache — výsledek runu pak závisel na tom, jak často se UI ptá na náhled či modifikátory.
+- **Cache modifikátorů.** `mods()` vrací zmrazený objekt (dřív šlo `api.modifiers().hands = 99` a pravidla se změnila
+  do další invalidace; `EngineApi.modifiers()` je nově `Readonly`). Cache se zneplatní po **každém** hooku v
+  `eachJoker`/`eachTag`/kroku 4 skórování, po `onAdded` štítku a po hookách šéfa `onRoundStart`, `afterHandPlayed`,
+  `onDiscard`, `onDraw` a pečetích `onDiscarded` — dřív se po hooku, který změnil stav čtený `passive` (např.
+  `round.flags` šéfa), dobírala ruka podle staré velikosti.
+- **Výjimka z obsahu uprostřed akce** vrátí stav jako neplatná akce (rollback ze snímku) a letí dál; dřív zůstal stav
+  napůl změněný (a autosave by ho uložil). Události se doručují až po dokončení akce.
+- **Neplatná čísla z obsahu** (NaN, ±∞) se ignorují v deltách modifikátorů (`applyDelta`/`mergeDelta`, i přetečení
+  výsledku), v `addHands`/`addDiscards`/`addRoundHandSize`/`changeAnte`/`levelUpHand` (desetinná čísla se useknou),
+  v rozpisu odměn (`roundEndMoney`, `roundEndHeldMoney`, balíček) a v `modifyBase` šéfa (NaN = původní základ);
+  peníze nepřetečou přes `Number.MAX_VALUE`. Dřív se dostaly do stavu (JSON je uloží jako `null`) — např. `hands: NaN`
+  z `passive` dalo `handsLeft = NaN` a kolo nešlo prohrát.
+- **Kolo neuvázne s prázdnou rukou.** Po každé akci (`dispatch`) se prázdná ruka dobere, a když ani pak nejsou karty,
+  je to prohra z nedostatku karet (dřív se to kontrolovalo jen po zahrání a zahození): kolo s prázdným balíčkem nebo
+  po spotřebce, která zničila celou ruku, dřív uvázlo bez jediné platné akce.
+- **Starší uložení s odebraným obsahem:** žolík s neznámým id se chová jako prázdný (dřív `Unknown joker` při každé
+  ruce), štítek za přeskočení s neznámým id se přeskočí, chybějící záznam `handLevels` se doplní při zahrání.
+- **Rekurze hooků:** vnoření téhož hooku žolíků je omezené na `MAX_NESTED_HOOK_DEPTH` (3) — žolík „při přidání karty
+  přidej kartu“ dřív přetekl zásobník.
+- **Sdílené objekty:** `unlockedPool` se při založení runu kopíruje (změna profilu neměnila rozehraný run), výsledek
+  `initState` se klonuje (stejný vrácený objekt dřív spojil stav všech instancí), události `roundRewards` a `gameOver`
+  nesdílí objekty se stavem.
+- Drobnosti: karta zničená během skórování nezůstane v hromádkách kola; `toResults` přeskočí prázdné položky pole
+  (JS obsah); `Game.newRun` odmítne seed z mezer, nečíselná obtížnost = 1; `rewards.total` je konečné číslo.
+
+Ověřené a ponechané: v enginu není `Math.random`/`Date.now` (ESLint); každé losování řadí id (pořadí registru výsledek
+neovlivní); `RunState` neobsahuje funkce, `Set`/`Map` ani cykly (typy `JsonValue`); `BASE_MODIFIERS` je zmrazený
+a skládání ho kopíruje; `extend()` gettery zachovává (průběžné čipy/mult); cyklus kopírujících žolíků končí
+(`visited`); `passive` volající `mods()` dostane výchozí hodnoty (ochrana proti rekurzi, záměr). Kopírující žolík volá
+hook cíle s `ctx.self` = kopie cíle — hook, který „zničí sám sebe“ (`destroyJoker(ctx.self.uid)`), musí kontrolovat
+`isCopy`, jinak zničí originál (CONTENT-GUIDE).
+
+**Proč:** CLAUDE.md (determinismus: stejný seed + stejné akce = stejný run, stav JSON-serializovatelný), DESIGN 1.2
+(prohra z nedostatku karet), ARCHITECTURE 2.6–2.7.
+
+## 2026-10-01 — Uzavření fáze 1: pokrytí blokuje CI, texty kombinací v podmodulu
+
+**Co:**
+
+- CI (`.github/workflows/ci.yml`) spouští unit testy jen jednou, přes `npm run test:coverage`, a krok je
+  **blokující** (bez `continue-on-error`): prahy ve `vite.config.ts` (řádky/příkazy/funkce `src/engine` ≥ 80 %,
+  větve ≥ 70 %) pod hranicí shodí build. Na konci fáze 1 je pokrytí `src/engine` 91 % řádků, 88 % příkazů,
+  83 % větví, 94 % funkcí; jediný netestovaný modul je `save/save.ts` (testy save/load a migrací jsou ve fázi 2).
+- Texty kombinací `hands.<type>.name|desc` se přesunuly z `src/i18n/cs.ts` do podmodulu `src/i18n/cs/hands.ts`
+  (podle záznamu „Struktura textů (i18n)“ a ROADMAP); klíče se nemění.
+- Explicitní testy unikátních id karet (`RunState.nextUid`, i po uložení přes JSON) a lízání do velikosti ruky
+  (vršek balíčku = konec `drawPile`, doplnění po zahrání i zahození, dochází-li karty) v `tests/unit/draw.test.ts`.
+
+**Proč:** ROADMAP fáze 1 („po dosažení 80 % pokrytí odstranit `continue-on-error`“), aby pokrytí enginu
+nemohlo nepozorovaně klesnout.

@@ -59,7 +59,7 @@ export interface EffectResult {
   money?: number;
   /** i18n klíč „bubliny“ nad zdrojem (např. 'score.again', 'jokers.pendolino.delay'). */
   message?: string;
-  /** Jen v onCardScored/afterCardScored: karta se po vyhodnocení ruky zničí. */
+  /** Jen u efektů skórující karty (vylepšení, pečeť, `onCardScored`): karta se po vyhodnocení ruky zničí. */
   destroyCard?: boolean;
 }
 
@@ -117,23 +117,70 @@ export interface EngineApi {
     patch: Partial<Pick<Card, 'suit' | 'rank' | 'enhancement' | 'seal' | 'edition' | 'bonusChips'>>,
   ): void;
   addTag(defId: string): void;
+  /**
+   * Vypne pravidlo šéfa do konce kola (Odvolání): zruší debuffy karet i žolíků z kola, otočí karty v ruce lícem
+   * nahoru a vrátí ruce/zahození, které šéf ubral (rozdíl modifikátorů; ruce nejníž 1). Cíl zůstává.
+   */
   disableBoss(): void;
   message(key: string, params?: Record<string, string | number>): void;
+
+  /**
+   * Zahodí kartu z ruky efektem (Kapsář v tramvaji, Tchyně na návštěvě): karta jde na odhazovací hromádku,
+   * nespotřebuje zahození a nespouští hooky zahození (žolíci, fialová pečeť). Nedobírá — ruka se doplní
+   * při nejbližším běžném dobrání. Vrací false, když karta v ruce není.
+   */
+  discardFromHand(cardId: number): boolean;
+  /**
+   * Dočasně (do konce kola) debuffne žolíka, nebo debuff zruší (Exekutor, Jednooký hejtman, Krajský úřad,
+   * Výpadek proudu). Zvětralého žolíka zrušení neoživí. Mimo kolo nedělá nic. Vypnutí šéfa debuffy zruší.
+   */
+  setJokerDebuffed(uid: number, on: boolean): void;
+  /** Otočí kartu lícem dolů/nahoru (Bílá paní, Česnek na krk). Na konci kola se všechny otočí nahoru. */
+  setCardFaceDown(cardId: number, on: boolean): void;
+  /** Náhodně zamíchá pořadí karet v ruce (Bílá paní). */
+  shuffleHand(): void;
+  /** Základní čipy a mult kombinace na dané úrovni (Nová vyhláška, Influencerka Nikča v `modifyBase`). */
+  handBase(hand: HandType, level: number): { chips: number; mult: number };
+  /**
+   * Změní velikost ruky do konce kola o `n` (Velká voda −1, Rozložené noviny +2). Ruka se nedobírá hned,
+   * ale při nejbližším doplnění (při zmenšení se karty nezahazují). Mimo kolo nedělá nic.
+   */
+  addRoundHandSize(n: number): void;
+  /** Nastaví peníze přesně na `n` Kč (Daňové přiznání); na rozdíl od `addMoney` neořezává dluhem. */
+  setMoney(n: number, reason: string): void;
+  /**
+   * Posune patro o `delta` (Úřední škrt, Amnestie: −1), nejníž na patro 1. Rozehrané útraty patra
+   * pokračují (cíle se počítají při výběru útraty); šéf se přelosuje, jen když pro nové patro neplatí.
+   */
+  changeAnte(delta: number): void;
+  /** Zvýší úroveň všech kombinací, včetně tajných (Úřední hodiny). */
+  levelUpAll(levels: number): void;
+  /**
+   * Trvale (do konce runu) přičte deltu modifikátorů do `RunState.extraModifiers` se stejnými pravidly
+   * jako skládání (čísla +, `*Mult` ×, booleany OR). Ruce/zahození se projeví od dalšího kola.
+   */
+  addPermanentModifier(delta: ModifierDelta): void;
+  /**
+   * Zdarma přelosuje šéfa aktuálního patra (Známý na úřadě). Jde jen před jeho kolem; vrací nové id
+   * šéfa nebo null, když přelosovat nejde.
+   */
+  rerollBoss(): string | null;
 
   // ── dotazy ──
   getCard(id: number): Card | undefined;
   handCards(): Card[];
-  modifiers(): Modifiers;
+  /** Aktuální modifikátory — zmrazený objekt (jen ke čtení; pravidla mění delta, např. `addPermanentModifier`). */
+  modifiers(): Readonly<Modifiers>;
   handLevel(hand: HandType): number;
   /** Figura? (respektuje allFaces a debuff se nebere v potaz). */
   isFace(card: Card): boolean;
   /** Má karta danou barvu? (divoká = všechny, kamenná = žádná, mergedSuits…) */
   hasSuit(card: Card, suit: Suit): boolean;
-  /** Základní čipy karty (2–10 = číslo, J/Q/K = 10, A = 11, kamenná 0) + bonusChips. */
+  /** Základní čipy karty (2–10 = číslo, J/Q/K = 10, A = 11, kamenná 0) + bonusChips; respektuje `fixedCardChips`. */
   cardChips(card: Card): number;
   /** Plný počet slotů žolíků po započtení negativních edicí. */
   jokerSlots(): number;
-  /** Prodejní cena žolíka. */
+  /** Prodejní cena žolíka (DESIGN 2.5.2; zapůjčený 1 Kč). Přibitý se prodat nedá, ale hodnotu má. */
   sellValue(joker: JokerInstance): number;
 }
 
@@ -180,6 +227,11 @@ export type JokerCardCtx = JokerScoringCtx & { readonly card: Card; readonly isR
 export interface JokerHooks {
   /** Trvalá změna pravidel (sloty, velikost ruky, Postupka ze 4 karet…). Musí být čistá funkce. */
   passive?(ctx: JokerCtx): ModifierDelta;
+  /**
+   * Žolík právě vstoupil do slotů — koupě, obálka nebo efekt (`createJoker`); ne startovní žolíci výzvy.
+   * Volá se jen tomuto žolíkovi (Golem: přidá do balíčku 2 kamenné karty).
+   */
+  onAcquire?(ctx: JokerCtx): void;
   onBlindSelect?(ctx: JokerCtx): void;
   onRoundStart?(ctx: JokerCtx): void;
   /** Po detekci kombinace, před skórováním (vylepšení kombinace, úpravy karet, nabíjení). */
@@ -281,6 +333,12 @@ export interface JokerDef {
   copyable?: boolean;
   /** Nelze najít v obchodě (např. jen ze speciálních efektů). */
   noShop?: boolean;
+  /** Nikdy nedostane nálepku přibitý (např. žolík, který se sám ničí). */
+  noEternal?: boolean;
+  /** Nikdy nedostane nálepku zapůjčený. */
+  noRental?: boolean;
+  /** Nikdy nedostane nálepku zvětrávající (např. žolík, který roste s časem). */
+  noPerishable?: boolean;
 }
 
 // ─────────────────────────── Úpravy karet ───────────────────────────
@@ -295,7 +353,11 @@ export interface EnhancementDef {
   allSuits?: boolean;
   params?: Record<string, number | string>;
   onScored?(ctx: CardCtx): HookResult;
-  /** Po skórování — např. skleněná může prasknout (destroyCard). */
+  /**
+   * Jednou za zahranou ruku, ve které karta skórovala (i když se aktivovala vícekrát), až po sečtení skóre
+   * (krok 5): skleněná může prasknout (`destroyCard`), ohmataná si přidá `bonusChips` přes `api.modifyCard`.
+   * Z výsledku se použije jen `destroyCard`, `money` a `message` — skóre ruky už je dané.
+   */
   afterScored?(ctx: CardCtx): HookResult;
   onHeld?(ctx: CardCtx): HookResult;
   /** Peníze za kartu drženou v ruce na konci kola (zlatá). */
@@ -318,18 +380,26 @@ export interface SealDef {
 export interface EditionDef {
   id: string;
   params?: Record<string, number | string>;
-  /** Efekt edice (karta při skórování / žolík po svém efektu). */
+  /**
+   * Efekt edice: u hrací karty při každé aktivaci ve skórování (po vylepšení, krok 2), u žolíka v kroku 4 před
+   * nebo po jeho vlastním efektu podle `jokerTiming` — i když žolík sám nic nedělá (DESIGN 2.6).
+   */
   effect?(): EffectResult;
-  /** Kdy se efekt edice žolíka aplikuje vůči jeho vlastnímu efektu. */
+  /** Kdy se efekt edice žolíka aplikuje vůči jeho vlastnímu efektu (výchozí `before`). */
   jokerTiming?: 'before' | 'after';
   /** Sloty žolíků/spotřebek navíc (negativní). */
   extraSlots?: number;
-  /** Příplatek k ceně v obchodě. */
+  /** Příplatek k ceně v obchodě (a k základní ceně pro prodej). */
   priceAdd: number;
-  /** Váha při losování edice. */
+  /** Šance v procentech u žolíka v obchodě a obálce (2,5 = 2,5 %). */
   weight: number;
-  /** Může se objevit na hracích kartách? */
-  forCards: boolean;
+  /** Šance v procentech u hrací karty v obchodě a obálce; 0 = na hracích kartách se neobjevuje. */
+  weightCard: number;
+  /**
+   * Losuje se samostatným hodem před ostatními edicemi, jen u žolíků, a nenásobí ji `editionRateMult`
+   * (negativní, DESIGN 2.6).
+   */
+  separateRoll?: boolean;
 }
 
 // ─────────────────────────── Spotřebky ───────────────────────────
@@ -355,6 +425,11 @@ export interface ConsumableDef {
   unlock?: UnlockCondition;
   /** Nelze najít v obchodě/boosteru běžně (jen speciálně). */
   noShop?: boolean;
+  /**
+   * Relativní váha při losování spotřebky daného typu (obchod, obálka, náhodné vytvoření); výchozí 1.
+   * Výjimka z vyhlášky má 0,25 (DESIGN 2.9).
+   */
+  weight?: number;
 }
 
 // ─────────────────────────── Šéfové ───────────────────────────
@@ -364,6 +439,10 @@ export type BossCtx = BaseCtx & { readonly round: Readonly<RoundState> };
 export interface BossHooks {
   passive?(ctx: BossCtx): ModifierDelta;
   onRoundStart?(ctx: BossCtx): void;
+  /**
+   * Je karta debuffnutá? Smí číst `round.flags` (dočasné debuffy, Černá kočka) — engine přepočítá debuffy celého
+   * balíčku po líznutí, po `onRoundStart`, `afterHandPlayed`, `onDiscard` a `onDraw` tohoto šéfa.
+   */
   isCardDebuffed?(ctx: BossCtx, card: Card): boolean;
   /** Má se karta líznout lícem dolů? */
   isDrawnFaceDown?(ctx: BossCtx, card: Card, info: { drawIndex: number; handsPlayed: number }): boolean;
@@ -374,6 +453,11 @@ export interface BossHooks {
     ctx: BossCtx & ScoringInfo,
     base: { chips: number; mult: number },
   ): { chips: number; mult: number };
+  /**
+   * Úprava výsledného skóre ruky po `floor(čipy × mult)` (Pan starosta: ruka se nezapočítá, když není lepší
+   * než předchozí). Vrací nové skóre (ořízne se na konečné číslo ≥ 0). Volá se před `afterHandScored`.
+   */
+  adjustHandScore?(ctx: BossCtx & ScoringInfo, score: number): number;
   /** Po zahrání ruky (ztráta peněz, zahození náhodných karet…). */
   afterHandPlayed?(ctx: BossCtx & ScoringInfo): void;
   onDiscard?(ctx: BossCtx & { readonly discarded: readonly Card[] }): void;
@@ -407,6 +491,12 @@ export interface TagHooks {
   onRoundStart?(ctx: TagCtx): boolean;
   onRoundEnd?(ctx: TagCtx): boolean;
   onShopEnter?(ctx: TagCtx): boolean;
+  /**
+   * Kolo právě skončilo prohrou (došly ruce nebo karty). Vrať true, když štítek kolo zachrání: počítá se
+   * jako vyhrané, ale **bez odměny za útratu**, a štítek se spotřebuje (Lékařské potvrzení). Štítky se ptají
+   * před žolíky (`preventGameOver`).
+   */
+  onRoundLost?(ctx: TagCtx & { readonly score: number; readonly target: number }): boolean;
   /** Úprava cen/obsahu obchodu při generování (po onShopEnter). */
   passive?(ctx: TagCtx): ModifierDelta;
 }
@@ -458,6 +548,8 @@ export interface DeckDef {
   onRunStart?(ctx: BaseCtx): void;
   /** Peníze navíc na konci kola. */
   roundEndMoney?(ctx: BaseCtx): number;
+  /** Po porážce šéfa (po žolících `onBossDefeated`; Kalendářový: vytvoří pranostiku). */
+  onBossDefeated?(ctx: BaseCtx & { readonly bossId: string }): void;
   startingMoney?: number;
   params?: Record<string, number | string>;
   art: ArtSpec;
@@ -475,8 +567,13 @@ export interface StakeDef {
   targetCurve?: number;
   /** Malá útrata nedává odměnu. */
   noSmallBlindReward?: boolean;
-  /** Šance (0–1), že žolík v obchodě dostane nálepku. */
+  /** Šance (0–1), že žolík v obchodě a obálce dostane nálepku (kumuluje se maximem přes úrovně). */
   stickerChance?: Partial<Record<StickerId, number>>;
+  /**
+   * Velká útrata má navíc pravidlo náhodného běžného šéfa (Imperial): jiného než šéf patra, `minAnte ≤ patro`,
+   * a jen šéfa, který má nějaké pravidlo (hook) — ne ty, co jen zvyšují cíl. Cíl 1,5× a odměna 4 Kč zůstávají.
+   */
+  bigBlindBoss?: boolean;
   art: ArtSpec;
 }
 

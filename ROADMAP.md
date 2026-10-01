@@ -9,18 +9,35 @@ _Aktualizováno: 2026-10-01_
 
 **Fáze 0 (Založení) je hotová** (typecheck, lint, 160 unit testů, build, e2e smoke zelené; commit `chore/docs: phase 0`).
 
-**Fáze 1–2 jsou rozpracované:** kód enginu existuje a projde kouřovou simulací (bot bez žolíků dojde do patra 2),
-ale chybí úplné testy (pokrytí enginu < 80 %) a revize proti DESIGN.md.
+**Fáze 1 (Engine jádra) je hotová** — všech 17 podúkolů odškrtnuto; commit `feat(engine): …` fáze 1.
 
-- Hotové moduly: `src/engine/cards/cards.ts`, `hands/{detect,levels}.ts`, `effects/{core,api,modifiers}.ts`,
-  `scoring/score.ts`, `run/{game,init,draw,targets}.ts`, `shop/{shop,pool}.ts`, `save/save.ts`, `index.ts`.
-- Obsah: `src/content/{hands,modifiers,index}.ts` + prázdné soubory pro ostatní typy obsahu.
-- Engine vyžaduje seed od volajícího (UI generuje `generateSeed(Math.random)`); `Math.random`/`Date.now` jsou
-  v `src/engine/**` zakázané ESLintem.
+- Kontroly zelené: `typecheck`, `lint` (ESLint + Prettier), `npm test` (17 souborů, 665 testů), `build`,
+  `test:e2e` (1 smoke test), `test:coverage` (prahy splněné; v CI je krok nově blokující).
+- Pokrytí `src/engine`: 91,1 % řádků, 88,2 % příkazů, 82,6 % větví, 93,5 % funkcí. Po modulech (řádky):
+  `cards` 100 %, `hands` 99 %, `effects` 100 %, `scoring` 100 %, `shop` 98 %, `rng` 99 %, `run` 83 %
+  (`game.ts` 81 %, větve 64 %), **`save` 0 %** (testy save/load a migrací patří do fáze 2).
+- Hotové moduly: `src/engine/{constants,types,content-types,events}.ts`, `cards/cards.ts`, `hands/{detect,levels}.ts`,
+  `effects/{core,api,modifiers}.ts`, `scoring/score.ts`, `run/{game,init,draw,targets,bosses}.ts`,
+  `shop/{shop,pool,prices}.ts`, `save/save.ts` (bez testů). Testovací registr: `tests/unit/fixtures/registry.ts`
+  (+ `tests/unit/engine-fixtures.ts`). Texty: `src/i18n/cs/{hands,messages,modifiers}.ts`.
+- Revize správnosti a robustnosti enginu proběhly (záznamy v `docs/DECISIONS.md`, testy
+  `tests/unit/review-*.test.ts`); detekce a skórování ověřené nezávislým referenčním výpočtem.
+- Engine vyžaduje seed od volajícího (UI generuje `generateSeed(Math.random)`); `Math.random`/`Date.now`
+  a `localeCompare` jsou v `src/engine/**` zakázané ESLintem.
 
-**Další krok:** Fáze 1 — testy detekce kombinací, skórování a pořadí efektů (fixture registr), doladění enginu podle
-DESIGN.md (kap. 2.4–2.10, příloha B podle potřeby), pokrytí enginu ≥ 80 %. Pak Fáze 2 — testy run loopu,
-save/load roundtrip, determinismus, `npm run simulate` s boty.
+**Známé otevřené body (mimo fázi 1, řešit v uvedené fázi):**
+
+- fáze 2: `extend()` zabere ~45 % času skórování (~1,3 ms na ruku s 8 žolíky) — zvážit před velkými simulacemi;
+- fáze 3/6: i18n texty názvů útrat a hlášek pitvy pro konec runu v Malé/Velké útratě; `formatNumber(Number.MAX_VALUE)`
+  má ukázat „nekonečno“ (DESIGN 1.3);
+- fáze 6: šéf v `onDiscard` vidí zahazované karty ještě v `round.hand` (obsah je musí odfiltrovat, jinak hrozí
+  dvojí id na odhazovací hromádce); poziční pravidlo typu Jednooký hejtman nejde přes `setJokerDebuffed` spolehlivě
+  vyjádřit po přeřazení žolíků.
+
+**Další krok:** Fáze 2 — testy run loopu (stavový automat `RunPhase`, výběr/přeskočení útrat, odměny a úrok,
+výhra/prohra, nekonečný režim), save/load roundtrip a migrace (`src/engine/save/save.ts`), determinismus celého runu
+(stejný seed + akce = identický stav), `src/engine/sim` s boty + `npm run simulate` (`--runs`, `--stake`, `--json`…),
+textový režim `--play`, první kalibrace křivky cílů.
 
 ## Jak pokračovat v nové session
 
@@ -70,23 +87,23 @@ Fáze se smí odškrtnout, až když platí **všechno**:
 
 ## Fáze 1 — Engine jádra
 
-- [ ] `engine/cards`: tvorba karty, standardní balíček 52 karet, unikátní `id` (`nextUid`)
-- [ ] Čipy karty: 2–10 = číslo, J/Q/K = 10, A = 11, kamenná bez hodnoty, + `bonusChips`
-- [ ] Barvy a figury: `hasSuit` (divoká = všechny barvy, kamenná = žádná, `mergedSuits`), `isFace` (`allFaces`)
-- [ ] Míchání a lízání se seedem (stream `deck`), lízání do velikosti ruky
-- [ ] `engine/effects/modifiers.ts`: `BASE_MODIFIERS` + skládání delt (čísla se sčítají, `*Mult` násobí, booleany OR)
-- [ ] `engine/hands`: detekce všech 13 kombinací (vč. tajných: Pětice, Barevný full house, Barevná pětice), `scoringIds` v pořadí zahrání, `contains[]`
-- [ ] Hraniční případy: A-2-3-4-5 i 10-J-Q-K-A, žádné „kolem dokola“ (pokud není `straightWrap`), dvě dvojice v 5 kartách, divoké karty v barvě i pětici, kamenné karty vždy skórují
-- [ ] Modifikátory detekce: `fourCardStraightFlush`, `straightGaps`, `straightWrap`, `mergedSuits`, `allCardsScore`
-- [ ] Úrovně kombinací (`HandLevelState`, `levelUpHand`, čipy/mult podle úrovně z `src/content/hands.ts`)
-- [ ] `engine/scoring`: pipeline v závazném pořadí (`docs/ARCHITECTURE.md` 2.5) → `ScoreResult` s kroky `ScoreStep` pro animaci
-- [ ] Opakované aktivace karet (retriggery), debuffnuté karty (počítají se do kombinace, neskórují)
-- [ ] `HandPreview` — živý náhled kombinace a čipů × mult pro vybrané karty (pro UI)
-- [ ] Minimální testovací `ContentRegistry` v `tests/unit/fixtures/` (pár testovacích žolíků, vylepšení, pečetí)
-- [ ] Texty kombinací `hands.<type>.name|desc` v `src/i18n/cs/hands.ts`
-- [ ] Testy: každá kombinace + hraniční případy, pořadí vyhodnocení (karta → vylepšení → edice → pečeť → žolíci), úrovně, modifikátory, determinismus míchání; pokrytí enginu ≥ 80 %
-- [ ] CI: po dosažení 80 % pokrytí odstranit `continue-on-error` u kroku „Coverage“ v `.github/workflows/ci.yml` (a samostatný krok `npm test`)
-- [ ] `src/engine/constants.ts` podle `docs/DESIGN.md` kap. 2.10 (sjednotit `STARTING_MONEY`, `BLIND_REWARDS`, `RARITY_WEIGHTS`, nálepky, `BASE_CARD_PRICE`…) a dorovnat zbylé rozdíly enginu vůči DESIGN (vzorec ceny s `round` + `shopPriceAdd`, úrok ze zůstatku před výplatou, šance edic u hracích karet, vylepšení Ohmataná, rozšíření z přílohy B)
+- [x] `engine/cards`: tvorba karty, standardní balíček 52 karet, unikátní `id` (`nextUid`)
+- [x] Čipy karty: 2–10 = číslo, J/Q/K = 10, A = 11, kamenná bez hodnoty, + `bonusChips`
+- [x] Barvy a figury: `hasSuit` (divoká = všechny barvy, kamenná = žádná, `mergedSuits`), `isFace` (`allFaces`)
+- [x] Míchání a lízání se seedem (stream `deck`), lízání do velikosti ruky
+- [x] `engine/effects/modifiers.ts`: `BASE_MODIFIERS` + skládání delt (čísla se sčítají, `*Mult` násobí, booleany OR)
+- [x] `engine/hands`: detekce všech 13 kombinací (vč. tajných: Pětice, Barevný full house, Barevná pětice), `scoringIds` v pořadí zahrání, `contains[]`
+- [x] Hraniční případy: A-2-3-4-5 i 10-J-Q-K-A, žádné „kolem dokola“ (pokud není `straightWrap`), dvě dvojice v 5 kartách, divoké karty v barvě i pětici, kamenné karty vždy skórují
+- [x] Modifikátory detekce: `fourCardStraightFlush`, `straightGaps`, `straightWrap`, `mergedSuits`, `allCardsScore`
+- [x] Úrovně kombinací (`HandLevelState`, `levelUpHand`, čipy/mult podle úrovně z `src/content/hands.ts`)
+- [x] `engine/scoring`: pipeline v závazném pořadí (`docs/ARCHITECTURE.md` 2.5) → `ScoreResult` s kroky `ScoreStep` pro animaci
+- [x] Opakované aktivace karet (retriggery), debuffnuté karty (počítají se do kombinace, neskórují)
+- [x] `HandPreview` — živý náhled kombinace a čipů × mult pro vybrané karty (pro UI)
+- [x] Minimální testovací `ContentRegistry` v `tests/unit/fixtures/` (pár testovacích žolíků, vylepšení, pečetí)
+- [x] Texty kombinací `hands.<type>.name|desc` v `src/i18n/cs/hands.ts`
+- [x] Testy: každá kombinace + hraniční případy, pořadí vyhodnocení (karta → vylepšení → edice → pečeť → žolíci), úrovně, modifikátory, determinismus míchání; pokrytí enginu ≥ 80 %
+- [x] CI: po dosažení 80 % pokrytí odstranit `continue-on-error` u kroku „Coverage“ v `.github/workflows/ci.yml` (a samostatný krok `npm test`)
+- [x] `src/engine/constants.ts` podle `docs/DESIGN.md` kap. 2.10 (sjednotit `STARTING_MONEY`, `BLIND_REWARDS`, `RARITY_WEIGHTS`, nálepky, `BASE_CARD_PRICE`…) a dorovnat zbylé rozdíly enginu vůči DESIGN (vzorec ceny s `round` + `shopPriceAdd`, úrok ze zůstatku před výplatou, šance edic u hracích karet, vylepšení Ohmataná, rozšíření z přílohy B)
 
 **Hotovo, když:** všechny testy kombinací a skórování zelené, pokrytí `src/engine` ≥ 80 %, build
 projde, hra se pořád spustí; commit `feat(engine): …`; fáze odškrtnutá.

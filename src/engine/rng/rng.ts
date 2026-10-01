@@ -3,6 +3,7 @@
  * Veškerá náhoda v enginu jde přes tyto streamy → stejný seed + stejné akce = identický run.
  */
 import type { Rng } from '../content-types';
+import { SEED_ALPHABET, SEED_LENGTH } from '../constants';
 import type { RngState, RngStreamName } from '../types';
 
 export const RNG_STREAMS: readonly RngStreamName[] = [
@@ -118,11 +119,10 @@ function rotl(x: number, k: number): number {
   return ((x << k) | (x >>> (32 - k))) >>> 0;
 }
 
-/** Náhodný seed pro nový run (8 znaků, bez zaměnitelných znaků). */
+/** Náhodný seed pro nový run (`SEED_LENGTH` znaků z `SEED_ALPHABET` — bez zaměnitelných znaků). */
 export function generateSeed(source: () => number): string {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let out = '';
-  for (let i = 0; i < 8; i++) out += alphabet[Math.floor(source() * alphabet.length)];
+  for (let i = 0; i < SEED_LENGTH; i++) out += SEED_ALPHABET[Math.floor(source() * SEED_ALPHABET.length)];
   return out;
 }
 

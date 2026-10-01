@@ -22,6 +22,9 @@
  * Konvence klíčů pro obsah viz komentář v `src/engine/content-types.ts`
  * (`jokers.<id>.name|desc|flavor`, `bosses.<id>.name|rule|intro|defeat|death` …).
  */
+import { hands } from './cs/hands';
+import { boss, joker, score, tag } from './cs/messages';
+import { editions, enhancements, seals } from './cs/modifiers';
 import { interpolate, typo, type InterpolationParams } from './format';
 
 /** Strom textů: listy jsou řetězce nebo seznamy řetězců. */
@@ -86,29 +89,6 @@ const ranks = {
   14: { name: 'Eso', short: 'A' },
 };
 
-/** Kombinace podle `HandType` z engine/types.ts. */
-const hands = {
-  high_card: {
-    name: 'Vysoká karta',
-    desc: 'Když nic jiného nevyjde, skóruje jen nejvyšší zahraná karta.',
-  },
-  pair: { name: 'Dvojice', desc: 'Dvě karty stejné hodnoty.' },
-  two_pair: { name: 'Dvě dvojice', desc: 'Dvě Dvojice různých hodnot.' },
-  three: { name: 'Trojice', desc: 'Tři karty stejné hodnoty.' },
-  straight: {
-    name: 'Postupka',
-    desc: 'Pět karet po sobě jdoucích hodnot. Eso smí být nízké (A-2-3-4-5) i vysoké (10-J-Q-K-A).',
-  },
-  flush: { name: 'Barva', desc: 'Pět karet stejné barvy.' },
-  full_house: { name: 'Full house', desc: 'Trojice a k tomu Dvojice jiné hodnoty.' },
-  four: { name: 'Čtveřice', desc: 'Čtyři karty stejné hodnoty.' },
-  straight_flush: { name: 'Postupka v barvě', desc: 'Postupka, ve které jsou všechny karty stejné barvy.' },
-  royal_flush: { name: 'Královská postupka', desc: 'Postupka v barvě od desítky po eso (10-J-Q-K-A).' },
-  five: { name: 'Pětice', desc: 'Pět karet stejné hodnoty. S obyčejným balíčkem to nepůjde.' },
-  flush_house: { name: 'Barevný full house', desc: 'Full house, ve kterém jsou všechny karty stejné barvy.' },
-  flush_five: { name: 'Barevná pětice', desc: 'Pětice, ve které jsou všechny karty stejné barvy.' },
-};
-
 // ─────────────────────────── Chyby ───────────────────────────
 
 /** Klíče = `ActionErrorCode` z engine/types.ts (UI volá `t('errors.<code>')`) + `generic`. */
@@ -165,6 +145,13 @@ export const cs = {
   hands,
   errors,
   loadingTips,
+  enhancements,
+  seals,
+  editions,
+  score,
+  boss,
+  joker,
+  tag,
   /** Pangram s celou českou diakritikou — kontrola fontu (e2e test). */
   typoTest: 'Příliš žluťoučký kůň úpěl ďábelské ódy',
 } satisfies TextTree;

@@ -33,7 +33,13 @@ import type {
 import { BASE_MODIFIERS, combineModifiers } from './modifiers';
 import { createApi } from './api';
 
-export type JokerHookName = Exclude<keyof JokerHooks, 'passive' | 'copyTarget' | 'preventGameOver'>;
+/** Hooky žolíků, které se volají všem žolíkům zleva doprava (ne `passive`, kopírování, záchrana a získání). */
+export type JokerHookName = Exclude<
+  keyof JokerHooks,
+  'passive' | 'copyTarget' | 'preventGameOver' | 'onAcquire'
+>;
+
+const NO_ENHANCEMENTS: Readonly<Record<string, never>> = Object.freeze({});
 
 /**
  * Jako Object.assign, ale kopíruje deskriptory (gettery zůstávají živé — např. průběžné čipy/mult).
@@ -48,18 +54,29 @@ export function extend<T extends object, A extends object, B extends object = ob
   return target as T & A & B;
 }
 
-/** Normalizuje výsledek hooku na pole. */
+/** Normalizuje výsledek hooku na pole (prázdné položky pole — `null`, čísla… — z JS obsahu přeskočí). */
 export function toResults(r: HookResult): EffectResult[] {
   if (!r || typeof r !== 'object') return [];
-  return Array.isArray(r) ? r : [r];
+  if (!Array.isArray(r)) return [r];
+  return r.filter((x): x is EffectResult => !!x && typeof x === 'object');
 }
+
+/**
+ * Nejvyšší hloubka vnoření téhož hooku žolíků (např. `onCardAdded` → `api.addCard` → `onCardAdded`…). Hlubší
+ * volání se přeskočí — chybný obsah tak engine nezacyklí (místo přetečení zásobníku).
+ */
+export const MAX_NESTED_HOOK_DEPTH = 3;
 
 export class GameCore {
   readonly bus = new EventBus<GameEvent>();
   readonly api: EngineApi;
   private collected: GameEvent[] = [];
-  private modsCache: Modifiers | null = null;
+  private modsCache: Readonly<Modifiers> | null = null;
   private computingMods = false;
+  /** > 0 = běží dotaz bez vedlejších účinků (`readOnly`): RNG streamy se jen kopírují, stav se neposune. */
+  private detachedRng = 0;
+  /** Aktuální hloubka vnoření jednotlivých hooků žolíků (`eachJoker`). */
+  private hookDepth: Partial<Record<JokerHookName, number>> = {};
 
   constructor(
     public state: RunState,
@@ -92,7 +109,22 @@ export class GameCore {
   // ── RNG ──
 
   rng(stream: RngStreamName): Rng {
-    return rngFromState(this.state.rng[stream]);
+    const st = this.state.rng[stream];
+    return rngFromState(this.detachedRng > 0 ? [st[0], st[1], st[2], st[3]] : st);
+  }
+
+  /**
+   * Spustí dotaz bez vedlejších účinků na náhodu: RNG v kontextech vytvořených uvnitř pracuje na kopii streamu,
+   * takže stav runu se neposune. Pro `passive` (skládání modifikátorů), náhled ruky a `canUse` — jinak by výsledek
+   * runu závisel na tom, jak často se UI ptá (náhled, modifikátory) nebo kdy se zneplatní cache.
+   */
+  readOnly<T>(fn: () => T): T {
+    this.detachedRng++;
+    try {
+      return fn();
+    } finally {
+      this.detachedRng--;
+    }
   }
 
   uid(): number {
@@ -105,12 +137,17 @@ export class GameCore {
     this.modsCache = null;
   }
 
-  mods(): Modifiers {
-    if (this.computingMods) return { ...BASE_MODIFIERS };
+  /**
+   * Výsledné modifikátory (cache do `invalidate`). Objekt je **zmrazený** — volající (obsah, UI) ho nesmí měnit;
+   * změna pravidel jde jen přes deltu (`passive`, `api.addPermanentModifier`…). `passive` volající `mods()` dostane
+   * výchozí hodnoty (ochrana proti rekurzi).
+   */
+  mods(): Readonly<Modifiers> {
+    if (this.computingMods) return BASE_MODIFIERS;
     if (this.modsCache) return this.modsCache;
     this.computingMods = true;
     try {
-      this.modsCache = combineModifiers(this.collectDeltas());
+      this.modsCache = Object.freeze(combineModifiers(this.readOnly(() => this.collectDeltas())));
     } finally {
       this.computingMods = false;
     }
@@ -135,7 +172,7 @@ export class GameCore {
     }
     for (const tag of s.tags) {
       const td = r.tags[tag.defId];
-      if (td?.hooks.passive) deltas.push(td.hooks.passive({ ...ctx, self: tag }));
+      if (td?.hooks.passive) deltas.push(td.hooks.passive(this.tagCtx(tag)));
     }
     s.jokers.forEach((j, index) => {
       // Negativní (a jiné slotové) edice platí i u debuffnutého žolíka.
@@ -151,7 +188,18 @@ export class GameCore {
     }
     const boss = this.activeBoss();
     if (boss?.hooks.passive) deltas.push(boss.hooks.passive(this.bossCtx()));
+    // Dočasná velikost ruky do konce kola (EngineApi.addRoundHandSize).
+    const roundHandSize = s.round?.handSizeDelta ?? 0;
+    if (roundHandSize) deltas.push({ handSize: roundHandSize });
     return deltas;
+  }
+
+  /**
+   * Vylepšení, která právě platí: při `Modifiers.disableEnhancements` (Bílá hora) prázdný registr — karty
+   * se pak chovají, jako by vylepšení neměly (detekce, čipy, barvy, efekty).
+   */
+  enhancements(): ContentRegistry['enhancements'] {
+    return this.mods().disableEnhancements ? NO_ENHANCEMENTS : this.registry.enhancements;
   }
 
   // ── kontexty ──
@@ -180,9 +228,15 @@ export class GameCore {
     };
   }
 
+  /**
+   * Kontext hooku žolíka. Při `isCopy` (kopírující žolík volá hook cíle) dostane hook **kopii** instance cíle:
+   * čte její stav, ale změny `self.state`/`sellBonus` se zahodí — počítadla cíle se tak nenavýší dvakrát, ani když
+   * hook `isCopy` nekontroluje (ARCHITECTURE 2.7).
+   */
   jokerCtx(joker: JokerInstance, index: number, isCopy: boolean, def?: JokerDef): JokerCtx {
     const d = def ?? this.jokerDef(joker);
-    return Object.assign(this.baseCtx('joker'), { self: joker, def: d, index, isCopy });
+    const self = isCopy ? (JSON.parse(JSON.stringify(joker)) as JokerInstance) : joker;
+    return Object.assign(this.baseCtx('joker'), { self, def: d, index, isCopy });
   }
 
   tagCtx(tag: TagInstance): TagCtx {
@@ -210,6 +264,27 @@ export class GameCore {
     return this.registry.bosses[round.bossId] ?? null;
   }
 
+  /** Zvětralý žolík (zvětrávající s vypršelými koly) — trvale debuffnutý. */
+  isPerished(joker: JokerInstance): boolean {
+    return (
+      joker.stickers.includes('perishable') && joker.perishRounds !== undefined && joker.perishRounds <= 0
+    );
+  }
+
+  /** Zruší dočasné debuffy žolíků z tohoto kola (konec kola, vypnutí šéfa). */
+  clearJokerDebuffs(): void {
+    const round = this.state.round;
+    if (!round || round.jokerDebuffs.length === 0) return;
+    for (const uid of round.jokerDebuffs) {
+      const j = this.state.jokers.find((x) => x.uid === uid);
+      if (!j) continue;
+      j.debuffed = this.isPerished(j);
+      if (!j.debuffed) this.emit({ type: 'jokerDebuffChanged', uid, debuffed: false });
+    }
+    round.jokerDebuffs = [];
+    this.invalidate();
+  }
+
   card(id: number): Card | undefined {
     return this.state.deck.find((c) => c.id === id);
   }
@@ -220,21 +295,29 @@ export class GameCore {
     return c;
   }
 
-  /** Žolík, jehož schopnost `joker` efektivně používá (sleduje řetěz kopírování). */
+  /**
+   * Žolík, jehož schopnost `joker` (na pozici `index`) efektivně používá — sleduje řetěz kopírování. Každý článek
+   * řetězu dostane do `copyTarget` **svou** pozici (kopírující „vpravo od sebe“ tak funguje i v řetězu); cyklus,
+   * debuffnutý nebo nekopírovatelný cíl = null. Žolík s id, které registr nezná (obsah odebraný od uložení), nic
+   * nedělá (null) — stejně jako neznámý šéf, štítek nebo vylepšení.
+   */
   resolveCopy(
     joker: JokerInstance,
     index: number,
   ): { target: JokerInstance; def: JokerDef; isCopy: boolean } | null {
     let current = joker;
-    let def = this.jokerDef(current);
+    const first = this.registry.jokers[current.defId];
+    if (!first) return null;
+    let def: JokerDef = first;
     const visited = new Set<number>([current.uid]);
     let isCopy = false;
     while (def.hooks.copyTarget) {
-      const targetUid = def.hooks.copyTarget(this.jokerCtx(current, index, isCopy, def));
+      const pos = current === joker ? index : this.state.jokers.indexOf(current);
+      const targetUid = def.hooks.copyTarget(this.jokerCtx(current, pos, isCopy, def));
       const target = targetUid === null ? undefined : this.state.jokers.find((j) => j.uid === targetUid);
       if (!target || visited.has(target.uid) || target.debuffed) return null;
-      const tdef = this.jokerDef(target);
-      if (tdef.copyable === false) return null;
+      const tdef = this.registry.jokers[target.defId];
+      if (!tdef || tdef.copyable === false) return null;
       visited.add(target.uid);
       current = target;
       def = tdef;
@@ -245,24 +328,39 @@ export class GameCore {
 
   /**
    * Zavolá hook u všech (nedebuffnutých) žolíků zleva doprava, včetně kopírujících.
-   * `extra` se přimíchá do kontextu. `onResult` dostane výsledky přiřazené vlastníkovi slotu.
+   * `extra` se přimíchá do kontextu — buď stejné pro všechny, nebo funkce vlastníka slotu (např. `isSelf` u `onSell`).
+   * `onResult` dostane výsledky přiřazené vlastníkovi slotu.
+   *
+   * Po každém hooku se zneplatní cache modifikátorů (hook mohl změnit stav, na kterém závisí `passive` — další
+   * žolíci i engine pak čtou aktuální hodnoty). Vnoření téhož hooku je omezené `MAX_NESTED_HOOK_DEPTH`.
    */
   eachJoker<K extends JokerHookName>(
     hook: K,
-    extra: Record<string, unknown>,
+    extra: Record<string, unknown> | ((owner: JokerInstance) => Record<string, unknown>),
     onResult?: (results: EffectResult[], owner: JokerInstance, index: number, value: unknown) => void,
   ): void {
-    const jokers = [...this.state.jokers];
-    jokers.forEach((owner, index) => {
-      if (owner.debuffed || !this.state.jokers.includes(owner)) return;
-      const resolved = this.resolveCopy(owner, index);
-      if (!resolved) return;
-      const fn = resolved.def.hooks[hook] as ((ctx: unknown) => unknown) | undefined;
-      if (!fn) return;
-      const ctx = extend(this.jokerCtx(resolved.target, index, resolved.isCopy, resolved.def), extra);
-      const value = fn(ctx);
-      onResult?.(typeof value === 'number' ? [] : toResults(value as HookResult), owner, index, value);
-    });
+    const depth = this.hookDepth[hook] ?? 0;
+    if (depth >= MAX_NESTED_HOOK_DEPTH) return;
+    this.hookDepth[hook] = depth + 1;
+    try {
+      const jokers = [...this.state.jokers];
+      jokers.forEach((owner) => {
+        // Aktuální pozice (ne pozice ve snímku): žolík zničený dřív v průchodu posune ostatní doleva.
+        const index = this.state.jokers.indexOf(owner);
+        if (owner.debuffed || index < 0) return;
+        const resolved = this.resolveCopy(owner, index);
+        if (!resolved) return;
+        const fn = resolved.def.hooks[hook] as ((ctx: unknown) => unknown) | undefined;
+        if (!fn) return;
+        const more = typeof extra === 'function' ? extra(owner) : extra;
+        const ctx = extend(this.jokerCtx(resolved.target, index, resolved.isCopy, resolved.def), more);
+        const value = fn(ctx);
+        this.invalidate();
+        onResult?.(typeof value === 'number' ? [] : toResults(value as HookResult), owner, index, value);
+      });
+    } finally {
+      this.hookDepth[hook] = depth;
+    }
     this.invalidate();
   }
 
@@ -275,14 +373,15 @@ export class GameCore {
     return total;
   }
 
-  /** Zavolá hook štítků; štítky, které vrátí true, se odeberou. */
-  eachTag(hook: Exclude<keyof TagHooks, 'passive'>): void {
+  /** Zavolá hook štítků; štítky, které vrátí true, se odeberou. (`onRoundLost` volá run loop zvlášť.) */
+  eachTag(hook: Exclude<keyof TagHooks, 'passive' | 'onRoundLost'>): void {
     for (const tag of [...this.state.tags]) {
       if (!this.state.tags.includes(tag)) continue;
       const def = this.registry.tags[tag.defId];
       const fn = def?.hooks[hook];
       if (!fn) continue;
       const consumed = fn(this.tagCtx(tag));
+      this.invalidate();
       if (consumed) {
         this.state.tags = this.state.tags.filter((t) => t !== tag);
         this.emit({ type: 'tagTriggered', uid: tag.uid, defId: tag.defId });

@@ -33,13 +33,9 @@ jobs:
       - name: Lint (ESLint + Prettier)
         run: npm run lint
 
-      - name: Unit tests
-        run: npm test
-
-      # Prahy pokrytí (src/engine ≥ 80 %, vite.config.ts) zatím nejdou splnit — testy enginu přijdou ve fázi 1.
-      # TODO(fáze 1): odstranit continue-on-error a krok „Unit tests“ výše (test:coverage spouští i testy).
-      - name: Coverage (src/engine ≥ 80 %)
-        continue-on-error: true
+      # Spustí všechny unit testy a hlídá prahy pokrytí src/engine (vite.config.ts: řádky/příkazy/funkce ≥ 80 %,
+      # větve ≥ 70 %) — pod prahem krok selže.
+      - name: Unit tests + coverage (src/engine ≥ 80 %)
         run: npm run test:coverage
 
       - name: Build

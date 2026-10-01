@@ -1,4 +1,5 @@
 /** Cílová skóre útrat. Čísla viz docs/DESIGN.md (laděno simulací). */
+import { BLIND_TARGET_MULT } from '../constants';
 import type { BlindKind } from '../types';
 
 /** Základ patra 1–8 pro křivky 1–3 (index křivky je 1-based). */
@@ -8,8 +9,10 @@ export const TARGET_CURVES: readonly (readonly number[])[] = [
   [250, 850, 2500, 7500, 20000, 50000, 115000, 250000],
 ];
 
-export const BLIND_TARGET_MULT: Record<Exclude<BlindKind, 'boss'>, number> = { small: 1, big: 1.5 };
-export const DEFAULT_BOSS_TARGET_MULT = 2;
+/** Re-export pro starší importy — násobky útrat žijí v engine/constants.ts. */
+export { BLIND_TARGET_MULT };
+/** Výchozí násobek cíle šéfa (pokud `BossDef.targetMult` neurčí jinak). */
+export const DEFAULT_BOSS_TARGET_MULT = BLIND_TARGET_MULT.boss;
 
 /** Růst nekonečného režimu: g(a) = ENDLESS_GROWTH_BASE + ENDLESS_GROWTH_STEP × (a − 9). */
 export const ENDLESS_GROWTH_BASE = 2.2;

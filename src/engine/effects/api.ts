@@ -1,10 +1,16 @@
 /** Implementace EngineApi — příkazy a dotazy, které smí volat obsah (hooky). */
 import type { CardSpec, CreateJokerOptions, EngineApi } from '../content-types';
+import { MSG, PERISH_ROUNDS } from '../constants';
 import { cardChips, cardHasSuit, createCard, isFaceCard } from '../cards/cards';
+import { handValueAtLevel } from '../hands/levels';
+import { rerollBossSlot, revalidateBoss } from '../run/bosses';
 import { drawCards, bossDebuffs, refreshDebuffs } from '../run/draw';
 import { pickConsumableDefId, pickJokerDefId } from '../shop/pool';
+import { jokerSellValue } from '../shop/prices';
 import type { Card, ConsumableInstance, ConsumableKind, EditionId, HandType, JokerInstance } from '../types';
+import { HAND_TYPES } from '../types';
 import type { GameCore } from './core';
+import { mergeDelta } from './modifiers';
 
 export function newJokerInstance(
   core: GameCore,
@@ -18,12 +24,13 @@ export function newJokerInstance(
     uid: core.uid(),
     defId,
     edition,
-    state: def.initState ? def.initState() : {},
+    // Kopie: `initState` vracející pořád stejný objekt by jinak spojil stav všech instancí (do uložení a načtení).
+    state: def.initState ? (JSON.parse(JSON.stringify(def.initState() ?? {})) as JokerInstance['state']) : {},
     sellBonus: 0,
     stickers: [...stickers],
     debuffed: false,
   };
-  if (stickers.includes('perishable')) j.perishRounds = 6; // DESIGN 2.10 PERISH_ROUNDS
+  if (stickers.includes('perishable')) j.perishRounds = PERISH_ROUNDS;
   return j;
 }
 
@@ -36,23 +43,38 @@ export function newConsumableInstance(
   return { uid: core.uid(), defId, edition };
 }
 
-/** Počet slotů žolíků, které by byly k dispozici po přidání žolíka s danou edicí. */
-function jokerHasRoom(core: GameCore, edition: EditionId | null): boolean {
+/** Vejde se žolík s danou edicí do slotů? (negativní edice si slot přinese sama) */
+export function jokerHasRoom(core: GameCore, edition: EditionId | null): boolean {
   const extra = edition ? (core.registry.editions[edition]?.extraSlots ?? 0) : 0;
   return core.state.jokers.length < core.mods().jokerSlots + extra;
 }
 
-function consumableHasRoom(core: GameCore, edition: EditionId | null): boolean {
+/** Vejde se spotřebka s danou edicí do slotů? */
+export function consumableHasRoom(core: GameCore, edition: EditionId | null): boolean {
   const extra = edition ? (core.registry.editions[edition]?.extraSlots ?? 0) : 0;
   return core.state.consumables.length < core.mods().consumableSlots + extra;
 }
 
-/** Přidá hotovou instanci žolíka (kontroluje sloty, pokud ignoreSlots není true). */
-export function addJokerInstance(core: GameCore, joker: JokerInstance, ignoreSlots = false): boolean {
-  if (!ignoreSlots && !jokerHasRoom(core, joker.edition)) return false;
+/**
+ * Přidá hotovou instanci žolíka do slotů. `ignoreSlots` = bez kontroly místa; `acquire` = žolík byl
+ * získán ve hře (koupě, obálka, efekt) → zavolá se jeho `onAcquire`. Vrací false, když není místo.
+ */
+export function addJokerInstance(
+  core: GameCore,
+  joker: JokerInstance,
+  opts: { ignoreSlots?: boolean; acquire?: boolean } = {},
+): boolean {
+  if (!opts.ignoreSlots && !jokerHasRoom(core, joker.edition)) return false;
   core.state.jokers.push(joker);
   core.invalidate();
   core.emit({ type: 'jokerAdded', uid: joker.uid, defId: joker.defId });
+  if (opts.acquire) {
+    const def = core.registry.jokers[joker.defId];
+    if (def?.hooks.onAcquire) {
+      def.hooks.onAcquire(core.jokerCtx(joker, core.state.jokers.indexOf(joker), false, def));
+      core.invalidate();
+    }
+  }
   return true;
 }
 
@@ -63,6 +85,9 @@ export function addConsumableInstance(core: GameCore, c: ConsumableInstance, ign
   core.emit({ type: 'consumableAdded', uid: c.uid, defId: c.defId });
   return true;
 }
+
+/** Pole karty, která smí měnit `EngineApi.modifyCard`. */
+const CARD_PATCH_KEYS = ['suit', 'rank', 'enhancement', 'seal', 'edition', 'bonusChips'] as const;
 
 /** Odebere kartu ze všech hromádek kola. */
 function removeFromPiles(core: GameCore, cardId: number): void {
@@ -77,30 +102,60 @@ function removeFromPiles(core: GameCore, cardId: number): void {
   if (b) b.hand = b.hand.filter((id) => id !== cardId);
 }
 
-export function createApi(core: GameCore): EngineApi {
-  const enh = () => core.registry.enhancements;
+/** Ořízne číslo do konečného rozsahu (přetečení → ±`Number.MAX_VALUE`; JSON by nekonečno uložil jako `null`). */
+function finite(n: number): number {
+  return Math.min(Number.MAX_VALUE, Math.max(-Number.MAX_VALUE, n));
+}
 
+/** Celočíselná změna z obsahu: NaN/nekonečno = 0 (nic se nezmění), desetinná čísla se useknou. */
+function intDelta(n: number): number {
+  return Number.isFinite(n) ? Math.trunc(n) : 0;
+}
+
+/** Změní peníze o `delta` bez jakýchkoli limitů (jen bez přetečení) a zapíše statistiky + událost. */
+function changeMoney(core: GameCore, delta: number, reason: string): void {
+  if (!delta) return;
+  const s = core.state;
+  const before = s.money;
+  s.money = finite(s.money + delta);
+  const change = s.money - before;
+  if (!change) return;
+  if (change > 0) s.stats.moneyEarned = finite(s.stats.moneyEarned + change);
+  s.stats.minMoney = Math.min(s.stats.minMoney, s.money);
+  s.stats.maxMoney = Math.max(s.stats.maxMoney, s.money);
+  core.emit({ type: 'moneyChanged', delta: change, money: s.money, reason });
+}
+
+export function createApi(core: GameCore): EngineApi {
   const api: EngineApi = {
     addMoney(amount, reason) {
-      if (!amount) return;
-      const s = core.state;
-      s.money += amount;
-      if (amount > 0) s.stats.moneyEarned += amount;
-      s.stats.minMoney = Math.min(s.stats.minMoney, s.money);
-      s.stats.maxMoney = Math.max(s.stats.maxMoney, s.money);
-      core.emit({ type: 'moneyChanged', delta: amount, money: s.money, reason });
+      if (!amount || !Number.isFinite(amount)) return;
+      let delta = amount;
+      if (delta < 0) {
+        // Srážka se provede jen do výše dluhového limitu (DESIGN 2.4.3); pod limitem už nic nestrhne.
+        const floor = -core.mods().debtLimit;
+        delta = Math.max(delta, Math.min(0, floor - core.state.money));
+      }
+      changeMoney(core, delta, reason);
+    },
+
+    setMoney(n, reason) {
+      if (!Number.isFinite(n)) return;
+      changeMoney(core, Math.trunc(n) - core.state.money, reason);
     },
 
     addHands(n) {
       const r = core.state.round;
-      if (!r || !n) return;
-      r.handsLeft = Math.max(0, r.handsLeft + n);
+      const d = intDelta(n);
+      if (!r || !d) return;
+      r.handsLeft = Math.max(0, r.handsLeft + d);
     },
 
     addDiscards(n) {
       const r = core.state.round;
-      if (!r || !n) return;
-      r.discardsLeft = Math.max(0, r.discardsLeft + n);
+      const d = intDelta(n);
+      if (!r || !d) return;
+      r.discardsLeft = Math.max(0, r.discardsLeft + d);
     },
 
     drawCards(n) {
@@ -109,10 +164,22 @@ export function createApi(core: GameCore): EngineApi {
 
     levelUpHand(hand: HandType, levels = 1) {
       const hl = core.state.handLevels[hand];
-      if (!hl || !levels) return;
+      const d = intDelta(levels);
+      if (!hl || !d) return;
       const before = hl.level;
-      hl.level = Math.max(1, hl.level + levels);
-      core.emit({ type: 'handLeveled', hand, level: hl.level, delta: hl.level - before });
+      hl.level = Math.max(1, hl.level + d);
+      if (hl.level !== before)
+        core.emit({ type: 'handLeveled', hand, level: hl.level, delta: hl.level - before });
+    },
+
+    levelUpAll(levels) {
+      for (const hand of HAND_TYPES) api.levelUpHand(hand, levels);
+    },
+
+    handBase(hand, level) {
+      const def = core.registry.handTypes[hand];
+      if (!def) throw new Error(`Unknown hand type ${hand}`);
+      return handValueAtLevel(def, level);
     },
 
     createJoker(opts: CreateJokerOptions = {}) {
@@ -122,7 +189,7 @@ export function createApi(core: GameCore): EngineApi {
       const defId = opts.defId ?? pickJokerDefId(core, rng, opts.rarity ? { rarity: opts.rarity } : {});
       if (!defId) return null;
       const j = newJokerInstance(core, defId, edition, opts.stickers ?? []);
-      addJokerInstance(core, j, true);
+      addJokerInstance(core, j, { ignoreSlots: true, acquire: true });
       return j;
     },
 
@@ -131,8 +198,27 @@ export function createApi(core: GameCore): EngineApi {
       const j = s.jokers.find((x) => x.uid === uid);
       if (!j || j.stickers.includes('eternal')) return;
       s.jokers = s.jokers.filter((x) => x !== j);
+      if (s.round) s.round.jokerDebuffs = s.round.jokerDebuffs.filter((x) => x !== uid);
       core.invalidate();
       core.emit({ type: 'jokerDestroyed', uid, defId: j.defId, reason });
+    },
+
+    setJokerDebuffed(uid, on) {
+      const r = core.state.round;
+      const j = core.state.jokers.find((x) => x.uid === uid);
+      if (!r || !j) return;
+      const before = j.debuffed;
+      if (on) {
+        if (!r.jokerDebuffs.includes(uid)) r.jokerDebuffs.push(uid);
+        j.debuffed = true;
+      } else {
+        // Ruší jen dočasný debuff — zvětralý žolík zůstává mimo provoz.
+        if (!r.jokerDebuffs.includes(uid)) return;
+        r.jokerDebuffs = r.jokerDebuffs.filter((x) => x !== uid);
+        j.debuffed = core.isPerished(j);
+      }
+      core.invalidate();
+      if (j.debuffed !== before) core.emit({ type: 'jokerDebuffChanged', uid, debuffed: j.debuffed });
     },
 
     createConsumable(opts: {
@@ -214,9 +300,63 @@ export function createApi(core: GameCore): EngineApi {
     modifyCard(cardId, patch) {
       const card = core.card(cardId);
       if (!card) return;
-      Object.assign(card, patch);
+      // Jen povolená pole a jen definované hodnoty (`{ suit: undefined }` kartu nerozbije, `id` nejde změnit).
+      for (const key of CARD_PATCH_KEYS) {
+        const value = patch[key];
+        if (value !== undefined) Object.assign(card, { [key]: value });
+      }
       if (core.state.round) card.debuffed = bossDebuffs(core, card);
       core.emit({ type: 'cardChanged', cardId });
+    },
+
+    discardFromHand(cardId) {
+      const r = core.state.round;
+      if (!r || !r.hand.includes(cardId)) return false;
+      r.hand = r.hand.filter((id) => id !== cardId);
+      r.discardPile.push(cardId);
+      core.emit({ type: 'cardsDiscarded', cardIds: [cardId], forced: true });
+      return true;
+    },
+
+    setCardFaceDown(cardId, on) {
+      const card = core.card(cardId);
+      if (!card || card.faceDown === on) return;
+      card.faceDown = on;
+      core.emit({ type: 'cardChanged', cardId });
+    },
+
+    shuffleHand() {
+      const r = core.state.round;
+      if (!r || r.hand.length < 2) return;
+      core.rng('deck').shuffle(r.hand);
+      core.emit({ type: 'handShuffled', cardIds: [...r.hand] });
+    },
+
+    addRoundHandSize(n) {
+      const r = core.state.round;
+      const d = intDelta(n);
+      if (!r || !d) return;
+      r.handSizeDelta += d;
+      core.invalidate();
+    },
+
+    changeAnte(delta) {
+      const s = core.state;
+      const next = Math.max(1, s.ante + intDelta(delta));
+      if (next === s.ante) return;
+      s.ante = next;
+      core.invalidate();
+      core.emit({ type: 'anteChanged', ante: s.ante });
+      revalidateBoss(core);
+    },
+
+    addPermanentModifier(delta) {
+      mergeDelta(core.state.extraModifiers, delta);
+      core.invalidate();
+    },
+
+    rerollBoss() {
+      return rerollBossSlot(core);
     },
 
     addTag(defId) {
@@ -226,7 +366,10 @@ export function createApi(core: GameCore): EngineApi {
       core.invalidate();
       core.emit({ type: 'tagAdded', uid: tag.uid, defId });
       const def = core.registry.tags[defId]!;
-      if (def.hooks.onAdded?.(core.tagCtx(tag))) {
+      const consumed = def.hooks.onAdded?.(core.tagCtx(tag));
+      // Hook mohl změnit stav štítku, na kterém závisí jeho `passive`.
+      core.invalidate();
+      if (consumed) {
         core.state.tags = core.state.tags.filter((t) => t !== tag);
         core.invalidate();
         core.emit({ type: 'tagTriggered', uid: tag.uid, defId });
@@ -236,11 +379,19 @@ export function createApi(core: GameCore): EngineApi {
     disableBoss() {
       const r = core.state.round;
       if (!r || !r.bossId || r.bossDisabled) return;
+      const before = core.mods();
       r.bossDisabled = true;
       core.invalidate();
+      // Pravidlo šéfa přestane platit i pro ruce a zahození (Polední pauza, Sucho v obci, Kocovina):
+      // rozdíl modifikátorů se promítne do zbývajících, ruce nejníž 1 (kolo nesmí uváznout bez ruky).
+      const after = core.mods();
+      if (after.hands !== before.hands) r.handsLeft = Math.max(1, r.handsLeft + after.hands - before.hands);
+      if (after.discards !== before.discards)
+        r.discardsLeft = Math.max(0, r.discardsLeft + after.discards - before.discards);
       refreshDebuffs(core);
+      core.clearJokerDebuffs();
       for (const id of r.hand) core.mustCard(id).faceDown = false;
-      core.emit({ type: 'message', key: 'boss.disabled', params: { boss: r.bossId } });
+      core.emit({ type: 'message', key: MSG.bossDisabled, params: { boss: r.bossId } });
     },
 
     message(key, params) {
@@ -251,17 +402,11 @@ export function createApi(core: GameCore): EngineApi {
     handCards: () => (core.state.round?.hand ?? []).map((id) => core.mustCard(id)),
     modifiers: () => core.mods(),
     handLevel: (hand) => core.state.handLevels[hand]?.level ?? 1,
-    isFace: (card: Card) => isFaceCard(card, core.mods(), enh()),
-    hasSuit: (card, suit) => cardHasSuit(card, suit, core.mods(), enh()),
-    cardChips: (card) => cardChips(card, enh()),
+    isFace: (card: Card) => isFaceCard(card, core.mods(), core.enhancements()),
+    hasSuit: (card, suit) => cardHasSuit(card, suit, core.mods(), core.enhancements()),
+    cardChips: (card) => cardChips(card, core.enhancements(), core.mods()),
     jokerSlots: () => core.mods().jokerSlots,
-    sellValue(joker) {
-      const def = core.registry.jokers[joker.defId];
-      if (joker.stickers.includes('rental')) return 1;
-      const edAdd = joker.edition ? (core.registry.editions[joker.edition]?.priceAdd ?? 0) : 0;
-      const base = (def?.cost ?? 0) + edAdd;
-      return Math.max(1, Math.floor(base / 2)) + joker.sellBonus;
-    },
+    sellValue: (joker) => jokerSellValue(core, joker),
   };
   return api;
 }

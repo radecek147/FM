@@ -142,8 +142,17 @@ export interface Modifiers {
   shopWeightRada: number;
   shopWeightRazitko: number;
   shopWeightPlayingCard: number;
-  /** Násobič šance na edici u žolíků a karet v obchodě. */
+  /** Násobič šance na lesklou/holografickou/duhovou edici (negativní nenásobí, DESIGN 2.6). */
   editionRateMult: number;
+  /**
+   * Příplatek ke každé ceně ve Večerce v Kč (Jedenáctka +1): žolíci, spotřebky, karty, obálky, kupóny
+   * i přehození. Prodejní ceny ani položky zdarma nemění.
+   */
+  shopPriceAdd: number;
+  /** Šance (0–1), že hrací karta nabízená ve Večerce má vylepšení (výchozí 0,2; Kartářka 0,5). */
+  playingCardEnhanceChance: number;
+  /** Šance (0–1), že hrací karta nabízená ve Večerce má pečeť (výchozí 0; Kartářka 0,2). */
+  playingCardSealChance: number;
 
   /** Násobič čitatele všech pravděpodobností („1 z 4“ → „2 z 4“). */
   probabilityMult: number;
@@ -162,6 +171,16 @@ export interface Modifiers {
   mergedSuits: boolean;
   /** Skórují všechny zahrané karty, ne jen ty v kombinaci. */
   allCardsScore: boolean;
+  /**
+   * Vylepšení hracích karet nefungují (Bílá hora): karta se chová, jako by vylepšení neměla —
+   * žádné efekty, kamenná má zase hodnotu a barvu, divoká jen svou barvu.
+   */
+  disableEnhancements: boolean;
+  /**
+   * Pevné čipy každé karty místo hodnoty + `bonusChips` (Normalizace: 5). 0 = vypnuto.
+   * Vylepšení a edice fungují normálně (kamenná tedy dá pevné čipy + svých +50).
+   */
+  fixedCardChips: number;
 }
 
 export type ModifierDelta = Partial<Modifiers>;
@@ -172,7 +191,7 @@ export type ModifierDelta = Partial<Modifiers>;
 export type JsonValue = number | string | boolean | null | JsonValue[] | { [k: string]: JsonValue };
 export type InstanceState = { [k: string]: JsonValue };
 
-/** Nálepky obtížností na žolících (věčný, kazící se, zapůjčený). */
+/** Nálepky obtížností na žolících: přibitý, zvětrávající, zapůjčený (DESIGN 4.6). Žolík má nejvýš jednu. */
 export type StickerId = 'eternal' | 'perishable' | 'rental';
 
 export interface JokerInstance {
@@ -183,7 +202,7 @@ export interface JokerInstance {
   /** Prodejní cena navíc (roste u některých žolíků). */
   sellBonus: number;
   stickers: StickerId[];
-  /** Kazící se žolík: kolik kol zbývá. */
+  /** Zvětrávající žolík: kolik dokončených kol zbývá, než zvětrá (0 = zvětralý, trvale debuffnutý). */
   perishRounds?: number;
   debuffed: boolean;
 }
@@ -209,7 +228,7 @@ export const BLIND_KINDS: readonly BlindKind[] = ['small', 'big', 'boss'];
 
 export interface BlindSlot {
   kind: BlindKind;
-  /** Id šéfa (jen pro kind === 'boss'). */
+  /** Id šéfa: u `boss` šéf patra; u `big` pravidlo šéfa navíc (Imperial, `StakeDef.bigBlindBoss`), jinak null. */
   bossId: string | null;
   /** Štítek, který hráč dostane za přeskočení (jen small/big). */
   skipTagId: string | null;
@@ -235,36 +254,52 @@ export interface RoundState {
   discardsUsed: number;
   /** Typy kombinací zahrané v tomto kole (v pořadí). */
   handTypesPlayed: HandType[];
-  /** Volné pole pro šéfy/žolíky s per-kolo stavem. */
+  /** Dočasná změna velikosti ruky do konce kola (`EngineApi.addRoundHandSize`; Velká voda, Rozložené noviny). */
+  handSizeDelta: number;
+  /** Uid žolíků dočasně debuffnutých do konce kola (`EngineApi.setJokerDebuffed`; Exekutor, Krajský úřad…). */
+  jokerDebuffs: number[];
+  /** Volné pole pro šéfy/žolíky s per-kolo stavem (např. dočasné debuffy karet od Černé kočky). */
   flags: InstanceState;
 }
 
 // ─────────────────────────── Obchod a boostery ───────────────────────────
 
-export type ShopItem =
-  | { kind: 'joker'; joker: JokerInstance; price: number; sold: boolean }
-  | {
-      kind: 'consumable';
-      consumable: ConsumableInstance;
-      consumableKind: ConsumableKind;
-      price: number;
-      sold: boolean;
-    }
-  | { kind: 'card'; card: Card; price: number; sold: boolean };
-
-export interface ShopBooster {
-  boosterId: string;
+/** Společná pole položek Večerky. */
+export interface ShopPriced {
+  /** Aktuální cena v Kč (engine ji přepočítá po každé akci ve Večerce — slevy, `shopPriceAdd`). */
   price: number;
   sold: boolean;
+  /** Zdarma (štítek, efekt): cena je 0, a to i při `shopPriceAdd`. */
+  free?: boolean;
+}
+
+export type ShopItem = ShopPriced &
+  (
+    | { kind: 'joker'; joker: JokerInstance }
+    | { kind: 'consumable'; consumable: ConsumableInstance; consumableKind: ConsumableKind }
+    | { kind: 'card'; card: Card }
+  );
+
+/** Obálka nabízená ve Večerce. */
+export interface ShopBooster extends ShopPriced {
+  boosterId: string;
+}
+
+/** Kupón nabízený ve Večerce (drží se přes všechny Večerky patra). */
+export interface ShopVoucher extends ShopPriced {
+  voucherId: string;
 }
 
 export interface ShopState {
   items: ShopItem[];
   boosters: ShopBooster[];
   /** Kupóny nabízené v tomto patře (obnovují se po porážce šéfa). */
-  vouchers: { voucherId: string; price: number; sold: boolean }[];
+  vouchers: ShopVoucher[];
+  /** Cena příštího přehození (0, pokud je k dispozici bezplatné přehození). */
   rerollCost: number;
   rerollsThisShop: number;
+  /** Placená přehození v této Večerce (každé zdraží další o `rerollCostStep`). */
+  paidRerolls: number;
   /** Počet bezplatných přehození (ze štítků). */
   freeRerolls: number;
 }
@@ -306,6 +341,8 @@ export interface RunStats {
   jokersSold: number;
   consumablesUsed: number;
   rerolls: number;
+  /** Kolikrát hráč vstoupil do Večerky (první Večerka runu má zaručenou Žolíkovou obálku). */
+  shopsEntered: number;
   blindsSkipped: number;
   bossesDefeated: number;
   roundsWon: number;
@@ -324,7 +361,8 @@ export interface RoundRewards {
   unusedHands: number;
   unusedDiscards: number;
   interest: number;
-  extra: { source: string; amount: number }[];
+  /** Bonusy a srážky (`source` např. `held`, `joker:<id>`, `rental:<id>`, `rentalReturned:<id>`). */
+  extra: { source: string; amount: number; jokerUid?: number }[];
   total: number;
 }
 
@@ -360,7 +398,11 @@ export interface RunState {
   jokers: JokerInstance[];
   consumables: ConsumableInstance[];
   handLevels: Record<HandType, HandLevelState>;
-  /** Kombinace objevené v tomto runu (tajné se ukazují až po objevení). */
+  /**
+   * Kombinace zahrané (objevené) v tomto runu, v pořadí objevu. Pranostiky tajných kombinací se v obchodě
+   * a obálkách nabízejí až po objevu (DESIGN 2.2.4).
+   */
+  discoveredHands: HandType[];
   vouchers: string[];
   tags: TagInstance[];
   shop: ShopState | null;
@@ -403,7 +445,11 @@ export type Action =
   | { type: 'buyVoucher'; slot: number }
   | { type: 'reroll' }
   | { type: 'leaveShop' }
-  | { type: 'pickBooster'; index: number; targetIds?: number[] }
+  /**
+   * Výběr z obálky. Spotřebka se použije hned (s cíli `targetIds`), nebo se s `keep: true` uloží
+   * do volného slotu spotřebek (DESIGN 2.9).
+   */
+  | { type: 'pickBooster'; index: number; targetIds?: number[]; keep?: boolean }
   | { type: 'skipBooster' }
   | { type: 'sellJoker'; uid: number }
   | { type: 'sellConsumable'; uid: number }
@@ -472,6 +518,8 @@ export interface HandPreview {
   chips: number;
   mult: number;
   level: number;
+  /** Výběr obsahuje kartu lícem dolů — náhled se nepočítá a UI ukáže „?“ (DESIGN 2.1). */
+  hidden: boolean;
 }
 
 // ─────────────────────────── Události ───────────────────────────
@@ -484,7 +532,10 @@ export type GameEvent =
   | { type: 'roundStarted'; ante: number; blind: BlindKind; target: number }
   | { type: 'cardsDrawn'; cardIds: number[] }
   | { type: 'handPlayed'; result: ScoreResult; roundScore: number }
-  | { type: 'cardsDiscarded'; cardIds: number[] }
+  /** Zahozené karty; `forced` = zahození efektem (šéf), ne akcí hráče. */
+  | { type: 'cardsDiscarded'; cardIds: number[]; forced?: boolean }
+  /** Pořadí karet v ruce se změnilo efektem (zamíchání). */
+  | { type: 'handShuffled'; cardIds: number[] }
   | { type: 'cardDestroyed'; cardId: number; reason: string }
   | { type: 'cardAdded'; cardId: number; source: string }
   | { type: 'cardChanged'; cardId: number }
@@ -505,6 +556,8 @@ export type GameEvent =
   | { type: 'jokerSold'; uid: number; defId: string; price: number }
   | { type: 'jokerDestroyed'; uid: number; defId: string; reason: string }
   | { type: 'jokerTriggered'; uid: number; defId: string; message: string }
+  /** Žolík byl dočasně (do konce kola) debuffnut nebo debuff skončil. */
+  | { type: 'jokerDebuffChanged'; uid: number; debuffed: boolean }
   | { type: 'consumableAdded'; uid: number; defId: string }
   | { type: 'consumableUsed'; uid: number; defId: string }
   | { type: 'consumableSold'; uid: number; defId: string; price: number }

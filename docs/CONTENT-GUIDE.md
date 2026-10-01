@@ -51,7 +51,15 @@ Spotřebky mají tři soubory podle `CLAUDE.md` kap. 2 (`pranostiky.ts`, `rady.t
 - **Stav.** Hook smí měnit jen `ctx.self.state` (žolíci, štítky) a zbytek světa přes `ctx.api.*`.
   Stav musí být JSON-serializovatelný (čísla, řetězce, booleany, pole, prosté objekty).
 - **Kopie.** Když hook běží s `ctx.isCopy === true` (kopírující žolík), **nesmí** měnit `self.state` —
-  jinak by se počítadla navyšovala dvakrát.
+  jinak by se počítadla navyšovala dvakrát. Engine to jistí i sám: `ctx.self` je pak kopie instance cíle (změny se
+  zahodí), takže ji neporovnávej identitou (`===`) s instancemi ve `state.jokers` — pozici dává `ctx.index`.
+  `ctx.self.uid` je i v kopii uid **cíle**: hook, který ničí sám sebe (`api.destroyJoker(ctx.self.uid)`), musí při
+  `isCopy` skončit, jinak kopírující žolík zničí originál.
+- **`passive` je čistá funkce.** Volá se kdykoli (i při dotazech UI) a nesmí nic měnit; `ctx.rng`/`ctx.chance` v ní
+  pracují na kopii streamu (stav RNG se neposune). Totéž platí pro `ConsumableDef.canUse` a šéfův `modifyBase`
+  v náhledu ruky. Objekt `ctx.mods` / `api.modifiers()` je zmrazený — pravidla měň deltou, ne zápisem do něj.
+- **Čísla musí být konečná.** NaN z hooku engine ignoruje; nekonečno ve skórování ořízne na `Number.MAX_VALUE`,
+  jinde (delty modifikátorů, peníze, odměny, příkazy API) ho ignoruje.
 - **Modifikátory se skládají.** Delty `Modifiers` se sčítají (pole končící na `Mult` se násobí,
   booleany ORují) — `0` tedy neznamená „vypnout“, ale „beze změny“. Na „−1 zahození“ vrať `discards: -1`.
 - **Žádné texty v obsahu.** Definice obsahuje jen i18n klíče (např. `message: 'jokers.chronicler.note'`).
@@ -168,8 +176,8 @@ export const jokers = {
 ### 3.3 Test
 
 Každý žolík má aspoň jeden test — efekt nastane, když má, a nenastane, když nemá. U žolíků se stavem
-navíc kopie (`isCopy`) a save/load. Testovací helpery (`tests/unit/helpers.ts`) vzniknou ve fázích 1–4;
-schematicky:
+navíc kopie (`isCopy`) a save/load. Testovací helpery jsou v `tests/unit/fixtures/registry.ts` (`makeRegistry`,
+`makeGame`, `setupRound`, `play`, zápis karet `KH:mult@red~foil`); další přibudou s obsahem. Schematicky:
 
 ```ts
 // tests/unit/jokers/chronicler.test.ts

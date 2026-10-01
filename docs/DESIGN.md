@@ -499,7 +499,7 @@ náhody, aby náhled nic neprozrazoval a byl levný.
 
 **Situace (pozdní fáze runu):**
 
-- Kombinace: **Full house** na úrovni 2 → čipy `45 + 28 = 73`, mult `4 + 2 = 6`.
+- Kombinace: **Full house** na úrovni 2 → čipy `45 + 28 = 73`, mult `5 + 2 = 7`.
 - Zahráno (zleva): **K♥** Pálivá (+5 mult) · **K♠** lesklá edice (+50 čipů) · **K♦** · **5♣** Prémiová (+25 čipů)
   · **5♥** Skleněná (×2 mult) s červenou pečetí.
 - V ruce zůstaly: **Q♠** Ocelová · **Q♣** · **7♦**.
@@ -508,33 +508,34 @@ náhody, aby náhled nic neprozrazoval a byl levný.
 
 | Krok | Zdroj                              | Změna                        | Čipy |       Mult |
 | ---- | ---------------------------------- | ---------------------------- | ---: | ---------: |
-| 1    | Full house úr. 2                   | základ                       |   73 |          6 |
-| 2    | K♥ čipy                            | +10                          |   83 |          6 |
-| 2    | K♥ Pálivá                          | +5 mult                      |   83 |         11 |
-| 2    | K♥ → Srdcař                        | +5 čipů, +2 mult             |   88 |         13 |
-| 2    | K♠ čipy                            | +10                          |   98 |         13 |
-| 2    | K♠ lesklá                          | +50                          |  148 |         13 |
-| 2    | K♦ čipy                            | +10                          |  158 |         13 |
-| 2    | 5♣ čipy                            | +5                           |  163 |         13 |
-| 2    | 5♣ Prémiová                        | +25                          |  188 |         13 |
-| 2    | 5♥ čipy                            | +5                           |  193 |         13 |
-| 2    | 5♥ Skleněná                        | ×2                           |  193 |         26 |
-| 2    | 5♥ → Srdcař                        | +5 čipů, +2 mult             |  198 |         28 |
-| 2    | 5♥ **znovu** (červená pečeť): čipy | +5                           |  203 |         28 |
-| 2    | 5♥ Skleněná                        | ×2                           |  203 |         56 |
-| 2    | 5♥ → Srdcař                        | +5 čipů, +2 mult             |  208 |         58 |
-| 3    | Q♠ Ocelová (v ruce)                | ×1,5                         |  208 |         87 |
-| 3    | Q♣, 7♦ (v ruce)                    | —                            |  208 |         87 |
-| 4    | [1] Srdcař — holografická (před)   | +10 mult                     |  208 |         97 |
-| 4    | [1] Srdcař — vlastní efekt po ruce | žádný (reaguje jen na karty) |  208 |         97 |
-| 4    | [2] Pivní tácek                    | +10 čipů, +2 mult            |  218 |         99 |
-| 4    | [3] Zpožděný rychlík               | ×1,5                         |  218 |      148,5 |
-| 4    | [3] duhová (po)                    | ×1,5                         |  218 |     222,75 |
-| 5    | výsledek                           | `floor(218 × 222,75)`        |      | **48 559** |
+| 1    | Full house úr. 2                   | základ                       |   73 |          7 |
+| 2    | K♥ čipy                            | +10                          |   83 |          7 |
+| 2    | K♥ Pálivá                          | +5 mult                      |   83 |         12 |
+| 2    | K♥ → Srdcař                        | +5 čipů, +2 mult             |   88 |         14 |
+| 2    | K♠ čipy                            | +10                          |   98 |         14 |
+| 2    | K♠ lesklá                          | +50                          |  148 |         14 |
+| 2    | K♦ čipy                            | +10                          |  158 |         14 |
+| 2    | 5♣ čipy                            | +5                           |  163 |         14 |
+| 2    | 5♣ Prémiová                        | +25                          |  188 |         14 |
+| 2    | 5♥ čipy                            | +5                           |  193 |         14 |
+| 2    | 5♥ Skleněná                        | ×2                           |  193 |         28 |
+| 2    | 5♥ → Srdcař                        | +5 čipů, +2 mult             |  198 |         30 |
+| 2    | 5♥ **znovu** (červená pečeť): čipy | +5                           |  203 |         30 |
+| 2    | 5♥ Skleněná                        | ×2                           |  203 |         60 |
+| 2    | 5♥ → Srdcař                        | +5 čipů, +2 mult             |  208 |         62 |
+| 3    | Q♠ Ocelová (v ruce)                | ×1,5                         |  208 |         93 |
+| 3    | Q♣, 7♦ (v ruce)                    | —                            |  208 |         93 |
+| 4    | [1] Srdcař — holografická (před)   | +10 mult                     |  208 |        103 |
+| 4    | [1] Srdcař — vlastní efekt po ruce | žádný (reaguje jen na karty) |  208 |        103 |
+| 4    | [2] Pivní tácek                    | +10 čipů, +2 mult            |  218 |        105 |
+| 4    | [3] Zpožděný rychlík               | ×1,5                         |  218 |      157,5 |
+| 4    | [3] duhová (po)                    | ×1,5                         |  218 |     236,25 |
+| 5    | výsledek                           | `floor(218 × 236,25)`        |      | **51 502** |
 
 Po sečtení: hod skla u 5♥ (1 z 5, jednou za ruku) — když praskne, karta se zničí až teď. Kdyby Zpožděný rychlík
-„nabral zpoždění“, jeho vlastní ×1,5 by odpadlo, ale duhová edice by platila dál: `floor(218 × 148,5) = 32 373`.
-(Jeden efekt s čipy i multem se v UI ukáže jako dva kroky: nejdřív čipy, pak mult.)
+„nabral zpoždění“, jeho vlastní ×1,5 by odpadlo, ale duhová edice by platila dál: `floor(218 × 157,5) = 34 335`.
+(Jeden efekt s čipy i multem se v UI ukáže jako dva kroky: nejdřív čipy, pak mult — `ScoreStep` je vždy jedna
+změna. Přesné pořadí kroků hlídá test „pracovní příklad z DESIGN 3.2“ v `tests/unit/scoring.test.ts`.)
 
 Poučení pro hráče (do tipů na načítací obrazovce): **+mult patří doleva, ×mult doprava** a ocelové karty
 nech v ruce.

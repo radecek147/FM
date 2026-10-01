@@ -60,21 +60,22 @@ Denní run: `dailySeed(date)` = `DEN-YYYYMMDD` (UTC).
 
 ### 2.4 Moduly
 
-| Modul                     | Odpovědnost                                                                              |
-| ------------------------- | ---------------------------------------------------------------------------------------- |
-| `engine/types.ts`         | datové typy stavu, akcí, událostí                                                        |
-| `engine/content-types.ts` | rozhraní definic obsahu, hooků, `EngineApi`, `ContentRegistry`                           |
-| `engine/rng/`             | seedovaný RNG                                                                            |
-| `engine/events.ts`        | typovaný `EventBus`                                                                      |
-| `engine/cards/`           | tvorba karet, standardní balíček, čipy karty, barvy (divoká/kamenná)                     |
-| `engine/hands/`           | detekce kombinací (vč. tajných, divokých karet, modifikátorů 4 prstů/mezer/kolem dokola) |
-| `engine/scoring/`         | skórovací pipeline → `ScoreResult` s kroky pro animaci                                   |
-| `engine/effects/`         | skládání `Modifiers`, volání hooků žolíků/šéfů/štítků, implementace `EngineApi`          |
-| `engine/run/`             | `Game` — stavový automat runu (útraty, kola, odměny, konec, nekonečný režim), cíle       |
-| `engine/shop/`            | generování obchodu a boosterů, ceny, přehození, prodej                                   |
-| `engine/save/`            | serializace, verze formátu, migrace                                                      |
-| `engine/meta/`            | profil hráče: odemykání, statistiky, achievementy, historie (fáze 8)                     |
-| `engine/sim/`             | boti a headless simulace (`npm run simulate`)                                            |
+| Modul                     | Odpovědnost                                                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `engine/types.ts`         | datové typy stavu, akcí, událostí                                                                                         |
+| `engine/content-types.ts` | rozhraní definic obsahu, hooků, `EngineApi`, `ContentRegistry`                                                            |
+| `engine/constants.ts`     | čísla pravidel z DESIGN 2.10 (odměny, násobky útrat, vzácnosti, nálepky, strop opakování, seed) a i18n klíče hlášek `MSG` |
+| `engine/rng/`             | seedovaný RNG                                                                                                             |
+| `engine/events.ts`        | typovaný `EventBus`                                                                                                       |
+| `engine/cards/`           | tvorba karet, standardní balíček, čipy karty, barvy (divoká/kamenná)                                                      |
+| `engine/hands/`           | detekce kombinací (vč. tajných, divokých karet, modifikátorů 4 prstů/mezer/kolem dokola)                                  |
+| `engine/scoring/`         | skórovací pipeline → `ScoreResult` s kroky pro animaci                                                                    |
+| `engine/effects/`         | skládání `Modifiers`, volání hooků žolíků/šéfů/štítků, implementace `EngineApi`                                           |
+| `engine/run/`             | `Game` — stavový automat runu (útraty, kola, odměny, konec, nekonečný režim), cíle, losování šéfů (`bosses.ts`)           |
+| `engine/shop/`            | generování obchodu a boosterů (`shop.ts`), pooly a edice (`pool.ts`), ceny a prodej (`prices.ts`)                         |
+| `engine/save/`            | serializace, verze formátu, migrace                                                                                       |
+| `engine/meta/`            | profil hráče: odemykání, statistiky, achievementy, historie (fáze 8)                                                      |
+| `engine/sim/`             | boti a headless simulace (`npm run simulate`)                                                                             |
 
 ### 2.5 Skórování (pořadí je závazné a otestované)
 
@@ -86,20 +87,37 @@ Denní run: `dailySeed(date)` = `DEN-YYYYMMDD` (UTC).
    žolíci zleva doprava (`onCardScored`). Opakované aktivace (červená pečeť, `retriggerScored`)
    zopakují celou sekvenci. Debuffnutá karta nedává nic (ale počítá se do kombinace).
 3. **Karty držené v ruce** zleva doprava: vylepšení (`onHeld`, např. ocelová ×1,5) → žolíci
-   (`onCardHeld`), včetně opakování (`retriggerHeld`).
+   (`onCardHeld`), včetně opakování (`retriggerHeld`). `EffectResult.destroyCard` tu nic nezničí — platí jen
+   pro efekty skórující karty (krok 2 a `afterScored`).
 4. **Žolíci zleva doprava** (`onHandPlayed`): edice žolíka typu „before“ (lesklá +čipy,
    holografická +mult) → vlastní efekt žolíka → edice typu „after“ (duhová ×mult).
-5. `score = floor(chips × mult)`. Pak `afterHandScored` (počítadla), šéf `afterHandPlayed`,
-   zničení karet (sklo praskne apod.).
+5. `score = floor(chips × mult)`, šéf může skóre upravit (`BossHooks.adjustHandScore`). Pak `afterHandScored`
+   (počítadla), šéf `afterHandPlayed`, `afterScored` vylepšení (jednou za ruku: hod skla, Ohmataná +3 čipy;
+   `afterScoredCards` ve `scoring/score.ts`) a zničení označených karet.
 
-Každá změna čipů/multu/peněz se zapíše jako `ScoreStep` (s průběžnými hodnotami), UI je přehraje.
+Počet aktivací jedné karty je nejvýš `MAX_ACTIVATIONS_PER_CARD` (10). Platná vylepšení dává `GameCore.enhancements()`
+— při `Modifiers.disableEnhancements` (Bílá hora) prázdný registr, karta se pak chová jako bez vylepšení.
+
+Každá změna čipů/multu/peněz se zapíše jako **samostatný** `ScoreStep` (s průběžnými hodnotami), UI je přehraje —
+efekt `{ chips, mult }` dá dva kroky (čipy → mult → ×mult → peníze), zpráva efektu patří k jeho prvnímu kroku.
+Neplatné hodnoty efektu (NaN) se ignorují, nekonečno se ořízne na `Number.MAX_VALUE` (skóre ruky i kola zůstává
+konečné, aby šlo uložit do JSON).
 Velká čísla: počítáme v `number` (double); nad 1e15 formátujeme vědecky (`src/i18n/format.ts`).
 
 ### 2.6 Modifikátory
 
 `Modifiers` = `BASE_MODIFIERS` + delty ze zdrojů v tomto pořadí: obtížnost (všechny úrovně ≤ zvolená),
-balíček, výzva (`extraModifiers`), kupóny, štítky, žolíci (`passive`), šéf (`passive`, pokud není
-vypnutý). Čísla se sčítají, pole končící na `Mult` se násobí, booleany se ORují.
+balíček, výzva a trvalé efekty (`extraModifiers`, doplňuje `api.addPermanentModifier` přes `mergeDelta`), kupóny,
+štítky, žolíci (`passive`), šéf (`passive`, pokud není vypnutý), dočasná velikost ruky kola
+(`RoundState.handSizeDelta`). Čísla se sčítají, pole končící na `Mult` se násobí, booleany se ORují; výsledek se
+ořízne na rozumné meze (`clampModifiers`). Neplatná čísla v deltě (NaN, ±∞) i přetečení se ignorují.
+
+`GameCore.mods()` drží výsledek v cache a vrací ho **zmrazený** (nikdo ho nesmí měnit — pravidla mění jen delty).
+Cache se zneplatní po každé změně, která může změnit výsledek: příkazy API, každý hook žolíka/štítku, hooky šéfa
+s vedlejšími účinky (`onRoundStart`, `afterHandPlayed`, `onDiscard`, `onDraw`) a konec akce. `passive` musí být čistá
+funkce; běží v `GameCore.readOnly` — `ctx.rng`/`ctx.chance` v ní pracují na kopii streamu a stav RNG neposunou
+(stejně náhled ruky a `ConsumableDef.canUse`: dotazy UI nesmí měnit run). `passive`, která sama čte `mods()`, dostane
+`BASE_MODIFIERS` (ochrana proti rekurzi).
 
 ### 2.7 Hooky obsahu
 
@@ -109,8 +127,50 @@ Viz `JokerHooks`, `BossHooks`, `TagHooks` v `content-types.ts`. Hooky smí:
 - měnit **pouze** `ctx.self.state` (žolíci/štítky) a stav přes `ctx.api` příkazy,
 - pro náhodu používat výhradně `ctx.rng` / `ctx.chance(n, d)`.
 
+`EngineApi` (`ctx.api`, implementace `effects/api.ts`, typy v `content-types.ts`) — příkazy jsou deterministické,
+emitují události a respektují limity (sloty, dluhový limit, „jen během kola“):
+
+| Oblast             | Příkazy                                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| peníze             | `addMoney` (ořízne dluhovým limitem), `setMoney` (přesně)                                                                |
+| kolo a ruka        | `addHands`, `addDiscards`, `drawCards`, `addRoundHandSize`, `discardFromHand`, `setCardFaceDown`, `shuffleHand`          |
+| kombinace          | `levelUpHand`, `levelUpAll`, `handBase` (dotaz na základ úrovně)                                                         |
+| žolíci a spotřebky | `createJoker`, `destroyJoker`, `setJokerDebuffed`, `createConsumable`                                                    |
+| karty balíčku      | `addCard`, `copyCard`, `destroyCard`, `modifyCard`                                                                       |
+| run                | `addTag`, `disableBoss`, `rerollBoss`, `changeAnte`, `addPermanentModifier`, `message` (i18n klíč)                       |
+| dotazy (bez změn)  | `getCard`, `handCards`, `modifiers` (zmrazené), `handLevel`, `isFace`, `hasSuit`, `cardChips`, `jokerSlots`, `sellValue` |
+
+Číselné vstupy příkazů: NaN a ±∞ se ignorují, počty (ruce, zahození, úrovně, patra, velikost ruky) se usekávají na
+celá čísla, peníze a statistiky se zastaví na `Number.MAX_VALUE` — stav musí zůstat uložitelný do JSON.
+
 Kopírující žolíci (`copyTarget`) volají hook cílového žolíka s `isCopy = true` — hook pak nesmí měnit
-`self.state` (aby se počítadla nenavyšovala dvakrát).
+`self.state` (aby se počítadla nenavyšovala dvakrát); engine to jistí i sám: při `isCopy` dostane hook kopii instance
+cíle a její změny se zahodí. V řetězu kopírujících žolíků dostane každý článek do `copyTarget` svou vlastní pozici
+(`index`), hook cíle pak pozici kopírujícího. Cyklus, debuffnutý cíl nebo `copyable: false` = nic.
+`JokerCtx.index` je vždy **aktuální** pozice žolíka — když hook dřív v témže průchodu zničí jiného žolíka (Sněhulák
+roztaje), ostatní se posunou a kopírující „souseda“ vidí skutečného souseda.
+
+Robustnost: vnoření téhož hooku žolíků (`onCardAdded` → `api.addCard` → `onCardAdded`…) je omezené
+`MAX_NESTED_HOOK_DEPTH` (3), hlubší volání se přeskočí. Žolík s id, které registr nezná (obsah odebraný od uložení),
+nic nedělá — stejně jako neznámý šéf, štítek, vylepšení či edice. Výjimka z hooku uprostřed akce vrátí stav do stavu
+před akcí (jako neplatná akce) a propadne volajícímu. Po každé akci `dispatch` dobere prázdnou ruku v kole (spotřebka
+zničila celou ruku…); nejsou-li karty ani pak, je to prohra z nedostatku karet.
+
+Debuffy hracích karet určuje jen šéf (`BossHooks.isCardDebuffed`). Dočasné debuffy z jeho pravidla (Černá kočka) se
+ukládají do `RoundState.flags`; engine po hooku šéfa `onRoundStart`, `afterHandPlayed` (až po `afterScored`),
+`onDiscard` a `onDraw` přepočítá `Card.debuffed` celého balíčku, takže platí hned i pro karty v ruce.
+
+Zvláštní hooky (volají se jen jednomu adresátovi, ne všem zleva doprava): `JokerHooks.onAcquire` (žolík vstoupil do
+slotů — koupě, obálka, `createJoker`; ne startovní žolíci výzvy), `JokerHooks.preventGameOver` a
+`TagHooks.onRoundLost` (záchrana prohraného kola; štítky se ptají první), `DeckDef.onBossDefeated`. Hlášky, které
+engine emituje (`ScoreStep.message`, událost `message`), jsou i18n klíče z `MSG` v `engine/constants.ts`.
+
+### 2.8 Večerka a ceny
+
+Ceny počítá `shop/prices.ts` podle DESIGN 2.5.2 (sleva zaokrouhlená polovinou nahoru, minimum 1 Kč, pak
+`shopPriceAdd`; položky `free` za 0). `Game.dispatch` po každé úspěšné akci přepočítá ceny neprodaných položek
+(`refreshShopPrices`), takže kupón se slevou platí hned. Prodejní ceny nezávisí na slevách ani `shopPriceAdd`.
+Akce `pickBooster` umí `keep: true` — vybraná spotřebka se uloží do slotu místo použití.
 
 ## 3. Obsah (`src/content`)
 
@@ -134,8 +194,9 @@ flavor a že texty dodržují typografii.
 ## 5. Ukládání
 
 - `localStorage`: `karban.profile` (profil, odemčení, statistiky, nastavení) a `karban.run` (rozehraný run).
-- Formát `{ format: 'karban-save', kind: 'run' | 'profile', version: N, data }`. Migrace v
-  `src/engine/save/migrations.ts` (čisté funkce `vN → vN+1`), testované. Profil se nikdy nesmí ztratit:
+- Formát `{ format: 'karban-save', kind: 'run' | 'profile', version: N, savedAt, data }` (`src/engine/save/save.ts`:
+  `serializeRun`, `deserializeRun`, `SaveError`). Migrace `RUN_MIGRATIONS` ve stejném souboru (čisté funkce
+  `vN → vN+1`, aplikují se postupně; testy roundtripu a migrací patří do fáze 2). Profil se nikdy nesmí ztratit:
   při chybě načtení se poškozená data zálohují do `karban.profile.backup.<timestamp>`.
 - Export/import JSON z nastavení.
 

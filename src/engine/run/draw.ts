@@ -14,6 +14,16 @@ export function refreshDebuffs(core: GameCore): void {
   for (const c of core.state.deck) c.debuffed = core.state.round ? bossDebuffs(core, c) : false;
 }
 
+/**
+ * Po hooku šéfa, který mohl změnit `round.flags` (`onRoundStart`, `afterHandPlayed`, `onDiscard`, `onDraw`):
+ * přepočítá debuffy celého balíčku, má-li aktivní šéf `isCardDebuffed`. Dočasné debuffy z efektů (Černá kočka)
+ * se ukládají do `round.flags` a `isCardDebuffed` je čte (DESIGN příloha B) — bez přepočtu by platily jen pro
+ * karty líznuté až potom, ne pro karty, které už jsou v ruce.
+ */
+export function refreshBossDebuffs(core: GameCore): void {
+  if (core.activeBoss()?.hooks.isCardDebuffed) refreshDebuffs(core);
+}
+
 /** Dobere až `n` karet z vršku dobíracího balíčku do ruky. Vrací id líznutých karet. */
 export function drawCards(core: GameCore, n: number): number[] {
   const round = core.state.round;
@@ -38,6 +48,9 @@ export function drawCards(core: GameCore, n: number): number[] {
     core.emit({ type: 'cardsDrawn', cardIds: drawn });
     if (boss?.hooks.onDraw) {
       boss.hooks.onDraw(Object.assign(core.bossCtx(), { drawn: drawn.map((id) => core.mustCard(id)) }));
+      // Hook mohl změnit stav, na kterém závisí `passive` šéfa.
+      core.invalidate();
+      refreshBossDebuffs(core);
     }
   }
   return drawn;

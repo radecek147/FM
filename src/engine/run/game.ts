@@ -4,22 +4,20 @@
  */
 import type { BaseCtx, ConsumableCtx, ContentRegistry, NewRunOptions } from '../content-types';
 import { compareCards } from '../cards/cards';
+import { BLIND_REWARDS, BOSS_REROLL_COST, FINAL_ANTE, MSG, RENTAL_FEE } from '../constants';
 import {
   addConsumableInstance,
   addJokerInstance,
+  consumableHasRoom,
+  jokerHasRoom,
   newConsumableInstance,
   newJokerInstance,
 } from '../effects/api';
 import { GameCore, extend } from '../effects/core';
 import type { EventBus } from '../events';
-import { previewHand, scoreHand } from '../scoring/score';
-import {
-  consumablePrice,
-  generateShop,
-  generateShopItems,
-  openBooster,
-  rollAnteVouchers,
-} from '../shop/shop';
+import { afterScoredCards, previewHand, safe, scoreHand } from '../scoring/score';
+import { consumableSellValue, jokerSellValue, refreshShopPrices } from '../shop/prices';
+import { generateShop, generateShopItems, openBooster, rollAnteVouchers } from '../shop/shop';
 import type {
   Action,
   ActionErrorCode,
@@ -35,13 +33,18 @@ import type {
   RunState,
 } from '../types';
 import { BLIND_KINDS } from '../types';
-import { drawCards, fillHand, refreshDebuffs } from './draw';
+import { pickBigBlindBossId, pickBossId, rerollBossSlot, stakeBigBlindBoss } from './bosses';
+import { drawCards, fillHand, refreshBossDebuffs, refreshDebuffs } from './draw';
 import { createRunState } from './init';
 import { blindTarget } from './targets';
 
-export const BLIND_REWARDS: Record<BlindKind, number> = { small: 3, big: 4, boss: 5 };
-export const FINAL_ANTE = 8;
-export const DEFAULT_BOSS_REROLL_COST = 10;
+/** Re-export pro starší importy — konstanty žijí v engine/constants.ts. */
+export { BLIND_REWARDS, FINAL_ANTE };
+
+/** Částka z obsahu do rozpisu odměn: jen konečné číslo (NaN/nekonečno = 0 — rozpis je součástí uloženého stavu). */
+function rewardAmount(n: unknown): number {
+  return typeof n === 'number' && Number.isFinite(n) ? n : 0;
+}
 
 class ActionError extends Error {
   constructor(public readonly code: ActionErrorCode) {
@@ -64,8 +67,8 @@ export class Game {
 
   static newRun(opts: NewRunOptions, registry: ContentRegistry): Game {
     // Seed generuje volající (UI/simulace) — engine nesmí používat Math.random.
-    if (!opts.seed) throw new Error('Game.newRun: seed is required');
-    const seed = opts.seed.trim().toUpperCase();
+    const seed = (opts.seed ?? '').trim().toUpperCase();
+    if (!seed) throw new Error('Game.newRun: seed is required');
     const state = createRunState({ ...opts, seed }, registry);
     const game = new Game(new GameCore(state, registry));
     game.initRun(opts);
@@ -89,8 +92,10 @@ export class Game {
     reg.decks[s.deckId]?.onRunStart?.(ctx);
     const ch = opts.challengeId ? reg.challenges[opts.challengeId] : undefined;
     if (ch) {
+      // Startovní žolíci výzvy nejsou „získaní“ — `onAcquire` se nevolá (např. Golem v Kamenolomu).
       for (const j of ch.startingJokers ?? []) {
-        addJokerInstance(core, newJokerInstance(core, j.defId, j.edition ?? null, j.stickers ?? []), true);
+        const joker = newJokerInstance(core, j.defId, j.edition ?? null, j.stickers ?? []);
+        addJokerInstance(core, joker, { ignoreSlots: true });
       }
       for (const c of ch.startingConsumables ?? [])
         addConsumableInstance(core, newConsumableInstance(core, c), true);
@@ -130,9 +135,12 @@ export class Game {
     return this.core.card(id);
   }
 
+  /** Prodejní cena žolíka nebo spotřebky (podle uid), 0 když neexistuje. */
   sellValue(uid: number): number {
     const j = this.core.state.jokers.find((x) => x.uid === uid);
-    return j ? this.core.api.sellValue(j) : 0;
+    if (j) return jokerSellValue(this.core, j);
+    const c = this.core.state.consumables.find((x) => x.uid === uid);
+    return c ? consumableSellValue(this.core, c) : 0;
   }
 
   /** Lze spotřebku teď použít s danými cíli? */
@@ -171,18 +179,21 @@ export class Game {
     core.takeEvents();
     try {
       this.apply(action);
+      this.ensureRoundPlayable();
       core.invalidate();
-      return { ok: true, events: core.flush() };
+      // Ceny ve Večerce sledují aktuální modifikátory (kupón se slevou, Amnestie…).
+      if (core.state.shop) refreshShopPrices(core, core.state.shop);
     } catch (e) {
-      if (e instanceof ActionError) {
-        // Neplatná akce nesmí změnit stav.
-        core.state = JSON.parse(snapshot) as RunState;
-        core.invalidate();
-        core.takeEvents();
-        return { ok: false, error: e.code };
-      }
+      // Neplatná akce nesmí změnit stav. Neočekávaná výjimka (chyba v obsahu) také ne: stav se vrátí do stavu před
+      // akcí (autosave tak neuloží napůl provedenou akci) a výjimka letí dál.
+      core.state = JSON.parse(snapshot) as RunState;
+      core.invalidate();
+      core.takeEvents();
+      if (e instanceof ActionError) return { ok: false, error: e.code };
       throw e;
     }
+    // Události se doručí až po dokončení akce — chyba posluchače (UI) už stav nevrací.
+    return { ok: true, events: core.flush() };
   }
 
   // ─────────────────────────── Akce ───────────────────────────
@@ -218,7 +229,7 @@ export class Game {
       case 'leaveShop':
         return this.leaveShop();
       case 'pickBooster':
-        return this.pickBooster(a.index, a.targetIds);
+        return this.pickBooster(a.index, a.targetIds, a.keep === true);
       case 'skipBooster':
         return this.closeBooster(true);
       case 'sellJoker':
@@ -252,7 +263,9 @@ export class Game {
   private setupAnte(): void {
     const core = this.core;
     const s = core.state;
-    const bossId = this.pickBoss();
+    const bossId = pickBossId(core);
+    // Imperial: Velká útrata má navíc pravidlo jiného běžného šéfa.
+    const bigBossId = stakeBigBlindBoss(core) ? pickBigBlindBossId(core, bossId) : null;
     const tagRng = core.rng('tag');
     const tags = Object.values(core.registry.tags)
       .filter((t) => (t.minAnte ?? 1) <= s.ante)
@@ -261,29 +274,12 @@ export class Game {
     const pickTag = () => (tags.length ? tagRng.pick(tags) : null);
     s.blinds = BLIND_KINDS.map((kind): BlindSlot => ({
       kind,
-      bossId: kind === 'boss' ? bossId : null,
+      bossId: kind === 'boss' ? bossId : kind === 'big' ? bigBossId : null,
       skipTagId: kind === 'boss' ? null : pickTag(),
       status: kind === 'small' ? 'current' : 'upcoming',
     }));
     s.blindIndex = 0;
     s.anteVouchers = rollAnteVouchers(core);
-  }
-
-  private pickBoss(exclude: readonly string[] = []): string | null {
-    const core = this.core;
-    const s = core.state;
-    const isFinal = s.ante >= FINAL_ANTE && s.ante % FINAL_ANTE === 0;
-    const all = Object.values(core.registry.bosses);
-    let pool = all.filter((b) => (isFinal ? b.final : !b.final && (b.minAnte ?? 1) <= s.ante));
-    if (pool.length === 0) pool = all.filter((b) => !b.final);
-    if (pool.length === 0) return null;
-    const notExcluded = pool.filter((b) => !exclude.includes(b.id));
-    if (notExcluded.length > 0) pool = notExcluded;
-    const unseen = pool.filter((b) => !s.bossesSeen.includes(b.id));
-    const ids = (unseen.length > 0 ? unseen : pool).map((b) => b.id).sort();
-    const id = core.rng('boss').pick(ids);
-    if (!s.bossesSeen.includes(id)) s.bossesSeen.push(id);
-    return id;
   }
 
   private currentBlind(): BlindSlot {
@@ -312,6 +308,8 @@ export class Game {
       handsPlayed: 0,
       discardsUsed: 0,
       handTypesPlayed: [],
+      handSizeDelta: 0,
+      jokerDebuffs: [],
       flags: {},
     };
     core.invalidate();
@@ -332,7 +330,13 @@ export class Game {
     refreshDebuffs(core);
     core.emit({ type: 'blindSelected', blind: blind.kind, bossId: blind.bossId, target: round.target });
     const boss = core.activeBoss();
-    boss?.hooks.onRoundStart?.(core.bossCtx());
+    if (boss?.hooks.onRoundStart) {
+      boss.hooks.onRoundStart(core.bossCtx());
+      // Hook mohl změnit stav, na kterém závisí `passive` šéfa (round.flags) — modifikátory se přepočítají.
+      core.invalidate();
+      // Pravidlo vylosované na začátku kola (Pověrčivá babka) platí pro celý balíček.
+      refreshBossDebuffs(core);
+    }
     core.eachJoker('onRoundStart', {});
     core.eachTag('onRoundStart');
     s.phase = 'round';
@@ -358,7 +362,8 @@ export class Game {
     if (next) next.status = 'current';
     core.emit({ type: 'blindSkipped', blind: blind.kind, tagId: blind.skipTagId });
     core.eachJoker('onSkipBlind', {});
-    if (blind.skipTagId) core.api.addTag(blind.skipTagId);
+    // Štítek, který registr nezná (obsah odebraný od uložení), se přeskočí — jinak by útrata nešla přeskočit.
+    if (blind.skipTagId && core.registry.tags[blind.skipTagId]) core.api.addTag(blind.skipTagId);
   }
 
   private rerollBoss(): void {
@@ -368,15 +373,12 @@ export class Game {
     const left = typeof s.flags.bossRerolls === 'number' ? s.flags.bossRerolls : 0;
     const unlimited = s.flags.bossRerollUnlimited === true;
     if (!unlimited && left <= 0) fail('cannotUse');
-    const cost =
-      typeof s.flags.bossRerollCost === 'number' ? s.flags.bossRerollCost : DEFAULT_BOSS_REROLL_COST;
+    const cost = typeof s.flags.bossRerollCost === 'number' ? s.flags.bossRerollCost : BOSS_REROLL_COST;
     const bossSlot = s.blinds.find((b) => b.kind === 'boss');
     if (!bossSlot || (bossSlot.status !== 'upcoming' && bossSlot.status !== 'current')) fail('cannotUse');
     this.pay(cost);
     if (!unlimited) s.flags.bossRerolls = left - 1;
-    const id = this.pickBoss(bossSlot.bossId ? [bossSlot.bossId] : []);
-    bossSlot.bossId = id;
-    if (id) core.emit({ type: 'bossRerolled', bossId: id });
+    if (rerollBossSlot(core) === null) fail('cannotUse');
   }
 
   // ── kolo ──
@@ -402,30 +404,31 @@ export class Game {
     if (round.handsLeft <= 0) fail('noHandsLeft');
     this.validateSelection(cardIds, round.hand);
 
+    // Karty lícem dolů se při zahrání otočí (DESIGN 2.1).
+    for (const id of cardIds) core.mustCard(id).faceDown = false;
+
     const result = scoreHand(core, cardIds);
     const type = result.hand.type;
 
     // přesun karet
     round.hand = round.hand.filter((id) => !cardIds.includes(id));
-    round.playedPile.push(...cardIds);
+    // Karta zničená už během skórování (efekt žolíka) do hromádek nepatří.
+    round.playedPile.push(...cardIds.filter((id) => core.card(id)));
     round.handsLeft--;
     round.handsPlayed++;
     round.handTypesPlayed.push(type);
-    round.score += result.score;
 
-    // statistiky a objevy
-    const hl = s.handLevels[type];
-    const firstTime = hl.played === 0;
+    // statistiky a objevy (objev v runu i v profilu = první zahrání, DESIGN 2.2.4)
+    // Záznam může chybět ve starším uložení (kombinace přidaná později) — doplní se výchozí.
+    const hl = (s.handLevels[type] ??= { level: 1, played: 0 });
     hl.played++;
-    if (firstTime && core.registry.handTypes[type]?.secret) core.emit({ type: 'handDiscovered', hand: type });
+    if (!s.discoveredHands.includes(type)) {
+      s.discoveredHands.push(type);
+      if (core.registry.handTypes[type]?.secret) core.emit({ type: 'handDiscovered', hand: type });
+    }
     s.stats.handsPlayed++;
     s.stats.cardsPlayed += cardIds.length;
     s.stats.handTypeCounts[type] = (s.stats.handTypeCounts[type] ?? 0) + 1;
-    if (result.score > s.stats.bestHandScore) {
-      s.stats.bestHandScore = result.score;
-      s.stats.bestHandType = type;
-    }
-    core.emit({ type: 'handPlayed', result, roundScore: round.score });
 
     const boss = core.activeBoss();
     if (boss?.hooks.afterHandPlayed) {
@@ -443,7 +446,21 @@ export class Game {
           lastHand: round.handsLeft === 0,
         }),
       );
+      core.invalidate();
     }
+
+    // Konec kroku 5: hod skla, Ohmataná… (jednou za ruku), pak zničení označených karet.
+    afterScoredCards(core, result, { firstHand: round.handsPlayed === 1, lastHand: round.handsLeft === 0 });
+    // Šéf mohl v afterHandPlayed zapsat dočasné debuffy do round.flags (Černá kočka), nebo jeho pravidlo závisí na
+    // průběhu kola — debuffy platí hned i pro ruku. Až po afterScored: zahrané karty dohrají ve stavu, v jakém skórovaly.
+    refreshBossDebuffs(core);
+    // Přetečení skóre kola → Number.MAX_VALUE (nekonečno by se v JSON uložení změnilo na null, DESIGN 1.3).
+    round.score = safe(round.score + result.score);
+    if (result.score > s.stats.bestHandScore) {
+      s.stats.bestHandScore = result.score;
+      s.stats.bestHandType = type;
+    }
+    core.emit({ type: 'handPlayed', result, roundScore: round.score });
 
     for (const id of result.destroyedCardIds) core.api.destroyCard(id, 'score');
     // zahrané karty jdou na odhazovací hromádku
@@ -453,26 +470,66 @@ export class Game {
     if (round.score >= round.target) {
       this.winRound();
     } else if (round.handsLeft <= 0) {
-      if (!this.tryPreventGameOver()) this.loseRun();
+      this.roundLost();
     } else {
       fillHand(core);
+      this.checkOutOfCards();
     }
   }
 
+  /** Kolo skončilo pod cílem: zachrání ho štítek nebo žolík, jinak konec runu. */
+  private roundLost(): void {
+    if (!this.tryPreventGameOver()) this.loseRun();
+  }
+
+  /**
+   * Po každé akci: kolo nesmí uváznout s prázdnou rukou (spotřebka zničila celou ruku, prázdný balíček…) — ruka se
+   * dobere, a když ani pak nejsou karty, je to prohra z nedostatku karet. Jinak by nezbyla jediná platná akce.
+   */
+  private ensureRoundPlayable(): void {
+    const s = this.core.state;
+    if (s.phase !== 'round' || !s.round || s.round.hand.length > 0) return;
+    fillHand(this.core);
+    this.checkOutOfCards();
+  }
+
+  /** Prázdná ruka i dobírací balíček (a cíl nesplněn) = prohra z nedostatku karet (DESIGN 1.2). */
+  private checkOutOfCards(): void {
+    const s = this.core.state;
+    const round = s.round;
+    if (s.phase !== 'round' || !round) return;
+    if (round.hand.length === 0 && round.drawPile.length === 0) this.roundLost();
+  }
+
+  /**
+   * Pokus o záchranu prohraného kola: nejdřív štítky (`onRoundLost`; kolo se počítá jako vyhrané bez odměny
+   * za útratu, štítek se spotřebuje), pak žolíci (`preventGameOver`; plná odměna).
+   */
   private tryPreventGameOver(): boolean {
     const core = this.core;
     const round = this.round();
+    for (const tag of [...core.state.tags]) {
+      const onRoundLost = core.registry.tags[tag.defId]?.hooks.onRoundLost;
+      if (!onRoundLost) continue;
+      if (!onRoundLost(extend(core.tagCtx(tag), { score: round.score, target: round.target }))) continue;
+      core.state.tags = core.state.tags.filter((t) => t !== tag);
+      core.invalidate();
+      core.emit({ type: 'tagTriggered', uid: tag.uid, defId: tag.defId });
+      core.emit({ type: 'message', key: MSG.tagSaved, params: { tag: tag.defId } });
+      this.winRound({ noBlindReward: true });
+      return true;
+    }
     const jokers = [...core.state.jokers];
     for (let i = 0; i < jokers.length; i++) {
       const j = jokers[i]!;
       if (j.debuffed) continue;
-      const def = core.jokerDef(j);
-      if (!def.hooks.preventGameOver) continue;
+      const def = core.registry.jokers[j.defId];
+      if (!def?.hooks.preventGameOver) continue;
       const saved = def.hooks.preventGameOver(
         extend(core.jokerCtx(j, i, false, def), { score: round.score, target: round.target }),
       );
       if (saved) {
-        core.emit({ type: 'jokerTriggered', uid: j.uid, defId: j.defId, message: 'jokers.saved' });
+        core.emit({ type: 'jokerTriggered', uid: j.uid, defId: j.defId, message: MSG.jokerSaved });
         this.winRound();
         return true;
       }
@@ -498,11 +555,18 @@ export class Game {
       }
     });
     for (const c of cards) {
-      const seal = c.seal ? core.registry.seals[c.seal] : undefined;
+      // Debuffnutá karta nespouští ani pečeť (DESIGN 2.1).
+      const seal = c.seal && !c.debuffed ? core.registry.seals[c.seal] : undefined;
       seal?.onDiscarded?.(extend(core.baseCtx('card'), { card: c }));
     }
+    core.invalidate();
     const boss = core.activeBoss();
-    boss?.hooks.onDiscard?.(extend(core.bossCtx(), { discarded: cards }));
+    if (boss?.hooks.onDiscard) {
+      boss.hooks.onDiscard(extend(core.bossCtx(), { discarded: cards }));
+      // Šéf mohl změnit round.flags, na kterých závisí jeho `passive` (velikost ruky pro dobírání níže).
+      core.invalidate();
+      refreshBossDebuffs(core);
+    }
 
     round.hand = round.hand.filter((id) => !cardIds.includes(id));
     round.discardPile.push(...cardIds.filter((id) => core.card(id)));
@@ -512,6 +576,7 @@ export class Game {
     s.stats.cardsDiscarded += cardIds.length;
     core.emit({ type: 'cardsDiscarded', cardIds: [...cardIds] });
     fillHand(core);
+    this.checkOutOfCards();
   }
 
   private reorderHand(cardIds: readonly number[]): void {
@@ -529,13 +594,18 @@ export class Game {
     const s = core.state;
     const target = s.phase === 'booster' && s.booster ? s.booster.hand : s.round?.hand;
     if (!target) fail('wrongPhase');
-    const enh = core.registry.enhancements;
+    const enh = core.enhancements();
     target.sort((a, b) => compareCards(core.mustCard(a), core.mustCard(b), by, enh));
   }
 
   // ── konec kola ──
 
-  private computeRewards(): RoundRewards {
+  /**
+   * Rozpis odměn za vyhrané kolo (DESIGN 2.4.2, v tomto pořadí): útrata, nevyužité ruce a zahození, úrok,
+   * bonusy (zlaté karty, žolíci, balíček), nakonec poplatky za zapůjčené žolíky. Poplatek, který nejde
+   * zaplatit ani do dluhového limitu, se nestrhne a žolík se při výplatě vrátí do půjčovny.
+   */
+  private computeRewards(opts: { noBlindReward?: boolean } = {}): RoundRewards {
     const core = this.core;
     const s = core.state;
     const m = core.mods();
@@ -544,6 +614,7 @@ export class Game {
     const boss = round.bossId ? reg.bosses[round.bossId] : undefined;
     let blindReward =
       round.blind === 'boss' ? (boss?.reward ?? BLIND_REWARDS.boss) : BLIND_REWARDS[round.blind];
+    if (opts.noBlindReward) blindReward = 0;
     if (round.blind === 'small') {
       const noReward = Object.values(reg.stakes).some((st) => st.level <= s.stake && st.noSmallBlindReward);
       if (noReward) blindReward = 0;
@@ -557,34 +628,46 @@ export class Game {
         : 0;
     const extra: RoundRewards['extra'] = [];
     const ctx = core.baseCtx('misc');
-    // zlaté karty v ruce, modré pečetě
+    // zlaté karty v ruce, modré pečetě (debuffnuté nic nedávají; Bílá hora vypíná vylepšení)
     const lastHand = round.handTypesPlayed[round.handTypesPlayed.length - 1] ?? null;
+    const enhancements = core.enhancements();
     let heldMoney = 0;
     for (const id of round.hand) {
       const c = core.mustCard(id);
       if (c.debuffed) continue;
-      const enh = c.enhancement ? reg.enhancements[c.enhancement] : undefined;
+      const enh = c.enhancement ? enhancements[c.enhancement] : undefined;
       if (enh?.roundEndHeldMoney)
-        heldMoney += enh.roundEndHeldMoney(extend(core.baseCtx('card'), { card: c }));
+        heldMoney += rewardAmount(enh.roundEndHeldMoney(extend(core.baseCtx('card'), { card: c })));
       const seal = c.seal ? reg.seals[c.seal] : undefined;
       seal?.onRoundEndHeld?.(extend(core.baseCtx('card'), { card: c, lastHand }));
     }
     if (heldMoney) extra.push({ source: 'held', amount: heldMoney });
-    const deckMoney = reg.decks[s.deckId]?.roundEndMoney?.(ctx) ?? 0;
+    const deckMoney = rewardAmount(reg.decks[s.deckId]?.roundEndMoney?.(ctx));
     if (deckMoney) extra.push({ source: `deck:${s.deckId}`, amount: deckMoney });
-    s.jokers.forEach((j, i) => {
-      if (j.debuffed) return;
-      const def = core.jokerDef(j);
-      const amount = def.hooks.roundEndMoney?.(core.jokerCtx(j, i, false, def)) ?? 0;
-      if (amount) extra.push({ source: `joker:${j.defId}`, amount });
-      if (j.stickers.includes('rental')) extra.push({ source: `rental:${j.defId}`, amount: -2 }); // RENTAL_FEE
-    });
-    const total =
+    for (const j of [...s.jokers]) {
+      // Aktuální pozice; zničený (efektem jiného žolíka) nebo neznámý žolík nic nedává.
+      const i = s.jokers.indexOf(j);
+      const def = core.registry.jokers[j.defId];
+      if (i < 0 || j.debuffed || !def?.hooks.roundEndMoney) continue;
+      const amount = rewardAmount(def.hooks.roundEndMoney(core.jokerCtx(j, i, false, def)));
+      if (amount) extra.push({ source: `joker:${j.defId}`, amount, jokerUid: j.uid });
+    }
+    const sum = () =>
       blindReward + unusedHands + unusedDiscards + interest + extra.reduce((a, e) => a + e.amount, 0);
-    return { blindReward, unusedHands, unusedDiscards, interest, extra, total };
+    // Krok 6: zapůjčení žolíci (i debuffnutí) — poplatek jen do výše dluhového limitu.
+    for (const j of s.jokers) {
+      if (!j.stickers.includes('rental')) continue;
+      if (s.money + sum() - RENTAL_FEE >= -m.debtLimit) {
+        extra.push({ source: `rental:${j.defId}`, amount: -RENTAL_FEE, jokerUid: j.uid });
+      } else {
+        extra.push({ source: `rentalReturned:${j.defId}`, amount: 0, jokerUid: j.uid });
+      }
+    }
+    return { blindReward, unusedHands, unusedDiscards, interest, extra, total: safe(sum()) };
   }
 
-  private winRound(): void {
+  /** Kolo vyhráno (cíl splněn nebo zachráněno). `noBlindReward` = bez odměny za útratu (záchrana štítkem). */
+  private winRound(opts: { noBlindReward?: boolean } = {}): void {
     const core = this.core;
     const s = core.state;
     const round = this.round();
@@ -603,20 +686,30 @@ export class Game {
       if (round.bossId) {
         core.emit({ type: 'bossDefeated', bossId: round.bossId });
         core.eachJoker('onBossDefeated', { bossId: round.bossId });
+        core.registry.decks[s.deckId]?.onBossDefeated?.(
+          extend(core.baseCtx('misc'), { bossId: round.bossId }),
+        );
+        core.invalidate();
       }
     }
     core.eachJoker('onRoundEnd', { blind: round.blind, bossId: round.bossId });
     core.eachTag('onRoundEnd');
-    const rewards = this.computeRewards();
+    const rewards = this.computeRewards(opts);
     s.rewards = rewards;
-    core.emit({ type: 'roundRewards', ...rewards });
+    // Události nesdílí objekty se stavem (posluchač si je smí upravit, např. seřadit rozpis).
+    core.emit({ type: 'roundRewards', ...rewards, extra: rewards.extra.map((e) => ({ ...e })) });
 
+    // Dočasné debuffy žolíků platí do konce kola (včetně výpočtu odměn).
+    core.clearJokerDebuffs();
     // nálepky a statistiky žolíků
     for (const j of s.jokers) {
       s.stats.jokerRoundCounts[j.defId] = (s.stats.jokerRoundCounts[j.defId] ?? 0) + 1;
       if (j.stickers.includes('perishable') && j.perishRounds !== undefined && j.perishRounds > 0) {
         j.perishRounds--;
-        if (j.perishRounds === 0) j.debuffed = true;
+        if (j.perishRounds === 0) {
+          j.debuffed = true;
+          core.emit({ type: 'jokerTriggered', uid: j.uid, defId: j.defId, message: MSG.jokerPerished });
+        }
       }
     }
     for (const c of s.deck) {
@@ -624,7 +717,7 @@ export class Game {
       c.faceDown = false;
     }
     core.invalidate();
-    if (round.blind === 'boss' && s.ante === FINAL_ANTE && !s.endless) {
+    if (round.blind === 'boss' && s.ante >= FINAL_ANTE && !s.endless) {
       s.phase = 'victory';
       core.emit({ type: 'victory', ante: s.ante });
     } else {
@@ -644,7 +737,7 @@ export class Game {
       target: round.target,
     };
     s.phase = 'game_over';
-    core.emit({ type: 'gameOver', info: s.gameOver });
+    core.emit({ type: 'gameOver', info: { ...s.gameOver } });
   }
 
   private continueEndless(): void {
@@ -663,6 +756,14 @@ export class Game {
     const total = s.rewards?.total ?? 0;
     if (total) core.api.addMoney(total, 'roundReward');
     core.emit({ type: 'cashedOut', amount: total });
+    // Zapůjčení žolíci, za které nešlo zaplatit, se vracejí do půjčovny.
+    for (const e of s.rewards?.extra ?? []) {
+      if (!e.source.startsWith('rentalReturned:') || e.jokerUid === undefined) continue;
+      const j = s.jokers.find((x) => x.uid === e.jokerUid);
+      if (!j) continue;
+      core.api.destroyJoker(j.uid, 'rental');
+      core.emit({ type: 'message', key: MSG.rentalReturned, params: { joker: j.defId } });
+    }
     s.rewards = null;
     const wasBoss = round.blind === 'boss';
     s.round = null;
@@ -686,7 +787,9 @@ export class Game {
     const s = core.state;
     s.phase = 'shop';
     core.eachTag('onShopEnter');
-    s.shop = generateShop(core);
+    const firstShop = s.stats.shopsEntered === 0;
+    s.stats.shopsEntered++;
+    s.shop = generateShop(core, { firstShop });
     core.eachJoker('onShopEnter', {});
     core.emit({ type: 'shopEntered' });
   }
@@ -706,11 +809,10 @@ export class Game {
     if (item.sold) fail('soldOut');
     if (item.kind === 'joker') {
       if (use) fail('cannotUse');
-      const extra = item.joker.edition ? (core.registry.editions[item.joker.edition]?.extraSlots ?? 0) : 0;
-      if (s.jokers.length >= core.mods().jokerSlots + extra) fail('slotsFull');
+      if (!jokerHasRoom(core, item.joker.edition)) fail('slotsFull');
       this.pay(item.price);
       item.sold = true;
-      addJokerInstance(core, item.joker, true);
+      addJokerInstance(core, item.joker, { ignoreSlots: true, acquire: true });
       s.stats.jokersBought++;
       core.emit({ type: 'itemBought', kind: 'joker', defId: item.joker.defId, price: item.price });
     } else if (item.kind === 'consumable') {
@@ -727,10 +829,7 @@ export class Game {
         });
         this.runConsumable(item.consumable, targetIds ?? []);
       } else {
-        const extra = item.consumable.edition
-          ? (core.registry.editions[item.consumable.edition]?.extraSlots ?? 0)
-          : 0;
-        if (s.consumables.length >= core.mods().consumableSlots + extra) fail('slotsFull');
+        if (!consumableHasRoom(core, item.consumable.edition)) fail('slotsFull');
         this.pay(item.price);
         item.sold = true;
         addConsumableInstance(core, item.consumable, true);
@@ -817,8 +916,9 @@ export class Game {
       shop.freeRerolls--;
     } else {
       this.pay(shop.rerollCost);
-      shop.rerollCost += core.mods().rerollCostStep;
+      shop.paidRerolls++;
     }
+    refreshShopPrices(core, shop);
     const cost = shop.rerollCost;
     shop.rerollsThisShop++;
     s.stats.rerolls++;
@@ -837,7 +937,11 @@ export class Game {
 
   // ── boostery ──
 
-  private pickBooster(index: number, targetIds: readonly number[] | undefined): void {
+  /**
+   * Výběr z obálky (DESIGN 2.9): žolík jde do slotu (bez místa nejde, leda je negativní), hrací karta
+   * do balíčku, spotřebka se buď hned použije (`targetIds`), nebo s `keep` uloží do volného slotu.
+   */
+  private pickBooster(index: number, targetIds: readonly number[] | undefined, keep: boolean): void {
     this.requirePhase('booster');
     const core = this.core;
     const s = core.state;
@@ -846,9 +950,8 @@ export class Game {
     const opt = b.options[index];
     if (!opt) fail('unknownItem');
     if (opt.kind === 'joker') {
-      const extra = opt.joker.edition ? (core.registry.editions[opt.joker.edition]?.extraSlots ?? 0) : 0;
-      if (s.jokers.length >= core.mods().jokerSlots + extra) fail('slotsFull');
-      addJokerInstance(core, opt.joker, true);
+      if (!jokerHasRoom(core, opt.joker.edition)) fail('slotsFull');
+      addJokerInstance(core, opt.joker, { ignoreSlots: true, acquire: true });
     } else if (opt.kind === 'card') {
       const c = opt.card;
       core.api.addCard(
@@ -862,8 +965,10 @@ export class Game {
         },
         { source: 'booster' },
       );
+    } else if (keep) {
+      if (!consumableHasRoom(core, opt.consumable.edition)) fail('slotsFull');
+      addConsumableInstance(core, opt.consumable, true);
     } else {
-      // Spotřebky z boosteru se použijí hned.
       if (!this.consumableUsable(opt.consumable.defId, opt.consumable.uid, targetIds ?? []))
         fail('cannotUse');
       this.runConsumable(opt.consumable, targetIds ?? []);
@@ -899,8 +1004,9 @@ export class Game {
     const j = s.jokers.find((x) => x.uid === uid);
     if (!j) fail('unknownItem');
     if (j.stickers.includes('eternal')) fail('cannotSell');
-    const price = core.api.sellValue(j);
-    core.eachJoker('onSell', { sold: j, isSelf: false });
+    const price = jokerSellValue(core, j);
+    // Prodávaný žolík dostane isSelf = true (kopie jeho schopnosti v jiném slotu ne).
+    core.eachJoker('onSell', (owner) => ({ sold: j, isSelf: owner === j }));
     s.jokers = s.jokers.filter((x) => x !== j);
     core.invalidate();
     core.api.addMoney(price, 'sell');
@@ -914,7 +1020,7 @@ export class Game {
     const s = core.state;
     const c = s.consumables.find((x) => x.uid === uid);
     if (!c) fail('unknownItem');
-    const price = Math.max(1, Math.floor(consumablePrice(core, c.defId) / 2));
+    const price = consumableSellValue(core, c);
     s.consumables = s.consumables.filter((x) => x !== c);
     core.invalidate();
     core.api.addMoney(price, 'sell');
@@ -946,7 +1052,9 @@ export class Game {
     } else if (targetIds.length > 0) {
       return false;
     }
-    return def.canUse ? def.canUse(this.consumableCtx(defId, uid, targetIds)) : true;
+    // Dotaz bez vedlejších účinků: `canUse` nesmí posunout RNG (UI se ptá libovolně často).
+    const canUse = def.canUse;
+    return canUse ? this.core.readOnly(() => canUse(this.consumableCtx(defId, uid, targetIds))) : true;
   }
 
   private runConsumable(

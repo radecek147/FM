@@ -1,6 +1,7 @@
 /**
  * Skládání modifikátorů pravidel.
  * Čísla se sčítají, pole končící na `Mult` se násobí, booleany se ORují.
+ * Výchozí hodnoty = docs/DESIGN.md kap. 2.10 (`BASE_MODIFIERS`) + příloha B.
  */
 import type { ModifierDelta, Modifiers } from '../types';
 
@@ -32,6 +33,9 @@ export const BASE_MODIFIERS: Readonly<Modifiers> = Object.freeze({
   shopWeightRazitko: 0,
   shopWeightPlayingCard: 0,
   editionRateMult: 1,
+  shopPriceAdd: 0,
+  playingCardEnhanceChance: 0.2,
+  playingCardSealChance: 0,
 
   probabilityMult: 1,
   targetMult: 1,
@@ -42,6 +46,8 @@ export const BASE_MODIFIERS: Readonly<Modifiers> = Object.freeze({
   allFaces: false,
   mergedSuits: false,
   allCardsScore: false,
+  disableEnhancements: false,
+  fixedCardChips: 0,
 });
 
 const MODIFIER_KEYS = Object.keys(BASE_MODIFIERS) as (keyof Modifiers)[];
@@ -50,7 +56,17 @@ function isMultKey(key: string): boolean {
   return key.endsWith('Mult');
 }
 
-/** Přičte jednu deltu k modifikátorům (mutuje `target`). */
+/** Sečte/vynásobí číselný modifikátor; neplatná hodnota (NaN, ±∞) nebo přetečení výsledku se ignoruje. */
+function combineNumber(key: string, current: number, value: number): number {
+  if (!Number.isFinite(value)) return current;
+  const next = isMultKey(key) ? current * value : current + value;
+  return Number.isFinite(next) ? next : current;
+}
+
+/**
+ * Přičte jednu deltu k modifikátorům (mutuje `target`). Neplatná čísla z obsahu (NaN, nekonečno) se ignorují —
+ * jinak by se přes `handsLeft`/`discardsLeft` dostala do stavu a JSON uložení by je změnilo na `null`.
+ */
 export function applyDelta(target: Modifiers, delta: ModifierDelta | null | undefined): Modifiers {
   if (!delta) return target;
   const t = target as unknown as Record<string, number | boolean>;
@@ -61,7 +77,30 @@ export function applyDelta(target: Modifiers, delta: ModifierDelta | null | unde
     if (typeof current === 'boolean') {
       t[key] = current || Boolean(value);
     } else if (typeof current === 'number' && typeof value === 'number') {
-      t[key] = isMultKey(key) ? current * value : current + value;
+      t[key] = combineNumber(key, current, value);
+    }
+  }
+  return target;
+}
+
+/**
+ * Přičte deltu do jiné (částečné) delty se stejnými pravidly jako `applyDelta` — chybějící číslo se bere
+ * jako neutrální prvek (0, u `*Mult` 1). Mutuje a vrací `target` (použití: `RunState.extraModifiers`). Neplatná
+ * čísla (NaN, nekonečno) se ignorují — delta je součástí uloženého stavu.
+ */
+export function mergeDelta(target: ModifierDelta, delta: ModifierDelta | null | undefined): ModifierDelta {
+  if (!delta) return target;
+  const t = target as Record<string, number | boolean | undefined>;
+  for (const key of Object.keys(delta) as (keyof Modifiers)[]) {
+    const value = delta[key];
+    if (value === undefined || !(key in BASE_MODIFIERS)) continue;
+    const base = BASE_MODIFIERS[key];
+    if (typeof base === 'boolean') {
+      t[key] = Boolean(t[key]) || Boolean(value);
+    } else if (typeof value === 'number' && Number.isFinite(value)) {
+      const current = t[key];
+      const neutral = isMultKey(key) ? 1 : 0;
+      t[key] = combineNumber(key, typeof current === 'number' ? current : neutral, value);
     }
   }
   return target;
@@ -90,6 +129,14 @@ export function clampModifiers(m: Modifiers): Modifiers {
   m.rerollBaseCost = Math.max(0, m.rerollBaseCost);
   m.rerollCostStep = Math.max(0, m.rerollCostStep);
   m.shopDiscountPct = Math.min(100, Math.max(0, m.shopDiscountPct));
+  m.shopPriceAdd = Math.max(0, m.shopPriceAdd);
+  m.playingCardEnhanceChance = Math.min(1, Math.max(0, m.playingCardEnhanceChance));
+  m.playingCardSealChance = Math.min(1, Math.max(0, m.playingCardSealChance));
+  m.moneyPerUnusedHand = Math.max(0, m.moneyPerUnusedHand);
+  m.moneyPerUnusedDiscard = Math.max(0, m.moneyPerUnusedDiscard);
+  m.editionRateMult = Math.max(0, m.editionRateMult);
+  m.probabilityMult = Math.max(0, m.probabilityMult);
+  m.fixedCardChips = Math.max(0, m.fixedCardChips);
   m.debtLimit = Math.max(0, m.debtLimit);
   return m;
 }

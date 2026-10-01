@@ -1,6 +1,7 @@
 /** Vytvoření počátečního stavu runu (balíček, míchání se seedem, výchozí hodnoty). */
-import type { ContentRegistry, NewRunOptions } from '../content-types';
+import type { CardSpec, ContentRegistry, NewRunOptions, Rng } from '../content-types';
 import { createCard, standardDeckSpecs } from '../cards/cards';
+import { MAX_STAKE, STARTING_MONEY } from '../constants';
 import { initialHandLevels } from '../hands/levels';
 import { createRngStates, rngFromState } from '../rng/rng';
 import type { RunState, RunStats } from '../types';
@@ -8,7 +9,22 @@ import type { RunState, RunStats } from '../types';
 /** Aktuální verze formátu uloženého runu (viz engine/save/migrations.ts). */
 export const RUN_STATE_VERSION = 1;
 
-export const STARTING_MONEY = 5;
+/** Re-export pro starší importy — konstanta žije v engine/constants.ts. */
+export { STARTING_MONEY };
+
+/**
+ * Složení startovního balíčku: vlastní balíček výzvy, jinak `DeckDef.buildDeck(rng)`, jinak standardních 52 karet.
+ * Používá ho založení runu i hrací karty v obchodě a obálkách (výchozí složení, DESIGN 2.5.3 a 2.9).
+ */
+export function startingDeckSpecs(
+  registry: ContentRegistry,
+  deckId: string,
+  challengeId: string | null | undefined,
+  rng: Rng,
+): CardSpec[] {
+  const challenge = challengeId ? registry.challenges[challengeId] : undefined;
+  return challenge?.customDeck ?? registry.decks[deckId]?.buildDeck?.(rng) ?? standardDeckSpecs();
+}
 
 export function emptyStats(money: number): RunStats {
   return {
@@ -24,6 +40,7 @@ export function emptyStats(money: number): RunStats {
     jokersSold: 0,
     consumablesUsed: 0,
     rerolls: 0,
+    shopsEntered: 0,
     blindsSkipped: 0,
     bossesDefeated: 0,
     roundsWon: 0,
@@ -42,7 +59,7 @@ export function createRunState(opts: NewRunOptions & { seed: string }, registry:
   const rng = createRngStates(opts.seed);
   const deckDef = registry.decks[opts.deckId];
   const challenge = opts.challengeId ? registry.challenges[opts.challengeId] : undefined;
-  const specs = challenge?.customDeck ?? deckDef?.buildDeck?.(rngFromState(rng.deck)) ?? standardDeckSpecs();
+  const specs = startingDeckSpecs(registry, opts.deckId, opts.challengeId, rngFromState(rng.deck));
   let nextUid = 1;
   const deck = specs.map((spec) => createCard(nextUid++, spec));
   const money = challenge?.startingMoney ?? deckDef?.startingMoney ?? STARTING_MONEY;
@@ -52,7 +69,7 @@ export function createRunState(opts: NewRunOptions & { seed: string }, registry:
     seed: opts.seed,
     rng,
     deckId: opts.deckId,
-    stake: Math.max(1, Math.min(8, opts.stake)),
+    stake: Number.isFinite(opts.stake) ? Math.max(1, Math.min(MAX_STAKE, Math.trunc(opts.stake))) : 1,
     challengeId: opts.challengeId ?? null,
     daily: opts.daily ?? false,
     ante: 1,
@@ -66,6 +83,7 @@ export function createRunState(opts: NewRunOptions & { seed: string }, registry:
     jokers: [],
     consumables: [],
     handLevels: initialHandLevels(),
+    discoveredHands: [],
     vouchers: [],
     tags: [],
     shop: null,
@@ -73,7 +91,12 @@ export function createRunState(opts: NewRunOptions & { seed: string }, registry:
     anteVouchers: [],
     extraModifiers: { ...(challenge?.extraModifiers ?? {}) },
     bannedJokers: [...(challenge?.bannedJokers ?? [])],
-    unlockedPool: opts.unlockedPool ?? { jokers: null, vouchers: null, boosters: null },
+    // Kopie: pole odemčených položek patří profilu — jeho pozdější změna nesmí měnit rozehraný (seedovaný) run.
+    unlockedPool: {
+      jokers: opts.unlockedPool?.jokers ? [...opts.unlockedPool.jokers] : null,
+      vouchers: opts.unlockedPool?.vouchers ? [...opts.unlockedPool.vouchers] : null,
+      boosters: opts.unlockedPool?.boosters ? [...opts.unlockedPool.boosters] : null,
+    },
     bossesSeen: [],
     lastConsumable: null,
     flags: {},
