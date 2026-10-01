@@ -31,7 +31,7 @@ export const jokersRare = {
   beer_belly: {
     name: 'Pivní břicho',
     desc: 'Po každé zahrané ruce trvale +{chips|plural:čip,čipy,čipů} (teď +{current|plural:čip,čipy,čipů}).',
-    flavor: 'Každý půllitr se počítá. Dvakrát.',
+    flavor: 'Tohle není břicho, to je dlouhodobá investice.',
   },
   carousel: {
     name: 'Kolotoč na pouti',

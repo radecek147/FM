@@ -354,11 +354,19 @@ export const COMMON_JOKERS: JokerDef[] = [
         ctx.self.state.firedAt = -1;
       },
     },
-    art: { icon: 'smoking-pipe', prop: 'card-discard', bg: '#5a6b3a', fg: '#f3efd9', accent: '#c2a14d' },
+    art: {
+      icon: 'smoking-pipe',
+      prop: 'card-discard',
+      bg: '#5a6b3a',
+      fg: '#f3efd9',
+      accent: '#c2a14d',
+      pattern: 'stripes',
+    },
   },
   {
     // 13 — `onRoundEnd` počítá dokončená kola (běží před rozpisem odměn), `roundEndMoney` vyplácí; po posledním
-    // kole vyplatí i bonus a rovnou se zničí (v rozpisu je „Pokladnička +10 Kč“, pak zmizí).
+    // kole vyplatí i bonus a rovnou se zničí (v rozpisu je „Pokladnička +10 Kč“, pak zmizí). Rozbitá pokladnička,
+    // kterou zničit nejde (vynucená nálepka přibitý — výzva, `createJoker`), už nic nevyplácí.
     id: 'piggy_bank',
     rarity: 'common',
     cost: 5,
@@ -375,7 +383,9 @@ export const COMMON_JOKERS: JokerDef[] = [
         ctx.self.state.rounds = num(ctx.self, 'rounds') + 1;
       },
       roundEndMoney: (ctx) => {
-        if (piggyLeft(ctx.self) > 0) return PIGGY_MONEY;
+        const rounds = num(ctx.self, 'rounds');
+        if (rounds < PIGGY_ROUNDS) return PIGGY_MONEY;
+        if (rounds > PIGGY_ROUNDS) return 0;
         if (!ctx.isCopy) {
           ctx.api.message(MSG_PIGGY);
           ctx.api.destroyJoker(ctx.self.uid, 'broken');

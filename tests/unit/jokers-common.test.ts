@@ -558,6 +558,15 @@ describe('Pokladnička (piggy_bank)', () => {
     expect(game.state.jokers).toEqual([]);
   });
 
+  it('přibitá (vynucená nálepka) se zničit nedá: bonus dá jen jednou, pak už nic nevyplácí', () => {
+    const game = makeGame({ registry: reg, jokers: [{ id: 'piggy_bank', stickers: ['eternal'] }] });
+    const paid: number[] = [];
+    for (let i = 0; i < 10; i++) paid.push(jokerReward(finishRound(game).rewards, 'piggy_bank'));
+    expect(paid).toEqual([2, 2, 2, 2, 2, 2, 2, 10, 0, 0]);
+    expect(game.state.jokers.map((j) => j.defId)).toEqual(['piggy_bank']);
+    expect(joker(game, 'piggy_bank').state).toEqual({ rounds: 10 });
+  });
+
   it('nejde kopírovat: kopírující žolík počítadlo nenavýší ani nic nevyplatí', () => {
     const game = makeGame({ registry: reg, jokers: ['copier', 'piggy_bank'] });
     const { rewards } = finishRound(game);
