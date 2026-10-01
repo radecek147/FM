@@ -23,7 +23,9 @@
  * (`jokers.<id>.name|desc|flavor`, `bosses.<id>.name|rule|intro|defeat|death` …).
  */
 import { art } from './cs/art';
+import { boosters } from './cs/boosters';
 import { cli } from './cs/cli';
+import { consumables } from './cs/consumables';
 import { decks } from './cs/decks';
 import { game } from './cs/game';
 import { hands } from './cs/hands';
@@ -31,6 +33,7 @@ import { jokers } from './cs/jokers';
 import { boss, joker, score, tag } from './cs/messages';
 import { editions, enhancements, seals } from './cs/modifiers';
 import { stakes } from './cs/stakes';
+import { vouchers } from './cs/vouchers';
 import { common, credits, menu, newGame, settings } from './cs/ui';
 import { interpolate, typo, type InterpolationParams } from './format';
 
@@ -155,6 +158,9 @@ export const cs = {
   decks,
   stakes,
   jokers,
+  consumables,
+  vouchers,
+  boosters,
   /** Grafika, názvy karet, vzácnosti, tooltipy a galerie (src/ui/art, src/ui/describe.ts). */
   art,
   /** Texty skriptu `npm run simulate` (výstup simulace a textový režim `--play`). */
