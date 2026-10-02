@@ -2946,3 +2946,64 @@ DESIGN 13.3, 13.4, 13.6.
 
 **Proč:** CLAUDE.md kap. 2 (60 fps, jen transform/opacity, žádný layout thrashing), kap. 4 (nastavení rychlosti,
 animací a shaku), kap. 9 bod 9; DESIGN 13.4 a 13.6.
+
+## 2026-10-02 — Fáze 10 (výkon, offline, přístupnost, bugfix)
+
+**Co:**
+
+- **Code splitting** (`src/main.ts`, `src/ui/app.ts`, `vite.config.ts`; ARCHITECTURE 8.1). Staticky jen start
+  a menu; ostatní obrazovky (nová hra, hra, nastavení, titulky, sbírka, statistiky, výzvy, denní run, galerie) jsou
+  dynamické importy přes `App.registerLazy`. Router zůstal synchronní pro načtené obrazovky; první přechod na línou
+  obrazovku počká na chunk (stará obrazovka zůstává, `aria-busy`, kurzor `progress`), opožděný přechod se zahodí,
+  když hráč mezitím odešel jinam, chyba načtení = hláška `errors.screenLoad`. Po vykreslení menu se v klidu
+  (`requestIdleCallback`) načtou ikony i všechny obrazovky dopředu, takže přechody jsou dál okamžité.
+  Pojmenované sdílené chunky (`codeSplitting.groups`: `i18n`, `engine`, `content`, zbytek startu v `index`) místo
+  automatických pojmenovaných po náhodném modulu. **Velikosti (raw / gzip):** dřív hlavní chunk 630 kB / 202 kB
+  (+ ikony 344 kB / 155 kB, na které se čekalo před prvním vykreslením); teď hlavní `index` 93 kB / 33 kB, start
+  celkem (`index` + `engine` 105/32 + `content` 97/29 + `i18n` 135/50) 431 kB / 144 kB, ikony až po vykreslení menu,
+  hra 72 kB / 22 kB, ostatní obrazovky 5–17 kB. Varování buildu o chunku > 500 kB zmizelo.
+- **Ikony nebrzdí start:** menu ikony nepotřebuje, takže se na ně nečeká; obrazovky s kartami na ně počkají
+  (`withIcons`), oznámení odemčení také (`notify` v `ProfileControllerOptions`). Lighthouse (simulované pomalé 4G)
+  jinak započítal 150 kB ikon do prvního vykreslení.
+- **CSS zůstává jeden soubor** v pevném pořadí (main.ts importuje styly všech obrazovek): CSS chunku připojené až
+  za běhu by se v kaskádě ocitlo za `fx.css` a přebilo „šťávu“. Ověřeno: hash CSS po rozdělení JS byl stejný jako
+  předtím (stejná kaskáda bajt po bajtu). 19 kB gzip blokujícího CSS je přijatelné.
+- **Statický text „Míchám karty…“ v `index.html`** (z `app.loading` přes i18n plugin) — první vykreslení hned po HTML
+  a CSS, ne až po JS.
+- **Service worker** ručně, bez knihoven (`src/sw/sw.ts` + plugin `karban-sw` ve `scripts/sw-plugin.ts`;
+  ARCHITECTURE 8.2): precache celého buildu (seznam generuje plugin z bundlu), verze cache = otisk obsahu buildu,
+  rozsah = adresář hry (`/` i `/FM/`), registrace jen v produkčním buildu. App shell pro navigace (i s `?seed=…`),
+  cache-first pro soubory buildu, cizí adresy bez zásahu. **Aktualizace bez `skipWaiting`:** nová verze naskočí až při
+  příštím spuštění (toast `app.updateReady`) — rozehraná hra nikdy nemíchá soubory dvou verzí; hashované soubory
+  se při aktualizaci přebírají ze staré cache. Workbox ani vite-plugin-pwa ne: zadání chce ručně psaný minimální
+  worker a závislost by přinesla víc kódu než celý worker. Typy: vlastní minimální rozhraní (projekt má knihovnu DOM;
+  WebWorker lib by s ní kolidovala). `tsconfig`: `allowImportingTsExtensions` (vite.config importuje plugin
+  s příponou `.ts`, jinak Vite 8 varuje kvůli budoucímu nativnímu načítání configu).
+- **Lighthouse 12** (jen ve scratchpadu, Chromium z `/opt/pw-browsers`; user flow: navigace menu → timespan
+  Pokračovat → snapshot hry). Desktop: menu výkon 99 / přístupnost 100 / best practices 100 (FCP 0,6 s, LCP 0,8 s,
+  TBT 0, CLS 0,002); Pokračovat → hra výkon 100 (TBT 40 ms, INP 130 ms); herní obrazovka přístupnost 100. Mobil
+  (pomalé 4G, 4× CPU): menu výkon 98 (dřív 91; LCP 2,0 s místo 3,2 s), druhé načtení ze service workeru 100,
+  přechod do hry 95. Snapshot herní obrazovky nemá skóre výkonu (Lighthouse ho ve snapshotu nepočítá).
+- **Přístupnost (snapshoty všech obrazovek a fází hry):** opraveno `aria-label` na `<p>` počtu ve sbírce (čtečky
+  ho ignorují → skrytý text), `aria-label` na oblasti oznámení bez role (→ `role="region"`), kontrast čísla výzvy
+  (průhlednost 0,75 → 0,85), odměny na kartě útraty (`#6f5005`), pilulky šéfa (`#b33128`) a tlumení útrat: odehrané
+  a přeskočené místo průhlednosti odbarvené (průhledný jen žeton), nadcházející už nejsou průsvitné. Přístupné názvy položek menu s cedulkou
+  obsahují i text cedulky (WCAG 2.5.3). Zbývá jen skrytý experimentální audit `label-content-name-mismatch` (váha 0)
+  u karet v ruce (viditelná je jen číslice klávesy) a voleb balíčku/výzev — přístupný název je tam záměrně popisný.
+- **Bugy nalezené průchody přes UI** (`scripts/ui-walkthrough.ts`, 30+ běhů: 4 boti, 12 balíčků, síly piva 1–8,
+  11 výzev, denní run, s animacemi i bez; konzole čistá všude):
+  - **Třesoucí se prvky při hoveru:** karta v ruce (a obecně prvek, který se při najetí posune nahoru — žolíci,
+    tlačítka, záložky, volby balíčku a síly piva, balíček) se třásla, když kurzor stál u spodní hrany: posun kurzor
+    z prvku vysunul, hover zmizel, prvek sjel zpět. Oprava: neviditelný pás pod posunutým prvkem jen během hoveru
+    (`fx.css`), e2e `tests/e2e/hover.spec.ts` (před opravou červený).
+  - **Štamgast bez kníru a půllitru:** bublina tutoriálu vznikala před načtením ikon, takže avatar měl náhradní
+    glyfy; teď se překreslí při připojení ke hře (unit test v `ui-meta-m5.test.ts`).
+  - Nástroj: výchozí seed `WALK1` po fázi 8 neprošel kontrolou seedu (8 znaků bez I, O, 0, 1) → `WALKWAYS`
+    a kontrola předem; peníze v DOM se četly bez typografického minus (balíček Dlužník); přibyly `--deck`,
+    `--stake`, `--challenge`, `--daily`, snímek a uložený run při chybě, důvod neúspěšného kliku a `KARBAN_WALK_LOG`.
+- **Konzole:** nový e2e `sweep.spec.ts` projde s profilem „vše odemčené a objevené“ všechny záložky sbírky
+  (s detailem), statistik, všechny výzvy, denní run, titulky, nastavení (přepínače, export) a galerii — bez chyb
+  a varování. Grep `src/ui` na české texty mimo `t()`: jen popisky chyb do konzole (pro vývojáře) a copyright písma.
+
+**Proč:** CLAUDE.md kap. 2 (výkon, offline), kap. 8 (konzole bez chyb a varování, Lighthouse > 90), kap. 10
+(běží z GitHub Pages i offline).

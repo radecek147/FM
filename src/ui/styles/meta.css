@@ -980,7 +980,8 @@
   flex: 0 0 1.8rem;
   font-weight: 700;
   text-align: right;
-  opacity: 0.75;
+  /* 0,85: i u zamčené výzvy (tlumená barva na plstě) kontrast ≥ 4,5 : 1 (Lighthouse color-contrast). */
+  opacity: 0.85;
 }
 
 .challenge-item__name {

@@ -19,6 +19,7 @@ import {
 } from '../../src/engine/meta';
 import { t } from '../../src/i18n/cs';
 import { App } from '../../src/ui/app';
+import { loadIcons } from '../../src/ui/art/icons';
 import { closeAllModals } from '../../src/ui/components/modal';
 import { clearToasts } from '../../src/ui/components/toast';
 import type { GameController } from '../../src/ui/controller';
@@ -595,6 +596,19 @@ describe('tutoriál ve hře', () => {
     expectNoMissingTexts(bubble());
     // Uloženo v profilu.
     expect(deserializeProfile(store.get(STORAGE_KEYS.profile)).tutorial.seen).toContain('discard');
+  });
+
+  it('Štamgast v bublině se při připojení ke hře překreslí (tutoriál vzniká dřív, než dorazí ikony)', async () => {
+    await loadIcons();
+    const avatar = q('[data-testid="tutorial"] .tutorial__avatar');
+    // Stav po startu bez ikon: náhradní glyf místo kníru a půllitru.
+    avatar.innerHTML = '<svg class="stamgast"></svg>';
+    app.controller = app.profiles.newRun({ deckId: 'pub', stake: 1, seed: 'TUTORIAL' });
+    app.go('game');
+    expect(avatar.querySelector('svg.stamgast')).not.toBeNull();
+    expect(avatar.querySelector('[data-icon="fallback"]')).toBeNull();
+    expect(avatar.querySelector('[data-icon="mustache"]')).not.toBeNull();
+    expect(avatar.querySelector('[data-icon="beer-stein"]')).not.toBeNull();
   });
 
   it('přeskočit tutoriál vypne rady; Nastavení → Zapnout tutoriál znovu ho vrátí od začátku', async () => {

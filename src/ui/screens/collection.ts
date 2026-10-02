@@ -1074,17 +1074,19 @@ export const collectionScreen: ScreenFactory = (app: App, params) => {
       h(
         'div',
         { class: 'codex-toolbar' },
+        // `aria-label` na <p> čtečky ignorují (axe: aria-prohibited-attr) — celé znění je ve skrytém textu.
         h(
           'p',
-          {
-            class: 'codex-count',
-            'data-testid': 'codex-count',
-            'aria-label': t('meta.collection.countLabel', { n: discovered, total: entries.length }),
-          },
+          { class: 'codex-count' },
           h(
             'span',
-            { 'aria-hidden': 'true' },
+            { 'aria-hidden': 'true', 'data-testid': 'codex-count' },
             t('meta.collection.count', { n: discovered, total: entries.length }),
+          ),
+          h(
+            'span',
+            { class: 'visually-hidden', 'data-testid': 'codex-count-label' },
+            t('meta.collection.countLabel', { n: discovered, total: entries.length }),
           ),
         ),
         controls.length > 0

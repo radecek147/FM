@@ -74,6 +74,12 @@ export function refreshBossJokerDebuffs(core: GameCore): void {
     core.api.setJokerDebuffed(uid, true);
     next.push(uid);
   }
+  // Kanonické pořadí (podle pozice žolíka zleva): stav nezávisí na cestě — přeřazení po krocích (UI „Posunout
+  // doleva“) i najednou skončí stejně, i když debuff mezi kroky přeskakoval mezi žolíky (Jednooký hejtman).
+  const pos = new Map(s.jokers.map((j, i) => [j.uid, i]));
+  const byPosition = (x: number, y: number): number => (pos.get(x) ?? Infinity) - (pos.get(y) ?? Infinity);
+  next.sort(byPosition);
+  round.jokerDebuffs.sort(byPosition);
   if (next.length > 0 || round.ruleJokerDebuffs) round.ruleJokerDebuffs = next;
 }
 

@@ -329,3 +329,42 @@ test('hlášky: nejvýš 3 ve sloupci nad stolem, mimo ruku, tlačítka a balí�
   }
   expectCleanConsole(log);
 });
+
+test('výběr klávesami 1–9 po zavření detailu žolíka: Enter zahraje ruku, neotevře znovu žolíka', async ({
+  page,
+}) => {
+  // Našel ui-walkthrough: po Esc se focus vrátí na žolíka a Enter by ho místo Zahrát znovu otevřel.
+  const log = watchConsole(page);
+  await presetSettings(page, { animations: false });
+  const s = roundState('ENTERJKR');
+  const def = REG.jokers['beer_mat']!;
+  s.jokers = [
+    {
+      uid: 900,
+      defId: 'beer_mat',
+      edition: null,
+      state: def.initState?.() ?? {},
+      sellBonus: 0,
+      stickers: [],
+      debuffed: false,
+    },
+  ];
+  await seedSavedRun(page, s);
+  await continueRun(page);
+
+  const jokerCard = page.locator('[data-joker-uid="900"]');
+  await jokerCard.click();
+  await expect(page.getByTestId('joker-detail')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('joker-detail')).toHaveCount(0);
+  await expect(jokerCard).toBeFocused();
+
+  const handsBefore = (await readRun(page)).round!.handsLeft;
+  await page.keyboard.press('1');
+  await expect(page.getByTestId('hand')).toBeFocused();
+  await page.keyboard.press('Enter');
+  await idle(page);
+  await expect(page.getByTestId('joker-detail')).toHaveCount(0);
+  expect((await readRun(page)).round!.handsLeft).toBe(handsBefore - 1);
+  expectCleanConsole(log);
+});

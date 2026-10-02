@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import { fileURLToPath } from 'node:url';
 import { defineConfig, runnerImport, type Plugin } from 'vite';
+import { serviceWorkerPlugin } from './scripts/sw-plugin.ts';
 
 // GitHub Pages servíruje z /<repo>/ — base lze přepsat proměnnou BASE_PATH.
 const base = process.env.BASE_PATH ?? './';
@@ -39,11 +40,27 @@ function i18nHtml(): Plugin {
 
 export default defineConfig({
   base,
-  plugins: [i18nHtml()],
+  // karban-sw: offline režim (sw.js se seznamem souborů buildu, scripts/sw-plugin.ts).
+  plugins: [i18nHtml(), serviceWorkerPlugin()],
   build: {
     target: 'es2022',
     sourcemap: true,
     assetsInlineLimit: 0,
+    rolldownOptions: {
+      output: {
+        // Čitelné sdílené chunky místo automatických (pojmenovaných po náhodném modulu, např. „button“).
+        // Obrazovky mimo menu jsou dynamické importy v src/main.ts; ikony mají vlastní chunk (src/ui/art/icons.ts).
+        codeSplitting: {
+          groups: [
+            { name: 'i18n', test: /[\\/]src[\\/]i18n[\\/]/, priority: 3 },
+            { name: 'engine', test: /[\\/]src[\\/]engine[\\/]/, priority: 3 },
+            { name: 'content', test: /[\\/]src[\\/]content[\\/]/, priority: 3 },
+            // Zbytek toho, co potřebuje start (menu, router, profil, zvuk, tutoriál…), v jednom chunku.
+            { name: 'app', tags: ['$initial'], priority: 1 },
+          ],
+        },
+      },
+    },
   },
   test: {
     include: ['tests/unit/**/*.test.ts'],

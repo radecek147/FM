@@ -60,6 +60,8 @@ const app = {
   tipLabel: 'Štamgast radí',
   version: 'verze {version}',
   footerNote: 'Při výrobě nebyl zraněn žádný žolík.',
+  /** Service worker stáhl novou verzi (převezme ji při příštím spuštění, src/ui/serviceWorker.ts). */
+  updateReady: 'Dorazila nová verze Karbanu. Naskočí při příštím spuštění, rozehranou hru ti nikdo nebere.',
 };
 
 // Hlavní menu, nová hra, nastavení, titulky a společné popisky UI žijí v ./cs/ui.ts.
@@ -108,6 +110,9 @@ const errors = {
   unknownItem: 'Tohle tu nevedeme. Zkus to ve Večerce naproti.',
   cannotSkip: 'Tohle se přeskočit nedá. Šéf na tebe čeká a bez pozdravu tě nepustí.',
   generic: 'Něco se pokazilo. Jako u Vaňků o Vánocích.',
+  /** Chunk obrazovky se nenačetl (bez sítě a bez service workeru, nebo po novém nasazení). */
+  screenLoad:
+    'Tahle obrazovka nedorazila. Asi jede náhradní autobusovou dopravou. Zkontroluj připojení a zkus to znovu.',
 };
 
 // ─────────────────────────── Tipy na načítací obrazovce ───────────────────────────

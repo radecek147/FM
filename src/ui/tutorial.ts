@@ -17,7 +17,7 @@ import type { Profile, TutorialStepId } from '../engine/meta';
 import { TUTORIAL_STEPS, markTutorialStep, skipTutorial, tutorialActive } from '../engine/meta';
 import { t } from '../i18n/cs';
 import type { App } from './app';
-import { stamgastElement } from './art/stamgast';
+import { stamgastElement, stamgastMarkup } from './art/stamgast';
 import { button } from './components/button';
 import { toast } from './components/toast';
 import type { GameController } from './controller';
@@ -285,6 +285,8 @@ export class TutorialController {
   private lastShown: TutorialStepId | null = null;
   private readonly layer: HTMLElement;
   private readonly bubble: HTMLElement;
+  /** Štamgast v bublině — překreslí se při připojení ke hře (tutoriál vzniká dřív, než dorazí ikony). */
+  private readonly avatar = stamgastElement('tutorial__avatar');
   private readonly metaEl: HTMLElement;
   private readonly titleEl: HTMLElement;
   private readonly textEl: HTMLElement;
@@ -324,7 +326,7 @@ export class TutorialController {
         hidden: true,
       },
       h('span', { class: 'tutorial__arrow', 'aria-hidden': 'true' }),
-      stamgastElement('tutorial__avatar'),
+      this.avatar,
       h(
         'div',
         { class: 'tutorial__body' },
@@ -372,6 +374,7 @@ export class TutorialController {
   }
 
   private attach(c: GameController): void {
+    this.avatar.innerHTML = stamgastMarkup();
     this.controller = c;
     this.lastShown = null;
     this.unsubs.push(

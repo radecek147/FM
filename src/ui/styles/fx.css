@@ -270,3 +270,49 @@
     transform: none;
   }
 }
+
+/*
+ * Pás pod prvkem, který se při najetí posune (karty, žolíci, tlačítka, záložky, volby balíčku…). Bez něj kurzor
+ * u spodní hrany po posunu z prvku „vypadne“, hover zmizí, prvek sjede zpět pod kurzor a tak pořád dokola — prvek se
+ * třese (našel ui-walkthrough: karta v ruce „not stable“ po kliku na Přeskočit, tests/e2e/hover.spec.ts).
+ * Pás zabírá jen plochu, kterou prvek před posunem sám zakrýval (+ 2 px rezerva), a existuje jen během hoveru.
+ */
+@media (hover: hover) {
+  .btn,
+  .tabs__tab,
+  .stake-option,
+  .challenge-item {
+    position: relative;
+  }
+
+  button.pcard:hover:not(:disabled)::before,
+  button.kcard:hover:not(:disabled)::before,
+  .btn:hover:not(:disabled)::before,
+  .tabs__tab:hover:not(.is-active)::before,
+  .codex-item:hover::before,
+  .deck-option:hover:not(.is-selected)::before,
+  .stake-option:hover:not(.is-selected)::before,
+  .gb-deck:hover::before {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: 0;
+    height: 5px;
+    content: '';
+  }
+
+  button.pcard:hover:not(:disabled)::before,
+  button.kcard:hover:not(:disabled)::before {
+    height: calc(var(--card-hover-lift) * -1 + 2px);
+  }
+
+  /* Výzva v seznamu uhýbá doprava — pás vlevo. */
+  .challenge-item:hover:not(.is-selected)::before {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -5px;
+    width: 5px;
+    content: '';
+  }
+}

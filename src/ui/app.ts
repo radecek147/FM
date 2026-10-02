@@ -5,12 +5,19 @@
  * Obrazovka = funkce `(app, params) => Screen`. Router ji vloží do #app, předá jí klávesy
  * a při odchodu zavolá `dispose()`. Přechod mezi obrazovkami je krátké prolnutí / příjezd (src/ui/fx/transitions.ts);
  * router zůstává synchronní (nová obrazovka je v DOM a má focus hned).
+ *
+ * Code splitting (docs/ARCHITECTURE.md): obrazovky, které nejsou potřeba při startu, se registrují přes
+ * `registerLazy` jako samostatné chunky. První `go()` na takovou obrazovku počká na načtení chunku (stará obrazovka
+ * do té doby zůstává, `#app` má `aria-busy`); `preloadScreens()` je po startu načte v klidu dopředu, takže pak je
+ * přechod okamžitý jako dřív. Když mezitím hráč odejde jinam, opožděný přechod se zahodí.
  */
 import type { ContentRegistry } from '../engine';
+import { t } from '../i18n/cs';
 import type { Profile } from '../engine/meta';
 import { AnimQueue } from './anim/queue';
 import { installDigitFont } from './art/digitFont';
 import { isModalOpen } from './components/modal';
+import { toast } from './components/toast';
 import type { GameController } from './controller';
 import { mount } from './dom';
 import { prefersReducedMotion } from './fx/motion';
@@ -32,6 +39,8 @@ export interface Screen {
 }
 
 export type ScreenFactory = (app: App, params?: Record<string, unknown>) => Screen;
+/** Načte obrazovku z vlastního chunku (`() => import('./screens/x').then((m) => m.xScreen)`). */
+export type ScreenLoader = () => Promise<ScreenFactory>;
 
 export class App {
   readonly anim: AnimQueue;
@@ -45,6 +54,10 @@ export class App {
   /** Běžící přechod obrazovky (zruší se při dalším přechodu). */
   private transition: Animation | null = null;
   private screens = new Map<ScreenId, ScreenFactory>();
+  private loaders = new Map<ScreenId, ScreenLoader>();
+  private loading = new Map<ScreenId, Promise<ScreenFactory | null>>();
+  /** Pořadové číslo posledního `go()` — opožděný přechod na líně načtenou obrazovku platí, jen když je poslední. */
+  private navSeq = 0;
   private screenListeners = new Set<(id: ScreenId) => void>();
   private settingsListeners = new Set<(s: Settings) => void>();
 
@@ -74,16 +87,57 @@ export class App {
     this.screens.set(id, factory);
   }
 
+  /** Zaregistruje obrazovku, jejíž kód je v samostatném chunku (načte se při prvním `go()` nebo `preloadScreens()`). */
+  registerLazy(id: ScreenId, loader: ScreenLoader): void {
+    if (!this.screens.has(id)) this.loaders.set(id, loader);
+  }
+
+  /**
+   * Načte chunk obrazovky (jednou; souběžná volání sdílejí slib). Chyba (síť, nový deploy bez service workeru) se
+   * zaloguje a oznámí; další pokus jde znovu na síť. Vrací továrnu, nebo null.
+   */
+  loadScreen(id: ScreenId): Promise<ScreenFactory | null> {
+    const ready = this.screens.get(id);
+    if (ready) return Promise.resolve(ready);
+    const pending = this.loading.get(id);
+    if (pending) return pending;
+    const loader = this.loaders.get(id);
+    if (!loader) return Promise.resolve(null);
+    const promise = loader().then(
+      (factory) => {
+        this.screens.set(id, factory);
+        this.loaders.delete(id);
+        this.loading.delete(id);
+        return factory;
+      },
+      (err: unknown) => {
+        this.loading.delete(id);
+        console.error(`[app] Obrazovku ${id} se nepodařilo načíst`, err);
+        return null;
+      },
+    );
+    this.loading.set(id, promise);
+    return promise;
+  }
+
+  /** Načte dopředu všechny líně registrované obrazovky (po startu, až má prohlížeč chvíli klid). */
+  preloadScreens(): Promise<void> {
+    return Promise.all([...this.loaders.keys()].map((id) => this.loadScreen(id))).then(() => undefined);
+  }
+
   get screenId(): ScreenId | null {
     return this.current?.id ?? null;
   }
 
   go(id: ScreenId, params?: Record<string, unknown>): void {
+    const seq = ++this.navSeq;
     const factory = this.screens.get(id);
     if (!factory) {
-      console.warn(`[app] Neznámá obrazovka ${id}`);
+      if (this.loaders.has(id)) this.goWhenLoaded(id, params, seq);
+      else console.warn(`[app] Neznámá obrazovka ${id}`);
       return;
     }
+    this.root.removeAttribute('aria-busy');
     const from = this.current?.id ?? null;
     this.current?.screen.dispose?.();
     this.transition?.cancel();
@@ -104,6 +158,20 @@ export class App {
         console.error('[app] Posluchač změny obrazovky selhal', e);
       }
     }
+  }
+
+  /** Přechod na obrazovku, jejíž chunk se teprve načítá. */
+  private goWhenLoaded(id: ScreenId, params: Record<string, unknown> | undefined, seq: number): void {
+    this.root.setAttribute('aria-busy', 'true');
+    void this.loadScreen(id).then((factory) => {
+      if (seq !== this.navSeq) return;
+      if (factory) {
+        this.go(id, params);
+        return;
+      }
+      this.root.removeAttribute('aria-busy');
+      toast(t('errors.screenLoad'), { kind: 'error', testId: 'toast-screen-load' });
+    });
   }
 
   /** Zavolá `fn` po každém přechodu na obrazovku (tutoriál). Vrací odhlášení. */

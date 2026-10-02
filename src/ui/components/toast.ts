@@ -104,6 +104,8 @@ export function toastRegion(): HTMLElement {
   if (region && region.isConnected) return region;
   region = h('div', {
     class: 'toast-region',
+    // Pojmenovaná oblast (landmark): `aria-label` na <div> bez role čtečky ignorují (axe aria-prohibited-attr).
+    role: 'region',
     'aria-live': 'polite',
     'aria-label': t('common.notifications'),
     'data-testid': 'toasts',

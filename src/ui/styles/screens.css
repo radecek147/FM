@@ -89,6 +89,11 @@
   color: var(--on-felt-muted);
 }
 
+/* Chunk obrazovky se teprve načítá (App.go → registerLazy) — stará obrazovka zůstává, kurzor napoví. */
+#app[aria-busy='true'] {
+  cursor: progress;
+}
+
 .boot-loading {
   display: grid;
   place-items: center;

@@ -5,16 +5,21 @@
 
 ## Aktuální stav
 
-_Aktualizováno: 2026-10-02 (uzavření fáze 9)_
+_Aktualizováno: 2026-10-02 (fáze 10: výkon, offline, přístupnost, bugfix)_
 
 **Shrnutí:** fáze 0–9 jsou hotové a commitnuté (poslední: `feat(ui): juice and audio`). Kontroly zelené: `typecheck`,
 `lint`, `npm test` (76 souborů, 3 776 testů), `build`, `test:e2e` (67 prošlo; vizuální a „juice“ sady běží jen
 s `KARBAN_VISUAL=1` / `KARBAN_JUICE=1`). Fáze 9: částice, screen shake, velké skóre, tilt karet, přechody obrazovek
 (`src/ui/fx/*`), syntetizované SFX a procedurální chiptune hudba (`src/ui/audio/*`), ztlumení klávesou M.
 
-**Další krok: Fáze 10 (Dokončení 1.0)** — balanc simulací (silnější boti a zvednutí cíle patra 8 podle plánu
-v DECISIONS „Balanc po fázi 7“, bod 5; střední síly piva; balíčky nad Hospodským), bugfix, výkon (velikost hlavního
-chunku, Lighthouse > 90), README česky se screenshoty a GIFem, deploy na GitHub Pages, tag `v1.0.0`.
+**Fáze 10 (Dokončení 1.0) rozpracovaná** (necommitnuto v pracovním stromu): hotový výkon (code splitting, hlavní
+chunk 93 kB místo 630 kB), offline (service worker, `src/sw/sw.ts`, `scripts/sw-plugin.ts`, `src/ui/serviceWorker.ts`),
+Lighthouse > 90 (výkon i přístupnost, opravy kontrastu a ARIA) a bugfix z průchodů přes UI (třesení při hoveru,
+Štamgast bez ikon); nové testy `tests/unit/{app-lazy,service-worker}.test.ts`, e2e `tests/e2e/{offline,sweep,hover}.spec.ts`.
+Shrnutí v DECISIONS „Fáze 10 (výkon, offline, přístupnost, bugfix)“, popis v ARCHITECTURE kap. 8.
+**Další krok:** balanc simulací (silnější boti a zvednutí cíle patra 8 podle plánu v DECISIONS „Balanc po fázi 7“,
+bod 5; střední síly piva; balíčky nad Hospodským), jazyková korektura, README česky se screenshoty a GIFem, deploy na
+GitHub Pages, tag `v1.0.0`.
 Pozn.: e2e spouštět vždy jen z jednoho procesu (sdílený port 4173).
 
 **Fáze 0–2 jsou hotové** (commity `chore: …`, `feat(engine): complete phase 1 …`, `feat(engine): complete phase 2 …`).
@@ -24,7 +29,7 @@ Z fáze 2 zůstal jen podúkol „První kalibrace křivky cílů“ — předb�
 **Fáze 3 (Herní UI v1) je hotová** a commitnutá (`81d813f feat(ui): complete phase 3 game UI v1`; revize
 v `docs/DECISIONS.md`, 2026-10-02 „Revize a uzavření fáze 3“). Run jde v prohlížeči dohrát od menu po pitvu i výhru
 → Nekonečný režim myší, klávesnicí i dotykem; autosave po každé akci. QA nástroj:
-`npx tsx scripts/ui-walkthrough.ts --seed S --bot flush [--anim]` (proti `vite preview` na portu 4173).
+`npx tsx scripts/ui-walkthrough.ts --seed S --bot flush [--anim] [--deck D --stake N | --challenge ID | --daily]` (proti `vite preview` na portu 4173; seed 8 znaků bez I, O, 0, 1).
 
 **Fáze 4 (Žolíci v1 + Večerka) je hotová** — všechny podúkoly odškrtnuté, audit a finální ověření proběhly
 (`docs/DECISIONS.md`, 2026-10-02 „Uzavření fáze 4“). Commitnutá (`e85c464 feat: complete phase 4 jokers v1 and shop`).
@@ -339,12 +344,14 @@ průměrném notebooku; kontroly zelené; commit `feat(ui): juice and audio`; f�
 - [ ] Žádný žolík zjevně bezcenný ani „auto-win“ (porovnání s cílovými hodnotami vzácností)
 - [ ] Patro 8 řádově statisíce: metrika síly bota v `simulate`, silnější boti, pak křivky po krocích (plán v DECISIONS „Balanc po fázi 7“, bod 5)
 - [ ] Ztížení Speciálu, které boty i hráče opravdu stojí; balíčky v ±7 p. b. od Hospodského (DESIGN 12.1); Δ výher žolíků normalizovaná na patro koupě
-- [ ] Bugfix, konzole bez chyb a varování
-- [ ] Lighthouse: výkon a přístupnost > 90 na herní obrazovce
+- [x] Bugfix, konzole bez chyb a varování (36 průchodů `ui-walkthrough` přes balíčky, síly piva, výzvy a denní run, s animacemi i bez; e2e `sweep.spec.ts` přes všechny obrazovky mimo hru; opraveno třesení prvků při hoveru a Štamgast bez ikon — DECISIONS „Fáze 10 (výkon, offline, přístupnost, bugfix)“)
+- [x] Výkon: code splitting — hlavní chunk 93 kB / 33 kB gzip (dřív 630 / 202 kB), obrazovky mimo menu jako líné chunky s přednačtením, ikony až po vykreslení menu (ARCHITECTURE 8.1)
+- [x] Lighthouse: výkon a přístupnost > 90 na herní obrazovce (desktop: menu 99 / 100, přechod do hry 100, herní obrazovka přístupnost 100; mobil: menu 98; přístupnost 100 na všech obrazovkách a fázích hry)
 - [ ] Jazyková korektura všech textů (pravopis, typografie, `plural()`, tykání)
 - [ ] `ASSETS.md` kompletní s licencemi, atribuce (game-icons.net, Pixelify Sans) i v Titulcích
 - [ ] README česky: popis, screenshoty, GIF, jak spustit, „inspirováno hrou Balatro“, licence
-- [ ] Deploy na GitHub Pages (`base`), hra funguje i offline (bez síťových závislostí)
+- [x] Hra funguje offline po prvním načtení: ručně psaný service worker s precache buildu (`src/sw/sw.ts`, plugin `scripts/sw-plugin.ts`), bezpečná aktualizace; e2e `offline.spec.ts` i pod `BASE_PATH=/FM/` (ARCHITECTURE 8.2)
+- [ ] Deploy na GitHub Pages (`base`)
 - [ ] Testy a e2e zelené, pokrytí enginu ≥ 80 %
 - [ ] Kontrola definice hotovo v1.0 (`CLAUDE.md` kap. 10)
 - [ ] Tag `v1.0.0`

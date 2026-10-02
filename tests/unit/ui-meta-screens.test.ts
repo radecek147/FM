@@ -384,6 +384,11 @@ describe('sbírka', () => {
     expect(q('[data-testid="codex-count"]').textContent).toBe(
       t('meta.collection.count', { n: 1, total: ids.length }),
     );
+    // Čtečka dostane celé znění skrytým textem; `aria-label` na <p> je zakázaný (axe aria-prohibited-attr).
+    const countLabel = q('[data-testid="codex-count-label"]');
+    expect(countLabel.textContent).toBe(t('meta.collection.countLabel', { n: 1, total: ids.length }));
+    expect(countLabel.classList.contains('visually-hidden')).toBe(true);
+    expect(countLabel.parentElement?.hasAttribute('aria-label')).toBe(false);
 
     known.click();
     const detail = q('[data-testid="codex-detail"]');

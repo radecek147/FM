@@ -355,6 +355,13 @@ class GameView implements PresentView {
       const id = c.handIds()[idx];
       if (!selecting || id === undefined) return false;
       c.toggleSelect(id);
+      // Výběr klávesou patří ruce: zůstal-li focus na jiném ovládacím prvku (žolík po zavření detailu, Zahodit…),
+      // Enter by aktivoval ten prvek místo Zahrát (našel ui-walkthrough). Karta v ruce focus drží dál.
+      const onHandCard =
+        e.target instanceof HTMLElement &&
+        e.target.classList.contains('pcard') &&
+        this.handArea.el.contains(e.target);
+      if (isControl(e.target) && !onHandCard) this.handArea.focusHand();
       return true;
     }
     const key = e.key.toLowerCase();

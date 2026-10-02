@@ -5,25 +5,52 @@
  * režimu. Hlídá i konzoli (chyby a varování) a peníze / skóre v DOM.
  *
  *   npm run build && npx vite preview --port 4173 &
- *   npx tsx scripts/ui-walkthrough.ts [--seed WALK1] [--bot max|flush|pairs|econ] [--anim] [--url http://localhost:4173/]
+ *   npx tsx scripts/ui-walkthrough.ts [--seed WALKWAYS] [--bot max|flush|pairs|econ] [--anim] [--url http://localhost:4173/]
+ *     [--deck pub] [--stake 1] [--challenge <id>] [--daily]
  *
- * Výstup: JSON se souhrnem (fáze, akce, rozdíly, konzole); nenulový návratový kód při rozdílu nebo chybě.
+ * `--deck` / `--stake` vyberou balíček a sílu piva na obrazovce Nová hra, `--challenge` spustí výzvu z obrazovky
+ * Výzvy, `--daily` dnešní denní run. S kterýmkoli z nich se předem vloží profil se vším odemčeným (balíčky, síly
+ * piva, žolíci, kupóny, výzvy). Výzva si seed losuje; s `--seed` se losování podvrhne (přehrání konkrétního runu
+ * ze souhrnu).
+ *
+ * Výstup: JSON se souhrnem (fáze, akce, rozdíly, konzole); nenulový návratový kód při rozdílu nebo chybě. Při chybě
+ * uloží snímek obrazovky a uložený run do `test-results/ui-walkthrough-<seed>.*`; `KARBAN_WALK_LOG=1` vypisuje
+ * akce tah po tahu na stderr.
  * Ruku UI libovolně přeřadit neumí (jen třídění) — akci `reorderHand` bot nahradí navazující akcí s cíli
  * v pořadí ruky.
  */
+import { writeFileSync } from 'node:fs';
 import { chromium, type Page } from '@playwright/test';
 import { registry } from '../src/content';
-import { Game, createBot, deserializeRun, type Action, type BotName, type RunState } from '../src/engine';
+import {
+  Game,
+  createBot,
+  deserializeRun,
+  serializeRun,
+  type Action,
+  type BotName,
+  type RunState,
+} from '../src/engine';
+import { SEED_ALPHABET } from '../src/engine/constants';
+import { createProfile, parseSeedInput, serializeProfile } from '../src/engine/meta';
 
 function arg(name: string, fallback: string): string {
   const i = process.argv.indexOf(`--${name}`);
   return i >= 0 && process.argv[i + 1] ? process.argv[i + 1]! : fallback;
 }
 
-const SEED = arg('seed', 'WALK1');
+const SEED = arg('seed', 'WALKWAYS');
+// Seed musí projít stejnou kontrolou jako v UI (8 znaků bez I, O, 0, 1) — jinak by Nová hra nezačala.
+const seedCheck = parseSeedInput(SEED);
+if (!seedCheck.ok) throw new Error(`Neplatný seed „${SEED}“ (${seedCheck.error}) — 8 znaků bez I, O, 0, 1`);
 const BOT = arg('bot', 'max') as Exclude<BotName, 'random'>;
 const URL = arg('url', 'http://localhost:4173/');
 const ANIM = process.argv.includes('--anim');
+const DECK = arg('deck', '');
+const STAKE = arg('stake', '');
+const CHALLENGE = arg('challenge', '');
+const DAILY = process.argv.includes('--daily');
+const UNLOCK_ALL = Boolean(DECK || STAKE || CHALLENGE || DAILY);
 const MAX_TURNS = Number(arg('max-turns', '700'));
 const RELOAD_AT = new Set([30, 61]);
 const ENDLESS_TURNS = 40;
@@ -74,6 +101,45 @@ await page.addInitScript((anim) => {
   if (!localStorage.getItem('karban.settings'))
     localStorage.setItem('karban.settings', JSON.stringify(anim ? { speed: 4 } : { animations: false }));
 }, ANIM);
+if ((CHALLENGE || DAILY) && process.argv.includes('--seed')) {
+  // Výzva si seed losuje (`randomSeed` přes crypto.getRandomValues) — pro přehrání konkrétního runu se prvních
+  // 8 losování podvrhne tak, aby vyšel zadaný seed.
+  // Skript jako text: tsx by do funkce vložil pomocníka `__name`, který v prohlížeči neexistuje.
+  const queue = [...SEED].map((ch) =>
+    Math.floor(((SEED_ALPHABET.indexOf(ch) + 0.5) / SEED_ALPHABET.length) * 2 ** 32),
+  );
+  await page.addInitScript(`{
+    const queue = ${JSON.stringify(queue)};
+    const original = crypto.getRandomValues.bind(crypto);
+    crypto.getRandomValues = (array) => {
+      if (queue.length > 0 && array instanceof Uint32Array && array.length === 1) {
+        array[0] = queue.shift();
+        return array;
+      }
+      return original(array);
+    };
+  }`);
+}
+if (UNLOCK_ALL) {
+  // Profil se vším odemčeným (nastavení je jeho součástí — starý klíč `karban.settings` se pak nečte).
+  const now = new Date().toISOString();
+  const profile = createProfile(now, { ...(ANIM ? { speed: 4 } : { animations: false }), tutorial: false });
+  profile.unlocks = {
+    decks: Object.keys(reg.decks),
+    stakes: Object.fromEntries(Object.keys(reg.decks).map((id) => [id, 8])),
+    jokers: Object.keys(reg.jokers),
+    vouchers: Object.keys(reg.vouchers),
+    challenges: Object.keys(reg.challenges),
+  };
+  profile.stats.runs.won = 10;
+  profile.stats.runs.played = 10;
+  await page.addInitScript(
+    (value) => {
+      if (!localStorage.getItem('karban.profile')) localStorage.setItem('karban.profile', value);
+    },
+    serializeProfile(profile, now),
+  );
+}
 
 const idle = async (): Promise<void> => {
   await page.waitForSelector('.game:not(.is-busy)', { timeout: 30_000 });
@@ -181,10 +247,22 @@ async function perform(s: RunState, action: Action, mouse: boolean): Promise<voi
 }
 
 await page.goto(URL);
-await page.getByTestId('menu-new-game').click();
-await page.getByTestId('seed-input').fill(SEED);
-await page.getByTestId('newgame-start').click();
+if (CHALLENGE) {
+  await page.getByTestId('menu-challenges').click();
+  await page.getByTestId(`challenge-${CHALLENGE}`).click();
+  await page.getByTestId('challenge-start').click();
+} else if (DAILY) {
+  await page.getByTestId('menu-daily').click();
+  await page.getByTestId('daily-play').click();
+} else {
+  await page.getByTestId('menu-new-game').click();
+  if (DECK) await page.getByTestId(`deck-${DECK}`).click();
+  if (STAKE) await page.getByTestId(`stake-${STAKE}`).click();
+  await page.getByTestId('seed-input').fill(SEED);
+  await page.getByTestId('newgame-start').click();
+}
 await page.waitForSelector('.game[data-phase]');
+const started = (await readRun())!;
 
 const phases: Record<string, number> = {};
 const actions: Record<string, number> = {};
@@ -192,6 +270,9 @@ const mismatches: string[] = [];
 let turn = 0;
 let reloads = 0;
 let endlessTurns = -1;
+let lastAction: Action | null = null;
+/** Soubory k chybě podle skutečného seedu runu (výzva a denní run si seed losují). */
+const errorPrefix = (): string => `test-results/ui-walkthrough-${started.seed}`;
 
 try {
   for (; turn < MAX_TURNS; turn++) {
@@ -221,6 +302,8 @@ try {
     if (!s) throw new Error('chybí uložený run');
     if (s.phase !== ph) mismatches.push(`tah ${turn}: fáze v DOM ${ph} ≠ uložená ${s.phase}`);
     const action = decide(s);
+    lastAction = action;
+    if (process.env.KARBAN_WALK_LOG) console.error(`tah ${turn} (${ph}): ${JSON.stringify(action)}`);
     actions[action.type] = (actions[action.type] ?? 0) + 1;
     const expected = Game.fromState(structuredClone(s), reg);
     const res = expected.dispatch(action);
@@ -239,9 +322,14 @@ try {
     const d = diff(after, exp);
     if (d.length > 0) {
       mismatches.push(`tah ${turn}: ${JSON.stringify(action)} → ${d.slice(0, 8).join('; ')}`);
+      // Stav před akcí (k přehrání: vložit jako `karban.run` a Pokračovat) a snímek po ní.
+      writeFileSync(`${errorPrefix()}.before.json`, serializeRun(s, new Date().toISOString()));
+      await page.screenshot({ path: `${errorPrefix()}.png` }).catch(() => undefined);
       break;
     }
-    const money = Number(((await page.getByTestId('money').textContent()) ?? '').replace(/[^\d-]/g, ''));
+    // Záporné částky UI píše typografickým minus (U+2212, src/i18n/format.ts).
+    const moneyText = ((await page.getByTestId('money').textContent()) ?? '').replace(/\u2212/g, '-');
+    const money = Number(moneyText.replace(/[^\d-]/g, ''));
     if (money !== exp.money) mismatches.push(`tah ${turn}: peníze v DOM ${money} ≠ ${exp.money}`);
     if (exp.phase === 'round') {
       const text = (await page.getByTestId('round-score').textContent()) ?? '';
@@ -250,11 +338,26 @@ try {
     }
   }
 } catch (err) {
-  mismatches.push(`tah ${turn}: ${err instanceof Error ? err.message.split('\n')[0] : String(err)}`);
+  const lines = err instanceof Error ? err.message.split('\n') : [String(err)];
+  // Z logu Playwrightu i důvod, proč klik neprošel (překrytí, neviditelný, neaktivní nebo pohybující se prvek).
+  const why = [...lines]
+    .reverse()
+    .find((l) =>
+      /intercepts pointer events|not visible|not enabled|not stable|outside of the viewport/.test(l),
+    );
+  const msg = `${lines[0]}${why ? ` — ${why.trim()}` : ''}`;
+  mismatches.push(`tah ${turn}: ${msg}${lastAction ? ` (akce ${JSON.stringify(lastAction)})` : ''}`);
+  // Snímek obrazovky v okamžiku chyby (pro ladění; test-results/ je v .gitignore).
+  await page.screenshot({ path: `${errorPrefix()}.png` }).catch(() => undefined);
+  const raw = await page.evaluate(() => localStorage.getItem('karban.run')).catch(() => null);
+  if (raw) writeFileSync(`${errorPrefix()}.run.json`, raw);
 }
 
 const summary = {
-  seed: SEED,
+  seed: started.seed,
+  deck: started.deckId,
+  stake: started.stake,
+  challenge: started.challengeId ?? null,
   bot: BOT,
   animations: ANIM,
   turns: turn,

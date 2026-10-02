@@ -43,21 +43,21 @@ export const menu = {
     hint: 'Runy se zvláštními pravidly. Pro ty, kterým normální hra nestačí.',
     /** Cedulka s počtem nově odemčených výzev. */
     badge: '{n}',
-    labelNew: 'Výzvy ({n|plural:nová výzva,nové výzvy,nových výzev})',
+    labelNew: 'Výzvy – {n|plural:nová výzva,nové výzvy,nových výzev}',
   },
   daily: {
     label: 'Denní run',
     hint: 'Stejné karty pro celou republiku. Kdo prohraje, platí rundu.',
-    /** Cedulka, dokud čeká dnešní oficiální pokus. */
+    /** Cedulka, dokud čeká dnešní oficiální pokus. Přístupné názvy s cedulkou ji obsahují (WCAG 2.5.3). */
     badge: 'Dnes',
-    labelOpen: 'Denní run (dnešní pokus čeká)',
+    labelOpen: 'Denní run – Dnes (oficiální pokus ještě čeká)',
   },
   collection: {
     label: 'Sbírka',
     hint: 'Všichni žolíci, šéfové a pranostiky, které ti prošly rukama.',
     /** Cedulka s počtem novinek (štítek „Nové“). */
     badge: '{n}',
-    labelNew: 'Sbírka ({n|plural:novinka,novinky,novinek})',
+    labelNew: 'Sbírka – {n|plural:novinka,novinky,novinek}',
   },
   stats: { label: 'Statistiky', hint: 'Čísla, kterými se můžeš chlubit. Nebo je radši nikomu neukazuj.' },
   settings: { label: 'Nastavení', hint: 'Hlasitost, rychlost a další šroubky.' },

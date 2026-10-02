@@ -329,6 +329,29 @@ describe('Jednooký hejtman (one_eyed_hetman)', () => {
     expect(hand(g, 'KH KS').score).toBe((12 + 20 + 10 + 2 * 3) * (2 + 2));
   });
 
+  it('přeřazení po krocích (jako „Posunout doleva“ v UI) dá stejný stav jako přeřazení najednou', () => {
+    // Našel ui-walkthrough: pořadí v `jokerDebuffs` záviselo na cestě (debuff mezi kroky přeskakoval mezi žolíky).
+    const single = bossGame('one_eyed_hetman', { jokers: FIVE });
+    const stepwise = reload(single);
+    const [a, b, c, d, e] = single.state.jokers.map((j) => j.uid) as [number, number, number, number, number];
+    const target = [e, d, a, b, c];
+    ok(single.dispatch({ type: 'reorderJokers', uids: target }));
+    for (let i = 0; i < target.length; i++) {
+      let order = stepwise.state.jokers.map((j) => j.uid);
+      for (let p = order.indexOf(target[i]!); p > i; p--) {
+        [order[p - 1], order[p]] = [order[p]!, order[p - 1]!];
+        ok(stepwise.dispatch({ type: 'reorderJokers', uids: [...order] }));
+        order = stepwise.state.jokers.map((j) => j.uid);
+      }
+    }
+    expect(stepwise.state.jokers.map((j) => j.uid)).toEqual(target);
+    expect(stepwise.state.round!.jokerDebuffs).toEqual(single.state.round!.jokerDebuffs);
+    expect(stepwise.state.round!.ruleJokerDebuffs).toEqual(single.state.round!.ruleJokerDebuffs);
+    expect(JSON.stringify(stepwise.state)).toBe(JSON.stringify(single.state));
+    // Kanonické pořadí: podle pozice žolíka zleva.
+    expect(single.state.round!.jokerDebuffs).toEqual([b, c]);
+  });
+
   it('prodej žolíka během kola: polovina se přepočítá', () => {
     const g = bossGame('one_eyed_hetman', { jokers: ['noop', 'plus_mult', 'times_mult', 'coaster'] });
     const [a, , c, d] = g.state.jokers.map((j) => j.uid);

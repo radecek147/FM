@@ -295,7 +295,8 @@ flavor a že texty dodržují typografii.
 ## 4. UI (`src/ui`)
 
 - Vlastní lehký helper `h(tag, props, ...children)` (`src/ui/dom.ts`) — žádný framework.
-- `src/ui/app.ts` — router obrazovek (menu, nová hra, hra, sbírka, statistiky, nastavení, titulky).
+- `src/ui/app.ts` — router obrazovek (menu, nová hra, hra, sbírka, statistiky, nastavení, titulky); obrazovky mimo
+  menu se načítají líně jako samostatné chunky (kap. 8.1).
 - `src/ui/controller.ts` — drží instanci `Game`, předává akce, řadí události do fronty animací,
   po každé akci autosave.
 - Obrazovky v `src/ui/screens/*`, komponenty v `src/ui/components/*`.
@@ -393,7 +394,53 @@ game.modifiers() })` a uložit profil i run; po pitvě / výhře / opuštění `
   příkazy oddělené středníkem neinteraktivně (testy a ukázky).
 - `npm run fetch-assets` — stáhne/extrahuje volně licencované assety a přegeneruje `ASSETS.md`.
 - `npm run deploy` — build pro GitHub Pages (`BASE_PATH=/<repo>/`).
-- `npx tsx scripts/ui-walkthrough.ts [--seed S] [--bot max|flush|pairs|econ] [--anim]` — QA průchod celým runem přes
-  UI (běžící `vite preview` na portu 4173): bot rozhoduje, prohlížeč klávesami a myší provádí akce a po každé z nich
-  se uložený stav porovná s tím, co by z předchozího uložení udělal engine; cestou dva reloady (Pokračovat), po výhře
-  Nekonečný režim; hlídá konzoli. Trvá minuty, proto není součástí `test:e2e`.
+- `npx tsx scripts/ui-walkthrough.ts [--seed S] [--bot max|flush|pairs|econ] [--anim] [--url U] [--deck D]
+[--stake N] [--challenge ID] [--daily]` — QA průchod celým runem přes UI (běžící `vite preview`, výchozí port 4173):
+  bot rozhoduje, prohlížeč klávesami a myší provádí akce a po každé z nich se uložený stav porovná s tím, co by
+  z předchozího uložení udělal engine; cestou dva reloady (Pokračovat), po výhře Nekonečný režim; hlídá konzoli.
+  `--deck` / `--stake` / `--challenge` / `--daily` vloží profil se vším odemčeným a run spustí z obrazovky Nová hra,
+  Výzvy nebo Denní run. Trvá minuty, proto není součástí `test:e2e`.
+
+## 8. Build: code splitting a offline
+
+### 8.1 Code splitting (`src/main.ts`, `vite.config.ts`)
+
+- Staticky se načítá jen to, co potřebuje start a menu: router, profil, zvuk, tutoriál, menu. Ostatní obrazovky
+  (nová hra, hra, nastavení, titulky, sbírka, statistiky, výzvy, denní run, galerie) jsou dynamické importy
+  registrované přes `App.registerLazy(id, loader)` — literály v `import()` nechávají Vite vytvořit chunky a cesty
+  k nim podle `base` (funguje i pod `/FM/` na GitHub Pages, ověřeno e2e `offline.spec.ts` s `BASE_PATH=/FM/`).
+- Router zůstává synchronní pro načtené obrazovky. První `go()` na línou obrazovku počká na chunk (stará obrazovka
+  zůstane, `#app` má `aria-busy`), souběžná načtení sdílejí slib, opožděný přechod se zahodí, když hráč mezitím
+  odešel jinam, a chyba načtení skončí hláškou `errors.screenLoad` (další pokus jde znovu na síť).
+  Po vykreslení menu `whenIdle` načte ikony a všechny líné obrazovky dopředu (`App.preloadScreens`), takže přechody
+  jsou pak okamžité. Testy: `tests/unit/app-lazy.test.ts`.
+- Ikony (game-icons, ~345 kB) jsou vlastní chunk (`loadIcons`, `src/ui/art/icons.ts`); menu je nepotřebuje, takže
+  se na ně při startu nečeká. Obrazovky s kartami se ukážou až s nimi (`withIcons` v `main.ts`), oznámení odemčení
+  (`ProfileControllerOptions.notify`) také. Štamgast v bublině tutoriálu se překreslí při připojení ke hře.
+- Pojmenované sdílené chunky (`build.rolldownOptions.output.codeSplitting.groups`): `i18n`, `engine`, `content`
+  a zbytek startu (`$initial`) v hlavním `index`. Hlavní chunk ~93 kB (33 kB gzip), celý start ~431 kB (144 kB gzip)
+  místo jednoho 630kB chunku (202 kB gzip) + ikon čekajících před prvním vykreslením.
+- CSS zůstává jedno (`index-*.css`, ~94 kB / 19 kB gzip): `main.ts` importuje styly všech obrazovek v pevném pořadí
+  (base → screens → meta → cards → game → tutorial → fx), takže kaskáda je stejná jako bez code splittingu
+  (CSS chunku připojené až za běhu by přebilo „šťávu“ z `fx.css`).
+- `index.html` má v `#app` statický text „Míchám karty…“ (z `app.loading`), ať se něco vykreslí hned po HTML a CSS.
+
+### 8.2 Service worker (`src/sw/sw.ts`, `scripts/sw-plugin.ts`, `src/ui/serviceWorker.ts`)
+
+- Ručně psaný worker bez knihoven, typovaný vlastními minimálními typy (projekt má knihovnu DOM, ne WebWorker).
+  Plugin `karban-sw` (jen `vite build`, `enforce: 'post'`) ho v `generateBundle` přeloží (`transformWithOxc`) do
+  `sw.js` vedle `index.html` a doplní `__SW_PRECACHE__` (všechny soubory buildu kromě source map; `index.html` jako
+  `./`) a `__SW_VERSION__` (SHA-256 obsahu všech souborů buildu, 12 znaků → cache `karban-<verze>`).
+- Registrace jen v produkčním buildu (`import.meta.env.PROD`) na `${BASE_URL}sw.js` — rozsah je adresář hry
+  (`/` lokálně, `/FM/` na GitHub Pages). Chyba registrace jen varuje, hra běží dál.
+- install: stáhne celý build mimo HTTP cache (`cache: 'reload'`, ať se nesmíchají verze); hashované soubory, které
+  má starší cache, jen zkopíruje; chybějící soubor shodí instalaci (neúplná cache by offline nefungovala).
+  activate: smaže cache starších verzí `karban-*` (cizí nechá) a `clients.claim()`.
+  fetch: navigace na hru (adresář nebo `index.html`, s libovolnými parametry) → app shell z cache; ostatní GET
+  v rozsahu → cache, jinak síť; cizí adresy a POST nechá prohlížeči.
+- Aktualizace je bezpečná: žádné `skipWaiting` — nový worker čeká, dokud běží stará verze, takže rozehraná hra nikdy
+  nedostane soubory jiné verze; stránka hráči oznámí `app.updateReady` („naskočí při příštím spuštění“).
+  Profil ani run worker nečte (jsou v `localStorage`).
+- Testy: `tests/unit/service-worker.test.ts` (plugin + chování nad falešnými `caches`/`fetch`),
+  e2e `tests/e2e/offline.spec.ts` (načíst, `context.setOffline(true)`, reload → menu, sbírka, nový run); stejný test
+  projde i proti buildu s `BASE_PATH=/FM/` servírovanému pod `/FM/`.

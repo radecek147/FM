@@ -33,6 +33,8 @@ export interface HandArea {
    * zaměřenou. Vrací false, když není co posouvat (klávesa pak propadne dál).
    */
   moveCard(dir: -1 | 1): boolean;
+  /** Přesune focus na ruku (skupinu karet) — když byl na jiném ovládacím prvku mimo ruku. */
+  focusHand(): void;
 }
 
 export interface HandAreaActions {
@@ -65,6 +67,8 @@ export function createHandArea(ctx: GameCtx, actions: HandAreaActions): HandArea
     role: 'group',
     'aria-describedby': 'gb-hand-reorder',
     'data-testid': 'hand',
+    // Cíl focusu při výběru klávesami 1–9 (`focusHand`), mimo pořadí Tab.
+    tabindex: '-1',
   });
   // Nápověda k přesunu (čtečky) a hlášení nové pozice karty po přesunu.
   const reorderHint = h('p', { class: 'visually-hidden', id: 'gb-hand-reorder' }, t('game.hand.reorderHint'));
@@ -362,5 +366,8 @@ export function createHandArea(ctx: GameCtx, actions: HandAreaActions): HandArea
       return n && handRow.contains(n) ? n : null;
     },
     moveCard,
+    focusHand() {
+      handRow.focus({ preventScroll: true });
+    },
   };
 }

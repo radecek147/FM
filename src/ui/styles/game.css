@@ -703,13 +703,19 @@
   transform: translateY(-6px);
 }
 
+/*
+ * Odehraná / přeskočená útrata: odbarvení místo průhlednosti — text si drží kontrast ≥ 4,5 : 1 (Lighthouse
+ * color-contrast); průhledný je jen obrázek žetonu. Nadcházející útraty zůstávají plně čitelné (aktuální se zvedá).
+ */
 .blind-card.is-defeated,
 .blind-card.is-skipped {
-  opacity: 0.55;
+  filter: grayscale(0.85);
+  box-shadow: 0 2px 0 var(--paper-shade);
 }
 
-.blind-card.is-upcoming {
-  opacity: 0.88;
+.blind-card.is-defeated .blind-card__token,
+.blind-card.is-skipped .blind-card__token {
+  opacity: 0.45;
 }
 
 .blind-card__status {
@@ -729,7 +735,8 @@
 }
 
 .blind-card--boss .blind-card__status {
-  background: var(--danger);
+  /* Tmavší než --danger: světlý text na pilulce s kontrastem ≥ 4,5 : 1. */
+  background: #b33128;
 }
 
 .blind-card__token {
@@ -790,7 +797,8 @@
 .blind-card__reward {
   font-size: 1.05rem;
   font-weight: 700;
-  color: #8a6408;
+  /* Tmavá „pivní“ zlatá: kontrast ≥ 4,5 : 1 na papíře i na --paper-shade. */
+  color: #6f5005;
 }
 
 .blind-card__tag {
@@ -1556,6 +1564,11 @@
 
 .gb-hand-wrap {
   min-width: 0;
+}
+
+/* Focus dostává ruka jen programově (výběr klávesami 1–9, mimo pořadí Tab) — výběr karet je vidět sám. */
+.gb-hand:focus {
+  outline: none;
 }
 
 .gb-hand {

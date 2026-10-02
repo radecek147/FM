@@ -81,7 +81,10 @@ test('menu se načte bez chyb, Pokračovat je bez uložení neaktivní, všechny
   }
   await expect(page.locator('.btn--soon')).toHaveCount(0);
   // Denní run: cedulka „Dnes“, dokud čeká oficiální pokus.
-  await expect(page.getByTestId('menu-daily')).toHaveAttribute('aria-label', 'Denní run (dnešní pokus čeká)');
+  await expect(page.getByTestId('menu-daily')).toHaveAttribute(
+    'aria-label',
+    /^Denní run\s–\sDnes \(oficiální pokus ještě čeká\)$/,
+  );
 
   // Klávesnice: focus začíná na Nové hře, šipka dolů přeskočí neaktivní Pokračovat.
   await expect(page.getByTestId('menu-new-game')).toBeFocused();
