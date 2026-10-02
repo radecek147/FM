@@ -81,3 +81,4 @@
 - [ ] **Tácek s čárkami** — statistika odehraných rukou zobrazená jako čárky na pivním tácku.
 - [ ] **Kalendář pranostik** — loading tipy s pranostikou podle dnešního data (jen UI, engine to neovlivní).
 - [ ] **Slovenská mutace** — `src/i18n/sk.ts` po 1.0; struktura textů s tím počítá.
+- [ ] **Předložka před číslem** — filtr `{n|z}` ve `format.ts` („z“/„ze“ podle výslovnosti čísla: ze 2, ze 3, ze 4, ze 7, ze 12, ale z 5) a sjednocení zápisu pravděpodobností „1 ze 4“ ve všech textech (žolíci, vylepšení, rady).

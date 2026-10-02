@@ -854,7 +854,7 @@ Vzácná a silná, většinou s cenou. V obchodě jen s kupónem „Babiččina 
 |  10 | Kontrola totožnosti (`id_check`)      | 1 karta                           | Karta dostane náhodnou edici (lesklá 55 %, holografická 30 %, duhová 15 %).                                                 | „Občanku, prosím. To na té fotce jste vy?“           |
 |  11 | Sloučení spisů (`merge_files`)        | přesně 2                          | Pravá karta se zničí; levá převezme její vylepšení, pečeť a edici (jen to, co levá nemá).                                   | „Dva spisy, jedna složka, nula přehlednosti.“        |
 |  12 | Daňové přiznání (`tax_return`)        | —                                 | Vytvoří náhodného **epického** žolíka (potřebuje slot); **peníze se nastaví na 0 Kč** (dluh zůstane).                       | „Přiznání je polehčující okolnost.“                  |
-|  13 | Kolaudace (`occupancy_permit`)        | —                                 | **Trvale +1 slot žolíka a −1 slot spotřebky** (jen pokud máš aspoň 2 sloty spotřebek a ostatní spotřebky se pak vejdou).   | „Stavba je hotová, chybí jen schody.“                |
+|  13 | Kolaudace (`occupancy_permit`)        | —                                 | **Trvale +1 slot žolíka a −1 slot spotřebky** (jen pokud máš aspoň 2 sloty spotřebek a ostatní spotřebky se pak vejdou).    | „Stavba je hotová, chybí jen schody.“                |
 |  14 | Odvolání (`appeal`)                   | jen v kole se šéfovským pravidlem | Vypne pravidlo šéfa do konce kola; **stojí 5 Kč** (i do dluhu, do limitu).                                                  | „Odvolání má odkladný účinek. Za pět korun.“         |
 |  15 | Vyvlastnění (`expropriation`)         | —                                 | Zničí žolíka **nejvíc vpravo** (ne přibitého) a dá **3× jeho prodejní cenu**.                                               | „Ve veřejném zájmu, samozřejmě.“                     |
 |  16 | Prominutí pokut (`fine_waiver`)       | —                                 | Odstraní všechny nálepky ze všech tvých žolíků (zvětralým vrátí funkci).                                                    | „Amnestie na všechno kromě parkování.“               |
@@ -871,6 +871,8 @@ Upřesnění pravidel (fáze 5, `canUse` = kdy jde razítko použít; bez platn�
   (zničený negativní žolík si odnese svůj slot).
 - **Hromadné vyřízení** potřebuje aspoň jednoho žolíka bez edice a velikost ruky aspoň 2; **Úřední hodiny** aspoň
   2 ruce za kolo (postih nesmí být zadarmo). Úřední hodiny zvednou i tajné kombinace.
+- **Kolaudace** nesmí přeplnit sloty: ostatní spotřebky se po ubrání slotu musí vejít (razítko použité ze slotu svůj
+  slot uvolní). S plnými sloty jinými spotřebkami ji tedy nejde ani „Koupit a použít“, ani použít z obálky.
 - **Sloučení spisů**: levá/pravá podle pořadí v ruce, ne podle pořadí výběru.
 - **Odvolání**: jen ve fázi kola s aktivním (nevypnutým) šéfovským pravidlem a jen když `peníze − 5 ≥ −dluhový limit`.
 - **Vyvlastnění** vezme nejpravějšího žolíka, který **není přibitý** (přibité přeskočí); zapůjčený vynese 3 × 1 Kč.
@@ -1433,8 +1435,12 @@ skleněná ×2, čipy karet, 1/1,5/2× cíle útrat, 5 slotů žolíků, 2 sloty
 | Zapůjčený žolík                    | cena 1 Kč, −3 Kč za kolo                                                                           | cena 2 Kč, −2 Kč za kolo                                                                                         | shoda                                                                  |
 | Žebříček síly piva                 | malá bez odměny / křivka 2 / věční 30 % / −1 zahození / křivka 3 / kazící se 30 % / zapůjčení 30 % | Dražší pivo / křivka 2 / zvětrávání 25 % / Bez dýška / křivka 3 / přibití 20 % + zapůjčení 15 % / Šéf i ve Velké | celý žebříček odpovídal 1:1 (pořadí, pravidla i 30 %)                  |
 | Nekonečný režim                    | `base(8) × g^(a−8)`                                                                                | `nice(base(8) × g(a)^(a−8))`                                                                                     | upřesnění zápisu, stejné zaokrouhlení jako hlavní hra                  |
+| Edice hrací karty (revize fáze 5)  | lesklá 4 %, holografická 2,8 %, duhová 1,2 %                                                       | 5 % / 2,5 % / 1 %                                                                                                | shoda (karetní obálka)                                                 |
+| Karetní obálka (revize fáze 5)     | vylepšení 40 %                                                                                     | 35 % (pečeť 15 % beze změny)                                                                                     | shoda                                                                  |
+| Zaručená edice (revize fáze 5)     | lesklá 50 %, holografická 35 %, duhová 15 %                                                        | 55 % / 30 % / 15 % (Hromadné vyřízení, Kontrola totožnosti, štítek Vyleštěné příbory)                            | shoda                                                                  |
+| Babská rada č. 18 (revize fáze 5)  | Zaříkávání (`incantation`)                                                                         | Zaklepat na dřevo (`knock_on_wood`)                                                                              | přeložený název cizí karty (CONTENT-GUIDE 13: ani přeložené názvy)     |
 
-Křivky cílů 1–3, ceny žolíků 4–5 / 6–7 / 8–10, přehození 4 Kč (+1), šance edic lesklá/holo/duhová, vylepšení
+Křivky cílů 1–3, ceny žolíků 4–5 / 6–7 / 8–10, přehození 4 Kč (+1), šance edic lesklá/holo/duhová u žolíka, vylepšení
 (+25 čipů, +5 mult, sklo 1 z 5, šťastná 1 z 4 / 1 z 12) a ostatní výchozí čísla jsou převzata z návrhu beze změny.
 
 ## Příloha B — Požadovaná rozšíření rozhraní enginu

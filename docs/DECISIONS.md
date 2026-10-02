@@ -1172,3 +1172,53 @@ patří do fáze 5 k výběru cílů spotřebek.
 
 **Proč:** CLAUDE.md kap. 2 (UI jen přes controller, výkon), kap. 4 (ovládání, dotyk), kap. 6 (texty), kap. 8 (konzole
 bez chyb, determinismus „stejný seed = identický run“ včetně uložení); DESIGN 13.1–13.3.
+
+## 2026-10-02 — Revize obsahu fáze 5: texty, převzatá čísla, kombinace s enginem, fuzz
+
+**Co:** prošly se všechny vyrenderované popisky (`t()` s `params`) 13 pranostik, 22 rad, 16 razítek, 15 obálek
+a 24 kupónů proti kódu a DESIGN (čísla, cíle, ceny, pravopis, tykání, rodová neutralita, názvy ≤ 3 slova, flavor,
+názvy a čísla z cizích her). Nový test `tests/unit/phase5-review.test.ts`: každá spotřebka v kole šéfa, s prázdnou
+rukou, na výběru útraty, ve Večerce přes „Koupit a použít“ (volné i plné sloty) a v obálce (použít / nechat si),
+špatný počet cílů, tajné pranostiky, každý kupón přes uložení a načtení, chaos fuzz (60 runů, všechny akce
+s náhodnými cíli, vnucený obsah) a všichni boti na všech balíčcích na Desítce i Imperialu. Registr testu = skutečný
+obsah + testoví šéfové a dva testoví legendární žolíci (Odvolání a Výjimku z vyhlášky jinak se skutečným obsahem
+použít nejde, dokud fáze 6 a 7 nepřinesou šéfy a legendy). Nálezy a opravy:
+
+- **Převzatá čísla (CONTENT-GUIDE 13, DESIGN příloha A):** rozdělení „zaručené“ edice 50 / 35 / 15 % (Hromadné
+  vyřízení, Kontrola totožnosti; v DESIGN i štítek Vyleštěné příbory) → **55 / 30 / 15 %**; šance edic hrací karty
+  4 / 2,8 / 1,2 % → **5 / 2,5 / 1 %** (`EditionDef.weightCard`); vylepšení karty v karetní obálce 40 % → **35 %**
+  (`BOOSTER_CARD_ENHANCE_CHANCE`). Původní trojice byly 1:1 čísla cizí hry; síla se změnila jen nepatrně.
+- **Přeložený cizí název:** babská rada „Zaříkávání“ (`incantation`) = přeložený název karty cizí hry →
+  **„Zaklepat na dřevo“ (`knock_on_wood`)**, mechanika beze změny, nový flavor „Ťuk, ťuk, ťuk. Hlavně to
+  nezakřiknout.“, ikona pěst na dřevěném pozadí. Id kupónu Kartářka `fortune_teller` (anglický název cizího žolíka)
+  → **`card_reader`**; český název zůstává (běžné slovo). Hráč ani uložení id ještě nevidí (před 1.0, bez migrace).
+- **Kolaudace přeplnila sloty:** s plnými sloty šla „Koupit a použít“ (nebo použít z obálky) a ve slotech pak zůstaly
+  2 spotřebky na 1 slot. `canUse` teď chce, aby se ostatní spotřebky po ubrání slotu vešly (razítko ze slotu svůj
+  slot uvolní, i s negativní edicí); text to říká.
+- **Negativní spotřebka si odnese svůj slot:** Rosnička a Babiččin recept počítaly volné místo i se slotem vlastní
+  negativní edice, který po použití zmizí (`canUse` řekl ano, nic se nevytvořilo). Opraveno (v 1.0 negativní spotřebky
+  běžně nevznikají, engine je podporuje).
+- **Rady, které by nic nezměnily, nejdou použít** (DESIGN 5.3 „bez platného cíle je Použít neaktivní“): Babiččina
+  barva, když všechny vybrané karty už mají barvu levé; Zrcátko v předsíni na dvě karty stejné hodnoty; Kynuté těsto
+  na samá esa. Dřív se rada spotřebovala naprázdno.
+- **Texty:** obálky „Vyber 1 z 3 pranostik“ (správně „ze 3“, ale „z 5“ — šablona to neumí) → „Nabídne 3 pranostiky,
+  vybereš 1.“ s `|plural:`; Trhací kalendář „z 3 na 7“ → „(váha každé 3 → 7, žolíci mají 14)“; kupóny s číslem
+  a slovem používají `|plural:` (dřív pevný tvar „ruka“, „karta“, „slot“); Rosnička, Babiččin recept a Odvolání mají
+  mechaniku v jedné větě (Recept nově říká, že potřebuje volný slot, jako Rosnička); Kolaudace zmiňuje, že se ostatní
+  spotřebky musí vejít. Flavor Svatého Václava je teď věrohodná pranostika („Na svatého Václava sklizeň bývá hotová.
+  I ta královská.“) — jako jediná ji neměl ani v názvu, ani ve flavoru.
+- **Ověřeno bez nálezu:** ceny, cíle, váhy a čísla všech 51 spotřebek, 15 obálek a 24 kupónů sedí s DESIGN 2.9, 5 a 6;
+  sleva neplatí na přehození a Amnestie ano (jak říkají texty); chaos fuzz i boti bez výjimky a bez neplatných akcí,
+  stav po každém kroku JSON-bezpečný a po uložení a načtení shodný (i modifikátory); `canUseConsumable` = `dispatch`.
+
+**Vědomě ponecháno:**
+
+- Pravděpodobnost „{chance} z {odds}“ (1 z 4, 1 z 12) zůstává zápisem v celé hře (i u žolíků); správné „ze 4“ by
+  potřebovalo filtr předložky ve `format.ts` a sjednocení všech textů — nápad do `docs/IDEAS.md`.
+- Nominativní popisky rad „Až {cards} vybrané karty dostanou…“ mají tvar pro 2–4 napsaný rovnou: `|plural:` by
+  nespravil shodu slovesa („1 karta dostane“, „5 karet dostane“). Při změně čísla přepsat i text.
+- Výjimka z vyhlášky a Odvolání se nabízejí, i když je se skutečným obsahem zatím nejde použít (fáze 6/7 doplní šéfy
+  a legendy); fallback popisku obálky v `src/i18n/cs/art.ts` („Vyber {picks} z {options}.“) patří UI workflow.
+
+**Proč:** CLAUDE.md kap. 3, 5, 6 a 7 (žádné názvy, texty ani čísla z cizích her), kap. 8 (testy, determinismus);
+CONTENT-GUIDE 12–13; DESIGN 2.6, 2.9, 5.1–5.4, 6, příloha A.
