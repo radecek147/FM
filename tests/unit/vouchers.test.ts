@@ -32,7 +32,7 @@ import { ART, boss, makeGame, makeRegistry, winNextHand } from './fixtures/regis
 /** DESIGN 6: [tier 1, cena, tier 2, cena] v pořadí tabulky. */
 const PAIRS: [string, number, string, number][] = [
   ['second_shelf', 9, 'checkout_shelf', 12],
-  ['loyalty_card', 10, 'gold_loyalty', 13],
+  ['yellow_price', 10, 'relabeled_price', 13],
   ['counter_buddy', 9, 'manager_inlaw', 11],
   ['late_hours', 12, 'nonstop', 15],
   ['dumpster', 9, 'recycling_yard', 12],
@@ -40,7 +40,7 @@ const PAIRS: [string, number, string, number][] = [
   ['savings_account', 9, 'building_savings', 12],
   ['narrow_rack', 11, 'proper_rack', 13],
   ['tear_calendar', 8, 'grandmas_pantry', 11],
-  ['card_stall', 9, 'card_reader', 12],
+  ['card_stall', 9, 'collectors_fair', 12],
   ['polish', 9, 'holo_foil', 12],
   ['official_strike', 12, 'amnesty', 14],
 ];
@@ -175,8 +175,8 @@ describe('kupóny – definice (DESIGN 6)', () => {
 
   it('popisky čtou stejná čísla jako mechanika', () => {
     const d = (id: string) => t(`vouchers.${id}.desc`, def(id).params ?? {});
-    expect(d('loyalty_card')).toBe(`Zboží ve Večerce je o${NBSP}20${NBSP}% levnější (přehození ne).`);
-    expect(d('gold_loyalty')).toContain(`o${NBSP}40${NBSP}%`);
+    expect(d('yellow_price')).toBe(`Zboží ve Večerce je o${NBSP}20${NBSP}% levnější (přehození ne).`);
+    expect(d('relabeled_price')).toContain(`o${NBSP}40${NBSP}%`);
     expect(d('counter_buddy')).toContain(`o${NBSP}1${NBSP}Kč levnější (začíná na 3${NBSP}Kč)`);
     expect(d('nonstop')).toBe(
       `+1${NBSP}ruka v${NBSP}každém kole a${NBSP}+1${NBSP}Kč navíc za každou nevyužitou ruku.`,
@@ -185,7 +185,7 @@ describe('kupóny – definice (DESIGN 6)', () => {
     expect(d('building_savings')).toContain(`na 12${NBSP}Kč`);
     expect(d('tear_calendar')).toContain('(váha každé 3 → 7, žolíci mají 14)');
     expect(d('grandmas_pantry')).toContain('7 → 8,5');
-    expect(d('card_reader')).toContain(`50${NBSP}% šanci na vylepšení a${NBSP}20${NBSP}% šanci na pečeť`);
+    expect(d('collectors_fair')).toContain(`50${NBSP}% šanci na vylepšení a${NBSP}20${NBSP}% šanci na pečeť`);
     expect(d('polish')).toContain('2,5× častěji');
     expect(d('holo_foil')).toContain('3,5× častěji (místo 2,5×)');
     expect(d('official_strike')).toContain('×1,1');
@@ -208,21 +208,21 @@ describe('kupóny – nabídka a koupě', () => {
   it('tier 2 se nabídne až s vlastněným tier 1; vlastněný kupón už ne', () => {
     const g = game();
     toShop(g);
-    expect(eligibleVouchers(g._core)).not.toContain('gold_loyalty');
-    buy(g, 'loyalty_card');
+    expect(eligibleVouchers(g._core)).not.toContain('relabeled_price');
+    buy(g, 'yellow_price');
     const pool = eligibleVouchers(g._core);
-    expect(pool).toContain('gold_loyalty');
-    expect(pool).not.toContain('loyalty_card');
-    expect(pool.filter((id) => def(id).tier === 2)).toEqual(['gold_loyalty']);
-    buy(g, 'gold_loyalty');
-    expect(eligibleVouchers(g._core)).not.toContain('gold_loyalty');
-    expect(g.state.vouchers).toEqual(['loyalty_card', 'gold_loyalty']);
+    expect(pool).toContain('relabeled_price');
+    expect(pool).not.toContain('yellow_price');
+    expect(pool.filter((id) => def(id).tier === 2)).toEqual(['relabeled_price']);
+    buy(g, 'relabeled_price');
+    expect(eligibleVouchers(g._core)).not.toContain('relabeled_price');
+    expect(g.state.vouchers).toEqual(['yellow_price', 'relabeled_price']);
   });
 
   it('tier 2 bez tier 1 koupit nejde (ani vnucený do nabídky) — stav se nezmění', () => {
     const g = game();
     toShop(g);
-    g._core.state.shop!.vouchers = [{ voucherId: 'gold_loyalty', price: 13, sold: false }];
+    g._core.state.shop!.vouchers = [{ voucherId: 'relabeled_price', price: 13, sold: false }];
     const before = JSON.stringify(g.state);
     expect(g.dispatch({ type: 'buyVoucher', slot: 0 })).toMatchObject({ ok: false, error: 'cannotUse' });
     expect(JSON.stringify(g.state)).toBe(before);
@@ -313,26 +313,26 @@ describe('1 Druhý regál / Regál u pokladny', () => {
   });
 });
 
-describe('2 Věrnostní karta / Zlatá věrnostní', () => {
+describe('2 Žlutá cenovka / Přelepená cenovka', () => {
   /** Obálky (4 / 7 / 10 Kč) jako vzorek cen. */
   const boosterPrices = (g: Game) => g.state.shop!.boosters.map((b) => [b.boosterId, b.price] as const);
   const cost = (id: string) => BOOSTERS.find((b) => b.id === id)!.cost;
 
-  it('Věrnostní karta: zboží o 20 % levnější hned (polovina nahoru), přehození ne', () => {
+  it('Žlutá cenovka: zboží o 20 % levnější hned (polovina nahoru), přehození ne', () => {
     const g = game();
     toShop(g);
     const rerollCost = g.state.shop!.rerollCost;
-    buy(g, 'loyalty_card');
+    buy(g, 'yellow_price');
     expect(g.modifiers().shopDiscountPct).toBe(20);
     const expected: Record<number, number> = { 4: 3, 7: 6, 10: 8 };
     for (const [id, price] of boosterPrices(g)) expect(price, id).toBe(expected[cost(id)]);
     expect(g.state.shop!.rerollCost).toBe(rerollCost);
-    offer(g, 'gold_loyalty');
+    offer(g, 'relabeled_price');
     expect(g.state.shop!.vouchers[0]!.price).toBe(10); // 13 × 0,8 = 10,4
   });
 
-  it('Zlatá věrnostní: celkem 40 %', () => {
-    const g = shopWith('loyalty_card', 'gold_loyalty');
+  it('Přelepená cenovka: celkem 40 %', () => {
+    const g = shopWith('yellow_price', 'relabeled_price');
     expect(g.modifiers().shopDiscountPct).toBe(40);
     const expected: Record<number, number> = { 4: 2, 7: 4, 10: 6 };
     for (const [id, price] of boosterPrices(g)) expect(price, id).toBe(expected[cost(id)]);
@@ -498,7 +498,7 @@ describe('9 Trhací kalendář / Babiččina spíž', () => {
   });
 });
 
-describe('10 Stánek s kartami / Kartářka', () => {
+describe('10 Stánek s kartami / Sběratelská burza', () => {
   it('Stánek s kartami: ve Večerce se objevují hrací karty (bez kupónu nikdy); vylepšení ~20 %, pečeť 0 %', () => {
     const plain = game();
     toShop(plain);
@@ -513,8 +513,8 @@ describe('10 Stánek s kartami / Kartářka', () => {
     expect(cards.some((c) => c.seal)).toBe(false);
   });
 
-  it('Kartářka: vylepšení 50 %, pečeť 20 %', () => {
-    const g = shopWith('card_stall', 'card_reader');
+  it('Sběratelská burza: vylepšení 50 %, pečeť 20 %', () => {
+    const g = shopWith('card_stall', 'collectors_fair');
     expect(g.modifiers().playingCardEnhanceChance).toBe(0.5);
     expect(g.modifiers().playingCardSealChance).toBe(0.2);
     const cards = sampleItems(g, 600).flatMap((it) => (it.kind === 'card' ? [it.card] : []));

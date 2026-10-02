@@ -16,9 +16,9 @@ import { BASE_MODIFIERS } from '../engine/effects/modifiers';
 /** 1 Druhý regál / Regál u pokladny: sloty Večerky navíc. */
 const SHELF_CARD_SLOTS = 1;
 const CHECKOUT_BOOSTER_SLOTS = 1;
-/** 2 Věrnostní karta / Zlatá věrnostní: sleva ve Večerce v % (celkem). */
-const LOYALTY_PCT = 20;
-const GOLD_LOYALTY_PCT = 40;
+/** 2 Žlutá cenovka / Přelepená cenovka: sleva ve Večerce v % (celkem). */
+const YELLOW_PRICE_PCT = 20;
+const RELABELED_PRICE_PCT = 40;
 /** 3 Kamarád za pultem: přehození o tolik Kč levnější. Švagr vedoucí: cena v téže Večerce neroste. */
 const BUDDY_REROLL_DISCOUNT = 1;
 /** 4 Prodloužená otvíračka / Nonstop: ruce navíc, Kč navíc za nevyužitou ruku. */
@@ -45,10 +45,10 @@ const CALENDAR_WEIGHT = 4;
 const PANTRY_WEIGHT = 1.5;
 const PANTRY_RAZITKO_WEIGHT = 2;
 const PANTRY_CONSUMABLE_SLOTS = 1;
-/** 10 Stánek s kartami / Kartářka: váha hracích karet, šance na vylepšení a pečeť v % (celkem). */
+/** 10 Stánek s kartami / Sběratelská burza: váha hracích karet, šance na vylepšení a pečeť v % (celkem). */
 const STALL_CARD_WEIGHT = 5;
-const TELLER_ENHANCE_PCT = 50;
-const TELLER_SEAL_PCT = 20;
+const FAIR_ENHANCE_PCT = 50;
+const FAIR_SEAL_PCT = 20;
 /** 11 Leštěnka / Hologramová fólie: násobič šance na lesklou, holografickou a duhovou edici (celkem). */
 const POLISH_EDITION_MULT = 2.5;
 const HOLO_FOIL_EDITION_MULT = 3.5;
@@ -116,23 +116,23 @@ export const VOUCHERS: VoucherDef[] = [
 
   // 2 — sleva
   tier1(
-    'loyalty_card',
+    'yellow_price',
     10,
-    { icon: 'ticket', bg: '#1f3b3a', fg: '#e8f1d4', accent: '#9bc53d', pattern: 'dots' },
+    { icon: 'ticket', bg: '#1f3b3a', fg: '#fff7c2', accent: '#facc15', pattern: 'dots' },
     {
-      params: { pct: LOYALTY_PCT },
-      passive: () => ({ shopDiscountPct: LOYALTY_PCT }),
+      params: { pct: YELLOW_PRICE_PCT },
+      passive: () => ({ shopDiscountPct: YELLOW_PRICE_PCT }),
     },
   ),
   tier2(
-    'gold_loyalty',
-    'loyalty_card',
+    'relabeled_price',
+    'yellow_price',
     13,
-    { icon: 'crown-coin', bg: '#3b2f12', fg: '#ffe9a8', accent: '#f4c430', pattern: 'rays' },
+    { icon: 'papers', bg: '#3b2f12', fg: '#ffe9a8', accent: '#f4c430', pattern: 'rays' },
     {
-      params: { pct: GOLD_LOYALTY_PCT },
+      params: { pct: RELABELED_PRICE_PCT },
       // Modifikátory se sčítají: 20 + 20 = 40 %.
-      passive: () => ({ shopDiscountPct: GOLD_LOYALTY_PCT - LOYALTY_PCT }),
+      passive: () => ({ shopDiscountPct: RELABELED_PRICE_PCT - YELLOW_PRICE_PCT }),
     },
   ),
 
@@ -336,16 +336,16 @@ export const VOUCHERS: VoucherDef[] = [
     },
   ),
   tier2(
-    'card_reader',
+    'collectors_fair',
     'card_stall',
     12,
-    { icon: 'crystal-ball', bg: '#2e1a47', fg: '#f3e8ff', accent: '#a78bfa', pattern: 'waves' },
+    { icon: 'magnifying-glass', bg: '#2e1a47', fg: '#f3e8ff', accent: '#a78bfa', pattern: 'waves' },
     {
       // Procenta, ne „…Chance“: UI by je jinak násobilo `probabilityMult`, který tyto šance nemění.
-      params: { enhancePct: TELLER_ENHANCE_PCT, sealPct: TELLER_SEAL_PCT },
+      params: { enhancePct: FAIR_ENHANCE_PCT, sealPct: FAIR_SEAL_PCT },
       passive: () => ({
-        playingCardEnhanceChance: TELLER_ENHANCE_PCT / 100 - BASE_MODIFIERS.playingCardEnhanceChance,
-        playingCardSealChance: TELLER_SEAL_PCT / 100 - BASE_MODIFIERS.playingCardSealChance,
+        playingCardEnhanceChance: FAIR_ENHANCE_PCT / 100 - BASE_MODIFIERS.playingCardEnhanceChance,
+        playingCardSealChance: FAIR_SEAL_PCT / 100 - BASE_MODIFIERS.playingCardSealChance,
       }),
     },
   ),

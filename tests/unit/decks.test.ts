@@ -96,7 +96,7 @@ describe('balíčky – seznam a texty', () => {
 
   it('Úřednický: popisek jmenuje přesně startovní kupóny (názvy z textů kupónů)', () => {
     const clerk = DECKS.find((d) => d.id === 'clerk')!;
-    expect(clerk.startingVouchers).toEqual(['loyalty_card', 'tear_calendar']);
+    expect(clerk.startingVouchers).toEqual(['tear_calendar', 'counter_buddy']);
     const desc = t('decks.clerk.desc');
     for (const v of clerk.startingVouchers!) {
       expect(reg.vouchers[v], v).toBeDefined();
@@ -261,21 +261,21 @@ function beatBoss(g: Game): GameEvent[] {
 const pranostikaHand = (defId: string): HandType | undefined => reg.consumables[defId]?.hand;
 
 describe('balíčky fáze 7 – pravidla', () => {
-  it('Úřednický: start s kupóny Věrnostní karta a Trhací kalendář (zdarma, s jejich efekty)', () => {
+  it('Úřednický: start s kupóny Trhací kalendář a Kamarád za pultem (zdarma, s jejich efekty)', () => {
     const g = newGame('clerk');
-    expect(g.state.vouchers).toEqual(['loyalty_card', 'tear_calendar']);
+    expect(g.state.vouchers).toEqual(['tear_calendar', 'counter_buddy']);
     expect(g.state.money).toBe(5);
     expect(g.state.deck).toHaveLength(52);
-    expect(modsDiff('clerk')).toEqual({ shopDiscountPct: 20, shopWeightPranostika: 7, shopWeightRada: 7 });
+    expect(modsDiff('clerk')).toEqual({ rerollBaseCost: 3, shopWeightPranostika: 7, shopWeightRada: 7 });
     // Kupón patra nikdy nenabídne to, co už balíček dal.
     for (let i = 0; i < 30; i++) {
       const offered = newGame('clerk', `CLERK${i}`).state.anteVouchers;
-      expect(offered).not.toContain('loyalty_card');
+      expect(offered).not.toContain('counter_buddy');
       expect(offered).not.toContain('tear_calendar');
     }
     // Uložení a načtení: kupóny zůstanou, pravidla také.
     const loaded = Game.fromState(deserializeRun(serializeRun(g.state as RunState)), reg);
-    expect(loaded.state.vouchers).toEqual(['loyalty_card', 'tear_calendar']);
+    expect(loaded.state.vouchers).toEqual(['tear_calendar', 'counter_buddy']);
     expect(loaded.modifiers()).toEqual(g.modifiers());
   });
 

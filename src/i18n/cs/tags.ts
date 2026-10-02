@@ -62,10 +62,10 @@ export const tags = {
       'bez příplatku.',
     flavor: 'Na návštěvu se vytahuje to nejlepší.',
   },
-  photo_negative: {
-    name: 'Fotonegativ',
+  dental_xray: {
+    name: 'Rentgen od zubaře',
     desc: 'Příští žolík ve Večerce bude negativní, bez příplatku.',
-    flavor: 'Z alba, kde všichni vypadají jako duchové.',
+    flavor: 'Na snímku je vidět skrz. Proto nezabere místo.',
   },
   referral: {
     name: 'Doporučení od známého',
@@ -77,10 +77,10 @@ export const tags = {
     desc: 'V příští Večerce navíc slot s epickým žolíkem (za plnou cenu).',
     flavor: 'Nejde o to, co umíš, ale koho znáš.',
   },
-  voucher_slip: {
-    name: 'Úřední poukaz',
+  mailbox_flyer: {
+    name: 'Leták ve schránce',
     desc: 'V příští Večerce navíc {vouchers|plural:kupón,kupóny,kupónů}.',
-    flavor: 'Platí do konce měsíce. Kterého, neuvedeno.',
+    flavor: 'Na schránce je cedulka proti reklamě. Leták číst neumí.',
   },
   boss_flu: {
     name: 'Šéf má chřipku',

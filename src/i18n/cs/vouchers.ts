@@ -16,15 +16,15 @@ export const vouchers = {
     desc: '+{slots|plural:slot,sloty,slotů} na obálky ve Večerce.',
     flavor: 'Impulzivní nákupy na dosah ruky.',
   },
-  loyalty_card: {
-    name: 'Věrnostní karta',
+  yellow_price: {
+    name: 'Žlutá cenovka',
     desc: 'Zboží ve Večerce je o {pct} % levnější (přehození ne).',
-    flavor: 'Sbíráte body? – Ne. – Tak je máte.',
+    flavor: 'Žlutá barva, menší číslo. Víc vědět nepotřebuješ.',
   },
-  gold_loyalty: {
-    name: 'Zlatá věrnostní',
+  relabeled_price: {
+    name: 'Přelepená cenovka',
     desc: 'Zboží ve Večerce je celkem o {pct} % levnější (přehození ne).',
-    flavor: 'Platinová by byla moc nápadná.',
+    flavor: 'Pod novou cenovkou stará, pod ní ještě starší. Archeologie slev.',
   },
   counter_buddy: {
     name: 'Kamarád za pultem',
@@ -101,10 +101,10 @@ export const vouchers = {
     desc: 'Ve Večerce se objevují i hrací karty (váha {weight}, žolíci mají {joker}).',
     flavor: 'Z druhé ruky, jako nové.',
   },
-  card_reader: {
-    name: 'Kartářka',
+  collectors_fair: {
+    name: 'Sběratelská burza',
     desc: 'Hrací karty ve Večerce mají {enhancePct} % šanci na vylepšení a {sealPct} % šanci na pečeť.',
-    flavor: 'Vyložila mi budoucnost. Je v ní Barva.',
+    flavor: 'Tahle je ještě s pečetí z první republiky. Pro tebe za pade.',
   },
   polish: {
     name: 'Leštěnka',

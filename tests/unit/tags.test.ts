@@ -110,10 +110,10 @@ describe('štítky — obsah (DESIGN 7)', () => {
     ['official_letter', 2],
     ['cottage_marias', 1],
     ['polished_cutlery', 1],
-    ['photo_negative', 2],
+    ['dental_xray', 2],
     ['referral', 1],
     ['connections', 3],
-    ['voucher_slip', 1],
+    ['mailbox_flyer', 1],
     ['boss_flu', 1],
     ['spread_newspaper', 1],
     ['forecast', 1],
@@ -148,7 +148,7 @@ describe('štítky — obsah (DESIGN 7)', () => {
     expect(desc('open_doors')).toContain('3 přehození zdarma');
     expect(desc('polished_cutlery')).toContain('lesklá 55 %, holografická 30 %, duhová 15 %');
     expect(desc('referral')).toContain('o 50 % levněji');
-    expect(desc('voucher_slip')).toContain('1 kupón');
+    expect(desc('mailbox_flyer')).toContain('1 kupón');
     expect(desc('boss_flu')).toContain('o 25 % nižší');
     expect(desc('spread_newspaper')).toBe('V příštím kole +2 karty v ruce a +1 zahození.');
     expect(desc('forecast')).toContain('+2 úrovně');
@@ -189,7 +189,7 @@ describe('štítky útrat — losování (DESIGN 7)', () => {
     expect(seen.size).toBe(TAGS.length - late.size);
   });
 
-  it('od patra 3 se nabízejí i štítky s vyšším minAnte (Úřední dopis, Fotonegativ, Protekce, Lékařské potvrzení)', () => {
+  it('od patra 3 se nabízejí i štítky s vyšším minAnte (Úřední dopis, Rentgen od zubaře, Protekce, Lékařské potvrzení)', () => {
     const seen = new Set<string>();
     for (let i = 0; i < 40; i++) {
       const game = Game.newRun({ seed: `TAGANTE${i}`, deckId: 'pub', stake: 1 }, real);
@@ -439,9 +439,9 @@ describe('štítky „příští Večerka“', () => {
     expect(items[0]!.price).toBe(reg.jokers[items[0]!.joker.defId]!.cost);
   });
 
-  it('Fotonegativ: příští žolík ve Večerce je negativní bez příplatku a jde koupit i do plných slotů', () => {
+  it('Rentgen od zubaře: příští žolík ve Večerce je negativní bez příplatku a jde koupit i do plných slotů', () => {
     const game = newGame({ jokers: ['jokers_only', 'noop', 'noop', 'noop', 'noop'], money: 50 });
-    skipWith(game, 'photo_negative');
+    skipWith(game, 'dental_xray');
     winToShop(game);
     const items = jokerItems(game);
     const neg = items.find((it) => it.joker.edition === 'negative');
@@ -500,9 +500,9 @@ describe('štítky „příští Večerka“', () => {
     expect(items.at(-1)!.extra).toBe(true);
   });
 
-  it('Úřední poukaz: v příští Večerce navíc 1 kupón (jiný než kupón patra), v další Večerce už ne', () => {
+  it('Leták ve schránce: v příští Večerce navíc 1 kupón (jiný než kupón patra), v další Večerce už ne', () => {
     const game = newGame({ money: 100 });
-    skipWith(game, 'voucher_slip');
+    skipWith(game, 'mailbox_flyer');
     winToShop(game);
     const vouchers = game.state.shop!.vouchers;
     expect(vouchers).toHaveLength(2);

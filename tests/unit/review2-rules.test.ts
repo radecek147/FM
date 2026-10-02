@@ -98,18 +98,23 @@ describe('Večerka: prázdný stav po vykoupení všeho (DESIGN 2.5.1)', () => {
 // ─────────────────────────── Doppelbock: cena zapůjčeného žolíka ───────────────────────────
 
 describe('Doppelbock: popisek ceny zapůjčeného žolíka sedí s cenou ve Večerce (DESIGN 4.6, 10)', () => {
-  it('na Doppelbocku (vč. Jedenáctky) stojí zapůjčený žolík tolik, kolik říká popisek', () => {
+  it('na Doppelbocku stojí zapůjčený žolík tolik, kolik říká popisek (od 2. patra plus příplatek Jedenáctky)', () => {
     const registry: ContentRegistry = {
       ...makeRegistry(),
       stakes: Object.fromEntries(STAKES.map((s) => [s.id, s])),
     };
     const doppelbock = STAKES.find((s) => s.id === 'doppelbock')!;
+    const jedenactka = STAKES.find((s) => s.id === 'jedenactka')!;
     for (const level of [7, 8]) {
       const game = makeGame({ registry, stake: level });
       const rental = newJokerInstance(game._core, 'epic_one', null, ['rental']);
       const price = jokerPrice(game._core, rental);
       expect(price).toBe(doppelbock.params!.price);
-      expect(t('stakes.doppelbock.desc', doppelbock.params)).toContain(`stojí ${formatMoney(price)}`);
+      expect(t('stakes.doppelbock.desc', doppelbock.params)).toContain(`stojí jen ${formatMoney(price)}`);
+      // Od 2. patra platí příplatek Jedenáctky i na zapůjčené žolíky.
+      game._core.state.ante = Number(jedenactka.params!.fromAnte);
+      game._core.invalidate();
+      expect(jokerPrice(game._core, rental)).toBe(price + Number(jedenactka.params!.add));
     }
   });
 

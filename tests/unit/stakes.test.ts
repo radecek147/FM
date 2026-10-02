@@ -11,7 +11,7 @@ import { Game } from '../../src/engine/run/game';
 import { stakeStickerChance } from '../../src/engine/shop/shop';
 import type { Modifiers } from '../../src/engine/types';
 import { hasKey, t } from '../../src/i18n/cs';
-import { typo } from '../../src/i18n/format';
+import { formatNumber, typo } from '../../src/i18n/format';
 import { makeRegistry, winNextHand } from './fixtures/registry';
 
 const reg = buildRegistry();
@@ -20,9 +20,17 @@ function newGame(stake: number, registry = reg): Game {
   return Game.newRun({ seed: 'STAKETEST', deckId: 'pub', stake }, registry);
 }
 
-/** Modifikátory, ve kterých se obtížnost liší od výchozích (BASE_MODIFIERS). */
-function modsDiff(stake: number): Partial<Modifiers> {
-  const m = newGame(stake).modifiers();
+/** Hra dané obtížnosti přepnutá do patra `ante` (ztížení Jedenáctky a Ležáku platí až od 2. / 3. patra). */
+function gameAtAnte(stake: number, ante: number): Game {
+  const g = newGame(stake);
+  g._core.state.ante = ante;
+  g._core.invalidate();
+  return g;
+}
+
+/** Modifikátory, ve kterých se obtížnost liší od výchozích (BASE_MODIFIERS); výchozí patro 3 = všechna ztížení. */
+function modsDiff(stake: number, ante = 3): Partial<Modifiers> {
+  const m = gameAtAnte(stake, ante).modifiers();
   const out: Partial<Modifiers> = {};
   for (const key of Object.keys(BASE_MODIFIERS) as (keyof Modifiers)[]) {
     if (m[key] !== BASE_MODIFIERS[key]) (out as Record<string, unknown>)[key] = m[key];
@@ -37,9 +45,9 @@ function finalSmallTarget(stake: number): number {
   return g.blindTarget('small');
 }
 
-/** Vyhraje Malou útratu jedinou rukou a vrátí rozpis odměn. */
-function winSmallBlind(stake: number) {
-  const g = newGame(stake);
+/** Vyhraje Malou útratu jedinou rukou (volitelně v patře `ante`) a vrátí rozpis odměn. */
+function winSmallBlind(stake: number, ante = 1) {
+  const g = ante === 1 ? newGame(stake) : gameAtAnte(stake, ante);
   g.dispatch({ type: 'selectBlind' });
   winNextHand(g);
   const res = g.dispatch({ type: 'play', cardIds: [g.state.round!.hand[0]!] });
@@ -83,10 +91,12 @@ describe('obtížnosti – seznam (DESIGN kap. 10)', () => {
       expect(t(`stakes.${s.id}.desc`, s.params ?? {})).not.toMatch(/[{}⟦]/);
       expect(t(`stakes.${s.id}.flavor`)).toBe(typo(flavors[s.id]!));
     }
-    expect(t('stakes.jedenactka.desc', STAKES[1]!.params)).toContain('o 1 Kč víc');
+    expect(t('stakes.jedenactka.desc', STAKES[1]!.params)).toContain(typo('od 2. patra'));
+    expect(t('stakes.jedenactka.desc', STAKES[1]!.params)).toContain(typo('o 1 Kč víc'));
+    expect(t('stakes.lezak.desc', STAKES[4]!.params)).toContain(typo('od 3. patra'));
     expect(t('stakes.special.desc', STAKES[3]!.params)).toContain('25 %');
     expect(t('stakes.special.desc', STAKES[3]!.params)).toContain('6 kolech');
-    expect(t('stakes.dvanactka.desc', STAKES[2]!.params)).toContain('23 000');
+    expect(t('stakes.dvanactka.desc', STAKES[2]!.params)).toContain(formatNumber(26_000));
   });
 });
 
@@ -94,18 +104,35 @@ describe('obtížnosti – každá úroveň přidává právě své ztížení',
   it('1 Desítka: základní pravidla, křivka cílů 1', () => {
     expect(modsDiff(1)).toEqual({});
     expect(newGame(1).targetCurve()).toBe(1);
-    expect(finalSmallTarget(1)).toBe(21_000);
+    expect(finalSmallTarget(1)).toBe(23_000);
     const g = newGame(1);
     expect([g.blindTarget('small'), g.blindTarget('big'), g.blindTarget('boss')]).toEqual([250, 380, 500]);
     expect(stakeStickerChance(g._core)).toEqual({});
   });
 
-  it('2 Jedenáctka: ve Večerce všechno o 1 Kč dráž (i přehození), jinak beze změny', () => {
+  it('2 Jedenáctka: od 2. patra ve Večerce všechno o 1 Kč dráž (i přehození), jinak beze změny', () => {
     expect(modsDiff(2)).toEqual({ shopPriceAdd: 1 });
+    expect(modsDiff(2, 2)).toEqual({ shopPriceAdd: 1 });
+    expect(modsDiff(2, 1)).toEqual({});
     expect(newGame(2).targetCurve()).toBe(1);
+    // Patro 1: Večerka za běžné ceny.
     const { game } = winSmallBlind(2);
     expect(game.dispatch({ type: 'cashOut' }).ok).toBe(true);
-    expect(game.state.shop!.rerollCost).toBe(BASE_MODIFIERS.rerollBaseCost + 1);
+    expect(game.state.shop!.rerollCost).toBe(BASE_MODIFIERS.rerollBaseCost);
+    // Večerka po šéfovi 1. patra už patří 2. patru (patro se zvedne při výplatě) → příplatek.
+    const boss = newGame(2);
+    boss._core.state.blindIndex = 2;
+    boss._core.state.blinds[0]!.status = 'done';
+    boss._core.state.blinds[1]!.status = 'done';
+    boss._core.state.blinds[2]!.status = 'current';
+    boss.dispatch({ type: 'selectBlind' });
+    expect(boss.state.round!.blind).toBe('boss');
+    boss._core.api.disableBoss();
+    winNextHand(boss);
+    expect(boss.dispatch({ type: 'play', cardIds: [boss.state.round!.hand[0]!] }).ok).toBe(true);
+    expect(boss.dispatch({ type: 'cashOut' }).ok).toBe(true);
+    expect(boss.state.ante).toBe(2);
+    expect(boss.state.shop!.rerollCost).toBe(BASE_MODIFIERS.rerollBaseCost + 1);
     const { game: cheap } = winSmallBlind(1);
     cheap.dispatch({ type: 'cashOut' });
     expect(cheap.state.shop!.rerollCost).toBe(BASE_MODIFIERS.rerollBaseCost);
@@ -114,8 +141,8 @@ describe('obtížnosti – každá úroveň přidává právě své ztížení',
   it('3 Dvanáctka: křivka cílů 2', () => {
     expect(modsDiff(3)).toEqual({ shopPriceAdd: 1 });
     expect(newGame(3).targetCurve()).toBe(2);
-    expect(finalSmallTarget(3)).toBe(23_000);
-    expect(finalSmallTarget(2)).toBe(21_000);
+    expect(finalSmallTarget(3)).toBe(26_000);
+    expect(finalSmallTarget(2)).toBe(23_000);
   });
 
   it('4 Speciál: 25 % žolíků zvětrávajících', () => {
@@ -125,10 +152,14 @@ describe('obtížnosti – každá úroveň přidává právě své ztížení',
     expect(newGame(4).targetCurve()).toBe(2);
   });
 
-  it('5 Ležák: nevyužité ruce nedávají peníze', () => {
+  it('5 Ležák: od 3. patra nevyužité ruce nedávají peníze', () => {
     expect(modsDiff(5)).toEqual({ shopPriceAdd: 1, moneyPerUnusedHand: 0 });
-    expect(winSmallBlind(4).rewards.unusedHands).toBe(BASE_MODIFIERS.hands - 1);
-    const { rewards } = winSmallBlind(5);
+    expect(modsDiff(5, 2)).toEqual({ shopPriceAdd: 1 });
+    expect(modsDiff(5, 1)).toEqual({});
+    // Patra 1–2: dýško ještě je.
+    expect(winSmallBlind(5).rewards.unusedHands).toBe(BASE_MODIFIERS.hands - 1);
+    expect(winSmallBlind(4, 3).rewards.unusedHands).toBe(BASE_MODIFIERS.hands - 1);
+    const { rewards } = winSmallBlind(5, 3);
     expect(rewards.unusedHands).toBe(0);
     expect(rewards.blindReward).toBe(3);
   });
@@ -136,7 +167,7 @@ describe('obtížnosti – každá úroveň přidává právě své ztížení',
   it('6 Bock: křivka cílů 3', () => {
     expect(newGame(5).targetCurve()).toBe(2);
     expect(newGame(6).targetCurve()).toBe(3);
-    expect(finalSmallTarget(6)).toBe(26_000);
+    expect(finalSmallTarget(6)).toBe(29_000);
     expect(modsDiff(6)).toEqual(modsDiff(5));
   });
 
@@ -167,7 +198,7 @@ describe('obtížnosti – každá úroveň přidává právě své ztížení',
 
 describe('obtížnosti – kumulace', () => {
   it('Imperial obsahuje všechna ztížení nižších úrovní', () => {
-    const g = newGame(8);
+    const g = gameAtAnte(8, 3);
     expect(g.targetCurve()).toBe(3);
     expect(g.modifiers().shopPriceAdd).toBe(1);
     expect(g.modifiers().moneyPerUnusedHand).toBe(0);
@@ -178,7 +209,7 @@ describe('obtížnosti – kumulace', () => {
   it('křivka cílů nikdy neklesá a každé ztížení platí od své úrovně výš', () => {
     let prevCurve = 0;
     for (let stake = 1; stake <= 8; stake++) {
-      const g = newGame(stake);
+      const g = gameAtAnte(stake, 3);
       expect(g.targetCurve()).toBeGreaterThanOrEqual(prevCurve);
       prevCurve = g.targetCurve();
       expect(g.modifiers().shopPriceAdd).toBe(stake >= 2 ? 1 : 0);

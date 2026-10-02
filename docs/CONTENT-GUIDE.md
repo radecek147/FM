@@ -286,10 +286,10 @@ trvalý na celý run — obvykle `passive` (delta `Modifiers`), jednorázové v�
 
 ```ts
 const DISCOUNT_BASE = 20;
-const DISCOUNT_GOLD = 40;
+const DISCOUNT_RELABELED = 40;
 
-export const loyaltyCard: VoucherDef = {
-  id: 'loyalty_card',
+export const yellowPrice: VoucherDef = {
+  id: 'yellow_price',
   tier: 1,
   cost: 10,
   params: { pct: DISCOUNT_BASE },
@@ -297,19 +297,19 @@ export const loyaltyCard: VoucherDef = {
   art: { icon: 'ticket', bg: '#1f3b3a', fg: '#e8f1d4', pattern: 'dots' },
 };
 
-export const goldLoyalty: VoucherDef = {
-  id: 'gold_loyalty',
+export const relabeledPrice: VoucherDef = {
+  id: 'relabeled_price',
   tier: 2,
-  requires: 'loyalty_card',
+  requires: 'yellow_price',
   cost: 13,
-  params: { pct: DISCOUNT_GOLD },
+  params: { pct: DISCOUNT_RELABELED },
   // modifikátory se sčítají: 20 + 20 = 40 %
-  passive: () => ({ shopDiscountPct: DISCOUNT_GOLD - DISCOUNT_BASE }),
+  passive: () => ({ shopDiscountPct: DISCOUNT_RELABELED - DISCOUNT_BASE }),
   art: { icon: 'ticket', bg: '#3b2f12', fg: '#ffe9a8', pattern: 'rays' },
 };
 ```
 
-Text: **Věrnostní karta** — Všechno ve Večerce je o {pct} % levnější. _Sbíráte body? — Ne. — Tak je máte._
+Text: **Žlutá cenovka** — Zboží ve Večerce je o {pct} % levnější. _Žlutá barva, menší číslo. Víc vědět nepotřebuješ._
 Test: cena ve Večerce po uplatnění, tier 2 nejde koupit bez tier 1.
 
 Kupón, který má smysl jen za určitých podmínek, dostane `available(ctx)` — čistou funkci (bez RNG a změn stavu),
@@ -390,14 +390,14 @@ export const offlineWeek: ChallengeDef = {
   id: 'offline_week',
   deckId: 'pub',
   extraModifiers: { shopCardSlots: -1, rerollCostStep: 2 },
-  bannedVouchers: ['loyalty_card'],
-  ruleKeys: ['fewerSlots', 'pricierReroll', 'noLoyalty'],
+  bannedVouchers: ['yellow_price'],
+  ruleKeys: ['fewerSlots', 'pricierReroll', 'noDiscount'],
   art: { icon: 'old-lantern', bg: '#1d2430', fg: '#dfe6f0', pattern: 'grid' },
 };
 ```
 
 Text: **Týden bez internetu** — Ve Večerce je o 1 slot karet méně, přehazování zdražuje rychleji
-a věrnostní kartu nekoupíš. _Zkusíš, co dělali lidi dřív. Karban._ Test: run se založí s pravidly
+a žlutou cenovku nekoupíš. _Zkusíš, co dělali lidi dřív. Karban._ Test: run se založí s pravidly
 výzvy a zakázané věci se neobjeví.
 
 ## 10. Jak přidat achievement
@@ -475,7 +475,7 @@ Osvědčené vzorce (vlastní příklady formátu **Název** — mechanika. _Fla
 - **Pomlčky:** rozsah bez mezer `2–4`, `Po–St`; větná pomlčka je **krátká** `–` (U+2013) s mezerami — dlouhá
   `—` (U+2014) se v české sazbě nepoužívá a v textech hry být nesmí (hlídá to `tests/unit/i18n.test.ts`);
   zápor ve statickém textu `−1 zahození` (U+2212). Trojtečka `…` (U+2026). (Dokumentace v `docs/` smí `—` používat.)
-- **Velká písmena:** v názvech jen první slovo a vlastní jména („Zlatá věrnostní“, „Martin na koni“,
+- **Velká písmena:** v názvech jen první slovo a vlastní jména („Přelepená cenovka“, „Martin na koni“,
   „Svatý Václav“). Herní pojmy s velkým písmenem jako v UI: názvy kombinací (Dvojice, Full house), útrat
   (Malá útrata, Velká útrata, Šéf), Večerka. Figury a barvy v textu malými („za každého krále“, „kárová
   karta“).

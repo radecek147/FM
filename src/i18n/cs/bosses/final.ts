@@ -21,12 +21,12 @@ export const bossesFinal = {
     defeat: 'Kontrola skončila bez nálezu. A bez oběda.',
     death: 'Vaše žádost byla zamítnuta. Odvolání není přípustné.',
   },
-  noise_barrier: {
-    name: 'Protihluková stěna',
+  banana_queue: {
+    name: 'Fronta na banány',
     rule: 'Žádné zvláštní pravidlo, jen vyšší cíl: {target}× základ patra.',
-    intro: 'Čtyři metry betonu. A ani jeden strom.',
-    defeat: 'Zeď padla. Sousedi děkují.',
-    death: 'Hlavou zeď neprorazíš.',
+    intro: 'Stojí se od šesti ráno. Banány prý přivezou.',
+    defeat: 'Fronta se pohnula. Banány jsou tvoje.',
+    death: 'Na tebe už nezbyly. Fronta se rozchází.',
   },
   great_flood: {
     name: 'Velká voda',

@@ -38,8 +38,8 @@ const CUTLERY_EDITIONS: readonly { edition: EditionId; pct: number }[] = [
 ];
 /** 13 Doporučení od známého: násobek ceny vzácného žolíka (poloviční cena). */
 const REFERRAL_PRICE_MULT = 0.5;
-/** 15 Úřední poukaz: kupónů navíc. */
-const VOUCHER_SLIP_COUNT = 1;
+/** 15 Leták ve schránce: kupónů navíc. */
+const FLYER_VOUCHERS = 1;
 /** 16 Šéf má chřipku: o kolik % je cíl šéfa nižší. */
 const BOSS_FLU_PCT = 25;
 /** 17 Rozložené noviny: karty v ruce a zahození navíc v příštím kole. */
@@ -269,7 +269,7 @@ export const TAGS: TagDef[] = [
   },
   {
     // 12 — Příští žolík ve Večerce bude negativní, bez příplatku (od patra 2).
-    id: 'photo_negative',
+    id: 'dental_xray',
     minAnte: 2,
     hooks: {
       onShopEnter: (ctx) => {
@@ -278,8 +278,8 @@ export const TAGS: TagDef[] = [
       },
     },
     art: {
-      icon: 'ghost',
-      prop: 'eyeball',
+      icon: 'tooth',
+      prop: 'ghost',
       bg: '#101418',
       fg: '#e5e7eb',
       accent: '#a78bfa',
@@ -319,17 +319,17 @@ export const TAGS: TagDef[] = [
   },
   {
     // 15 — V příští Večerce navíc 1 kupón.
-    id: 'voucher_slip',
-    params: { vouchers: VOUCHER_SLIP_COUNT },
+    id: 'mailbox_flyer',
+    params: { vouchers: FLYER_VOUCHERS },
     hooks: {
       onShopEnter: (ctx) => {
-        for (let i = 0; i < VOUCHER_SLIP_COUNT; i++) ctx.api.addShopVoucher();
+        for (let i = 0; i < FLYER_VOUCHERS; i++) ctx.api.addShopVoucher();
         return true;
       },
     },
     art: {
-      icon: 'ticket',
-      prop: 'scroll-unfurled',
+      icon: 'papers',
+      prop: 'ticket',
       bg: '#3b2f12',
       fg: '#ffe9a8',
       accent: '#facc15',

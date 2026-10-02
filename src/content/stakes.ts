@@ -10,10 +10,19 @@ import { PERISH_ROUNDS, RENTAL_BUY_PRICE, RENTAL_FEE } from '../engine/constants
 import { anteBase } from '../engine/run/targets';
 import { shopPrice } from '../engine/shop/prices';
 
-/** Jedenáctka: příplatek ke každé ceně ve Večerce (Kč). */
+/**
+ * Jedenáctka: příplatek ke každé ceně ve Večerce (Kč) — až od patra `SHOP_PRICE_FROM_ANTE` (první dvě Večerky za
+ * běžné ceny). Příplatek hned od začátku srazil výhry z ~33 na ~20 % a přes kumulaci i všechny vyšší síly piva pod
+ * pásmo (DECISIONS 2026-10-02 „Balanc po fázi 7“).
+ */
 export const SHOP_PRICE_ADD = 1;
-/** Ležák: změna peněz za každou nevyužitou ruku (Kč). */
+export const SHOP_PRICE_FROM_ANTE = 2;
+/**
+ * Ležák: změna peněz za každou nevyužitou ruku (Kč) — až od patra `UNUSED_HAND_FROM_ANTE`. Bez dýška od začátku
+ * srazilo výhry ze Speciálu (~13 %) na ~3 % (pásmo 7–12 %).
+ */
 export const UNUSED_HAND_PENALTY = -1;
+export const UNUSED_HAND_FROM_ANTE = 3;
 /** Speciál: šance na zvětrávajícího žolíka v obchodě a obálce. */
 export const PERISHABLE_CHANCE = 0.25;
 /** Doppelbock: šance na přibitého a zapůjčeného žolíka. */
@@ -27,10 +36,11 @@ const pct = (p: number): number => Math.round(p * 100);
 const finalSmall = (curve: number): number => anteBase(8, curve);
 
 /**
- * Doppelbock: cena zapůjčeného žolíka ve Večerce. `RENTAL_BUY_PRICE` nahrazuje jen základ ceny — příplatek Jedenáctky
- * (`shopPriceAdd`, platí na Doppelbocku vždy) se přičte jako ke všemu ostatnímu (DECISIONS: ceny ve Večerce).
+ * Doppelbock: základní cena zapůjčeného žolíka ve Večerce. `RENTAL_BUY_PRICE` nahrazuje jen základ ceny — příplatek
+ * Jedenáctky (`shopPriceAdd`, od patra `SHOP_PRICE_FROM_ANTE`) se přičte jako ke všemu ostatnímu (DECISIONS: ceny
+ * ve Večerce); popisek proto říká „plus příplatek Jedenáctky“.
  */
-const RENTAL_SHOP_PRICE = shopPrice({ shopDiscountPct: 0, shopPriceAdd: SHOP_PRICE_ADD }, RENTAL_BUY_PRICE);
+const RENTAL_SHOP_PRICE = shopPrice({ shopDiscountPct: 0, shopPriceAdd: 0 }, RENTAL_BUY_PRICE);
 
 export const STAKES: StakeDef[] = [
   {
@@ -43,8 +53,8 @@ export const STAKES: StakeDef[] = [
   {
     id: 'jedenactka',
     level: 2,
-    passive: () => ({ shopPriceAdd: SHOP_PRICE_ADD }),
-    params: { add: SHOP_PRICE_ADD },
+    passive: (ctx) => (ctx.state.ante >= SHOP_PRICE_FROM_ANTE ? { shopPriceAdd: SHOP_PRICE_ADD } : {}),
+    params: { add: SHOP_PRICE_ADD, fromAnte: SHOP_PRICE_FROM_ANTE },
     art: { icon: 'take-my-money', bg: '#b8860b', fg: '#fff8dc', accent: '#ffe08a', pattern: 'dots' },
   },
   {
@@ -64,8 +74,8 @@ export const STAKES: StakeDef[] = [
   {
     id: 'lezak',
     level: 5,
-    passive: () => ({ moneyPerUnusedHand: UNUSED_HAND_PENALTY }),
-    params: { money: -UNUSED_HAND_PENALTY },
+    passive: (ctx) => (ctx.state.ante >= UNUSED_HAND_FROM_ANTE ? { moneyPerUnusedHand: UNUSED_HAND_PENALTY } : {}),
+    params: { money: -UNUSED_HAND_PENALTY, fromAnte: UNUSED_HAND_FROM_ANTE },
     art: { icon: 'tap', bg: '#8c6d1f', fg: '#fffbe6', accent: '#f2d16b', pattern: 'grid' },
   },
   {

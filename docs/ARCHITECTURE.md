@@ -249,7 +249,7 @@ Akce `pickBooster` umí `keep: true` — vybraná spotřebka se uloží do slotu
 
 Úpravy ze štítků (fáze 6) jsou pole položky (`ShopPriced`), takže je přepočet cen respektuje: `priceMult` násobí
 základní cenu před slevou a `shopPriceAdd` (Doporučení od známého 0,5), `noEditionSurcharge` počítá žolíka bez
-příplatku za edici (Vyleštěné příbory, Fotonegativ) a `extra` označí položku navíc — přehození ji (neprodanou) nechá
+příplatku za edici (Vyleštěné příbory, Rentgen od zubaře) a `extra` označí položku navíc — přehození ji (neprodanou) nechá
 na konci nabídky a její žolík se znovu nenabídne, `syncShopSlots` ji do `shopCardSlots` nepočítá. Kupón navíc
 (`addShopVoucher`) platí jen pro tu Večerku, do `anteVouchers` se nezapíše.
 

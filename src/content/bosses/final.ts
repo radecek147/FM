@@ -10,8 +10,8 @@ import type { BossCtx, BossDef } from '../../engine/content-types';
 
 // ─────────────────────────── Čísla ───────────────────────────
 
-/** Protihluková stěna: násobek základního cíle patra. */
-const NOISE_BARRIER_TARGET_MULT = 4.5;
+/** Fronta na banány: násobek základního cíle patra. */
+const BANANA_QUEUE_TARGET_MULT = 4.5;
 /**
  * Cíle finálových šéfů laděné simulací na letalitu 20–40 % (docs/DESIGN.md 12.1, DECISIONS „Fáze 6: ladění se
  * šéfy“): Pan starosta, Krajský úřad a Velká voda měli s 2× ~16–19 %, Bílá paní ~35–48 %.
@@ -87,13 +87,13 @@ export const BOSSES_FINAL: BossDef[] = [
   },
   {
     // F3 — Vyšší cíl (4,5× místo 2×), žádné další pravidlo.
-    id: 'noise_barrier',
+    id: 'banana_queue',
     final: true,
-    targetMult: NOISE_BARRIER_TARGET_MULT,
-    params: { target: NOISE_BARRIER_TARGET_MULT },
-    color: '#6e6e6e',
+    targetMult: BANANA_QUEUE_TARGET_MULT,
+    params: { target: BANANA_QUEUE_TARGET_MULT },
+    color: '#c9a227',
     hooks: {},
-    art: { icon: 'brick-wall', prop: 'speaker-off', bg: '#2b2b2b', fg: '#bdbdbd', pattern: 'checker' },
+    art: { icon: 'hourglass', prop: 'shopping-cart', bg: '#3a3220', fg: '#fde68a', pattern: 'stripes' },
   },
   {
     // F4 — Každá zahraná ruka zmenší velikost ruky o 1 (do konce kola).

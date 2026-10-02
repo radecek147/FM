@@ -32,18 +32,18 @@ const OVERFLOW_ANTE = 210;
 // Přepočítáno nezávisle podle vzorce DESIGN 1.3: base(a) = nice(base(8) × g(a)^(a − 8)), g(a) = 2,2 + 0,15 × (a − 9).
 type Row = [number, number, number, number, number, number, number, number, number, number];
 const ROWS: Row[] = [
-  [9, 46e3, 69e3, 92e3, 51e3, 77e3, 100e3, 57e3, 86e3, 115e3],
-  [10, 115e3, 175e3, 230e3, 125e3, 190e3, 250e3, 145e3, 220e3, 290e3],
-  [11, 330e3, 500e3, 660e3, 360e3, 540e3, 720e3, 410e3, 620e3, 820e3],
-  [12, 1.05e6, 1.6e6, 2.1e6, 1.15e6, 1.75e6, 2.3e6, 1.3e6, 1.95e6, 2.6e6],
-  [13, 3.6e6, 5.4e6, 7.2e6, 4e6, 6e6, 8e6, 4.5e6, 6.8e6, 9e6],
-  [14, 14e6, 21e6, 28e6, 15e6, 23e6, 30e6, 17e6, 26e6, 34e6],
-  [15, 58e6, 87e6, 115e6, 63e6, 95e6, 125e6, 72e6, 110e6, 145e6],
-  [16, 260e6, 390e6, 520e6, 290e6, 440e6, 580e6, 320e6, 480e6, 640e6],
-  [17, 1.3e9, 1.95e9, 2.6e9, 1.4e9, 2.1e9, 2.8e9, 1.6e9, 2.4e9, 3.2e9],
-  [18, 6.7e9, 10e9, 13.5e9, 7.3e9, 11e9, 14.5e9, 8.3e9, 12.5e9, 16.5e9],
-  [19, 37e9, 56e9, 74e9, 41e9, 62e9, 82e9, 46e9, 69e9, 92e9],
-  [20, 220e9, 330e9, 440e9, 240e9, 360e9, 480e9, 280e9, 420e9, 560e9],
+  [9, 51e3, 77e3, 100e3, 57e3, 86e3, 115e3, 64e3, 96e3, 130e3],
+  [10, 125e3, 190e3, 250e3, 145e3, 220e3, 290e3, 160e3, 240e3, 320e3],
+  [11, 360e3, 540e3, 720e3, 410e3, 620e3, 820e3, 450e3, 680e3, 900e3],
+  [12, 1.15e6, 1.75e6, 2.3e6, 1.3e6, 1.95e6, 2.6e6, 1.45e6, 2.2e6, 2.9e6],
+  [13, 4e6, 6e6, 8e6, 4.5e6, 6.8e6, 9e6, 5e6, 7.5e6, 10e6],
+  [14, 15e6, 23e6, 30e6, 17e6, 26e6, 34e6, 19e6, 29e6, 38e6],
+  [15, 63e6, 95e6, 125e6, 72e6, 110e6, 145e6, 80e6, 120e6, 160e6],
+  [16, 290e6, 440e6, 580e6, 320e6, 480e6, 640e6, 360e6, 540e6, 720e6],
+  [17, 1.4e9, 2.1e9, 2.8e9, 1.6e9, 2.4e9, 3.2e9, 1.75e9, 2.6e9, 3.5e9],
+  [18, 7.3e9, 11e9, 14.5e9, 8.3e9, 12.5e9, 16.5e9, 9.2e9, 14e9, 18.5e9],
+  [19, 41e9, 62e9, 82e9, 46e9, 69e9, 92e9, 52e9, 78e9, 105e9],
+  [20, 240e9, 360e9, 480e9, 280e9, 420e9, 560e9, 310e9, 470e9, 620e9],
 ];
 
 describe('nekonečný režim – cíle pater 9–20 (DESIGN 1.3, 2.3.3)', () => {
@@ -73,13 +73,13 @@ describe('nekonečný režim – cíle pater 9–20 (DESIGN 1.3, 2.3.3)', () => 
     }
   });
 
-  it('orientační čísla z DESIGN 2.3.3 (křivka 1): patro 24 ≈ 5e14, 32 ≈ 2,4e22, 40 ≈ 1,15e31', () => {
-    expect(anteBase(24, 1)).toBe(5e14);
-    expect(anteBase(32, 1)).toBe(2.4e22);
-    expect(anteBase(40, 1)).toBe(1.15e31);
+  it('orientační čísla z DESIGN 2.3.3 (křivka 1): patro 24 ≈ 5,4e14, 32 ≈ 2,6e22, 40 ≈ 1,25e31', () => {
+    expect(anteBase(24, 1)).toBe(5.4e14);
+    expect(anteBase(32, 1)).toBe(2.6e22);
+    expect(anteBase(40, 1)).toBe(1.25e31);
     // Od 1e15 vědecký zápis s čárkou.
-    expect(formatNumber(blindTarget(24, 'boss', 1))).toBe('1e15');
-    expect(formatNumber(anteBase(32, 1))).toBe('2,4e22');
+    expect(formatNumber(blindTarget(24, 'boss', 1))).toBe('1,1e15');
+    expect(formatNumber(anteBase(32, 1))).toBe('2,6e22');
   });
 });
 
@@ -169,7 +169,7 @@ describe('nekonečný režim – průchod patry 9–24 se skutečným obsahem', 
     expect(loaded.state.endless).toBe(true);
     expect(loaded.state.ante).toBe(9);
     loaded.dispatch({ type: 'selectBlind' });
-    expect(loaded.state.round!.target).toBe(46_000);
+    expect(loaded.state.round!.target).toBe(51_000);
   });
 });
 
@@ -186,7 +186,7 @@ describe('nekonečný režim – přetečení (≈ patro 210)', () => {
         expect(blindTarget(OVERFLOW_ANTE, kind, curve)).toBe(Number.MAX_VALUE);
         expect(blindTarget(OVERFLOW_ANTE + 50, kind, curve)).toBe(Number.MAX_VALUE);
       }
-      // I nejvyšší násobek šéfa (Protihluková stěna ×4,5) se v patře 209 vejde.
+      // I nejvyšší násobek šéfa (Fronta na banány ×4,5) se v patře 209 vejde.
       expect(blindTarget(OVERFLOW_ANTE - 1, 'boss', curve, { bossMult: 4.5 })).toBeLessThan(Number.MAX_VALUE);
     }
     expect(formatNumber(blindTarget(OVERFLOW_ANTE, 'boss', 1))).toBe('∞');
