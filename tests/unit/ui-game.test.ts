@@ -105,16 +105,18 @@ async function inRound(): Promise<GameController> {
 
 describe('herní obrazovka – fáze runu', () => {
   it('výběr útraty: tři karty s cílem a odměnou, Malá je na řadě', () => {
-    open(GameController.newRun({ deckId: 'pub', stake: 1, seed: SEED }, deps()));
+    const c = GameController.newRun({ deckId: 'pub', stake: 1, seed: SEED }, deps());
+    open(c);
     expect(phase()).toBe('blind_select');
     const cards = root.querySelectorAll('.blind-card');
     expect(cards).toHaveLength(3);
     expect(root.querySelector('[data-testid="blind-small"]')?.getAttribute('data-status')).toBe('current');
     expect(root.querySelector('[data-testid="blind-select-small"]')).not.toBeNull();
     expect(root.querySelector('[data-testid="blind-skip-small"]')).not.toBeNull();
-    // Šéf bez definice v registru: obecné pravidlo, žádný chybějící text.
+    // Šéf patra: jeho jméno z textů (bez šéfů v registru obecné pravidlo), žádný chybějící text.
+    const bossId = c.state.blinds[2]?.bossId;
     expect(root.querySelector('[data-testid="blind-boss"]')?.textContent).toContain(
-      t('game.blinds.bossNoRule'),
+      bossId ? t(`bosses.${bossId}.name`) : t('game.blinds.bossNoRule'),
     );
     expect(root.querySelector('[data-testid="round-target"]')?.textContent).not.toBe('–');
     expectNoMissingTexts();

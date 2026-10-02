@@ -10,7 +10,8 @@
  * 2. **Větev se žolíkem** — stejný run do bodu koupě (začátek patra 1; škálující žolíci začátek patra 2 podle
  *    DESIGN 4.2), tam se žolík vloží do volného slotu (jako po koupi, ale zdarma; prvních `MIN_HOLD_ROUNDS` kol
  *    ho bot nesmí prodat) a bot hraje dál. Bot žolíka zná — hraje s ním (přesné skóre tahů se žolíky).
- * 3. **Každá ruka větve** (karty v ruce v okamžiku, kdy bot hrál) se přepočítá na kopiích stavu se stejným RNG:
+ * 3. **Každá ruka větve** (karty v ruce v okamžiku, kdy bot hrál; bez rukou, kdy byl žolík mimo provoz kvůli šéfovi)
+ *    se přepočítá na kopiích stavu se stejným RNG:
  *    nejlepší tah jen se žolíkem proti nejlepšímu tahu bez žolíků (bez karet a čipů karet, které žolík přinesl).
  *    Izolovaný efekt (Δčipy, Δmult, nebo ×mult u žolíků se štítkem `xmult`) se promítne na referenční ruce
  *    DESIGN 4.2: `navýšení = (Rč + Δč)(Rm + Δm)·×/(Rč·Rm) − 1`, R1 = 60 × 8 (patra 1–3), R2 = 200 × 40.
@@ -493,7 +494,9 @@ function branchRun(
   let growth: GrowthPoint | null = null;
   const held = (): JokerInstance | undefined => game.state.jokers.find((j) => j.uid === uid);
   const before = (a: Action): void => {
-    if (a.type !== 'play' || game.state.phase !== 'round' || !held()) return;
+    // Ruka, ve které žolík nefunguje (debuff od šéfa — Výpadek proudu, Jednooký hejtman, Exekutor…), o jeho
+    // hodnotě nic neříká: měří se jen ruce, kdy je v provozu.
+    if (a.type !== 'play' || game.state.phase !== 'round' || !held() || held()!.debuffed) return;
     const index = samples.length;
     samples.push({
       snap: JSON.stringify(game.state),

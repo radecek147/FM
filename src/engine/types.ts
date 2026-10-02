@@ -158,6 +158,8 @@ export interface Modifiers {
   probabilityMult: number;
   /** Násobič cílového skóre útrat. */
   targetMult: number;
+  /** Násobič cíle šéfa navíc k `targetMult` (Malá a Velká útrata ho ignorují; štítek Šéf má chřipku 0,75). */
+  bossTargetMult: number;
 
   /** Postupka a Barva stačí ze 4 karet. */
   fourCardStraightFlush: boolean;
@@ -263,6 +265,11 @@ export interface RoundState {
    * Volitelné kvůli uloženým runům ze starší verze (chybí = žádné).
    */
   cleansedCards?: number[];
+  /**
+   * Uid žolíků vypnutých pravidlem šéfa (`BossHooks.isJokerDebuffed`; Jednooký hejtman, Výpadek proudu) — podmnožina
+   * `jokerDebuffs`, kterou engine po každé změně přepočítá. Volitelné (chybí = žádné, i ve starších uloženích).
+   */
+  ruleJokerDebuffs?: number[];
   /** Volné pole pro šéfy/žolíky s per-kolo stavem (např. dočasné debuffy karet od Černé kočky). */
   flags: InstanceState;
 }
@@ -276,6 +283,12 @@ export interface ShopPriced {
   sold: boolean;
   /** Zdarma (štítek, efekt): cena je 0, a to i při `shopPriceAdd`. */
   free?: boolean;
+  /** Násobek základní ceny před slevou a `shopPriceAdd` (Doporučení od známého: 0,5 = poloviční cena). */
+  priceMult?: number;
+  /** Jen žolík: cena bez příplatku za edici (Vyleštěné příbory, Fotonegativ). */
+  noEditionSurcharge?: boolean;
+  /** Položka navíc ze štítku (`EngineApi.addShopJoker`): přehození ji nemění a nepočítá se do `shopCardSlots`. */
+  extra?: boolean;
 }
 
 export type ShopItem = ShopPriced &

@@ -58,10 +58,14 @@ export function editionPriceAdd(core: GameCore, edition: EditionId | null): numb
   return edition ? (core.registry.editions[edition]?.priceAdd ?? 0) : 0;
 }
 
-/** Základní cena žolíka pro obchod: zapůjčený `RENTAL_BUY_PRICE` (místo ceny), jinak cena + edice. */
-export function jokerBasePrice(core: GameCore, joker: JokerInstance): number {
+/**
+ * Základní cena žolíka pro obchod: zapůjčený `RENTAL_BUY_PRICE` (místo ceny), jinak cena + edice
+ * (s `noEditionSurcharge` bez příplatku za edici — štítky Vyleštěné příbory a Fotonegativ).
+ */
+export function jokerBasePrice(core: GameCore, joker: JokerInstance, noEditionSurcharge = false): number {
   if (joker.stickers.includes('rental')) return RENTAL_BUY_PRICE;
-  return (core.registry.jokers[joker.defId]?.cost ?? 0) + editionPriceAdd(core, joker.edition);
+  const edition = noEditionSurcharge ? 0 : editionPriceAdd(core, joker.edition);
+  return (core.registry.jokers[joker.defId]?.cost ?? 0) + edition;
 }
 
 /** Základní cena spotřebky: cena z definice + edice. */
@@ -82,11 +86,17 @@ export function cardBasePrice(core: GameCore, card: Card): number {
   );
 }
 
-/** Základní cena položky kartového slotu. */
+/**
+ * Základní cena položky kartového slotu; `priceMult` položky (štítek: poloviční cena) ji násobí ještě před slevou
+ * a `shopPriceAdd` (neplatný násobek se ignoruje).
+ */
 export function shopItemBasePrice(core: GameCore, item: ShopItem): number {
-  if (item.kind === 'joker') return jokerBasePrice(core, item.joker);
-  if (item.kind === 'consumable') return consumableBasePrice(core, item.consumable);
-  return cardBasePrice(core, item.card);
+  let base: number;
+  if (item.kind === 'joker') base = jokerBasePrice(core, item.joker, item.noEditionSurcharge === true);
+  else if (item.kind === 'consumable') base = consumableBasePrice(core, item.consumable);
+  else base = cardBasePrice(core, item.card);
+  const mult = item.priceMult;
+  return typeof mult === 'number' && Number.isFinite(mult) && mult >= 0 ? base * mult : base;
 }
 
 export function jokerPrice(core: GameCore, joker: JokerInstance, free = false): number {

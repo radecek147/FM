@@ -348,6 +348,8 @@ export class GameCore {
   /** Zruší dočasné debuffy žolíků z tohoto kola (konec kola, vypnutí šéfa). */
   clearJokerDebuffs(): void {
     const round = this.state.round;
+    // Žolíci vypnutí pravidlem šéfa (`isJokerDebuffed`) jsou podmnožinou `jokerDebuffs` — ruší se s nimi.
+    if (round?.ruleJokerDebuffs?.length) round.ruleJokerDebuffs = [];
     if (!round || round.jokerDebuffs.length === 0) return;
     for (const uid of round.jokerDebuffs) {
       const j = this.state.jokers.find((x) => x.uid === uid);

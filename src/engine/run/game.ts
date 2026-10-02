@@ -12,6 +12,7 @@ import {
   jokerHasRoom,
   newConsumableInstance,
   newJokerInstance,
+  pendingBoosterIds,
 } from '../effects/api';
 import { GameCore, extend } from '../effects/core';
 import type { EventBus } from '../events';
@@ -22,6 +23,7 @@ import {
   generateShopItems,
   openBooster,
   rollAnteVouchers,
+  shopJokerIds,
   syncShopSlots,
   voucherAvailable,
 } from '../shop/shop';
@@ -42,7 +44,7 @@ import type {
 } from '../types';
 import { BLIND_KINDS } from '../types';
 import { pickBigBlindBossId, pickBossId, rerollBossSlot, stakeBigBlindBoss } from './bosses';
-import { drawCards, fillHand, refreshBossDebuffs, refreshDebuffs } from './draw';
+import { drawCards, fillHand, refreshBossDebuffs, refreshBossJokerDebuffs, refreshDebuffs } from './draw';
 import { createRunState } from './init';
 import { blindTarget } from './targets';
 
@@ -120,6 +122,8 @@ export class Game {
     s.stats.maxMoney = Math.max(s.stats.maxMoney, s.money);
     this.setupAnte();
     core.emit({ type: 'runStarted', seed: s.seed });
+    // Obálka zdarma ze štítku přidaného na startu (výzva) se otevře hned.
+    this.openPendingBooster();
   }
 
   // ─────────────────────────── Veřejné API ───────────────────────────
@@ -176,12 +180,13 @@ export class Game {
     return curve;
   }
 
-  /** Cíl útraty v aktuálním patře. */
+  /** Cíl útraty v aktuálním patře (šéf navíc × `bossTargetMult` — Šéf má chřipku). */
   blindTarget(kind: BlindKind, bossId: string | null = null): number {
     const boss = bossId ? this.core.registry.bosses[bossId] : undefined;
+    const m = this.core.mods();
     return blindTarget(this.core.state.ante, kind, this.targetCurve(), {
       bossMult: boss?.targetMult,
-      targetMult: this.core.mods().targetMult,
+      targetMult: kind === 'boss' ? m.targetMult * m.bossTargetMult : m.targetMult,
     });
   }
 
@@ -209,6 +214,10 @@ export class Game {
     core.takeEvents();
     try {
       this.apply(action);
+      // Pravidlo šéfa o žolících (Jednooký hejtman) platí i po přeřazení, prodeji nebo novém žolíkovi během kola.
+      if (core.state.phase === 'round') refreshBossJokerDebuffs(core);
+      // Obálky zdarma ze štítků (`api.openBooster`) se otevřou, jakmile je výběr útraty nebo Večerka.
+      this.openPendingBooster();
       this.ensureRoundPlayable();
       core.invalidate();
       // Ceny ve Večerce sledují aktuální modifikátory (kupón se slevou, Amnestie…).
@@ -377,6 +386,9 @@ export class Game {
       // Pravidlo vylosované na začátku kola (Pověrčivá babka) platí pro celý balíček.
       refreshBossDebuffs(core);
     }
+    // Žolíci mimo provoz podle pravidla šéfa (Jednooký hejtman, Výpadek proudu) — před `onRoundStart` žolíků a před
+    // přepočtem rukou/zahození níže (pasivní efekty vypnutých žolíků se nezapočítají).
+    refreshBossJokerDebuffs(core);
     core.eachJoker('onRoundStart', {});
     core.eachTag('onRoundStart');
     s.phase = 'round';
@@ -507,6 +519,9 @@ export class Game {
     round.discardPile.push(...round.playedPile);
     round.playedPile = [];
 
+    // Pravidlo šéfa o žolících se mohlo změnit průběhem kola (Výpadek proudu po první ruce) — před dobráním ruky.
+    refreshBossJokerDebuffs(core);
+
     if (round.score >= round.target) {
       this.winRound();
     } else if (round.handsLeft <= 0) {
@@ -618,6 +633,7 @@ export class Game {
       core.invalidate();
       refreshBossDebuffs(core);
     }
+    refreshBossJokerDebuffs(core);
     fillHand(core);
     this.checkOutOfCards();
   }
@@ -700,6 +716,13 @@ export class Game {
     }
     const deckMoney = Math.floor(rewardAmount(reg.decks[s.deckId]?.roundEndMoney?.(ctx)));
     if (deckMoney) extra.push({ source: `deck:${s.deckId}`, amount: deckMoney });
+    // Štítky (Termínovaný vklad) — za balíčkem; spotřebovat se smí až v `onRoundEnd`, který běží po rozpisu.
+    for (const tag of s.tags) {
+      const roundEndMoney = reg.tags[tag.defId]?.hooks.roundEndMoney;
+      if (!roundEndMoney) continue;
+      const amount = Math.floor(rewardAmount(roundEndMoney(core.tagCtx(tag))));
+      if (amount) extra.push({ source: `tag:${tag.defId}`, amount });
+    }
     const sum = () =>
       blindReward + unusedHands + unusedDiscards + interest + extra.reduce((a, e) => a + e.amount, 0);
     // Krok 6: zapůjčení žolíci (i debuffnutí) — poplatek jen do výše dluhového limitu.
@@ -742,11 +765,12 @@ export class Game {
       }
     }
     core.eachJoker('onRoundEnd', { blind: round.blind, bossId: round.bossId });
-    core.eachTag('onRoundEnd');
     const rewards = this.computeRewards(moneyAtWin, opts);
     s.rewards = rewards;
     // Události nesdílí objekty se stavem (posluchač si je smí upravit, např. seřadit rozpis).
     core.emit({ type: 'roundRewards', ...rewards, extra: rewards.extra.map((e) => ({ ...e })) });
+    // Štítky až po rozpisu: štítek, který vyplácí v rozpisu (`roundEndMoney`), se tu smí spotřebovat.
+    core.eachTag('onRoundEnd');
 
     // Dočasné debuffy žolíků platí do konce kola (včetně výpočtu odměn).
     core.clearJokerDebuffs();
@@ -835,10 +859,11 @@ export class Game {
     const core = this.core;
     const s = core.state;
     s.phase = 'shop';
-    core.eachTag('onShopEnter');
     const firstShop = s.stats.shopsEntered === 0;
     s.stats.shopsEntered++;
     s.shop = generateShop(core, { firstShop });
+    // Štítky „v příští Večerce“ upravují už vygenerovanou nabídku (žolík navíc, edice, kupón, přehození zdarma).
+    core.eachTag('onShopEnter');
     core.eachJoker('onShopEnter', {});
     core.emit({ type: 'shopEntered' });
   }
@@ -922,7 +947,7 @@ export class Game {
     this.startBooster(b.boosterId, 'shop');
   }
 
-  /** Otevře booster (z obchodu nebo ze štítku). Používá se i z obsahu přes flags. */
+  /** Otevře booster (z obchodu nebo ze štítku). Obsah ho otevírá přes `api.openBooster` (fronta ve flags). */
   startBooster(boosterId: string, returnTo: 'shop' | 'blind_select'): void {
     const core = this.core;
     const s = core.state;
@@ -930,6 +955,27 @@ export class Game {
     s.phase = 'booster';
     core.emit({ type: 'boosterOpened', boosterId });
     core.eachJoker('onBoosterOpened', { boosterId });
+  }
+
+  /**
+   * Otevře první obálku zdarma z fronty `flags.pendingBoosters` (`api.openBooster`), je-li fáze výběr útraty nebo
+   * Večerka — zavřením se vrátí tam a další z fronty se otevře po té akci. Neznámá obálka se z fronty zahodí.
+   */
+  private openPendingBooster(): void {
+    const s = this.core.state;
+    while (s.phase === 'blind_select' || s.phase === 'shop') {
+      const [next, ...rest] = pendingBoosterIds(s.flags);
+      if (next === undefined) {
+        delete s.flags.pendingBoosters;
+        return;
+      }
+      if (rest.length > 0) s.flags.pendingBoosters = rest;
+      else delete s.flags.pendingBoosters;
+      if (this.core.registry.boosters[next]) {
+        this.startBooster(next, s.phase);
+        return;
+      }
+    }
   }
 
   private buyVoucher(slot: number): void {
@@ -985,7 +1031,9 @@ export class Game {
     refreshShopPrices(core, shop);
     shop.rerollsThisShop++;
     s.stats.rerolls++;
-    shop.items = generateShopItems(core);
+    // Položky navíc ze štítků (`extra`) přehození nemění; žolíci z nich se znovu nenabídnou.
+    const extras = shop.items.filter((it) => it.extra && !it.sold);
+    shop.items = [...generateShopItems(core, shopJokerIds(extras)), ...extras];
     core.eachJoker('onReroll', {});
     core.emit({ type: 'shopRerolled', cost });
   }

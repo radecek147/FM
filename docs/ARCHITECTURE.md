@@ -125,6 +125,8 @@ balíček, výzva a trvalé efekty (`extraModifiers`, doplňuje `api.addPermanen
 štítky, žolíci (`passive`), šéf (`passive`, pokud není vypnutý), dočasná velikost ruky kola
 (`RoundState.handSizeDelta`). Čísla se sčítají, pole končící na `Mult` se násobí, booleany se ORují; výsledek se
 ořízne na rozumné meze (`clampModifiers`). Neplatná čísla v deltě (NaN, ±∞) i přetečení se ignorují.
+`bossTargetMult` násobí jen cíl šéfa (navíc k `targetMult`; `Game.blindTarget` ho použije i v náhledu výběru útrat) —
+štítek Šéf má chřipku ho drží `passive` (0,75), dokud se v kole šéfa nespotřebuje.
 
 `GameCore.mods()` drží výsledek v cache a vrací ho **zmrazený** (nikdo ho nesmí měnit — pravidla mění jen delty).
 Cache se zneplatní po každé změně, která může změnit výsledek: příkazy API, každý hook žolíka/štítku, hooky šéfa
@@ -144,15 +146,16 @@ Viz `JokerHooks`, `BossHooks`, `TagHooks` v `content-types.ts`. Hooky smí:
 `EngineApi` (`ctx.api`, implementace `effects/api.ts`, typy v `content-types.ts`) — příkazy jsou deterministické,
 emitují události a respektují limity (sloty, dluhový limit, „jen během kola“):
 
-| Oblast             | Příkazy                                                                                                                                                                      |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| peníze             | `addMoney` (ořízne dluhovým limitem), `setMoney` (přesně)                                                                                                                    |
-| kolo a ruka        | `addHands`, `addDiscards`, `drawCards`, `addRoundHandSize`, `discardFromHand`, `setCardFaceDown`, `shuffleHand`, `cleanseCard`                                               |
-| kombinace          | `levelUpHand`, `levelUpAll`, `handBase` (dotaz na základ úrovně)                                                                                                             |
-| žolíci a spotřebky | `createJoker`, `destroyJoker`, `setJokerDebuffed`, `setJokerEdition`, `removeJokerStickers`, `copyJoker`, `transformJoker`, `createConsumable`                               |
-| karty balíčku      | `addCard`, `copyCard`, `destroyCard`, `modifyCard`                                                                                                                           |
-| run                | `addTag`, `disableBoss`, `rerollBoss`, `changeAnte`, `addPermanentModifier`, `message` (i18n klíč)                                                                           |
-| dotazy (bez změn)  | `getCard`, `handCards`, `modifiers` (zmrazené), `handLevel`, `isFace`, `hasSuit`, `cardChips`, `jokerSlots`, `sellValue`, `availableJokers`, `jokerRarity`, `consumableKind` |
+| Oblast             | Příkazy                                                                                                                                                                                  |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| peníze             | `addMoney` (ořízne dluhovým limitem), `setMoney` (přesně)                                                                                                                                |
+| kolo a ruka        | `addHands`, `addDiscards`, `drawCards`, `addRoundHandSize`, `discardFromHand`, `setCardFaceDown`, `shuffleHand`, `cleanseCard`                                                           |
+| kombinace          | `levelUpHand`, `levelUpAll`, `handBase` (dotaz na základ úrovně)                                                                                                                         |
+| žolíci a spotřebky | `createJoker`, `destroyJoker`, `setJokerDebuffed`, `setJokerEdition`, `removeJokerStickers`, `copyJoker`, `transformJoker`, `createConsumable`                                           |
+| karty balíčku      | `addCard`, `copyCard`, `destroyCard`, `modifyCard`                                                                                                                                       |
+| run                | `addTag`, `openBooster`, `disableBoss`, `rerollBoss`, `changeAnte`, `addPermanentModifier`, `message` (i18n klíč)                                                                        |
+| Večerka            | `addFreeRerolls`, `addShopJoker`, `setShopJokerEdition`, `addShopVoucher` (jen otevřená Večerka; přehození zdarma mimo ni čekají na příští)                                              |
+| dotazy (bez změn)  | `getCard`, `handCards`, `modifiers` (zmrazené), `handLevel`, `isFace`, `cardRank`, `hasSuit`, `cardChips`, `jokerSlots`, `sellValue`, `availableJokers`, `jokerRarity`, `consumableKind` |
 
 Žolíci z efektů spotřebek (fáze 5, úřední razítka): `setJokerEdition` mění edici (negativní tím mění sloty),
 `removeJokerStickers` sundá nálepky (zvětralý žolík bez „zvětrávající“ znovu funguje, dočasný debuff kola trvá),
@@ -189,11 +192,46 @@ Debuffy hracích karet určuje jen šéf (`BossHooks.isCardDebuffed`). Dočasné
 ukládají do `RoundState.flags`; engine po hooku šéfa `onRoundStart`, `afterHandPlayed` (až po `afterScored`),
 `onDiscard` a `onDraw` přepočítá `Card.debuffed` celého balíčku, takže platí hned i pro karty v ruce.
 
+Stav pravidla šéfa do konce kola žije v `RoundState.flags` pod klíči s předponou id šéfa (`black_cat.cards`,
+`superstitious_granny.suit`, `track_closure.drawn`…): zapisují ho jen hooky s vedlejšími účinky (`onRoundStart`,
+`afterHandPlayed`, `onDiscard`, `onDraw`), čisté hooky (`passive`, `isCardDebuffed`, `isDrawnFaceDown`, `validateHand`)
+ho jen čtou. Nové kolo začíná s prázdnými `flags`, uložení a načtení je přenáší. **Strop** hodnoty modifikátoru
+(Polední pauza „jen 1 ruka“, Sucho v obci „0 zahození“, Garsonka „nejvýš 4 karty“) se dělá bez nového pole
+`Modifiers`: `onRoundStart` spočítá, o kolik je hodnota bez vlastního stropu nad stropem, uloží rozdíl do `flags`
+a `passive` ho odečte — strop tak platí i s kupóny, balíčkem a žolíky, `Game.selectBlind` promítne změnu do
+`handsLeft`/`discardsLeft` (porovnání modifikátorů před a po hoocích začátku kola) a Odvolání (`disableBoss`) vrátí
+rozdíl jako u každého `passive`. Ruce a zahození přidané efekty až během kola (`api.addHands`) platí navíc.
+
+Debuffy **žolíků** podle pravidla šéfa (Jednooký hejtman: pravá polovina řady, Výpadek proudu: do konce první ruky)
+určuje čistá funkce `BossHooks.isJokerDebuffed(ctx, joker, index)`. Engine ji přepočítá (`refreshBossJokerDebuffs`
+v `run/draw.ts`) na začátku kola po `onRoundStart` šéfa (před `onRoundStart` žolíků a před přepočtem rukou/zahození),
+po zahrání ruky (před dobráním), po zahození a na konci každé akce v kole (`Game.dispatch`: přeřazení, prodej, nový
+žolík ze spotřebky) — pravidlo tak sleduje pozici, ne uid. Rozdíl promítá přes `api.setJokerDebuffed`; žolíky vypnuté
+pravidlem eviduje `RoundState.ruleJokerDebuffs` (volitelná podmnožina `jokerDebuffs`): žolíka vypnutého už jiným
+efektem (Krajský úřad, Exekutor) si pravidlo nepřivlastní a jeho debuff nezruší. `clearJokerDebuffs` (konec kola,
+Odvolání) eviduje prázdné pole; mimo fázi `round` se nepřepočítává. Ruce a zahození z pasivních efektů žolíků platí
+podle stavu na začátku kola (jako u Exekutora) — přeřazením se nedají „nasbírat“.
+
+`BossDef.params` nese čísla do textů šéfa. Dokud UI `bossTexts` (`src/ui/describe.ts`) `params` šéfů nedosazuje, mají
+`rule` čísla napsaná rovnou a testy šéfů hlídají shodu s `params`. `EngineApi.cardRank(card)` vrací hodnotu karty pro
+pravidla (kamenná při platných vylepšeních `null` — Sudé dny, Kapsář, Mlha nad Labem).
+
 Kontexty hooků jsou levné objekty: společný prototyp jádra nese živé `state`, `mods` a `api`; `ScoringInfo` zahrané
 ruky je **sdílená vrstva** (`GameCore.ctxLayer`), kterou kontexty všech hooků ruky dědí přes prototyp (gettery
 `chips`/`mult` zůstávají živé); vlastní pole volání (`card`, `isRetrigger`, `score`…) se přiřadí hodnotami a `ctx.rng`
 vzniká až při prvním použití. Obsah proto nesmí kontext kopírovat spreadem (`{ ...ctx }` zkopíruje jen vlastní pole).
 Dřív se `ScoringInfo` kopírovala přes `extend` (deskriptory) pro každý hook — ~45 % času skórování.
+
+Štítky (fáze 6, `TagHooks`; každý hook vrací true = štítek se spotřeboval): `onAdded` hned po získání (přeskočení
+útraty, `api.addTag`); `onBlindSelect` před výpočtem cíle a `onRoundStart` po něm (ruka se dobere až po hooku, takže
+`addRoundHandSize` platí pro první dobrání); `onShopEnter` až **po** vygenerování Večerky (štítek ji upravuje přes
+`addShopJoker` / `setShopJokerEdition` / `addShopVoucher` / `addFreeRerolls`; `passive` štítku při generování platí),
+před `onShopEnter` žolíků; `roundEndMoney` přidá řádek `tag:<id>` do rozpisu odměn (krok 5 za balíčkem) a `onRoundEnd`
+štítků běží až **po** sestavení rozpisu — štítek, který vyplácí v rozpisu (Termínovaný vklad), se tak smí spotřebovat
+v `onRoundEnd`. `api.openBooster(id)` zařadí obálku zdarma do fronty `RunState.flags.pendingBoosters`; `Game.dispatch`
+(a konec `newRun`) ji po akci otevře přes `startBooster`, jakmile je fáze `blind_select` nebo `shop` (zavření obálky
+vrátí tam, odkud se otevřela, a další z fronty se otevře po té akci). Obálka ze štítku získaného uprostřed kola tak
+počká na Večerku; fronta je součástí uloženého stavu, neznámé id se zahodí.
 
 Zvláštní hooky (volají se jen jednomu adresátovi, ne všem zleva doprava): `JokerHooks.onAcquire` (žolík vstoupil do
 slotů — koupě, obálka, `createJoker`; ne startovní žolíci výzvy), `JokerHooks.preventGameOver` a
@@ -206,6 +244,12 @@ Ceny počítá `shop/prices.ts` podle DESIGN 2.5.2 (sleva zaokrouhlená polovino
 `shopPriceAdd`; položky `free` za 0). `Game.dispatch` po každé úspěšné akci přepočítá ceny neprodaných položek
 (`refreshShopPrices`), takže kupón se slevou platí hned. Prodejní ceny nezávisí na slevách ani `shopPriceAdd`.
 Akce `pickBooster` umí `keep: true` — vybraná spotřebka se uloží do slotu místo použití.
+
+Úpravy ze štítků (fáze 6) jsou pole položky (`ShopPriced`), takže je přepočet cen respektuje: `priceMult` násobí
+základní cenu před slevou a `shopPriceAdd` (Doporučení od známého 0,5), `noEditionSurcharge` počítá žolíka bez
+příplatku za edici (Vyleštěné příbory, Fotonegativ) a `extra` označí položku navíc — přehození ji (neprodanou) nechá
+na konci nabídky a její žolík se znovu nenabídne, `syncShopSlots` ji do `shopCardSlots` nepočítá. Kupón navíc
+(`addShopVoucher`) platí jen pro tu Večerku, do `anteVouchers` se nezapíše.
 
 Kupóny (fáze 5): `VoucherDef.available?(ctx)` je čistá funkce (běží v `GameCore.readOnly`, neposune RNG ani stav),
 která říká, jestli má kupón teď smysl — Úřední škrt a Amnestie („−1 patro“) až od patra 2. `voucherAvailable` ji

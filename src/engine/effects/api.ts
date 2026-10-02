@@ -1,13 +1,22 @@
 /** Implementace EngineApi — příkazy a dotazy, které smí volat obsah (hooky). */
 import type { CardSpec, CreateJokerOptions, EngineApi } from '../content-types';
 import { MSG, PERISH_ROUNDS } from '../constants';
-import { cardChips, cardHasSuit, createCard, isFaceCard } from '../cards/cards';
+import { cardChips, cardHasSuit, createCard, hasNoRankSuit, isFaceCard } from '../cards/cards';
 import { handValueAtLevel } from '../hands/levels';
 import { rerollBossSlot, revalidateBoss } from '../run/bosses';
 import { drawCards, bossDebuffs, refreshDebuffs } from '../run/draw';
 import { availableJokerIds, pickConsumableDefId, pickJokerDefId } from '../shop/pool';
+import { addShopJoker, addShopVoucher, setShopJokerEdition } from '../shop/shop';
 import { jokerSellValue } from '../shop/prices';
-import type { Card, ConsumableInstance, ConsumableKind, EditionId, HandType, JokerInstance } from '../types';
+import type {
+  Card,
+  ConsumableInstance,
+  ConsumableKind,
+  EditionId,
+  HandType,
+  InstanceState,
+  JokerInstance,
+} from '../types';
 import { HAND_TYPES } from '../types';
 import type { GameCore } from './core';
 import { mergeDelta } from './modifiers';
@@ -100,6 +109,15 @@ function removeFromPiles(core: GameCore, cardId: number): void {
   }
   const b = core.state.booster;
   if (b) b.hand = b.hand.filter((id) => id !== cardId);
+}
+
+/**
+ * Fronta obálek zdarma čekajících na otevření (`EngineApi.openBooster`; `RunState.flags.pendingBoosters`). Neplatné
+ * záznamy (starší uložení, ruční úprava) se zahodí.
+ */
+export function pendingBoosterIds(flags: Readonly<InstanceState>): string[] {
+  const v = flags.pendingBoosters;
+  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
 }
 
 /** Ořízne číslo do konečného rozsahu (přetečení → ±`Number.MAX_VALUE`; JSON by nekonečno uložil jako `null`). */
@@ -453,6 +471,37 @@ export function createApi(core: GameCore): EngineApi {
       }
     },
 
+    openBooster(boosterId) {
+      if (!core.registry.boosters[boosterId]) return false;
+      const s = core.state;
+      s.flags.pendingBoosters = [...pendingBoosterIds(s.flags), boosterId];
+      return true;
+    },
+
+    addFreeRerolls(n) {
+      const k = intDelta(n);
+      if (k <= 0) return;
+      const s = core.state;
+      if (s.shop) {
+        s.shop.freeRerolls += k;
+        return;
+      }
+      const pending = typeof s.flags.freeRerolls === 'number' ? s.flags.freeRerolls : 0;
+      s.flags.freeRerolls = pending + k;
+    },
+
+    addShopJoker(opts = {}) {
+      return addShopJoker(core, opts);
+    },
+
+    setShopJokerEdition(edition, opts = {}) {
+      return setShopJokerEdition(core, edition, opts.noSurcharge === true);
+    },
+
+    addShopVoucher() {
+      return addShopVoucher(core);
+    },
+
     disableBoss() {
       const r = core.state.round;
       if (!r || !r.bossId || r.bossDisabled) return;
@@ -480,6 +529,7 @@ export function createApi(core: GameCore): EngineApi {
     modifiers: () => core.mods(),
     handLevel: (hand) => core.state.handLevels[hand]?.level ?? 1,
     isFace: (card: Card) => isFaceCard(card, core.mods(), core.enhancements()),
+    cardRank: (card: Card) => (hasNoRankSuit(card, core.enhancements()) ? null : card.rank),
     hasSuit: (card, suit) => cardHasSuit(card, suit, core.mods(), core.enhancements()),
     cardChips: (card) => cardChips(card, core.enhancements(), core.mods()),
     jokerSlots: () => core.mods().jokerSlots,

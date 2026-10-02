@@ -41,6 +41,7 @@ describe('BASE_MODIFIERS', () => {
       probabilityMult: 1,
       targetMult: 1,
       // příloha B
+      bossTargetMult: 1,
       shopPriceAdd: 0,
       playingCardEnhanceChance: 0.2,
       playingCardSealChance: 0,

@@ -1,5 +1,5 @@
 /** Večerka: generování nabídky, nálepky, kupóny, obálky (boostery). Ceny viz shop/prices.ts. */
-import type { CardSpec, Rng } from '../content-types';
+import type { CardSpec, JokerRarity, Rng } from '../content-types';
 import { BOOSTER_CARD_ENHANCE_CHANCE, BOOSTER_CARD_SEAL_CHANCE } from '../constants';
 import { createCard } from '../cards/cards';
 import { newConsumableInstance, newJokerInstance } from '../effects/api';
@@ -11,6 +11,7 @@ import type {
   BoosterState,
   Card,
   ConsumableKind,
+  EditionId,
   ShopItem,
   ShopState,
   StickerId,
@@ -23,6 +24,8 @@ import {
   jokerPrice,
   refreshShopPrices,
   rerollPrice,
+  shopItemBasePrice,
+  shopPrice,
   voucherPrice,
 } from './prices';
 
@@ -137,11 +140,14 @@ function generateItem(core: GameCore, rng: Rng, takenJokers: string[]): ShopItem
   };
 }
 
-/** Vygeneruje kartové sloty obchodu (stream `shop`). */
-export function generateShopItems(core: GameCore): ShopItem[] {
+/**
+ * Vygeneruje kartové sloty obchodu (stream `shop`). `exclude` = žolíci, kteří už ve Večerce jsou (položky navíc ze
+ * štítků, které přehození nemění) — znovu se nenabídnou.
+ */
+export function generateShopItems(core: GameCore, exclude: readonly string[] = []): ShopItem[] {
   const rng = core.rng('shop');
   const items: ShopItem[] = [];
-  const taken: string[] = [];
+  const taken: string[] = [...exclude];
   const n = core.mods().shopCardSlots;
   for (let i = 0; i < n; i++) {
     const item = generateItem(core, rng, taken);
@@ -200,19 +206,90 @@ function rollShopBoosterId(core: GameCore, rng: Rng): string | null {
 export function syncShopSlots(core: GameCore, shop: ShopState): void {
   const m = core.mods();
   const rng = core.rng('shop');
-  if (shop.items.length < m.shopCardSlots) {
-    const taken = shop.items.flatMap((it) => (it.kind === 'joker' ? [it.joker.defId] : []));
-    for (let i = shop.items.length; i < m.shopCardSlots; i++) {
+  // Položky navíc ze štítků (`extra`) se do slotů nepočítají a zůstávají na konci nabídky.
+  const regular = shop.items.filter((it) => !it.extra);
+  if (regular.length < m.shopCardSlots) {
+    const taken = shopJokerIds(shop.items);
+    for (let i = regular.length; i < m.shopCardSlots; i++) {
       const item = generateItem(core, rng, taken);
       if (!item) break;
-      shop.items.push(item);
+      regular.push(item);
     }
+    shop.items = [...regular, ...shop.items.filter((it) => it.extra)];
   }
   for (let i = shop.boosters.length; i < m.shopBoosterSlots; i++) {
     const id = rollShopBoosterId(core, rng);
     if (!id) break;
     shop.boosters.push({ boosterId: id, price: boosterPrice(core, id), sold: false });
   }
+}
+
+/** Id žolíků v nabídce (prodaných i neprodaných) — aby se ve stejné Večerce neopakovali. */
+export function shopJokerIds(items: readonly ShopItem[]): string[] {
+  return items.flatMap((it) => (it.kind === 'joker' ? [it.joker.defId] : []));
+}
+
+/**
+ * Žolík navíc do otevřené Večerky (`EngineApi.addShopJoker`; štítky Doporučení od známého, Protekce): stream `shop`,
+ * jen žolík, který hráč nevlastní a ve Večerce není; edice podle `opts.edition` (jinak hod jako v obchodě), nálepky
+ * podle obtížnosti. Položka má `extra` (přehození ji nemění). Vrací false bez Večerky nebo bez žolíka v poolu.
+ */
+export function addShopJoker(
+  core: GameCore,
+  opts: {
+    rarity?: JokerRarity;
+    edition?: EditionId | null;
+    priceMult?: number;
+    noEditionSurcharge?: boolean;
+  } = {},
+): boolean {
+  const shop = core.state.shop;
+  if (!shop) return false;
+  const rng = core.rng('shop');
+  const defId = pickJokerDefId(core, rng, {
+    ...(opts.rarity ? { rarity: opts.rarity } : {}),
+    exclude: shopJokerIds(shop.items),
+  });
+  if (!defId) return false;
+  const edition = opts.edition !== undefined ? opts.edition : rollEdition(core, rng, 'joker');
+  if (edition !== null && !core.registry.editions[edition]) throw new Error(`Unknown edition ${edition}`);
+  const joker = newJokerInstance(core, defId, edition, rollStickers(core, rng, defId));
+  const item: ShopItem = { kind: 'joker', joker, price: 0, sold: false, extra: true };
+  if (opts.priceMult !== undefined && Number.isFinite(opts.priceMult)) item.priceMult = opts.priceMult;
+  if (opts.noEditionSurcharge) item.noEditionSurcharge = true;
+  item.price = shopPrice(core.mods(), shopItemBasePrice(core, item));
+  shop.items.push(item);
+  return true;
+}
+
+/**
+ * Edice pro prvního neprodaného žolíka bez edice v otevřené Večerce (`EngineApi.setShopJokerEdition`), s `noSurcharge`
+ * bez příplatku. Vrací false, když takový žolík v nabídce není.
+ */
+export function setShopJokerEdition(core: GameCore, edition: EditionId, noSurcharge: boolean): boolean {
+  if (!core.registry.editions[edition]) throw new Error(`Unknown edition ${edition}`);
+  const shop = core.state.shop;
+  const item = shop?.items.find((it) => it.kind === 'joker' && !it.sold && it.joker.edition === null);
+  if (!item || item.kind !== 'joker') return false;
+  item.joker.edition = edition;
+  if (noSurcharge) item.noEditionSurcharge = true;
+  item.price = shopPrice(core.mods(), shopItemBasePrice(core, item), item.free);
+  return true;
+}
+
+/**
+ * Kupón navíc jen pro otevřenou Večerku (`EngineApi.addShopVoucher`; Úřední poukaz): stream `shop`, z kupónů, které jde
+ * teď koupit (`eligibleVouchers`) a v nabídce nejsou. Do kupónů patra se nezapíše. Vrací id nebo null.
+ */
+export function addShopVoucher(core: GameCore): string | null {
+  const shop = core.state.shop;
+  if (!shop) return null;
+  const offered = shop.vouchers.map((v) => v.voucherId);
+  const pool = eligibleVouchers(core).filter((id) => !offered.includes(id));
+  if (pool.length === 0) return null;
+  const id = core.rng('shop').pick(pool);
+  shop.vouchers.push({ voucherId: id, price: voucherPrice(core, id), sold: false, extra: true });
+  return id;
 }
 
 /** Smí se kupón teď nabídnout/koupit (`VoucherDef.available`, čistá funkce)? Neznámý kupón ne. */

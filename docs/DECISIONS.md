@@ -1359,3 +1359,63 @@ na každou položku, determinismus — náhoda jen streamem `boss`/`deck`); DESI
 
 **Proč:** CLAUDE.md kap. 9 (definice hotovo fáze), kap. 4 (Večerka, řada žolíků s drag & drop, Info o runu), kap. 6
 (typografie textů), kap. 2 (min. 1024 px, dotyk plně funkční); DESIGN kap. 4 a 13.
+
+## 2026-10-02 — Fáze 6: štítky za přeskočení (20) — výklad efektů a rozšíření enginu
+
+**Co:** 20 štítků z DESIGN 7 v `src/content/tags.ts`, texty `src/i18n/cs/tags.ts`, testy `tests/unit/tags.test.ts`
+(přes skutečný engine: přeskočení útraty, výběr útrat, Večerka, obálky, rozpis odměn, záchrana kola, uložení).
+
+Rozšíření enginu (obecná, s testem; zapsáno v `docs/ARCHITECTURE.md` 2.6–2.8):
+
+- **`EngineApi.openBooster(id)`** — obálka zdarma do fronty `RunState.flags.pendingBoosters`; `Game.dispatch` (a konec
+  `newRun`) ji po akci otevře přes `startBooster`, jakmile je fáze výběr útraty nebo Večerka, zavření vrátí tam.
+  Fronta místo okamžitého otevření: štítek může přijít i uprostřed kola nebo při zavírání jiné obálky — obálka pak
+  počká (Večerka), víc obálek se otevře postupně a fronta přežije uložení. Bez nového pole ve `RunState` (flags).
+- **`TagHooks.roundEndMoney`** — řádek `tag:<id>` v rozpisu odměn (DESIGN 2.4.2 krok 5, za balíčkem). `onRoundEnd`
+  štítků se přesunul **za** sestavení rozpisu, aby se vyplácející štítek mohl v `onRoundEnd` spotřebovat (dřív běžel
+  před rozpisem; žádný obsah na pořadí nezávisel).
+- **`onShopEnter` štítků až po vygenerování Večerky** (dřív před) + příkazy `addFreeRerolls`, `addShopJoker`,
+  `setShopJokerEdition`, `addShopVoucher`. Štítky „v příští Večerce“ tak upravují skutečnou nabídku; `passive` štítku
+  při generování dál platí. Cesta `flags.freeRerolls` (přehození zdarma mimo Večerku) zůstává.
+- **Pole položek Večerky** `priceMult`, `noEditionSurcharge`, `extra` (`ShopPriced`) — přepočet cen po každé akci
+  je respektuje, takže sleva ze štítku nepřepíše a nezmizí. `extra` položky (žolík navíc) přehození nemění a do
+  `shopCardSlots` se nepočítají (`syncShopSlots`).
+- **`Modifiers.bossTargetMult`** (1) — násobí jen cíl šéfa (Šéf má chřipku 0,75 přes `passive`). Nový modifikátor
+  místo úpravy `round.target`: náhled cíle šéfa na výběru útrat ukazuje sníženou hodnotu hned po přeskočení.
+
+Výklad efektů (kde DESIGN 7 nechává prostor):
+
+- **„Příští Večerka“** = `onShopEnter` první Večerky po získání; po přeskočení se Večerka nekoná, štítek čeká.
+  **„Příští kolo“** = `onRoundStart` prvního kola po získání.
+- **Obálky zdarma** (Obálka od strýce, Kalendář z trafiky, Balík od babičky, Úřední dopis, Mariáš na chalupě): otevřou
+  se hned po přeskočení, zavřením (výběr i přeskočení) zpět na výběr útraty. Id obálek přes `boosterId(kind, size)`.
+- **Zálohy:** počítá `stats.blindsSkipped`, které se zvýší před přidáním štítku — „včetně této“ tedy platí samo.
+- **Brigáda na chmelu:** `floor(stats.handsPlayed / 2) × 1 Kč`, nejvýš 15 Kč.
+- **Vyleštěné příbory / Fotonegativ:** „příští žolík“ = první **neprodaný žolík bez edice** v nabídce při vstupu;
+  dostane edici (55/30/15 % streamem `tag`, resp. negativní) a cenu bez příplatku. **Odchylka:** když v nabídce
+  žolík bez edice není, přibude žolík navíc (náhodná vzácnost podle vah) s touto edicí — štítek nepropadne naprázdno
+  a nemusí čekat na přehození (DESIGN říká „spotřebuje se: příští Večerka“).
+- **Doporučení od známého / Protekce:** žolík navíc (`extra`) dané vzácnosti, nálepky a edice jako v obchodě; poloviční
+  cena = `priceMult 0,5` před slevou (zaokrouhlení polovinou nahoru jako u slev). Přehození položku navíc nechá.
+  Popisek Doporučení „o 50 % levněji“ (číslo z `params`, ne slovo „poloviční“).
+- **Úřední poukaz:** kupón navíc jen v té Večerce (z kupónů, které jde teď koupit a nejsou v nabídce); do kupónů patra
+  se nezapíše, takže v další Večerce už není.
+- **Šéf má chřipku:** platí pro nejbližší kolo šéfa (štítek jde získat jen před šéfem patra, takže je to „šéf tohoto
+  patra“); spotřebuje se v `onRoundStart` kola šéfa, cíl je v tu chvíli spočítaný. Velká útrata s pravidlem šéfa
+  (Imperial) ho nespotřebuje ani nesníží. Dva štítky se násobí (× 0,5625).
+- **Termínovaný vklad:** vyplatí 15 Kč v rozpisu nejbližšího vyhraného kola šéfa (i zachráněného Lékařským
+  potvrzením), Malá/Velká nic.
+- **Předpověď počasí:** nejčastěji hraná podle `handLevels[*].played` (stejně jako Influencerka Nikča), při shodě
+  pozdější v `HAND_TYPES`, bez zahraných rukou Vysoká karta.
+- **Lékařské potvrzení:** „aspoň 50 %“ = `skóre × 100 ≥ cíl × 50` (přesně polovina stačí). Platí jen v kole, které
+  začalo po získání (`self.state.armed` v `onRoundStart`) — štítek získaný uprostřed kola čeká na další. Vyhrané kolo
+  bez potřeby záchrany štítek spotřebuje (`onRoundEnd`).
+- **Bazar u silnice:** `api.createJoker({ rarity: 'common' })`; když vrátí null (plné sloty), +4 Kč.
+- **Hromadění:** každý štítek působí sám za sebe (dva Termínované vklady = 2× 15 Kč, dvě chřipky se násobí).
+
+**Pro UI (mimo tento krok):** obálka zdarma otevřená z výběru útraty má `booster.returnTo = 'blind_select'`;
+rozpis odměn má zdroj `tag:<id>` (popisek `tags.<id>.name`); položky Večerky s `extra`/`priceMult`/`noEditionSurcharge`
+stojí za odlišení (štítek „navíc“, přeškrtnutá cena).
+
+**Proč:** CLAUDE.md kap. 3 (štítky za přeskočení, 20 kusů), 5 (humor), 6 (texty v i18n), 8 (test na každou položku,
+determinismus — náhoda jen streamy `tag`/`shop`/`booster`/`joker`); DESIGN 7 a 2.4.2; ARCHITECTURE 2.7.

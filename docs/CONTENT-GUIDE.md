@@ -317,8 +317,16 @@ kterou engine kontroluje při losování kupónu patra i při koupi (Úřední �
 ## 7. Jak přidat štítek
 
 Štítek se dostane za přeskočení Malé nebo Velké útraty. Každý hook (`onAdded`, `onBlindSelect`,
-`onRoundStart`, `onRoundEnd`, `onShopEnter`) vrací **`true`, když se štítek tím spotřeboval** (pak se
-odebere). `passive` mění generování Večerky, dokud štítek trvá. `minAnte` = od kterého patra se nabízí.
+`onRoundStart`, `onRoundEnd`, `onShopEnter`, `onRoundLost`) vrací **`true`, když se štítek tím spotřeboval** (pak se
+odebere). `passive` mění pravidla, dokud štítek trvá (Šéf má chřipku: `bossTargetMult`). `minAnte` = od kterého
+patra se nabízí.
+
+- „Hned“ = `onAdded`; obálka zdarma přes `ctx.api.openBooster(boosterId('joker', 'jumbo'))` — engine ji otevře
+  hned po přeskočení a zavřením se hráč vrátí na výběr útraty.
+- „Příští Večerka“ = `onShopEnter`: nabídka je už vygenerovaná, uprav ji přes `api.addShopJoker`,
+  `setShopJokerEdition`, `addShopVoucher`, `addFreeRerolls`.
+- „Příští kolo“ = `onRoundStart` (ruka se dobere až po něm, `api.addRoundHandSize` platí hned).
+- Peníze v rozpisu odměn = `roundEndMoney`; spotřebovat se dá v `onRoundEnd`, který běží až po rozpisu.
 
 ```ts
 const COAT_CHANGE_MONEY = 6;

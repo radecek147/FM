@@ -39,6 +39,7 @@ export const BASE_MODIFIERS: Readonly<Modifiers> = Object.freeze({
 
   probabilityMult: 1,
   targetMult: 1,
+  bossTargetMult: 1,
 
   fourCardStraightFlush: false,
   straightGaps: false,
@@ -136,6 +137,7 @@ export function clampModifiers(m: Modifiers): Modifiers {
   m.moneyPerUnusedDiscard = Math.max(0, m.moneyPerUnusedDiscard);
   m.editionRateMult = Math.max(0, m.editionRateMult);
   m.probabilityMult = Math.max(0, m.probabilityMult);
+  m.bossTargetMult = Math.max(0, m.bossTargetMult);
   m.fixedCardChips = Math.max(0, m.fixedCardChips);
   m.debtLimit = Math.max(0, m.debtLimit);
   return m;

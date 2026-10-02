@@ -118,6 +118,35 @@ export interface EngineApi {
   ): void;
   addTag(defId: string): void;
   /**
+   * Otevře zdarma obálku `boosterId` (štítky Obálka od strýce, Úřední dopis…). Obálka se zařadí do fronty
+   * (`RunState.flags.pendingBoosters`) a engine ji otevře hned po akci, jakmile je fáze výběr útraty nebo Večerka
+   * (zavřením se vrátí tam); víc obálek se otevře postupně. Vrací false, když obálku registr nezná.
+   */
+  openBooster(boosterId: string): boolean;
+  /** Přidá bezplatná přehození: v otevřené Večerce hned, jinak do příští Večerky (Otevřené dveře). */
+  addFreeRerolls(n: number): void;
+  /**
+   * Přidá do otevřené Večerky žolíka navíc (Doporučení od známého, Protekce): vzácnost `rarity` (bez ní podle vah),
+   * edice `edition` (bez ní hod jako v obchodě), nálepky podle obtížnosti, cena × `priceMult`. Položka má `extra`:
+   * přehození ji nemění. Bez otevřené Večerky nebo bez žolíka v poolu vrací false.
+   */
+  addShopJoker(opts?: {
+    rarity?: JokerRarity;
+    edition?: EditionId | null;
+    priceMult?: number;
+    noEditionSurcharge?: boolean;
+  }): boolean;
+  /**
+   * Dá prvnímu neprodanému žolíkovi bez edice v otevřené Večerce edici `edition`, s `noSurcharge` bez příplatku
+   * (Vyleštěné příbory, Fotonegativ). Vrací false, když takový žolík v nabídce není (nebo Večerka není otevřená).
+   */
+  setShopJokerEdition(edition: EditionId, opts?: { noSurcharge?: boolean }): boolean;
+  /**
+   * Přidá do otevřené Večerky kupón navíc jen pro tuto Večerku (Úřední poukaz) — z kupónů, které jde teď koupit
+   * a v nabídce nejsou. Vrací id kupónu, nebo null (žádný není, Večerka zavřená).
+   */
+  addShopVoucher(): string | null;
+  /**
    * Vypne pravidlo šéfa do konce kola (Odvolání): zruší debuffy karet i žolíků z kola, otočí karty v ruce lícem
    * nahoru a vrátí ruce/zahození, které šéf ubral (rozdíl modifikátorů; ruce nejníž 1). Cíl zůstává.
    */
@@ -211,6 +240,8 @@ export interface EngineApi {
   handLevel(hand: HandType): number;
   /** Figura? (respektuje allFaces a debuff se nebere v potaz). */
   isFace(card: Card): boolean;
+  /** Hodnota karty pro pravidla; kamenná (`noRankSuit`, pokud vylepšení platí) hodnotu nemá → null (Sudé dny). */
+  cardRank(card: Card): Rank | null;
   /** Má karta danou barvu? (divoká = všechny, kamenná = žádná, mergedSuits…) */
   hasSuit(card: Card, suit: Suit): boolean;
   /** Základní čipy karty (2–10 = číslo, J/Q/K = 10, A = 11, kamenná 0) + bonusChips; respektuje `fixedCardChips`. */
@@ -481,6 +512,13 @@ export interface BossHooks {
    * balíčku po líznutí, po `onRoundStart`, `afterHandPlayed`, `onDiscard` a `onDraw` tohoto šéfa.
    */
   isCardDebuffed?(ctx: BossCtx, card: Card): boolean;
+  /**
+   * Má být žolík na pozici `index` podle pravidla mimo provoz (Jednooký hejtman: pravá polovina řady, Výpadek proudu:
+   * do konce první ruky)? Čistá funkce stavu — engine ji přepočítá na začátku kola (po `onRoundStart`), po zahrání
+   * ruky, po zahození a po každé akci během kola (přeřazení, prodej, nový žolík), takže platí i po přeřazení.
+   * Rozdíl promítá přes `setJokerDebuffed` a vypnuté žolíky eviduje v `RoundState.ruleJokerDebuffs`.
+   */
+  isJokerDebuffed?(ctx: BossCtx, joker: JokerInstance, index: number): boolean;
   /** Má se karta líznout lícem dolů? */
   isDrawnFaceDown?(ctx: BossCtx, card: Card, info: { drawIndex: number; handsPlayed: number }): boolean;
   /** Vrátí i18n klíč důvodu, proč ruka neskóruje, nebo null. Ruka se tím spotřebuje. */
@@ -511,6 +549,8 @@ export interface BossDef {
   targetMult?: number;
   /** Odměna v Kč (default 5). */
   reward?: number;
+  /** Čísla do textů šéfa (`bosses.<id>.rule` s `{param}`) — text i pravidlo musí používat stejná čísla. */
+  params?: Record<string, number | string>;
   /** Barva šéfa v UI (CSS barva). */
   color: string;
   hooks: BossHooks;
@@ -524,17 +564,32 @@ export type TagCtx = BaseCtx & { readonly self: TagInstance };
 /** Každý hook vrací true, pokud se štítek tímto spotřeboval (odebere se). */
 export interface TagHooks {
   onAdded?(ctx: TagCtx): boolean;
+  /** Výběr útraty — `round` už existuje, cíl ještě ne (počítá se hned po hooku z modifikátorů, vč. `passive`). */
   onBlindSelect?(ctx: TagCtx): boolean;
+  /** Začátek kola — cíl, ruce a zahození jsou spočítané, ruka se dobere až po hooku (`addRoundHandSize` platí hned). */
   onRoundStart?(ctx: TagCtx): boolean;
+  /**
+   * Vyhrané kolo (i zachráněné) — **až po** sestavení rozpisu odměn (`roundEndMoney`), takže štítek, který vyplácí
+   * v rozpisu, se smí spotřebovat tady. `ctx.state.round` je ještě k dispozici.
+   */
   onRoundEnd?(ctx: TagCtx): boolean;
+  /**
+   * Vstup do Večerky — nabídka je už vygenerovaná (`passive` štítku při generování platí), štítek ji upraví přes
+   * `api.addShopJoker`, `setShopJokerEdition`, `addShopVoucher`, `addFreeRerolls`. Před `onShopEnter` žolíků.
+   */
   onShopEnter?(ctx: TagCtx): boolean;
+  /**
+   * Peníze v rozpisu odměn vyhraného kola (DESIGN 2.4.2 krok 5, za balíčkem; zdroj `tag:<id>`). Nespotřebovává —
+   * spotřebovat se dá v `onRoundEnd`, který běží po rozpisu (Termínovaný vklad).
+   */
+  roundEndMoney?(ctx: TagCtx): number;
   /**
    * Kolo právě skončilo prohrou (došly ruce nebo karty). Vrať true, když štítek kolo zachrání: počítá se
    * jako vyhrané, ale **bez odměny za útratu**, a štítek se spotřebuje (Lékařské potvrzení). Štítky se ptají
    * před žolíky (`preventGameOver`).
    */
   onRoundLost?(ctx: TagCtx & { readonly score: number; readonly target: number }): boolean;
-  /** Úprava cen/obsahu obchodu při generování (po onShopEnter). */
+  /** Trvalá změna pravidel, dokud štítek trvá (čistá funkce; Šéf má chřipku: `bossTargetMult`). */
   passive?(ctx: TagCtx): ModifierDelta;
 }
 
