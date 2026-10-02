@@ -5,7 +5,17 @@
 
 ## Aktuální stav
 
-_Aktualizováno: 2026-10-02 (revize fáze 8)_
+_Aktualizováno: 2026-10-02 (uzavření fáze 9)_
+
+**Shrnutí:** fáze 0–9 jsou hotové a commitnuté (poslední: `feat(ui): juice and audio`). Kontroly zelené: `typecheck`,
+`lint`, `npm test` (76 souborů, 3 776 testů), `build`, `test:e2e` (67 prošlo; vizuální a „juice“ sady běží jen
+s `KARBAN_VISUAL=1` / `KARBAN_JUICE=1`). Fáze 9: částice, screen shake, velké skóre, tilt karet, přechody obrazovek
+(`src/ui/fx/*`), syntetizované SFX a procedurální chiptune hudba (`src/ui/audio/*`), ztlumení klávesou M.
+
+**Další krok: Fáze 10 (Dokončení 1.0)** — balanc simulací (silnější boti a zvednutí cíle patra 8 podle plánu
+v DECISIONS „Balanc po fázi 7“, bod 5; střední síly piva; balíčky nad Hospodským), bugfix, výkon (velikost hlavního
+chunku, Lighthouse > 90), README česky se screenshoty a GIFem, deploy na GitHub Pages, tag `v1.0.0`.
+Pozn.: e2e spouštět vždy jen z jednoho procesu (sdílený port 4173).
 
 **Fáze 0–2 jsou hotové** (commity `chore: …`, `feat(engine): complete phase 1 …`, `feat(engine): complete phase 2 …`).
 Z fáze 2 zůstal jen podúkol „První kalibrace křivky cílů“ — předběžná kalibrace proběhla ve fázi 5
@@ -313,8 +323,8 @@ dává stejný seed; kontroly zelené; commit `feat(meta): …`; fáze odškrtnu
 
 - [x] Částice na jednom `<canvas>` overlay, screen shake, tilt a hover karet, počítadlo skóre, efekt „velkého skóre“ (`src/ui/fx/*`, `src/ui/styles/fx.css`; DESIGN 13.6, DECISIONS „Fáze 9 (šťáva)“)
 - [x] Přechody obrazovek (jen `transform`/`opacity`), respektovat `prefers-reduced-motion` (`src/ui/fx/transitions.ts`)
-- [ ] SFX syntetizované ve Web Audio (jsfxr-like): klik, výběr karty, míchání, „tik tik tik“ skóre, velké skóre, zaplacení, prodej, zahození, příchod šéfa, výhra, prohra, odemčení
-- [ ] Procedurální chiptune hudba: jiná v menu a ve hře, u šéfa rychlejší tempo
+- [x] SFX syntetizované ve Web Audio (jsfxr-like): klik, výběr karty, míchání, „tik tik tik“ skóre, velké skóre, zaplacení, prodej, zahození, příchod šéfa, výhra, prohra, odemčení
+- [x] Procedurální chiptune hudba: jiná v menu a ve hře, u šéfa rychlejší tempo
 - [x] Nastavení: hlasitost SFX/hudba, rychlost hry 1×–4×, animace zap/vyp, screen shake, celá obrazovka, velikost UI, přehled klávesových zkratek (ověřeno: ovládání v `src/ui/screens/settings.ts`, ukládá se v profilu; animace / rychlost / shake respektuje i šťáva — `src/ui/fx/motion.ts`)
 - [x] Barvoslepý režim: 4barevný balíček (druhý styl SVG karet) (ověřeno: `.colorblind` v `styles/cards.css`, přepínač v Nastavení, e2e `menu.spec.ts` a `game.spec.ts`)
 - [x] Vtip všude: loading tipy, prázdné stavy, chybové hlášky, titulky (prošlo se; doplněné pointy v DECISIONS)
