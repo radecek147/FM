@@ -221,43 +221,43 @@ describe('EngineApi.consumableHand a jokerCopyable', () => {
 // ─────────────────────────── Praotec Čech ───────────────────────────
 
 describe('Praotec Čech (forefather)', () => {
-  it('první ruka kola zvýší úroveň ještě před skórováním: Dvojice úr. 2 = (26 + 20) × 3 = 138', () => {
+  it('první ruka kola zvýší úroveň ještě před skórováním: Dvojice úr. 2 = (40 + 20) × 4 = 240', () => {
     const g = game(['forefather']);
     const cards = setupRound(g, 'KS KH');
     g._core.state.round!.target = 1e15;
     const { result: r, events } = play(g, cards);
-    expect(r.score).toBe(138);
-    expect(r.steps[0]).toMatchObject({ source: 'hand', chips: 26, mult: 3 });
+    expect(r.score).toBe(240);
+    expect(r.steps[0]).toMatchObject({ source: 'hand', chips: 40, mult: 4 });
     expect(g.state.handLevels.pair.level).toBe(2);
     expect(instance(g, 'forefather').state.levels).toBe(1);
     expect(messages(events)).toContain('jokers.forefather.settled');
     expect(jokerSteps(r, 'forefather')).toEqual([]);
   });
 
-  it('další ruka téhož kola už nic; v novém kole zase první ruka (úr. 3 = 60 × 4 = 240)', () => {
+  it('další ruka téhož kola už nic; v novém kole zase první ruka (úr. 3 = 88 × 6 = 528)', () => {
     const g = game(['forefather']);
     hand(g, 'KS KH');
     const second = hand(g, 'KS KH');
-    expect(second.score).toBe(138);
+    expect(second.score).toBe(240);
     expect(jokerSteps(second, 'forefather')).toEqual([]);
     expect(g.state.handLevels.pair.level).toBe(2);
     winRound(g);
     nextRound(g);
-    expect(hand(g, 'KS KH').score).toBe(240);
+    expect(hand(g, 'KS KH').score).toBe(528);
     expect(g.state.handLevels.pair.level).toBe(3);
     expect(instance(g, 'forefather').state.levels).toBe(2);
   });
 
-  it('úroveň dostane zahraná kombinace (Vysoká karta úr. 2 = 18 + 10 = 28 × 2 = 56)', () => {
+  it('úroveň dostane zahraná kombinace (Vysoká karta úr. 2 = 30 + 10 = 40 × 3 = 120)', () => {
     const g = game(['forefather']);
-    expect(hand(g, 'KS').score).toBe(56);
+    expect(hand(g, 'KS').score).toBe(120);
     expect(g.state.handLevels.high_card.level).toBe(2);
     expect(g.state.handLevels.pair.level).toBe(1);
   });
 
   it('kopie zvýší úroveň znovu, ale počítadlo nezvedá; stav přežije uložení a načtení', () => {
     const g = game(['copier', 'forefather']);
-    expect(hand(g, 'KS KH').score).toBe(240);
+    expect(hand(g, 'KS KH').score).toBe(528);
     expect(g.state.handLevels.pair.level).toBe(3);
     expect(instance(g, 'forefather').state.levels).toBe(1);
     const g2 = reload(g);

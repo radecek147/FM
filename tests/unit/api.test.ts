@@ -1005,7 +1005,7 @@ describe('api.levelUpHand / levelUpAll', () => {
     const game = fx.makeGame({ round: true });
     game._core.api.levelUpAll(2);
     const [a, b] = fx.setupRound(game, '9S 9H');
-    expect(fx.play(game, [a!, b!]).result.steps[0]).toMatchObject({ chips: 40, mult: 4 });
+    expect(fx.play(game, [a!, b!]).result.steps[0]).toMatchObject({ chips: 68, mult: 6 });
     game._core.api.levelUpAll(-5);
     for (const h of HAND_TYPES) expect(game.state.handLevels[h].level).toBe(1);
   });

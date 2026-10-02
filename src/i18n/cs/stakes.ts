@@ -11,7 +11,7 @@ export const stakes = {
   },
   jedenactka: {
     name: 'Jedenáctka',
-    desc: 'Dražší pivo: od {fromAnte}. patra stojí ve Večerce všechno o {add|money} víc – žolíci, spotřebky, karty, obálky, kupóny i přehození. Prodejní ceny se nemění.',
+    desc: 'Dražší pivo: od {fromAnte}. patra stojí každé přehození ve Večerce o {add|money} víc.',
     flavor: 'Pivo zdražilo. Zase.',
   },
   dvanactka: {
@@ -36,7 +36,7 @@ export const stakes = {
   },
   doppelbock: {
     name: 'Doppelbock',
-    desc: 'Bazar a půjčovna: {eternal} % žolíků v nabídce je přibitých (nejdou prodat) a {rental} % zapůjčených (stojí jen {price|money} plus příplatek Jedenáctky, ale na konci každého kola si půjčovna řekne o {fee|money}).',
+    desc: 'Bazar a půjčovna: {eternal} % žolíků v nabídce je přibitých (nejdou prodat) a {rental} % zapůjčených (stojí jen {price|money}, ale na konci každého kola si půjčovna řekne o {fee|money}).',
     flavor: 'Co je přibité, neprodáš. Co je půjčené, platíš.',
   },
   imperial: {

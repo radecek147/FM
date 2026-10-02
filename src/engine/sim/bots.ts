@@ -50,7 +50,7 @@ import {
   type EvalEnv,
   type PlayCandidate,
 } from './hand-eval';
-import { makeLab, type BuildLab } from './lab';
+import { LAB_SAMPLES, makeLab, type BuildLab } from './lab';
 import type { Bot, BotName } from './types';
 import {
   cardWorth,
@@ -200,25 +200,41 @@ const STICKER_VALUE: Readonly<Record<string, number>> = { eternal: 0.95, perisha
 
 // ─────────────────────────── Měřená hodnota žolíků (src/engine/sim/lab.ts) ───────────────────────────
 
-/** Kč za jednotku ln(skóre typických rukou) — ×1,5 ve skórování ≈ 18 Kč. */
-const POWER_KC = 45;
+/**
+ * Ladicí čísla měřeného oceňování (src/engine/sim/lab.ts). Objekt je měnitelný jen kvůli experimentům simulace
+ * (scratch skripty mění hodnoty před během); hra ani testy ho nemění.
+ */
+export const BOT_TUNING = {
+  /** Kč za jednotku ln(skóre typických rukou) — ×1,5 ve skórování ≈ 18 Kč. */
+  powerKc: 45,
+  /** Žolík bez skórovacího efektu (ekonomika, užitek): heuristika × tolik Kč za jednotku hodnocení. */
+  nonScoringKc: 4,
+  /** Ekonomická a škálovací složka skórujícího žolíka (Kč × vzácnost, do konce runu). */
+  econExtraKc: 3,
+  scalingExtraKc: 3,
+  /** Koupit žolíka do volného slotu, když měřená hodnota ≥ cena × poměr × pocit z ceny (při málo žolících nižší). */
+  jokerBuyRatio: 0.8,
+  jokerFewRatio: 0.45,
+  /** Výměna žolíka: zisk musí převýšit čistou cenu (cena − prodej) × poměr + rezervu. */
+  jokerSwapRatio: 1,
+  jokerSwapMarginKc: 1.5,
+  /** Apriorní hodnota +1 úrovně kombinace (Kč × podíl na historii runu / oblíbenost stylu). */
+  levelPriorKc: 2,
+  /** Váha měřené hodnoty úrovně hlavní kombinace buildu a ostatních kombinací. */
+  mainLevelMult: 2,
+  otherLevelMult: 0.5,
+  /** Počet typických rukou laboratoře. */
+  labSamples: LAB_SAMPLES,
+};
 /** Štítky efektů, které se projeví přímo ve skórování (měří je laboratoř). */
 const SCORING_TAGS: readonly JokerTag[] = ['chips', 'mult', 'xmult', 'retrigger', 'copy'];
-/** Žolík bez skórovacího efektu (ekonomika, užitek): heuristika × tolik Kč za jednotku hodnocení. */
-const NON_SCORING_KC = 4;
-/** Ekonomická a škálovací složka skórujícího žolíka (Kč × vzácnost, do konce runu). */
-const ECON_EXTRA_KC = 3;
-const SCALING_EXTRA_KC = 3;
 /** Negativní edice nezabírá slot. */
 const NEGATIVE_EXTRA_KC = 5;
-/** Koupit žolíka do volného slotu, když měřená hodnota ≥ cena × poměr × pocit z ceny (při málo žolících nižší). */
-const JOKER_BUY_RATIO = 0.8;
-const JOKER_FEW_RATIO = 0.45;
-/** Výměna žolíka: zisk musí převýšit čistou cenu (cena − prodej) × poměr + rezervu. */
-const JOKER_SWAP_RATIO = 1;
-const JOKER_SWAP_MARGIN_KC = 1.5;
-/** Apriorní hodnota +1 úrovně kombinace (Kč × podíl na historii runu / oblíbenost stylu). */
-const LEVEL_PRIOR_KC = 2;
+/** Nejnižší hodnota +1 úrovně kombinace (Kč). */
+const LEVEL_FLOOR_KC = 0.4;
+/** Rychlé síto nabídek žolíků: tolik typických rukou; nabídka pod potřebou o víc než `QUICK_SKIP_KC` vypadne. */
+const QUICK_SAMPLES = 3;
+const QUICK_SKIP_KC = 3;
 
 /** Pořadí žolíků: +čipy a +mult vlevo, ×mult vpravo (DESIGN 4.5). */
 function jokerOrderKey(tags: readonly JokerTag[]): number {
@@ -548,7 +564,15 @@ class StrategyBot implements Bot {
     const safeCount = s.jokers.length - off.size;
     // Žolík vypnutý jinak než pozicí (Exekutor) nefunguje nikde — fungující pozici nepotřebuje.
     const ruled = new Set(s.round?.ruleJokerDebuffs ?? []);
-    const rating = (j: JokerInstance): number => (j.debuffed && !ruled.has(j.uid) ? 0 : this.keepKc(game, j));
+    // Hodnota žolíka z kanonického pořadí (klíč, uid) — nezávisí na současném pořadí, jinak by se bot přeřazoval
+    // donekonečna.
+    const canon = [...s.jokers].sort(
+      (a, b) => slotOrderKey(game, a) - slotOrderKey(game, b) || a.uid - b.uid,
+    );
+    const lab = this.lab(game);
+    const v = lab.variants(canon);
+    const rating = (j: JokerInstance): number =>
+      j.debuffed && !ruled.has(j.uid) ? 0 : this.powerKc(v.without(j.uid), v.total) + this.extrasKc(game, j);
     const ranked = [...keyed].sort((a, b) => rating(b.j) - rating(a.j) || a.i - b.i);
     const good = ranked.slice(0, safeCount).sort(byKey);
     const rest = ranked.slice(safeCount).sort(byKey);
@@ -583,6 +607,7 @@ class StrategyBot implements Bot {
       makeEnv(game, this.handPref(game)),
       (cards) => this.filler(cards, drawInfo(cards, favor)),
       this.name,
+      BOT_TUNING.labSamples,
     );
     this.labCache = { game, lab };
     return lab;
@@ -613,10 +638,11 @@ class StrategyBot implements Bot {
     const left = roundsLeft(game);
     const rarity = RARITY_VALUE[def.rarity] ?? 1;
     let v = 0;
-    if (!def.tags.some((t) => SCORING_TAGS.includes(t))) v += this.jokerRating(game, j) * NON_SCORING_KC;
+    if (!def.tags.some((t) => SCORING_TAGS.includes(t)))
+      v += this.jokerRating(game, j) * BOT_TUNING.nonScoringKc;
     else {
-      if (def.tags.includes('economy')) v += ECON_EXTRA_KC * rarity * clamp(left / 12, 0, 1);
-      if (def.tags.includes('scaling')) v += SCALING_EXTRA_KC * rarity * clamp(left / 15, 0, 1);
+      if (def.tags.includes('economy')) v += BOT_TUNING.econExtraKc * rarity * clamp(left / 12, 0, 1);
+      if (def.tags.includes('scaling')) v += BOT_TUNING.scalingExtraKc * rarity * clamp(left / 15, 0, 1);
       v *= this.activeShare(game, j);
     }
     if (j.edition === 'negative') v += NEGATIVE_EXTRA_KC;
@@ -626,7 +652,7 @@ class StrategyBot implements Bot {
 
   /** Kč za změnu skóre typických rukou z `from` na `to`. */
   private powerKc(from: number, to: number): number {
-    return POWER_KC * Math.log((to + 1) / (from + 1));
+    return BOT_TUNING.powerKc * Math.log((to + 1) / (from + 1));
   }
 
   /** Kč, o které by sestava `jokers` (v pořadí bota) byla lepší než současná sestava. */
@@ -651,17 +677,21 @@ class StrategyBot implements Bot {
    * kdy žolík funguje — zvětrávání) a nejlepší výměna: sestava s `j` bez jednoho vlastního žolíka (mimo přibité),
    * odhadnutá přehráním z téhož přepočtu. `swap` = null, když není koho prodat.
    */
-  private offerKc(game: Game, j: JokerInstance): { add: number; swap: { uid: number; kc: number } | null } {
+  private offerKc(
+    game: Game,
+    j: JokerInstance,
+    samples?: number,
+  ): { add: number; swap: { uid: number; kc: number } | null } {
     const lab = this.lab(game);
     const cur = game.state.jokers;
-    const v = lab.variants(this.ordered(game, [...cur, j]));
+    const v = lab.variants(this.ordered(game, [...cur, j]), samples);
     const share = this.activeShare(game, j);
     const extra = this.extrasKc(game, j);
-    const add = this.powerKc(lab.base, v.total) * share + extra;
+    const add = this.powerKc(v.base, v.total) * share + extra;
     let swap: { uid: number; kc: number } | null = null;
     for (const w of cur) {
       if (w.stickers.includes('eternal')) continue;
-      const kc = this.powerKc(lab.base, v.without(w.uid)) * share + extra - this.extrasKc(game, w);
+      const kc = this.powerKc(v.base, v.without(w.uid)) * share + extra - this.extrasKc(game, w);
       if (!swap || kc > swap.kc) swap = { uid: w.uid, kc };
     }
     return { add, swap };
@@ -670,12 +700,6 @@ class StrategyBot implements Bot {
   /** Měřená hodnota žolíka `j` přidaného do volného slotu (Kč). */
   private addKc(game: Game, j: JokerInstance): number {
     return this.offerKc(game, j).add;
-  }
-
-  /** Měřená hodnota vlastního žolíka v Kč: o kolik je sestava s ním lepší než bez něj. */
-  private keepKc(game: Game, j: JokerInstance): number {
-    const lab = this.lab(game);
-    return Math.max(0, this.powerKc(lab.without(j.uid), lab.base)) + this.extrasKc(game, j);
   }
 
   /**
@@ -688,7 +712,34 @@ class StrategyBot implements Bot {
     const played = game.state.stats.handTypeCounts[hand] ?? 0;
     const total = Math.max(1, game.state.stats.handsPlayed);
     const prior = (this.style.favorHands.includes(hand) ? 0.6 : 0) + (0.8 * played) / total;
-    return measured + LEVEL_PRIOR_KC * prior;
+    // Hlavní kombinace: úrovně se sčítají přes celý run a každá další ji dělá hranější — bot do ní investuje víc
+    // než do ostatních (ty jen poloviční vahou).
+    const focus = hand === this.mainHand(game) ? BOT_TUNING.mainLevelMult : BOT_TUNING.otherLevelMult;
+    // Úroveň čehokoli má aspoň malou cenu (pranostiku je lepší použít než držet, z obálky vzít než přeskočit).
+    return Math.max(LEVEL_FLOOR_KC, focus * measured + BOT_TUNING.levelPriorKc * prior);
+  }
+
+  /**
+   * Hlavní kombinace buildu: nejčastější tah typických rukou (laboratoř vybírá tah podle úrovní a preferencí bota)
+   * s přihlédnutím k historii runu; při shodě vyšší úroveň.
+   */
+  private mainHand(game: Game): HandType | null {
+    const lab = this.lab(game);
+    const counts = game.state.stats.handTypeCounts;
+    const total = Math.max(1, game.state.stats.handsPlayed);
+    let best: HandType | null = null;
+    let bestScore = 0;
+    for (const t of HAND_TYPES) {
+      const score =
+        (lab.typeShare[t] ?? 0) +
+        (0.5 * (counts[t] ?? 0)) / total +
+        0.01 * (game.state.handLevels[t]?.level ?? 1);
+      if (score > bestScore) {
+        best = t;
+        bestScore = score;
+      }
+    }
+    return best;
   }
 
   /**
@@ -1206,20 +1257,32 @@ class StrategyBot implements Bot {
     let best: { action: Action; score: number } | null = null;
     shop.items.forEach((it, i) => {
       if (it.kind !== 'joker' || it.sold) return;
-      if (this.style.minJokerRating > 1 && this.jokerRating(game, it.joker) < this.style.minJokerRating) return;
+      if (this.style.minJokerRating > 1 && this.jokerRating(game, it.joker) < this.style.minJokerRating)
+        return;
       if (jokerRoom(game, it.joker)) {
         if (!(this.affordable(game, it.price) || this.debtAffordable(game, it.price))) return;
-        const surplus = this.addKc(game, it.joker) - it.price * (few ? JOKER_FEW_RATIO : JOKER_BUY_RATIO) * pf;
-        if (surplus >= 0 && (!best || surplus > best.score)) best = { action: { type: 'buy', slot: i }, score: surplus };
+        const need = it.price * (few ? BOT_TUNING.jokerFewRatio : BOT_TUNING.jokerBuyRatio) * pf;
+        // Rychlé síto na několika typických rukou: zjevně slabou nabídku bot celou nepřepočítává.
+        if (this.offerKc(game, it.joker, QUICK_SAMPLES).add < need - QUICK_SKIP_KC) return;
+        const surplus = this.addKc(game, it.joker) - need;
+        if (surplus >= 0 && (!best || surplus > best.score))
+          best = { action: { type: 'buy', slot: i }, score: surplus };
         return;
       }
       const maxSell = Math.max(0, ...s.jokers.map((j) => game.sellValue(j.uid)));
       if (!this.affordable(game, it.price - maxSell)) return;
+      const quick = this.offerKc(game, it.joker, QUICK_SAMPLES).swap;
+      if (
+        !quick ||
+        quick.kc < Math.max(0, it.price - maxSell) * BOT_TUNING.jokerSwapRatio * pf - QUICK_SKIP_KC
+      )
+        return;
       const swap = this.offerKc(game, it.joker).swap;
       if (!swap) return;
       const net = it.price - game.sellValue(swap.uid);
       if (!this.affordable(game, net)) return;
-      const surplus = swap.kc - Math.max(0, net) * JOKER_SWAP_RATIO * pf - JOKER_SWAP_MARGIN_KC;
+      const surplus =
+        swap.kc - Math.max(0, net) * BOT_TUNING.jokerSwapRatio * pf - BOT_TUNING.jokerSwapMarginKc;
       if (surplus >= 0 && (!best || surplus > best.score))
         best = { action: { type: 'sellJoker', uid: swap.uid }, score: surplus };
     });
@@ -1413,7 +1476,7 @@ class StrategyBot implements Bot {
         }
         const swap = this.offerKc(game, opt.joker).swap;
         if (!swap) return;
-        const gain = swap.kc - JOKER_SWAP_MARGIN_KC;
+        const gain = swap.kc - BOT_TUNING.jokerSwapMarginKc;
         if (gain > 0) offer(gain + game.sellValue(swap.uid), { type: 'sellJoker', uid: swap.uid });
       } else if (opt.kind === 'card') {
         offer(((cardWorth(view, opt.card) - avg) * 52) / (n + 1), pick);

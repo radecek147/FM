@@ -21,6 +21,7 @@ export {
   botStrength,
   DEFAULT_MAX_ACTIONS,
   fallbackAction,
+  JOKER_NORM_MIN_ROUNDS,
   MAX_CONSECUTIVE_INVALID,
   simSeed,
   simulateMany,

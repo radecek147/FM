@@ -70,6 +70,8 @@ export interface RunResult {
   jokerIds: string[];
   /** Kolik kol byl který žolík ve slotu (`RunStats.jokerRoundCounts`). */
   jokerRounds: Record<string, number>;
+  /** Patro, ve kterém byl žolík poprvé ve slotu na konci vyhraného kola (pro Δ výher normovanou na patro koupě). */
+  jokerFirstAnte?: Record<string, number>;
   shopMoney: ShopMoneySample[];
   /** Šéfové, se kterými se run utkal v útratě Šéf (id v pořadí pater; Velká útrata na Imperialu se nepočítá). */
   bosses: string[];
@@ -115,6 +117,13 @@ export interface JokerStat {
   winRateWithout: number;
   /** Rozdíl v procentních bodech. */
   delta: number;
+  /**
+   * Δ výher normovaná na patro koupě (DESIGN 4.3, pravidlo 4): runy, kde byl žolík ve slotu aspoň
+   * `JOKER_NORM_MIN_ROUNDS` kol, proti runům bez něj, které dosáhly patra, kde ho run poprvé měl (p. b.).
+   */
+  deltaNorm: number;
+  /** Kolik runů mělo žolíka aspoň `JOKER_NORM_MIN_ROUNDS` kol. */
+  normRuns: number;
 }
 
 /** Souhrn sady runů jednoho bota (DESIGN 12.3). Procenta jsou 0–100. */

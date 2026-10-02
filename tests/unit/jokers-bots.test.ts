@@ -102,13 +102,18 @@ describe('boti a žolíci – nákup podle štítků a params', () => {
     expect(createBot('max').decide(game)).toEqual({ type: 'buy', slot: 3 });
   });
 
-  it('s pranostikami v obsahu je Stará garda zase nejlepší nabídka', () => {
+  it('Stará garda podle měřené hodnoty: s kombinacemi na úrovni 3 nejlepší nabídka, na úrovni 1 ne', () => {
     const withPlanets: ContentRegistry = {
       ...reg,
       consumables: { test_planet: consumable('test_planet', { kind: 'pranostika', hand: 'pair' }) },
     };
-    const game = shopWith(['old_guard', 'beer_mat'], { money: 50, registry: withPlanets });
-    expect(createBot('max').decide(game)).toEqual({ type: 'buy', slot: 0 });
+    // Na úrovni 1 Stará garda ve skórování nic nedá — laboratoř bota (typické ruce) to změří.
+    const low = shopWith(['old_guard', 'beer_mat'], { money: 50, registry: withPlanets });
+    expect(createBot('max').decide(low)).toEqual({ type: 'buy', slot: 1 });
+    // Všechny kombinace na úrovni 3: ×1,5 platí v každé typické ruce a přebije +čipy a +mult Pivního tácku.
+    const high = shopWith(['old_guard', 'beer_mat'], { money: 50, registry: withPlanets });
+    for (const h of Object.values(high._core.state.handLevels)) h.level = 3;
+    expect(createBot('max').decide(high)).toEqual({ type: 'buy', slot: 0 });
   });
 
   it('se Sekerou koupí žolíka i do mínusu, bez ní ne', () => {

@@ -156,7 +156,7 @@ describe('Nová vyhláška (new_decree)', () => {
     const g = bossGame('new_decree');
     g._core.api.disableBoss();
     const r = hand(g, 'KH KS', undefined, { levels: { pair: 5 } });
-    expect(baseStep(r)).toMatchObject({ chips: 12 + 4 * 14, mult: 2 + 4 });
+    expect(baseStep(r)).toMatchObject({ chips: 12 + 4 * 28, mult: 2 + 4 * 2 });
   });
 });
 
@@ -184,9 +184,9 @@ describe('Krajské derby (regional_derby)', () => {
     expect(r.score).toBe(6 + 20);
   });
 
-  it('zaokrouhluje nahoru: Dvojice úrovně 2 (26 čipů, 3 mult) → 13 a 2', () => {
-    const r = hand(bossGame('regional_derby'), 'KH KS', undefined, { levels: { pair: 2 } });
-    expect(baseStep(r)).toMatchObject({ chips: 13, mult: 2 });
+  it('zaokrouhluje nahoru: Trojice (28 čipů, 3 mult) → 14 a 2', () => {
+    const r = hand(bossGame('regional_derby'), 'KH KS KD');
+    expect(baseStep(r)).toMatchObject({ chips: 14, mult: 2 });
   });
 
   it('počítá se celá zahraná ruka, i neskórující karta (Vysoká karta 1 mult → 1)', () => {

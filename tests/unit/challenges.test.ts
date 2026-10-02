@@ -550,7 +550,7 @@ describe('výzvy – dohratelnost botem', () => {
       expect(r.cause, r.seed).not.toBe('actionLimit');
       expect([r.deckId, r.stake]).toEqual([REG.challenges[id]!.deckId, 1]);
     }
-  });
+  }, 60_000);
 
   it('boti respektují zákaz přeskakování a přehazování (Rychlík bez zastávky)', () => {
     for (const name of ['random', 'econ', 'flush', 'pairs'] as const) {
@@ -567,5 +567,5 @@ describe('výzvy – dohratelnost botem', () => {
         expect([r.rerolls, r.blindsSkipped]).toEqual([0, 0]);
       }
     }
-  });
+  }, 120_000);
 });

@@ -232,15 +232,15 @@ describe('Pan vrchní (head_waiter)', () => {
 // ─────────────────────────── #18 Stará garda ───────────────────────────
 
 describe('Stará garda (old_guard)', () => {
-  it('×1,5 mult od úrovně 3: Dvojice úr. 3 = (40 + 20) × 4 × 1,5 = 360', () => {
+  it('×1,5 mult od úrovně 3: Dvojice úr. 3 = (68 + 20) × 6 × 1,5 = 792', () => {
     const r = hand(game(['old_guard']), 'KS KH', undefined, { levels: { pair: 3 } });
-    expect(r.score).toBe(360);
+    expect(r.score).toBe(792);
     expect(jokerSteps(r, 'old_guard')).toMatchObject([{ xmult: 1.5 }]);
   });
 
-  it('na úrovni 2 nic: (26 + 20) × 3 = 138', () => {
+  it('na úrovni 2 nic: (40 + 20) × 4 = 240', () => {
     const r = hand(game(['old_guard']), 'KS KH', undefined, { levels: { pair: 2 } });
-    expect(r.score).toBe(138);
+    expect(r.score).toBe(240);
     expect(jokerSteps(r, 'old_guard')).toEqual([]);
   });
 });
@@ -264,8 +264,8 @@ describe('Kořenářka (herbalist)', () => {
     useConsumable(g, 'stamp'); // razítko taky ne
     expect(g.state.jokers[0]!.state.mult).toBe(2);
     useConsumable(g, 'rada_b');
-    // Dvojice úr. 2 = 26 + 20 = 46 čipů, mult 3 + 4 = 7
-    expect(hand(g, 'KS KH').score).toBe(46 * 7);
+    // Dvojice úr. 2 = 40 + 20 = 60 čipů, mult 4 + 4 = 8
+    expect(hand(g, 'KS KH').score).toBe(60 * 8);
   });
 
   it('kopie nenavyšuje počítadlo, ale bonus kopíruje; stav přežije uložení a načtení', () => {

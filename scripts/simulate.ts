@@ -317,6 +317,8 @@ export function reportText(report: SimReport, reg: ContentRegistry = contentRegi
               with: n1(j.winRateWith),
               without: n1(j.winRateWithout),
               delta: formatSigned(n1(j.delta)),
+              norm: formatSigned(n1(j.deltaNorm)),
+              normRuns: j.normRuns,
             })}`,
           ),
         );

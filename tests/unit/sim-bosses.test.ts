@@ -28,7 +28,10 @@ import { addJokers, boss, joker, makeGame, makeRegistry, selectBoss, setupRound 
 const reg = buildRegistry();
 const rng = () => rngFromState([1, 2, 3, 4]);
 
-/** Testovací obsah: šéf vypínající pravou polovinu řady, šéf vypínající žolíky do první ruky, žolíci podle vzácnosti. */
+/**
+ * Testovací obsah: šéf vypínající pravou polovinu řady, šéf vypínající žolíky do první ruky, žolíci se skutečným
+ * efektem (bot je oceňuje měřením v laboratoři, src/engine/sim/lab.ts): ×2 a ×1,8 > +8 mult > +10 čipů > +2 mult.
+ */
 const positional = makeRegistry({
   bosses: [
     boss('right_half', {
@@ -37,11 +40,11 @@ const positional = makeRegistry({
     boss('dark_first', { hooks: { isJokerDebuffed: (ctx) => ctx.round.handsPlayed === 0 } }),
   ],
   jokers: [
-    joker('c_chips', { rarity: 'common', tags: ['chips'] }),
-    joker('c_mult', { rarity: 'common', tags: ['mult'] }),
-    joker('r_mult', { rarity: 'rare', tags: ['mult'] }),
-    joker('e_x', { rarity: 'epic', tags: ['xmult'] }),
-    joker('e_x2', { rarity: 'epic', tags: ['xmult'] }),
+    joker('c_chips', { rarity: 'common', tags: ['chips'], hooks: { onHandPlayed: () => ({ chips: 10 }) } }),
+    joker('c_mult', { rarity: 'common', tags: ['mult'], hooks: { onHandPlayed: () => ({ mult: 2 }) } }),
+    joker('r_mult', { rarity: 'rare', tags: ['mult'], hooks: { onHandPlayed: () => ({ mult: 8 }) } }),
+    joker('e_x', { rarity: 'epic', tags: ['xmult'], hooks: { onHandPlayed: () => ({ xmult: 2 }) } }),
+    joker('e_x2', { rarity: 'epic', tags: ['xmult'], hooks: { onHandPlayed: () => ({ xmult: 1.8 }) } }),
   ],
 });
 
@@ -70,7 +73,7 @@ describe('pořadí žolíků pod šéfem, který vypíná pozice', () => {
     const action = bot.decide(game);
     expect(action.type).toBe('reorderJokers');
     expect(game.dispatch(action).ok).toBe(true);
-    // Fungují 3 z 5: dva epičtí a vzácný; v rámci fungujících +mult vlevo, ×mult vpravo.
+    // Fungují 3 z 5: dva ×mult a +8 mult (měřená hodnota); v rámci fungujících +mult vlevo, ×mult vpravo.
     expect(working(game)).toEqual(['r_mult', 'e_x', 'e_x2']);
     expect(bot.decide(game).type).not.toBe('reorderJokers');
   });

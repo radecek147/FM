@@ -402,11 +402,11 @@ describe('Ranní ptáče (early_bird) a Noční směna (night_shift)', () => {
 
 describe('Meteorolog (meteorologist)', () => {
   it('+2 mult za každou úroveň zahrané kombinace nad první', () => {
-    // Dvojice úr. 3: 12 + 2 × 14 = 40 čipů, 2 + 2 × 1 = 4 mult; +2 × 2 = 8 mult.
+    // Dvojice úr. 3: 12 + 2 × 28 = 68 čipů, 2 + 2 × 2 = 6 mult; +2 × 2 = 10 mult.
     const r = playHand(roundGame(['meteorologist']), 'KS KH', undefined, { levels: { pair: 3 } });
-    expect([r.chips, r.mult, r.score]).toEqual([60, 8, 480]);
+    expect([r.chips, r.mult, r.score]).toEqual([88, 10, 880]);
     expect(playHand(roundGame(['meteorologist']), 'KS KH', undefined, { levels: { pair: 2 } }).mult).toBe(
-      3 + 2,
+      4 + 2,
     );
   });
 

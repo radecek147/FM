@@ -118,7 +118,7 @@ describe('pranostiky — definice (DESIGN 5.2)', () => {
       expect(t(`consumables.${d.id}.name`).split(/\s+/).length, d.id).toBeLessThanOrEqual(3);
     }
     expect(t('consumables.medard_drop.desc', def('medard_drop').params)).toBe(
-      'Barva +1 úroveň (+18 čipů a +2 mult za úroveň).',
+      'Barva +1 úroveň (+36 čipů a +4 mult za úroveň).',
     );
   });
 });
@@ -141,7 +141,7 @@ describe('pranostiky — použití přes engine', () => {
     },
   );
 
-  it('vyšší úroveň opravdu přidá čipy a mult podle tabulky (Barva 1 → 2: +18 čipů, +2 mult)', () => {
+  it('vyšší úroveň opravdu přidá čipy a mult podle tabulky (Barva 1 → 2: +36 čipů, +4 mult)', () => {
     const g = game(true);
     const cards = setupRound(g, 'AH 9H 7H 4H 2H');
     g._core.state.round!.target = 1e9;
@@ -150,8 +150,8 @@ describe('pranostiky — použití přes engine', () => {
     const again = setupRound(g, 'AH 9H 7H 4H 2H');
     const after = play(g, again).result;
     expect(before.hand.type).toBe('flush');
-    expect(base(after).chips - base(before).chips).toBe(18);
-    expect(base(after).mult - base(before).mult).toBe(2);
+    expect(base(after).chips - base(before).chips).toBe(36);
+    expect(base(after).mult - base(before).mult).toBe(4);
   });
 
   it('jde použít i mimo kolo (výběr útraty) a skládá se (2× = +2 úrovně)', () => {

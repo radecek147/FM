@@ -75,7 +75,8 @@ export const cli = {
     length: 'Délka runu v průměru: vyhraná kola {rounds}, ruce {hands}, akce {actions}',
     jokersNone: 'Žolíci: žádný nebyl ve slotu na konci kola.',
     jokersTitle: 'Nejsilnější žolíci (výhry se žolíkem / bez něj):',
-    jokerLine: '{name}: {runs|plural:run,runy,runů}, {with} % / {without} % ({delta} p. b.)',
+    jokerLine:
+      '{name}: {runs|plural:run,runy,runů}, {with} % / {without} % ({delta} p. b.; normováno na patro koupě {norm} p. b. z {normRuns|plural:runu,runů,runů})',
     invalid: 'Neplatné akce botů: {n}',
     summary: 'Souhrn:',
     summaryLine: '{id}: výhry {rate} %, průměrné patro {ante}, nejlepší ruka v průměru {best}',

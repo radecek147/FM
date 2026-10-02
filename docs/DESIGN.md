@@ -91,7 +91,7 @@ Po porážce šéfa patra 8 → VÝHRA (titulky, statistika) → nabídka Nekone
   base(a) = nice( base(8) × g(a)^(a − 8) ),   g(a) = 2,2 + 0,15 × (a − 9)
   ```
 
-  kde `base(8)` je základ patra 8 zvolené křivky (23 000 / 26 000 / 29 000, kalibrace po fázi 7 — kap. 2.3.1).
+  kde `base(8)` je základ patra 8 zvolené křivky (100 000 / 120 000 / 140 000, kalibrace fáze 10 — kap. 2.3.1).
   Růst je nadexponenciální (poměr mezi patry se zvyšuje z ×2,2 v patře 9 na zhruba ×4,5 v patře 16 a dál roste).
 
 - `nice(x)` je stejné zaokrouhlení jako v hlavní hře (kap. 2.3.2). Útraty pak `nice(base × 1 / 1,5 / 2)`.
@@ -125,21 +125,27 @@ Po porážce šéfa patra 8 → VÝHRA (titulky, statistika) → nabídka Nekone
 
 | Pořadí síly | Kombinace (`id`)                             | Čipy | Mult | +čipy / úr. | +mult / úr. | Úr. 1 (čipy×mult) |          Úr. 5 | Skórující karty  |
 | ----------- | -------------------------------------------- | ---: | ---: | ----------: | ----------: | ----------------: | -------------: | ---------------- |
-| 1           | Vysoká karta (`high_card`)                   |    6 |    1 |         +12 |          +1 |                 6 |     54×5 = 270 | 1 nejvyšší karta |
-| 2           | Dvojice (`pair`)                             |   12 |    2 |         +14 |          +1 |                24 |     68×6 = 408 | 2                |
-| 3           | Dvě dvojice (`two_pair`)                     |   24 |    2 |         +18 |          +1 |                48 |     96×6 = 576 | 4                |
-| 4           | Trojice (`three`)                            |   28 |    3 |         +22 |          +2 |                84 | 116×11 = 1 276 | 3                |
-| 5           | Postupka (`straight`)                        |   35 |    4 |         +25 |          +2 |               140 | 135×12 = 1 620 | 5                |
-| 6           | Barva (`flush`)                              |   40 |    4 |         +18 |          +2 |               160 | 112×12 = 1 344 | 5                |
-| 7           | Full house (`full_house`)                    |   45 |    5 |         +28 |          +2 |               225 | 157×13 = 2 041 | 5                |
-| 8           | Čtveřice (`four`)                            |   65 |    6 |         +35 |          +3 |               390 | 205×18 = 3 690 | 4                |
-| 9           | Postupka v barvě (`straight_flush`)          |   90 |    9 |         +40 |          +3 |               810 | 250×21 = 5 250 | 5                |
-| 10          | Královská postupka (`royal_flush`)           |  120 |   10 |         +45 |          +3 |             1 200 | 300×22 = 6 600 | 5                |
-| 11          | _Pětice_ (`five`) — tajná                    |  110 |   11 |         +40 |          +3 |             1 210 | 270×23 = 6 210 | 5                |
-| 12          | _Barevný full house_ (`flush_house`) — tajná |  130 |   13 |         +45 |          +4 |             1 690 | 310×29 = 8 990 | 5                |
-| 13          | _Barevná pětice_ (`flush_five`) — tajná      |  150 |   15 |         +55 |          +3 |             2 250 | 370×27 = 9 990 | 5                |
+| 1           | Vysoká karta (`high_card`)                   |    6 |    1 |         +24 |          +2 |                 6 |     102×9 = 918 | 1 nejvyšší karta |
+| 2           | Dvojice (`pair`)                             |   12 |    2 |         +28 |          +2 |                24 |  124×10 = 1 240 | 2                |
+| 3           | Dvě dvojice (`two_pair`)                     |   24 |    2 |         +36 |          +2 |                48 |  168×10 = 1 680 | 4                |
+| 4           | Trojice (`three`)                            |   28 |    3 |         +44 |          +4 |                84 |  204×19 = 3 876 | 3                |
+| 5           | Postupka (`straight`)                        |   35 |    4 |         +50 |          +4 |               140 |  235×20 = 4 700 | 5                |
+| 6           | Barva (`flush`)                              |   40 |    4 |         +36 |          +4 |               160 |  184×20 = 3 680 | 5                |
+| 7           | Full house (`full_house`)                    |   45 |    5 |         +56 |          +4 |               225 |  269×21 = 5 649 | 5                |
+| 8           | Čtveřice (`four`)                            |   65 |    6 |         +70 |          +6 |               390 | 345×30 = 10 350 | 4                |
+| 9           | Postupka v barvě (`straight_flush`)          |   90 |    9 |         +80 |          +6 |               810 | 410×33 = 13 530 | 5                |
+| 10          | Královská postupka (`royal_flush`)           |  120 |   10 |         +90 |          +6 |             1 200 | 480×34 = 16 320 | 5                |
+| 11          | _Pětice_ (`five`) — tajná                    |  110 |   11 |         +80 |          +6 |             1 210 | 430×35 = 15 050 | 5                |
+| 12          | _Barevný full house_ (`flush_house`) — tajná |  130 |   13 |         +90 |          +8 |             1 690 | 490×45 = 22 050 | 5                |
+| 13          | _Barevná pětice_ (`flush_five`) — tajná      |  150 |   15 |         +110 |          +6 |             2 250 | 590×39 = 23 010 | 5                |
 
 Poznámky k designu tabulky:
+
+- **Přírůstky za úroveň jsou od fáze 10 dvojnásobné** proti návrhu z fáze 0 (dřív např. Barva +18 / +2, Dvojice
+  +14 / +1): pozdní hra škáluje hlavně úrovněmi hlavní kombinace a s původními přírůstky nejlepší rozumný bot
+  na cílech se základem patra 8 100 000 vyhrál jen ~12 % runů (×1,5 od Trojice 17 %, ×1,5 u všech 19 %, ×2 u všech
+  ~29 %). Rozjezd (patra 1–3) se mění málo — úrovně tam ještě skoro nejsou (`docs/DECISIONS.md` „Fáze 10: silnější
+  boti, úrovně ×2 a cíle patra 8“).
 
 - Postupka roste po úrovních rychleji než Barva — je těžší ji poskládat, ale za investici do pranostik se odmění.
 - Čtveřice je první „velký skok“ (mult 6). Tajné kombinace jsou nejsilnější, ale vyžadují upravený balíček.
@@ -212,16 +218,16 @@ Cíl útraty = `nice(base(patro) × násobek útraty × Modifiers.targetMult)`. 
 Šéf 2× (některý šéf jinak, viz kap. 8). Křivku určuje síla piva: **křivka 1** (Desítka, Jedenáctka),
 **křivka 2** (od Dvanáctky), **křivka 3** (od Bocku).
 
-| Patro | Křivka 1: Malá |  Velká |    Šéf | Křivka 2: Malá |  Velká |    Šéf | Křivka 3: Malá |  Velká |    Šéf |
-| ----: | -------------: | -----: | -----: | -------------: | -----: | -----: | -------------: | -----: | -----: |
-|     1 |            250 |    380 |    500 |            250 |    380 |    500 |            250 |    380 |    500 |
-|     2 |            550 |    830 |  1 100 |            550 |    830 |  1 100 |            600 |    900 |  1 200 |
-|     3 |          1 100 |  1 650 |  2 200 |          1 200 |  1 800 |  2 400 |          1 300 |  1 950 |  2 600 |
-|     4 |          2 300 |  3 500 |  4 600 |          2 600 |  3 900 |  5 200 |          3 100 |  4 700 |  6 200 |
-|     5 |          4 500 |  6 800 |  9 000 |          5 100 |  7 700 | 10 000 |          6 300 |  9 500 | 12 500 |
-|     6 |          8 200 | 12 500 | 16 500 |          9 300 | 14 000 | 18 500 |         11 000 | 16 500 | 22 000 |
-|     7 |         14 500 | 22 000 | 29 000 |         16 500 | 25 000 | 33 000 |         20 000 | 30 000 | 40 000 |
-|     8 |         23 000 | 35 000 | 46 000 |         26 000 | 39 000 | 52 000 |         32 000 | 48 000 | 64 000 |
+| Patro | Křivka 1: Malá |   Velká |     Šéf | Křivka 2: Malá |   Velká |     Šéf | Křivka 3: Malá |   Velká |     Šéf |
+| ----: | -------------: | ------: | ------: | -------------: | ------: | ------: | -------------: | ------: | ------: |
+|     1 |            250 |     380 |     500 |            250 |     380 |     500 |            250 |     380 |     500 |
+|     2 |            550 |     830 |   1 100 |            550 |     830 |   1 100 |            600 |     900 |   1 200 |
+|     3 |          1 100 |   1 650 |   2 200 |          1 200 |   1 800 |   2 400 |          1 300 |   1 950 |   2 600 |
+|     4 |          2 700 |   4 100 |   5 400 |          3 200 |   4 800 |   6 400 |          3 700 |   5 600 |   7 400 |
+|     5 |          6 700 |  10 000 |  13 500 |          8 000 |  12 000 |  16 000 |          9 400 |  14 000 |  19 000 |
+|     6 |         16 500 |  25 000 |  33 000 |         20 000 |  30 000 |  40 000 |         22 000 |  33 000 |  44 000 |
+|     7 |         41 000 |  62 000 |  82 000 |         49 000 |  74 000 |  98 000 |         56 000 |  84 000 | 110 000 |
+|     8 |        100 000 | 150 000 | 200 000 |        120 000 | 180 000 | 240 000 |        140 000 | 210 000 | 280 000 |
 
 Engine má v tabulce jen základy křivek (sloupce „Malá“); Velkou a Šéfa počítá přes `nice()`. Celá tabulka slouží
 jako test.
@@ -260,19 +266,20 @@ z balíčků, výzev a kupónů, nekonečný režim).
 
 `g(a) = 2,2 + 0,15 × (a − 9)`, `base(a) = nice(base(8) × g(a)^(a − 8))`.
 
-| Patro |    g | Křivka 1: Malá |       Velká |         Šéf | Křivka 2: Malá |         Šéf | Křivka 3: Malá |         Šéf |
-| ----: | ---: | -------------: | ----------: | ----------: | -------------: | ----------: | -------------: | ----------: |
-|     9 | 2,20 |         51 000 |      77 000 |     100 000 |         57 000 |     115 000 |         70 000 |     140 000 |
-|    10 | 2,35 |        125 000 |     190 000 |     250 000 |        145 000 |     290 000 |        175 000 |     350 000 |
-|    11 | 2,50 |        360 000 |     540 000 |     720 000 |        410 000 |     820 000 |        500 000 |   1 000 000 |
-|    12 | 2,65 |      1 150 000 |   1 750 000 |   2 300 000 |      1 300 000 |   2 600 000 |      1 600 000 |   3 200 000 |
-|    13 | 2,80 |      4 000 000 |   6 000 000 |   8 000 000 |      4 500 000 |   9 000 000 |      5 500 000 |  11 000 000 |
-|    14 | 2,95 |     15 000 000 |  23 000 000 |  30 000 000 |     17 000 000 |  34 000 000 |     21 000 000 |  42 000 000 |
-|    15 | 3,10 |     63 000 000 |  95 000 000 | 125 000 000 |     72 000 000 | 145 000 000 |     88 000 000 | 175 000 000 |
-|    16 | 3,25 |    290 000 000 | 440 000 000 | 580 000 000 |    320 000 000 | 640 000 000 |    400 000 000 | 800 000 000 |
+| Patro |    g | Křivka 1: Malá |         Velká |           Šéf | Křivka 2: Malá |           Šéf | Křivka 3: Malá |           Šéf |
+| ----: | ---: | -------------: | ------------: | ------------: | -------------: | ------------: | -------------: | ------------: |
+|     9 | 2,20 |        220 000 |       330 000 |       440 000 |        260 000 |       520 000 |        310 000 |       620 000 |
+|    10 | 2,35 |        550 000 |       830 000 |     1 100 000 |        660 000 |     1 300 000 |        770 000 |     1 550 000 |
+|    11 | 2,50 |      1 550 000 |     2 300 000 |     3 100 000 |      1 900 000 |     3 800 000 |      2 200 000 |     4 400 000 |
+|    12 | 2,65 |      4 900 000 |     7 400 000 |     9 800 000 |      5 900 000 |    12 000 000 |      6 900 000 |    14 000 000 |
+|    13 | 2,80 |     17 000 000 |    26 000 000 |    34 000 000 |     21 000 000 |    42 000 000 |     24 000 000 |    48 000 000 |
+|    14 | 2,95 |     66 000 000 |    99 000 000 |   130 000 000 |     79 000 000 |   160 000 000 |     92 000 000 |   185 000 000 |
+|    15 | 3,10 |    280 000 000 |   420 000 000 |   560 000 000 |    330 000 000 |   660 000 000 |    390 000 000 |   780 000 000 |
+|    16 | 3,25 |  1 250 000 000 | 1 900 000 000 | 2 500 000 000 |  1 500 000 000 | 3 000 000 000 |  1 750 000 000 | 3 500 000 000 |
 
-Pro orientaci (křivka 1): patro 20 ≈ 240 000 000 000, patro 24 ≈ 5,4e14, patro 32 ≈ 2,6e22, patro 40 ≈ 1,25e31
-(zápis jako ve hře: od 1e15 vědecky, koncové nuly mantisy se ořezávají).
+Pro orientaci (křivka 1): patro 20 ≈ 1 050 000 000 000, patro 24 ≈ 2,4e15, patro 32 ≈ 1,1e23, patro 40 ≈ 5,5e31
+(zápis jako ve hře: od 1e15 vědecky, koncové nuly mantisy se ořezávají). Cíl Malé útraty přeteče na
+`Number.MAX_VALUE` („∞“) v patře 210, cíl šéfa už v patře 209.
 
 ### 2.4 Kolo a peníze
 
@@ -516,7 +523,7 @@ náhody, aby náhled nic neprozrazoval a byl levný.
 
 **Situace (pozdní fáze runu):**
 
-- Kombinace: **Full house** na úrovni 2 → čipy `45 + 28 = 73`, mult `5 + 2 = 7`.
+- Kombinace: **Full house** na úrovni 2 → čipy `45 + 56 = 101`, mult `5 + 4 = 9`.
 - Zahráno (zleva): **K♥** Pálivá (+5 mult) · **K♠** lesklá edice (+50 čipů) · **K♦** · **5♣** Prémiová (+25 čipů)
   · **5♥** Skleněná (×2 mult) s červenou pečetí.
 - V ruce zůstaly: **Q♠** Ocelová · **Q♣** · **7♦**.
@@ -525,32 +532,32 @@ náhody, aby náhled nic neprozrazoval a byl levný.
 
 | Krok | Zdroj                              | Změna                        | Čipy |       Mult |
 | ---- | ---------------------------------- | ---------------------------- | ---: | ---------: |
-| 1    | Full house úr. 2                   | základ                       |   73 |          7 |
-| 2    | K♥ čipy                            | +10                          |   83 |          7 |
-| 2    | K♥ Pálivá                          | +5 mult                      |   83 |         12 |
-| 2    | K♥ → Srdcař                        | +5 čipů, +2 mult             |   88 |         14 |
-| 2    | K♠ čipy                            | +10                          |   98 |         14 |
-| 2    | K♠ lesklá                          | +50                          |  148 |         14 |
-| 2    | K♦ čipy                            | +10                          |  158 |         14 |
-| 2    | 5♣ čipy                            | +5                           |  163 |         14 |
-| 2    | 5♣ Prémiová                        | +25                          |  188 |         14 |
-| 2    | 5♥ čipy                            | +5                           |  193 |         14 |
-| 2    | 5♥ Skleněná                        | ×2                           |  193 |         28 |
-| 2    | 5♥ → Srdcař                        | +5 čipů, +2 mult             |  198 |         30 |
-| 2    | 5♥ **znovu** (červená pečeť): čipy | +5                           |  203 |         30 |
-| 2    | 5♥ Skleněná                        | ×2                           |  203 |         60 |
-| 2    | 5♥ → Srdcař                        | +5 čipů, +2 mult             |  208 |         62 |
-| 3    | Q♠ Ocelová (v ruce)                | ×1,5                         |  208 |         93 |
-| 3    | Q♣, 7♦ (v ruce)                    | —                            |  208 |         93 |
-| 4    | [1] Srdcař — holografická (před)   | +10 mult                     |  208 |        103 |
-| 4    | [1] Srdcař — vlastní efekt po ruce | žádný (reaguje jen na karty) |  208 |        103 |
-| 4    | [2] Pivní tácek                    | +10 čipů, +2 mult            |  218 |        105 |
-| 4    | [3] Zpožděný rychlík               | ×1,5                         |  218 |      157,5 |
-| 4    | [3] duhová (po)                    | ×1,5                         |  218 |     236,25 |
-| 5    | výsledek                           | `floor(218 × 236,25)`        |      | **51 502** |
+| 1    | Full house úr. 2                   | základ                       |  101 |          9 |
+| 2    | K♥ čipy                            | +10                          |  111 |          9 |
+| 2    | K♥ Pálivá                          | +5 mult                      |  111 |         14 |
+| 2    | K♥ → Srdcař                        | +5 čipů, +2 mult             |  116 |         16 |
+| 2    | K♠ čipy                            | +10                          |  126 |         16 |
+| 2    | K♠ lesklá                          | +50                          |  176 |         16 |
+| 2    | K♦ čipy                            | +10                          |  186 |         16 |
+| 2    | 5♣ čipy                            | +5                           |  191 |         16 |
+| 2    | 5♣ Prémiová                        | +25                          |  216 |         16 |
+| 2    | 5♥ čipy                            | +5                           |  221 |         16 |
+| 2    | 5♥ Skleněná                        | ×2                           |  221 |         32 |
+| 2    | 5♥ → Srdcař                        | +5 čipů, +2 mult             |  226 |         34 |
+| 2    | 5♥ **znovu** (červená pečeť): čipy | +5                           |  231 |         34 |
+| 2    | 5♥ Skleněná                        | ×2                           |  231 |         68 |
+| 2    | 5♥ → Srdcař                        | +5 čipů, +2 mult             |  236 |         70 |
+| 3    | Q♠ Ocelová (v ruce)                | ×1,5                         |  236 |        105 |
+| 3    | Q♣, 7♦ (v ruce)                    | —                            |  236 |        105 |
+| 4    | [1] Srdcař — holografická (před)   | +10 mult                     |  236 |        115 |
+| 4    | [1] Srdcař — vlastní efekt po ruce | žádný (reaguje jen na karty) |  236 |        115 |
+| 4    | [2] Pivní tácek                    | +10 čipů, +2 mult            |  246 |        117 |
+| 4    | [3] Zpožděný rychlík               | ×1,5                         |  246 |      175,5 |
+| 4    | [3] duhová (po)                    | ×1,5                         |  246 |     263,25 |
+| 5    | výsledek                           | `floor(246 × 263,25)`        |      | **64 759** |
 
 Po sečtení: hod skla u 5♥ (1 z 5, jednou za ruku) — když praskne, karta se zničí až teď. Kdyby Zpožděný rychlík
-„nabral zpoždění“, jeho vlastní ×1,5 by odpadlo, ale duhová edice by platila dál: `floor(218 × 157,5) = 34 335`.
+„nabral zpoždění“, jeho vlastní ×1,5 by odpadlo, ale duhová edice by platila dál: `floor(246 × 175,5) = 43 173`.
 (Jeden efekt s čipy i multem se v UI ukáže jako dva kroky: nejdřív čipy, pak mult — `ScoreStep` je vždy jedna
 změna. Přesné pořadí kroků hlídá test „pracovní příklad z DESIGN 3.2“ v `tests/unit/scoring.test.ts`.)
 
@@ -926,7 +933,7 @@ skupin v `docs/DECISIONS.md`.
 
 Každá zvýší úroveň jedné kombinace o 1 (`levelUpHand`). Pranostiky tajných kombinací se v obchodě a obálkách
 objevují až po objevení kombinace v aktuálním runu (kap. 2.2.4). Popisek ve hře ukáže změnu: „Barva: úroveň 3 → 4
-(+18 čipů, +2 mult)“.
+(+36 čipů, +4 mult)“.
 
 |   # | Kombinace                  | Název (`id`)                           | Flavor                                                                     |
 | --: | -------------------------- | -------------------------------------- | -------------------------------------------------------------------------- |
@@ -1215,24 +1222,30 @@ odemkne úroveň N + 1 pro tento balíček.** Desítka je odemčená vždy.
 | Úr. | Název (`id`)              | Nové ztížení                                                                                                                                                                              | Implementace                                       | Cíl výher (simulace) |
 | --: | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | -------------------: |
 |   1 | Desítka (`desitka`)       | Základní pravidla, křivka cílů 1.                                                                                                                                                         | `targetCurve: 1`                                   |              25–35 % |
-|   2 | Jedenáctka (`jedenactka`) | **Dražší pivo:** od 2. patra stojí ve Večerce všechno o 1 Kč víc (žolíci, spotřebky, karty, obálky, kupóny, přehození). Prodejní ceny se nemění.                                          | `shopPriceAdd +1` od patra 2 (`passive` čte patro) |              20–30 % |
+|   2 | Jedenáctka (`jedenactka`) | **Dražší pivo:** od 2. patra stojí každé přehození ve Večerce o 1 Kč víc.                                                                                                                 | `rerollBaseCost +1` od patra 2 (`passive` čte patro) |              20–30 % |
 |   3 | Dvanáctka (`dvanactka`)   | Křivka cílů 2.                                                                                                                                                                            | `targetCurve: 2`                                   |              14–22 % |
-|   4 | Speciál (`special`)       | **Zvětrávání:** 25 % žolíků v obchodě a obálkách je zvětrávajících (po 6 kolech přestanou fungovat).                                                                                      | `stickerChance.perishable: 0,25`                   |              10–17 % |
+|   4 | Speciál (`special`)       | **Zvětrávání:** 40 % žolíků v obchodě a obálkách je zvětrávajících (po 6 kolech přestanou fungovat).                                                                                      | `stickerChance.perishable: 0,4`                    |              10–17 % |
 |   5 | Ležák (`lezak`)           | **Bez dýška:** od 3. patra nevyužité ruce nedávají peníze.                                                                                                                                | `moneyPerUnusedHand −1` od patra 3                 |               7–12 % |
 |   6 | Bock (`bock`)             | Křivka cílů 3.                                                                                                                                                                            | `targetCurve: 3`                                   |                4–8 % |
 |   7 | Doppelbock (`doppelbock`) | **Bazar a půjčovna:** 25 % žolíků v nabídce je přibitých a 25 % zapůjčených.                                                                                                              | `stickerChance.eternal: 0,25`, `rental: 0,25`      |                3–6 % |
-|   8 | Imperial (`imperial`)     | **Šéf i ve Velké:** Velká útrata má navíc pravidlo náhodného běžného šéfa (jiného než šéf patra, `minAnte ≤ patro`; její cíl 1,5× a odměna 4 Kč zůstávají) a cíle šéfů jsou o 20 % vyšší. | `bigBlindBoss: true`, `bossTargetMult ×1,2`        |        1–3 % (< 3 %) |
+|   8 | Imperial (`imperial`)     | **Šéf i ve Velké:** Velká útrata má navíc pravidlo náhodného běžného šéfa (jiného než šéf patra, `minAnte ≤ patro`; její cíl 1,5× a odměna 4 Kč zůstávají) a cíle šéfů jsou o 10 % vyšší. | `bigBlindBoss: true`, `bossTargetMult ×1,1`        |        1–3 % (< 3 %) |
 
 - **Jedenáctka a Ležák platí až od 2. / 3. patra** (kalibrace po fázi 7, `docs/DECISIONS.md` „Balanc po fázi 7“):
   ekonomické ztížení od prvního kola srazilo výhry Jedenáctky z ~33 na ~20 % a Ležáku ze ~13 na ~3 % a přes
-  kumulaci táhlo pod pásmo i Bock a Doppelbock. Patro se zvedá při výplatě po šéfovi, takže Večerka po šéfovi
-  1. patra už stojí o 1 Kč víc. Zapůjčený žolík stojí 2 Kč plus příplatek Jedenáctky (od 2. patra 3 Kč).
+  kumulaci táhlo pod pásmo i Bock a Doppelbock. Patro se zvedá při výplatě po šéfovi, takže přehození ve Večerce
+  po šéfovi 1. patra už stojí o 1 Kč víc. **Od fáze 10 zdražuje Jedenáctka jen přehození** (dřív všechno ve Večerce
+  o 1 Kč): silnější boti nakupují víc položek za run a plošný příplatek je stál ~20 p. b. (Desítka ~30 % →
+  Jedenáctka ~10 %, i s příplatkem až od 6. patra ~21 %); příplatek na přehození stojí ~3–6 p. b. Zapůjčený žolík
+  stojí 2 Kč i na Jedenáctce a výš.
 - **Kalibrace vyšších sil piva po fázi 7** (sady `SIM-A` až `SIM-D`, `docs/DECISIONS.md` „Balanc po fázi 7“):
   Doppelbock a Imperial byly nad pásmem (5,8 % a 4,0 %), proto je křivka 3 od patra 4 o ~12 % výš, Doppelbock má
   25 % přibitých a 25 % zapůjčených (dřív 20 % / 15 %; 30 % je číslo žebříčku předlohy, příloha A) a Imperial
   navíc cíle šéfů ×1,2. Výsledek: Bock 6,5 %, Doppelbock 3,5 %, Imperial 2,0 % (každá sada 2,0–2,3 %).
 - Nálepky se losují v pořadí přibitý → zapůjčený → zvětrávající, takže skutečné podíly na Doppelbocku a výš jsou
-  přibližně 25 % přibitých, 19 % zapůjčených, 14 % zvětrávajících a 42 % bez nálepky.
+  přibližně 25 % přibitých, 19 % zapůjčených, 22 % zvětrávajících a 34 % bez nálepky.
+- **Speciál 40 % (dřív 25 %):** boti fáze 10 oceňují zvětrávajícího žolíka jen za podíl zbytku runu, kdy bude
+  fungovat (6 kol), takže 25 % je skoro nebrzdilo (Dvanáctka → Speciál −2 p. b.); 40 % jim bere zhruba každou
+  druhou použitelnou nabídku a stojí ~5–8 p. b.
 - Imperial: pro Velkou útratu se nelosují šéfové, jejichž pravidlo je jen vyšší cíl (Šanon na šanonu), ani šéf
   téhož patra.
 - Výzvy se hrají na Desítce (pokud výzva neříká jinak), denní run má úroveň danou seedem (kap. 11.7).
@@ -1534,7 +1547,7 @@ podle vzácnosti/názvu/četnosti použití.
 
 | Bot (`--strategy`) | Chování                                                                                                                                                                                                      |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `max`              | Zahraje kombinaci s nejvyšším očekávaným skóre (vč. žolíků), zahazuje pro zlepšení, kupuje žolíky s nejvyšším hodnocením (tabulka 4.3 × synergie), přehazuje, má-li ≥ 2× cenu přehození nad rezervu na úrok. |
+| `max`              | Zahraje kombinaci s nejvyšším očekávaným skóre (vč. žolíků), zahazuje pro zlepšení, kupuje žolíky podle měřené hodnoty (laboratoř buildu, viz níže), přehazuje, má-li ≥ 2× cenu přehození nad rezervu na úrok. |
 | `flush`            | Honí Barvu: drží nejčastější barvu, kupuje pranostiky na Barvu, barevné žolíky a babskou barvu.                                                                                                              |
 | `pairs`            | Dvojice, Dvě dvojice, Trojice, Full house; kupuje žolíky na Dvojici a Pana vrchního.                                                                                                                         |
 | `econ`             | Drží rezervu 25 Kč kvůli úroku, kupuje jen žolíky nad průměrem.                                                                                                                                              |
@@ -1543,6 +1556,26 @@ podle vzácnosti/názvu/četnosti použití.
 
 Boti používají jen veřejné informace (žádné nahlížení do balíčku nad rámec „zbývá v balíčku“) a stejný engine
 jako hra. Simulace je deterministická: run `i` má seed `SIM-<prefix>-<i>`.
+
+**Laboratoř buildu** (od fáze 10, `src/engine/sim/lab.ts`): žolíky a úrovně kombinací boti neoceňují tabulkou
+vzácností, ale **měřením**. Laboratoř rozdá 8 „typických rukou“ z veřejného složení balíčku (11 karet = ruka
++ rezerva za zahazování; seed z runu, patra, útraty a otisku balíčku — ne z RNG hry), bot z každé vybere tah svým
+odhadem a engine (`scoreHand`) ho přesně spočítá na syntetickém kole bez šéfa. Hodnota v Kč = 45 Kč × ln(poměr
+součtu skóre) — ×1,5 ve skórování ≈ 18 Kč:
+
+- **žolík v nabídce** (Večerka, obálka): sestava s ním proti současné (pořadí jako bot: +čipy a +mult vlevo,
+  ×mult vpravo); výměna = tatáž sestava bez jednoho vlastního žolíka (přehráním kroků skórování bez jeho kroků,
+  bez dalšího přepočtu) — kupuje se, když hodnota převýší cenu × poměr × „pocit z ceny“, výměna když zisk převýší
+  čistou cenu + 1,5 Kč; nabídky nejdřív projdou rychlým sítem na 3 rukou;
+- **zvětrávající žolík** jen za podíl zbytku runu, kdy bude fungovat; žolík bez skórovacího efektu (ekonomika,
+  užitek) a růst škálujících žolíků podle heuristiky (vzácnost × štítky);
+- **+1 úroveň kombinace** přehráním kroků se zvýšeným základem u rukou té kombinace; **hlavní kombinace** buildu
+  (nejčastější typický tah s historií runu) má váhu ×2, ostatní ×0,5 — bot tak úrovně soustředí;
+- rezerva na úrok se ke konci runu rozpouští (poslední 3 kola 0, 4–6 kol polovina).
+
+Výsledky laboratoře jsou čisté funkce normalizovaného stavu (bez RNG, statistik nákupů a peněz, které skórování
+nečte), takže je sdílí paměť napříč rozhodnutími — bot dál nemá stav mimo `RunState`. Run trvá ~0,8 s (dřív
+~0,25 s).
 
 **Šéfové a štítky** (od fáze 6): boti pravidla šéfů nepoznávají podle id — zkouší je na kopii hry nebo čtou náhled
 enginu:
@@ -1578,6 +1611,8 @@ nevydělají). Se žolíkem ×mult za držené spotřebky (Babiččina truhla) s
 
 - % výher podle síly piva, balíčku a bota; rozložení patra prohry; příčina prohry (útrata / id šéfa).
 - Průměr a medián skóre nejlepší ruky a skóre kola na patro, poměr skóre/cíl.
+- **Síla bota** (`SimSummary.strength`, od fáze 10): medián a p90 nejlepší ruky v patře 8 u runů, které ho dosáhly,
+  totéž u vítězů a medián poměru skóre/cíl kola finálového šéfa (`RunResult.bestHandByAnte`, `finalBossRatio`).
 - Peníze při vstupu do Večerky, útrata podle kategorií (žolíci, spotřebky, obálky, kupóny, přehození).
 - Nejčastěji kupovaní žolíci, Δ výher žolíků (kap. 4.3), letalita šéfů, výhry balíčků.
 - Délka runu (kola, ruce), doba simulace.
@@ -1816,7 +1851,7 @@ Obsah v tomto dokumentu počítá s těmito doplňky `src/engine/types.ts` a `sr
 
 | Kde                         | Doplněk                                                                                                                                                                                                                                                                    | Kvůli                                                                                                   |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `Modifiers`                 | `shopPriceAdd: number` (0)                                                                                                                                                                                                                                                 | Jedenáctka                                                                                              |
+| `Modifiers`                 | `shopPriceAdd: number` (0)                                                                                                                                                                                                                                                 | Jedenáctka (do fáze 10), kupón Amnestie                                                                 |
 | `Modifiers`                 | `playingCardEnhanceChance: number` (0,2), `playingCardSealChance: number` (0)                                                                                                                                                                                              | Sběratelská burza, hrací karty ve Večerce                                                               |
 | `Modifiers`                 | `disableEnhancements: boolean`                                                                                                                                                                                                                                             | Bílá hora                                                                                               |
 | `Modifiers`                 | `fixedCardChips: number` (0 = vypnuto)                                                                                                                                                                                                                                     | Normalizace                                                                                             |

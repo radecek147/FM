@@ -98,7 +98,7 @@ describe('Večerka: prázdný stav po vykoupení všeho (DESIGN 2.5.1)', () => {
 // ─────────────────────────── Doppelbock: cena zapůjčeného žolíka ───────────────────────────
 
 describe('Doppelbock: popisek ceny zapůjčeného žolíka sedí s cenou ve Večerce (DESIGN 4.6, 10)', () => {
-  it('na Doppelbocku stojí zapůjčený žolík tolik, kolik říká popisek (od 2. patra plus příplatek Jedenáctky)', () => {
+  it('na Doppelbocku stojí zapůjčený žolík tolik, kolik říká popisek (i od 2. patra — Jedenáctka zdražuje jen přehození)', () => {
     const registry: ContentRegistry = {
       ...makeRegistry(),
       stakes: Object.fromEntries(STAKES.map((s) => [s.id, s])),
@@ -111,17 +111,16 @@ describe('Doppelbock: popisek ceny zapůjčeného žolíka sedí s cenou ve Več
       const price = jokerPrice(game._core, rental);
       expect(price).toBe(doppelbock.params!.price);
       expect(t('stakes.doppelbock.desc', doppelbock.params)).toContain(`stojí jen ${formatMoney(price)}`);
-      // Od 2. patra platí příplatek Jedenáctky i na zapůjčené žolíky.
       game._core.state.ante = Number(jedenactka.params!.fromAnte);
       game._core.invalidate();
-      expect(jokerPrice(game._core, rental)).toBe(price + Number(jedenactka.params!.add));
+      expect(jokerPrice(game._core, rental)).toBe(price);
     }
   });
 
   it('obtížnosti mají `params` přímo v `StakeDef` (registr je nese bez přetypování)', () => {
     const special = reg.stakes.special!;
     const params: Record<string, number | string> | undefined = special.params;
-    expect(params).toEqual({ perishable: 25, rounds: 6 });
+    expect(params).toEqual({ perishable: 40, rounds: 6 });
   });
 });
 

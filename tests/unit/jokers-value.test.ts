@@ -154,9 +154,11 @@ describe('hodnota žolíků – měření na skutečném obsahu (kouřový test)
     const v = measureJoker(reg, 'regular', opts, cache);
     expect(v.buyAnte).toBe(2);
     expect(v.r2.hands).toBeGreaterThan(0);
-    // Δmult se měří proti nejlepšímu tahu bez žolíka — s pranostikami a radami v obsahu bot občas zahraje bez žolíka
-    // jinou kombinaci (jiný základní mult), takže průměr nevychází přesně na +16 (např. 15,93).
-    expect(v.r2.effect.mult).toBeCloseTo(R2_ROUNDS_HELD, 0);
+    // Δmult se měří proti nejlepšímu tahu bez žolíka — bez +16 mult bot občas zahraje jinou kombinaci (jiný základní
+    // mult). S dvojnásobnými přírůstky úrovní (fáze 10) se základní mult kombinací na úrovni R2 liší víc, takže průměr
+    // vychází pod +16 (3 seedy: ~8,7); stav žolíka po 16 kolech je ale +16 a víc nedá.
+    expect(v.r2.effect.mult).toBeGreaterThan(R2_ROUNDS_HELD / 2);
+    expect(v.r2.effect.mult).toBeLessThanOrEqual(R2_ROUNDS_HELD + 0.5);
   });
 
   it('ekonomický žolík (Pokladnička) se měří v Kč za kolo', () => {

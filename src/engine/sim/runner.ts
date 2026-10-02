@@ -24,7 +24,8 @@ export const MAX_CONSECUTIVE_INVALID = 3;
 
 /**
  * Cílové pásmo % výher rozumné strategie podle síly piva (DESIGN 10 a 12.1) — [min, max] v procentech, pro hotovou
- * hru se šéfy. Kalibrace po fázi 7 (plný obsah): všech 8 sil piva v pásmu (docs/DECISIONS.md „Balanc po fázi 7“).
+ * hru se šéfy. Kalibrace fáze 10 (silnější boti, úrovně ×2, patro 8 se základem 100 000): všech 8 sil piva v pásmu
+ * (docs/DECISIONS.md „Fáze 10: silnější boti, úrovně ×2 a cíle patra 8“).
  */
 export const WIN_RATE_TARGETS: Readonly<Record<number, readonly [number, number]>> = Object.freeze({
   1: [25, 35],
@@ -36,6 +37,9 @@ export const WIN_RATE_TARGETS: Readonly<Record<number, readonly [number, number]
   7: [3, 6],
   8: [1, 3],
 });
+
+/** Δ výher normovaná na patro koupě počítá jen runy, kde byl žolík ve slotu aspoň tolik kol (DESIGN 4.3). */
+export const JOKER_NORM_MIN_ROUNDS = 6;
 
 /** Seed runu `i` (1…N) sady simulace (DESIGN 12.2). */
 export function simSeed(prefix: string, i: number): string {
@@ -72,6 +76,7 @@ export function simulateRun(registry: ContentRegistry, opts: SimulateRunOptions)
   const bosses: string[] = [];
   const skipTags: string[] = [];
   const bestHandByAnte: number[] = [];
+  const jokerFirstAnte: Record<string, number> = {};
   let finalBossRatio: number | null = null;
   const invalidByCode: Record<string, number> = {};
   let actions = 0;
@@ -98,8 +103,10 @@ export function simulateRun(registry: ContentRegistry, opts: SimulateRunOptions)
         const i = Math.max(0, game.state.ante - 1);
         while (bestHandByAnte.length <= i) bestHandByAnte.push(0);
         bestHandByAnte[i] = Math.max(bestHandByAnte[i]!, e.result.score);
-      } else if (e.type === 'roundWon' && e.ante === FINAL_ANTE && e.blind === 'boss' && e.target > 0)
-        finalBossRatio = e.score / e.target;
+      } else if (e.type === 'roundWon') {
+        for (const j of game.state.jokers) jokerFirstAnte[j.defId] ??= e.ante;
+        if (e.ante === FINAL_ANTE && e.blind === 'boss' && e.target > 0) finalBossRatio = e.score / e.target;
+      }
       else if (e.type === 'gameOver' && e.info.ante === FINAL_ANTE && e.info.blind === 'boss' && e.info.target > 0)
         finalBossRatio = e.info.score / e.info.target;
     }
@@ -113,6 +120,7 @@ export function simulateRun(registry: ContentRegistry, opts: SimulateRunOptions)
     skipTags,
     bestHandByAnte,
     finalBossRatio,
+    jokerFirstAnte,
   });
 }
 
@@ -128,6 +136,7 @@ function buildResult(
     skipTags: string[];
     bestHandByAnte: number[];
     finalBossRatio: number | null;
+    jokerFirstAnte: Record<string, number>;
   },
 ): RunResult {
   const s = game.state;
@@ -173,6 +182,7 @@ function buildResult(
     skipTags: run.skipTags,
     bestHandByAnte: run.bestHandByAnte,
     finalBossRatio: run.finalBossRatio,
+    jokerFirstAnte: run.jokerFirstAnte,
   };
 }
 
@@ -285,6 +295,14 @@ export function summarizeRuns(results: readonly RunResult[], minJokerRuns = 1): 
       const winsWith = withJ.filter((r) => r.won).length;
       const winRateWith = pct(winsWith, withJ.length);
       const winRateWithout = pct(without.filter((r) => r.won).length, without.length);
+      // Normování na patro koupě: každý run se žolíkem proti runům bez něj, které dosáhly téhož patra.
+      const held = withJ.filter((r) => (r.jokerRounds?.[id] ?? 0) >= JOKER_NORM_MIN_ROUNDS);
+      let norm = 0;
+      for (const r of held) {
+        const from = r.jokerFirstAnte?.[id] ?? 1;
+        const base = without.filter((x) => x.ante >= from);
+        norm += (r.won ? 1 : 0) - (base.length ? base.filter((x) => x.won).length / base.length : 0);
+      }
       return {
         id,
         runs: withJ.length,
@@ -292,6 +310,8 @@ export function summarizeRuns(results: readonly RunResult[], minJokerRuns = 1): 
         winRateWith,
         winRateWithout,
         delta: winRateWith - winRateWithout,
+        deltaNorm: held.length ? (100 * norm) / held.length : 0,
+        normRuns: held.length,
       };
     })
     .filter((j) => j.runs >= minJokerRuns)

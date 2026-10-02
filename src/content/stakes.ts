@@ -11,20 +11,23 @@ import { anteBase } from '../engine/run/targets';
 import { shopPrice } from '../engine/shop/prices';
 
 /**
- * Jedenáctka: příplatek ke každé ceně ve Večerce (Kč) — až od patra `SHOP_PRICE_FROM_ANTE` (první dvě Večerky za
- * běžné ceny). Příplatek hned od začátku srazil výhry z ~33 na ~20 % a přes kumulaci i všechny vyšší síly piva pod
- * pásmo (DECISIONS 2026-10-02 „Balanc po fázi 7“).
+ * Jedenáctka: příplatek k ceně každého přehození ve Večerce (Kč) — od patra `REROLL_PRICE_FROM_ANTE`. Dřív +1 Kč ke
+ * všemu ve Večerce: se silnějšími boty fáze 10 (víc nákupů za run) srazil výhry z ~29 na ~10 % (i od 6. patra jen
+ * na ~21 %); příplatek jen na přehození stojí ~6 p. b. (DECISIONS 2026-10-02 „Fáze 10: silnější boti…“).
  */
-export const SHOP_PRICE_ADD = 1;
-export const SHOP_PRICE_FROM_ANTE = 2;
+export const REROLL_PRICE_ADD = 1;
+export const REROLL_PRICE_FROM_ANTE = 2;
 /**
  * Ležák: změna peněz za každou nevyužitou ruku (Kč) — až od patra `UNUSED_HAND_FROM_ANTE`. Bez dýška od začátku
  * srazilo výhry ze Speciálu (~13 %) na ~3 % (pásmo 7–12 %).
  */
 export const UNUSED_HAND_PENALTY = -1;
 export const UNUSED_HAND_FROM_ANTE = 3;
-/** Speciál: šance na zvětrávajícího žolíka v obchodě a obálce. */
-export const PERISHABLE_CHANCE = 0.25;
+/**
+ * Speciál: šance na zvětrávajícího žolíka v obchodě a obálce. Dřív 25 % — boti fáze 10 oceňují zvětrávající žolíky
+ * podle zbývajících kol a 25 % je skoro nebrzdilo (Dvanáctka → Speciál −2 p. b.); se 40 % stojí ~8 p. b.
+ */
+export const PERISHABLE_CHANCE = 0.4;
 /**
  * Doppelbock: šance na přibitého a zapůjčeného žolíka. Dřív 20 % a 15 % — Doppelbock (5,75 %) i Imperial (4 %) byly
  * nad pásmem; s 25 % / 25 % a vyšší křivkou 3 jsou v pásmu (DECISIONS 2026-10-02 „Balanc po fázi 7“). Ne 30 %:
@@ -34,10 +37,11 @@ export const ETERNAL_CHANCE = 0.25;
 export const RENTAL_CHANCE = 0.25;
 
 /**
- * Imperial: násobek cílů útrat Šéf (vedle pravidla šéfa ve Velké útratě). Bez něj vyhrával nejlepší bot ~3 % (sady
- * A–D 2,3–4,3 %), s ×1,2 2,0–2,3 % (DECISIONS 2026-10-02 „Balanc po fázi 7“).
+ * Imperial: násobek cílů útrat Šéf (vedle pravidla šéfa ve Velké útratě). Po fázi 7 ×1,2; s cíli fáze 10 (patro 8
+ * se základem 100 000) a ×1,2 vyhrával nejlepší bot pod 1 %, s ×1,1 v pásmu 1–3 % (DECISIONS 2026-10-02 „Fáze 10:
+ * silnější boti…“).
  */
-export const IMPERIAL_BOSS_TARGET_MULT = 1.2;
+export const IMPERIAL_BOSS_TARGET_MULT = 1.1;
 
 /** Pravděpodobnost v procentech pro popisek (0,25 → 25). */
 const pct = (p: number): number => Math.round(p * 100);
@@ -45,11 +49,7 @@ const pct = (p: number): number => Math.round(p * 100);
 /** Základ Malé útraty v patře 8 dané křivky — popisek ukazuje, kam až cíle dorostou. */
 const finalSmall = (curve: number): number => anteBase(8, curve);
 
-/**
- * Doppelbock: základní cena zapůjčeného žolíka ve Večerce. `RENTAL_BUY_PRICE` nahrazuje jen základ ceny — příplatek
- * Jedenáctky (`shopPriceAdd`, od patra `SHOP_PRICE_FROM_ANTE`) se přičte jako ke všemu ostatnímu (DECISIONS: ceny
- * ve Večerce); popisek proto říká „plus příplatek Jedenáctky“.
- */
+/** Doppelbock: cena zapůjčeného žolíka ve Večerce (`RENTAL_BUY_PRICE` nahrazuje základ ceny). */
 const RENTAL_SHOP_PRICE = shopPrice({ shopDiscountPct: 0, shopPriceAdd: 0 }, RENTAL_BUY_PRICE);
 
 export const STAKES: StakeDef[] = [
@@ -63,8 +63,8 @@ export const STAKES: StakeDef[] = [
   {
     id: 'jedenactka',
     level: 2,
-    passive: (ctx) => (ctx.state.ante >= SHOP_PRICE_FROM_ANTE ? { shopPriceAdd: SHOP_PRICE_ADD } : {}),
-    params: { add: SHOP_PRICE_ADD, fromAnte: SHOP_PRICE_FROM_ANTE },
+    passive: (ctx) => (ctx.state.ante >= REROLL_PRICE_FROM_ANTE ? { rerollBaseCost: REROLL_PRICE_ADD } : {}),
+    params: { add: REROLL_PRICE_ADD, fromAnte: REROLL_PRICE_FROM_ANTE },
     art: { icon: 'take-my-money', bg: '#b8860b', fg: '#fff8dc', accent: '#ffe08a', pattern: 'dots' },
   },
   {

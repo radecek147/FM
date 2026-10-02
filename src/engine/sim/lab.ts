@@ -25,8 +25,11 @@ import { cardValue, planCandidates, RNG_STREAM_NAMES, type CardValue, type EvalE
 export const LAB_SAMPLES = 8;
 /** Karet navíc nad velikost ruky (náhrada za zahazování — bot si z větší hromádky vybere lepší tah). */
 export const LAB_EXTRA = 3;
-/** Peníze v šabloně po tolika Kč (žolíci podle peněz se ocení s přesností na tuto částku). */
-const LAB_MONEY_STEP = 10;
+/**
+ * Peníze v šabloně: pevná „typická“ částka. Skórování peníze skoro nečte (ze 101 žolíků dva) a se skutečnými penězi
+ * by se šablona měnila s každým nákupem — laboratoř by stejné nabídky ve Večerce přepočítávala znovu a znovu.
+ */
+const LAB_MONEY = 25;
 /** Uid nových instancí v laboratoři (za všemi skutečnými). */
 const LAB_UID_BASE = 1e7;
 /** Strop paměti výsledků (při překročení se vymaže celá). */
@@ -37,8 +40,8 @@ type ReplayStep = readonly [number, number, number, number];
 type Replay = readonly ReplayStep[];
 
 interface Scored {
-  scores: readonly number[];
-  steps: readonly Replay[];
+  scores: number[];
+  steps: Replay[];
 }
 
 const SCORE_MEMO = new Map<string, Scored>();
@@ -72,26 +75,33 @@ export interface BuildLab {
   levelUp(hand: HandType, levels?: number): number;
   /**
    * Sestava `jokers` (přesně) a odhady téže sestavy bez jednoho žolíka (přehráním, jako `without`) — výměna žolíka
-   * se tak ocení jedním přepočtem pro všechny kandidáty na prodej.
+   * se tak ocení jedním přepočtem pro všechny kandidáty na prodej. `samples` = jen prvních tolik typických rukou
+   * (rychlé síto; `base` je pak součet současné sestavy přes tytéž ruce).
    */
-  variants(jokers: readonly Readonly<JokerInstance>[]): { total: number; without(uid: number): number };
+  variants(
+    jokers: readonly Readonly<JokerInstance>[],
+    samples?: number,
+  ): { total: number; base: number; without(uid: number): number };
 }
 
 /** Otisk balíčku (seed vzorků): složení karet včetně úprav. */
 function deckKey(s: Readonly<RunState>): string {
   let h = '';
-  for (const c of s.deck) h += `${c.id}.${c.rank}${c.suit}${c.enhancement ?? ''}${c.seal ?? ''}${c.edition ?? ''};`;
+  for (const c of s.deck)
+    h += `${c.id}.${c.rank}${c.suit}${c.enhancement ?? ''}${c.seal ?? ''}${c.edition ?? ''};`;
   return cyrb128(h).join('.');
 }
 
 function jokersKey(jokers: readonly Readonly<JokerInstance>[]): string {
-  return JSON.stringify(jokers.map((j) => [j.defId, j.edition, j.state, j.debuffed, j.stickers, j.perishRounds]));
+  return JSON.stringify(
+    jokers.map((j) => [j.defId, j.edition, j.state, j.debuffed, j.stickers, j.perishRounds]),
+  );
 }
 
 /**
  * Syntetický stav kola bez šéfa (šablona; ruka a žolíci se doplní pro každý vzorek). Pole, která skórování
- * nečte a která se mění s každou akcí ve Večerce (RNG, statistiky nákupů, uid nových instancí, štítky), se ustálí,
- * peníze se zaokrouhlí — šablona (a klíč paměti) se pak mění jen se skutečnou změnou buildu.
+ * nečte a která se mění s každou akcí ve Večerce (RNG, statistiky nákupů, uid nových instancí a spotřebek, štítky,
+ * peníze — viz `LAB_MONEY`), se ustálí — šablona (a klíč paměti) se pak mění jen se skutečnou změnou buildu.
  */
 function templateState(game: Game, money: number): RunState {
   const st = JSON.parse(JSON.stringify(game.state)) as RunState;
@@ -103,6 +113,7 @@ function templateState(game: Game, money: number): RunState {
   st.money = money;
   st.nextUid = LAB_UID_BASE;
   st.tags = [];
+  st.consumables.forEach((c, i) => (c.uid = LAB_UID_BASE - 1 - i));
   for (const name of RNG_STREAM_NAMES) st.rng[name] = [1, 0, 0, 0];
   for (const c of st.deck) {
     c.debuffed = false;
@@ -180,17 +191,14 @@ export function makeLab(
   const s = game.state;
   const reg = game.registry;
   const realJokers = s.jokers.map((j) => ({ ...j }));
-  const money = Math.floor(s.money / LAB_MONEY_STEP) * LAB_MONEY_STEP;
-  const template = templateState(game, money);
+  const template = templateState(game, LAB_MONEY);
   const templateJson = JSON.stringify(template);
   const tplKey = cyrb128(templateJson).join('.');
   const mods = game.modifiers();
   const handSize = Math.max(1, mods.handSize);
   const hands = Math.max(1, mods.hands);
 
-  // Typické ruce: na penězích nezávisí (výběr tahu = náhled bez žolíků), klíč je šablona bez peněz.
-  const sampleTpl = cyrb128(JSON.stringify({ ...template, money: 0 })).join('.');
-  const sampleMemoKey = `${sampleTpl}|${tag}|${JSON.stringify(env.pref)}|${samples}`;
+  const sampleMemoKey = `${tplKey}|${tag}|${JSON.stringify(env.pref)}|${samples}`;
   let list = SAMPLE_MEMO.get(sampleMemoKey);
   if (!list) {
     list = [];
@@ -255,30 +263,43 @@ export function makeLab(
     }
   };
 
-  /** Skóre a kroky jednotlivých vzorků se sestavou `jokers` (paměť podle otisku šablony, vzorků a sestavy). */
-  const scored = (jokers: readonly Readonly<JokerInstance>[]): Scored => {
+  /**
+   * Skóre a kroky prvních `n` vzorků se sestavou `jokers` (paměť podle otisku šablony, vzorků a sestavy; vzorky se
+   * dopočítávají postupně, takže rychlé síto a plné ocenění sdílí práci).
+   */
+  const scored = (jokers: readonly Readonly<JokerInstance>[], n = list.length): Scored => {
     // Dočasné vypnutí (šéf, kolo) se do laboratoře nepřenáší — jen zvětralí žolíci zůstanou mimo provoz.
     const norm = jokers.map((j) => ({ ...j, debuffed: j.perishRounds === 0 }));
     const key = `${tplKey}|${sampleKey}|${jokersKey(norm)}`;
-    const hit = SCORE_MEMO.get(key);
-    if (hit) return hit;
-    const json = JSON.stringify(norm);
-    const steps: Replay[] = [];
-    const scores = list.map((sample, k) => scoreOne(sample, k, json, steps));
-    const out = { scores, steps };
-    if (SCORE_MEMO.size >= MEMO_MAX) SCORE_MEMO.clear();
-    SCORE_MEMO.set(key, out);
+    let out = SCORE_MEMO.get(key);
+    if (!out) {
+      out = { scores: [], steps: [] };
+      if (SCORE_MEMO.size >= MEMO_MAX) SCORE_MEMO.clear();
+      SCORE_MEMO.set(key, out);
+    }
+    const want = Math.min(n, list.length);
+    if (out.scores.length < want) {
+      const json = JSON.stringify(norm);
+      for (let k = out.scores.length; k < want; k++) out.scores.push(scoreOne(list[k]!, k, json, out.steps));
+    }
     return out;
   };
 
-  const sum = (xs: readonly number[]): number => xs.reduce((a, b) => a + b, 0);
+  const sum = (xs: readonly number[], n = xs.length): number => xs.slice(0, n).reduce((a, b) => a + b, 0);
   const baseScored = scored(realJokers);
   const base = sum(baseScored.scores);
 
-  /** Součet přes vzorky: přesné skóre × poměr přehrání se změnou / přehrání beze změny (null = beze změny). */
-  const adjustedOf = (sc: Scored, change: (steps: Replay, k: number) => number | null): number => {
+  /**
+   * Součet přes prvních `n` vzorků: přesné skóre × poměr přehrání se změnou / přehrání beze změny (null = beze
+   * změny).
+   */
+  const adjustedOf = (
+    sc: Scored,
+    change: (steps: Replay, k: number) => number | null,
+    n = list.length,
+  ): number => {
     let total = 0;
-    sc.steps.forEach((steps, k) => {
+    sc.steps.slice(0, n).forEach((steps, k) => {
       const score = sc.scores[k]!;
       const changed = change(steps, k);
       const full = changed === null ? 0 : replay(steps, -1);
@@ -286,7 +307,8 @@ export function makeLab(
     });
     return total;
   };
-  const adjusted = (change: (steps: Replay, k: number) => number | null): number => adjustedOf(baseScored, change);
+  const adjusted = (change: (steps: Replay, k: number) => number | null): number =>
+    adjustedOf(baseScored, change);
 
   return {
     samples: list,
@@ -294,9 +316,14 @@ export function makeLab(
     base,
     score: (jokers) => sum(scored(jokers).scores),
     without: (uid) => adjusted((steps) => replay(steps, uid)),
-    variants: (jokers) => {
-      const sc = scored(jokers);
-      return { total: sum(sc.scores), without: (uid) => adjustedOf(sc, (steps) => replay(steps, uid)) };
+    variants: (jokers, n = list.length) => {
+      const sc = scored(jokers, n);
+      const m = Math.min(n, sc.scores.length);
+      return {
+        total: sum(sc.scores, m),
+        base: sum(baseScored.scores, m),
+        without: (uid) => adjustedOf(sc, (steps) => replay(steps, uid), m),
+      };
     },
     levelUp: (hand, levels = 1) => {
       const def = reg.handTypes[hand];
