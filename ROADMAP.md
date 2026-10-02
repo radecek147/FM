@@ -351,7 +351,7 @@ průměrném notebooku; kontroly zelené; commit `feat(ui): juice and audio`; f�
 - [x] README česky: popis, screenshoty, GIF, jak spustit, „inspirováno hrou Balatro“, licence (`README.md`, `LICENSE` = MIT, snímky a GIF v `docs/media/` ze skriptu `scripts/readme-media.ts`; DECISIONS „Fáze 10: README, snímky a GIF, licence MIT“)
 - [x] Hra funguje offline po prvním načtení: ručně psaný service worker s precache buildu (`src/sw/sw.ts`, plugin `scripts/sw-plugin.ts`), bezpečná aktualizace; e2e `offline.spec.ts` i pod `BASE_PATH=/FM/` (ARCHITECTURE 8.2)
 - [ ] Deploy na GitHub Pages (`base`)
-- [x] Testy a e2e zelené, pokrytí enginu ≥ 80 % (příkazy 97,6 %, větve 93,0 %, funkce 99,1 %, řádky 99,2 %; 80 souborů unit testů, e2e zelené)
+- [x] Testy a e2e zelené, pokrytí enginu ≥ 80 % (příkazy 97,6 %, větve 93,0 %, funkce 99,1 %, řádky 99,2 %; 79 souborů a 3 803 unit testů, 71 e2e zelených)
 - [x] Kontrola definice hotovo v1.0 (`CLAUDE.md` kap. 10): dohratelnost na všech balíčcích (simulace + `ui-walkthrough`), minimální počty obsahu hlídá `tests/unit/content-minimums.test.ts`, texty jen v `src/i18n` (test `index.html` a `t()`), offline (`offline.spec.ts`), konzole bez chyb (e2e), `ASSETS.md`, žádný převzatý obsah (audity názvů ve fázích 7 a 10)
 - [x] Tag `v1.0.0` (verze 1.0.0 v `package.json`)
 
