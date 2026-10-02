@@ -426,7 +426,7 @@ test('Večerka po štítcích: žolík navíc se slevou, edice bez příplatku a
   await presetSettings(page, { animations: false });
   // Run těsně po vyhraném kole se třemi štítky „na příští Večerku“ (připravené enginem).
   const g = Game.fromState(newState('E2ESEF-VECERKA'), REG);
-  for (const id of ['referral', 'polished_cutlery', 'voucher_slip']) g._core.api.addTag(id);
+  for (const id of ['referral', 'polished_cutlery', 'mailbox_flyer']) g._core.api.addTag(id);
   expect(g.dispatch({ type: 'selectBlind' }).ok).toBe(true);
   g._core.state.round!.target = 1;
   expect(g.dispatch({ type: 'play', cardIds: [g.state.round!.hand[0]!] }).ok).toBe(true);

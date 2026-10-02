@@ -2286,9 +2286,12 @@ legenda to vysvětlí. Bez zakrytých karet beze změny (ztlumené karty venku p
 
 **Hlášky** (`src/ui/components/toast.ts`):
 
-- Na herní obrazovce sloupec nahoře uprostřed jeviště (`setToastAnchor(stage)`, poloha se změří při každé nové hlášce
-  a při změně velikosti okna), široký nejvýš 24 rem — mimo ruku, Zahrát / Zahodit, balíček i tlačítka v záhlaví
-  Večerky a obálky. Mimo hru zůstává roh vpravo dole.
+- Na herní obrazovce sloupec nahoře uprostřed jeviště, široký nejvýš 24 rem — mimo ruku, Zahrát / Zahodit a balíček.
+  U panelu fáze (Večerka, obálka, výběr útraty, konec kola) začíná až pod jeho záhlavím: uprostřed jeviště by jinak
+  na užší Večerce zakryl Přehodit (ověřeno snímkem). Kotva je funkce vracející obdélník
+  (`setToastAnchor((needed) => rect)`), poloha se změří při každé nové hlášce a při změně velikosti okna. Mimo hru
+  zůstává roh vpravo dole. Hláška tak může na chvíli zakrýt obrázek zboží, ne tlačítka — upřesněno níž („Fáze 5 (UI):
+  vizuální kontrola snímky“): když se sloupec vejde do volného místa pod panelem, jde tam.
 - Nejvýš **3** naráz (dřív 4), nejnovější dole, nejstarší odchází animací; ostatní se posunou plynule (FLIP přes
   `translate`). Stejná hláška znovu (druh + nadpis + text) nepřibude: obnoví se čas a naskočí počet „×2“
   (`common.repeated`) — opakované chyby (X bez zahození) se nevrší.
@@ -2306,10 +2309,47 @@ prodejní ceny). Detail spotřebky s cíli mimo kolo a obálku vysvětlí, že c
 z Anančáku“). `font-variant-ligatures: none` na `body`.
 
 **Testy:** e2e `tests/e2e/consumables.spec.ts` (Večerka: pranostika do slotu → použít → úroveň v Info o runu; rada
-s cíli bez ruky; prodej; kupón Druhý regál / Věrnostní karta; obálka rad s cílem v dobrané ruce → vylepšení na kartě
+s cíli bez ruky; prodej; kupón Druhý regál / Žlutá cenovka (dřív Věrnostní karta); obálka rad s cílem v dobrané ruce → vylepšení na kartě
 i v uloženém stavu; obálka pranostik „Nechat si“; obálka hracích karet; v kole Babiččina barva a razítko s pečetí),
 `tests/e2e/hand.spec.ts` (tažení myší i prstem, Shift + šipka, ruka obálky, náhled balíčku pod Výlukou, hlášky mimo
 ruku a tlačítka), společní pomocníci `tests/e2e/helpers.ts`; unit `tests/unit/ui-hand.test.ts` (happy-dom).
 
 **Proč:** CLAUDE.md kap. 4 (drag & drop, klávesy, dotyk), 6 (texty přes `t()`), 8 (e2e); ROADMAP „Známé otevřené
 body“ fáze 5 a 6/9.
+
+## 2026-10-02 — Fáze 5 (UI): vizuální kontrola snímky (Večerka, obálky, spotřebky, úpravy karet, tažení, hlášky)
+
+Dočasný Playwright skript (mimo repozitář) nafotil na 1366 × 768 a tabletu 820 × 1180 (dotyk) Večerku se spotřebkou
+a kupónem (i tooltip a hlášku), obálku babských rad s dobranou rukou a vybranými cíli, obálku pranostik, kolo se
+spotřebkami ve slotech (tooltip i detail), ruku se všemi vylepšeními / pečetěmi / edicemi (i zblízka 2×), tažení karty
+uprostřed pohybu a víc hlášek naráz v kole, ve Večerce i v obálce; obálky navíc na 1024 × 768, 1280 × 720,
+1920 × 1080, tabletu na šířku a telefonu. Konzole všude čistá. Opravy:
+
+- **Mega obálka (6 možností) se nevešla do jedné řady** na 1024 × 768 a na tabletu na výšku: šestá možnost spadla do
+  druhé řady **pod dobranou ruku** (tlačítka Použít / Nechat si nešla stisknout). Od 601 px se při 6 možnostech řada
+  nezalamuje (`.booster__options:has(> :nth-child(6))`), mezera je 0,5 rem a možnosti mají základ
+  `max(--card-w × 1,3; 5,6 rem)` se smrštěním (jeviště s místem pro balíček na tabletu). Telefon se dál skládá do řad
+  (stránka se posouvá). Tlačítka obálky mají užší vnitřní okraj (0,4 em) — „Nechat si“ se v užší možnosti nelámalo.
+- **Tlačítka obálky nebyla v jedné linii** pod dvouřádkovým názvem („Kvetoucí kapradí“, „Březen, duben, máj“):
+  možnosti mají výšku řady a tlačítka `margin-top: auto` (bez navýšení řady, když jsou všechny názvy jednořádkové).
+- **Hlášky ve Večerce zakrývaly zboží, i když pod panelem bylo volné místo** (tablet: skoro třetina obrazovky): kotva
+  hlášek dostane výšku sloupce (`setToastAnchor((needed) => rect)`, měří se po přidání hlášky, přesun dorovná FLIP)
+  a `GameView.toastRect` dá sloupec pod panel fáze, když se tam celý vejde; jinak zůstává hned pod záhlavím. Na
+  1366 × 768 se pod Večerku vejdou 1–2 hlášky; tři vyšší jdou pod záhlaví (zakryjí na chvíli obrázek zboží, ne
+  tlačítka).
+- **Čísla kláves pod kartami během tažení lhala** (uhýbající karty ukazovaly staré pozice, číslo tažené karty se
+  překrývalo s číslem karty pod ní): během tažení jsou skrytá (`opacity`), po puštění se ukážou nová.
+
+Zkontrolováno a ponecháno: duhová edice přebarví i zlaté vylepšení (vylepšení pozná odznak v rohu; duhová = posun
+barev celé karty), dlouhý stisk nechá tooltip otevřený do dalšího dotyku mimo (záměr, `tooltip.ts`), pořadí hlášek po
+pranostice („… je teď na úrovni 2“ nad „Použito: …“) odpovídá pořadí událostí enginu.
+
+Paralelní obsah fáze 7 přejmenoval kupón `loyalty_card` → `yellow_price` a štítek `voucher_slip` → `mailbox_flyer`;
+e2e testy (`consumables.spec.ts`, `bosses.spec.ts`) používají nová id.
+
+Testy: `tests/e2e/consumables.spec.ts` — mega obálka rad na 1024 × 768 i tabletu (6 možností v jedné řadě, žádné
+tlačítko pod rukou ani balíčkem, Použít / Nechat si v jedné linii), hláška ve Večerce na tabletu pod panelem (mimo
+zboží a balíček); `tests/unit/ui-hand.test.ts` — kotva-funkce dostane výšku sloupce.
+
+**Proč:** CLAUDE.md kap. 4 (tablet s dotykem plně funkční, rozvržení), 8 (konzole bez chyb); zadání vizuální kontroly
+fáze 5.

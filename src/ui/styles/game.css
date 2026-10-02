@@ -1226,15 +1226,34 @@
   text-align: center;
 }
 
+/* Tlačítka všech možností v řadě v jedné linii i pod dvouřádkovým názvem („Kvetoucí kapradí“): možnosti mají
+   výšku řady (flex stretch) a tlačítka sedí u spodního okraje. */
 .booster-option__actions {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
   width: 100%;
+  margin-top: auto;
+}
+
+/* Šest možností (mega obálka rad, pranostik a karet) v jedné řadě i na 1024 × 768 a na tabletu na výšku — druhá
+   řada by zajela pod dobranou ruku (tlačítka by nešla stisknout). Telefon se posouvá, tam se řady skládají. */
+@media (min-width: 601px) {
+  .booster__options:has(> :nth-child(6)) {
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+  }
+
+  /* Užší možnosti, a když ani to nestačí (jeviště s místem pro balíček na tabletu), smí se ještě zúžit. */
+  .booster__options:has(> :nth-child(6)) > .booster-option {
+    flex: 0 1 max(calc(var(--card-w) * 1.3), 5.6rem);
+    min-width: 0;
+  }
 }
 
 .booster-option__actions .btn {
   min-height: 2.2rem;
+  padding-inline: 0.4em;
   font-size: 0.85rem;
 }
 
@@ -1565,6 +1584,12 @@
 
 .gb-hand.is-sorting > .pcard:not(.is-dragging) {
   pointer-events: none;
+}
+
+/* Čísla kláves (1–8) platí pro pořadí před tažením — během tažení by u uhýbajících karet lhala a číslo tažené
+   karty by se překrývalo s číslem karty pod ní. Po puštění se ukážou nová. */
+.gb-hand.is-sorting .pcard__key {
+  opacity: 0;
 }
 
 .gb-hint {

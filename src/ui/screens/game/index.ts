@@ -18,7 +18,7 @@ import type { App, Screen, ScreenFactory } from '../../app';
 import { tableEmblem } from '../../art/table';
 import { backButton } from '../../components/button';
 import { closeAllModals, isModalOpen } from '../../components/modal';
-import { setToastAnchor } from '../../components/toast';
+import { TOAST_ANCHOR_GAP, setToastAnchor } from '../../components/toast';
 import { hideTooltip, isTooltipVisible } from '../../components/tooltip';
 import { GameController } from '../../controller';
 import { h } from '../../dom';
@@ -123,8 +123,10 @@ class GameView implements PresentView {
       this.bossBanner.el,
     );
     this.main = h('div', { class: 'game-main' }, this.topRow.el, stage, this.handArea.el);
-    // Hlášky ve sloupci nahoře uprostřed jeviště — ne přes ruku, tlačítka a balíček (toast.ts).
-    setToastAnchor(stage);
+    // Hlášky ve sloupci nahoře uprostřed jeviště — ne přes ruku, tlačítka a balíček (toast.ts). Panel fáze
+    // (Večerka, obálka, výběr útraty…) má tlačítka v záhlaví: sloupec pak začíná pod panelem, když je tam místo,
+    // jinak až pod záhlavím.
+    setToastAnchor((needed) => this.toastRect(stage, needed));
     this.fx = h('div', { class: 'game-fx', 'aria-hidden': 'true' });
     this.live = h('p', { class: 'visually-hidden', 'aria-live': 'polite', 'data-testid': 'game-live' });
     this.el = h(
@@ -196,6 +198,24 @@ class GameView implements PresentView {
         this.panelHost.hidden = true;
       }
     }
+  }
+
+  /**
+   * Obdélník pro sloupec hlášek vysoký `needed` px: jeviště; u panelu fáze volné místo pod panelem (Večerka na
+   * 1366 × 768 nebo na tabletu — hláška pak nezakryje zboží), a když se tam sloupec nevejde, hned pod záhlavím
+   * panelu (tlačítka v záhlaví zůstanou volná). Null = jeviště není vidět.
+   */
+  private toastRect(stage: HTMLElement, needed: number): DOMRect | null {
+    if (!stage.isConnected) return null;
+    const r = stage.getBoundingClientRect();
+    const panel = this.panelHost.hidden ? null : this.panelHost.firstElementChild;
+    if (!panel) return r;
+    const header = panel.querySelector<HTMLElement>('.game-panel__header');
+    let top = header ? Math.max(r.top, header.getBoundingClientRect().bottom) : r.top;
+    const below = panel.getBoundingClientRect().bottom;
+    const visibleBottom = Math.min(r.bottom, window.innerHeight || r.bottom);
+    if (needed > 0 && visibleBottom - below >= needed + 2 * TOAST_ANCHOR_GAP) top = Math.max(top, below);
+    return new DOMRect(r.left, top, r.width, Math.max(0, r.bottom - top));
   }
 
   // ─────────────────────────── PresentView ───────────────────────────

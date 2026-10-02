@@ -11,6 +11,7 @@ import {
   game,
   handCard,
   idle,
+  overlaps,
   presetSettings,
   readRun,
   roundState,
@@ -26,11 +27,13 @@ import {
  * uložený run (tests/e2e/helpers.ts). Animace vypnuté (presenter běží hned), konzole bez chyb a varování.
  *  1. Večerka: pranostika do slotu → použít ze slotu → úroveň kombinace v Info o runu; babská rada s cíli nejde
  *     „Koupit a použít“ (ve Večerce není ruka — tlačítko je neaktivní a řekne proč), ani použít ze slotu; prodej,
- *  2. kupón: Druhý regál přidá slot zboží hned v otevřené Večerce, Věrnostní karta hned zlevní,
+ *  2. kupón: Druhý regál přidá slot zboží hned v otevřené Večerce, Žlutá cenovka hned zlevní,
  *  3. obálka babských rad: otevřít, vybrat cíl v dobrané ruce, použít → vylepšení na kartě i v uloženém stavu,
  *  4. obálka pranostik: „Nechat si“ → spotřebka ve slotu,
  *  5. obálka hracích karet: vybrat kartu → balíček má o kartu víc,
- *  6. v kole: Babiččina barva přebarví vybrané karty, razítko dá vybrané kartě pečeť.
+ *  6. v kole: Babiččina barva přebarví vybrané karty, razítko dá vybrané kartě pečeť,
+ *  7. rozložení: mega obálka (6 možností) v jedné řadě nad dobranou rukou i na 1024 × 768 a tabletu, tlačítka
+ *     v jedné linii; hláška ve Večerce na tabletu jde do volného místa pod panelem (nezakryje zboží).
  */
 
 /** Text jako regulární výraz (bez zvláštních znaků). */
@@ -113,6 +116,13 @@ test('Večerka: pranostika do slotu → použít → úroveň v Info o runu; rad
   await useRada.focus();
   await page.keyboard.press('Enter');
   await expect(page.getByTestId('toast-shop-use')).toContainText(t('game.shop.useNeedsHand'));
+  await page.screenshot({ path: 'test-results/consumables-shop.png', animations: 'disabled' });
+  // Hláška je pod panelem Večerky (nebo pod jejím záhlavím): nepřekrývá Přehodit / Pokračovat ani tlačítka zboží.
+  const toastBox = await page.getByTestId('toast-shop-use').boundingBox();
+  for (const id of ['shop-reroll', 'shop-continue', 'shop-buy-1', 'shop-use-1']) {
+    const box = await page.getByTestId(id).boundingBox();
+    expect(toastBox && box && overlaps(toastBox, box), id).toBe(false);
+  }
   const afterTry = await readRun(page);
   expect(afterTry.shop!.items[1]!.sold).toBe(false);
   expect(afterTry.money).toBe(20 - pricePranostika);
@@ -165,14 +175,14 @@ test('Večerka: pranostika do slotu → použít → úroveň v Info o runu; rad
 
 // ─────────────────────────── 2. Kupón ───────────────────────────
 
-test('kupón: Druhý regál přidá slot zboží hned, Věrnostní karta hned zlevní zboží', async ({ page }) => {
+test('kupón: Druhý regál přidá slot zboží hned, Žlutá cenovka hned zlevní zboží', async ({ page }) => {
   const log = watchConsole(page);
   await presetSettings(page, { animations: false });
   const state = shopState('E2EKUPON1', 40, {
     items: [shopConsumable(consumable(900, 'medard_drop'), 3), shopConsumable(consumable(901, 'chili'), 3)],
     vouchers: [
       { voucherId: 'second_shelf', price: REG.vouchers.second_shelf!.cost, sold: false },
-      { voucherId: 'loyalty_card', price: REG.vouchers.loyalty_card!.cost, sold: false },
+      { voucherId: 'yellow_price', price: REG.vouchers.yellow_price!.cost, sold: false },
     ],
   });
   // Ceny podle enginu (kupón přepočítá ceny i sloty hned v otevřené Večerce).
@@ -195,7 +205,7 @@ test('kupón: Druhý regál přidá slot zboží hned, Věrnostní karta hned zl
   expect((await readRun(page)).shop!.items).toHaveLength(afterShelf.shop!.items.length);
   expect((await readRun(page)).vouchers).toContain('second_shelf');
 
-  // Věrnostní karta → ceny zboží hned dolů (stejně jako v enginu).
+  // Žlutá cenovka → ceny zboží hned dolů (stejně jako v enginu).
   const before = (await readRun(page)).shop!.items.map((i) => i.price);
   await page.getByTestId('shop-redeem-1').click();
   await idle(page);
@@ -205,7 +215,7 @@ test('kupón: Druhý regál přidá slot zboží hned, Věrnostní karta hned zl
   await expect(page.getByTestId('shop-buy-0')).toContainText(formatMoney(after[0]!));
   await expect(page.getByTestId('money')).toHaveText(formatMoney(afterLoyalty.money));
   await page.getByTestId('run-info').click();
-  await expect(page.getByTestId('run-info-modal')).toContainText(t('vouchers.loyalty_card.name'));
+  await expect(page.getByTestId('run-info-modal')).toContainText(t('vouchers.yellow_price.name'));
   await page.getByTestId('run-info-close').click();
   expectCleanConsole(log);
 });
@@ -394,4 +404,87 @@ test('v kole: Babiččina barva přebarví vybrané karty, razítko dá vybrané
   await idle(page);
   expect((await readRun(page)).round?.score).toBe(g.state.round?.score);
   expectCleanConsole(log);
+});
+
+// ─────────────────────────── 7. Rozložení ───────────────────────────
+
+type Box = { x: number; y: number; width: number; height: number };
+
+const boxes = (page: Page, selector: string): Promise<Box[]> =>
+  page.locator(selector).evaluateAll((els) =>
+    els.map((el) => {
+      const r = el.getBoundingClientRect();
+      return { x: r.x, y: r.y, width: r.width, height: r.height };
+    }),
+  );
+
+for (const vp of [
+  { name: '1024×768', width: 1024, height: 768, touch: false },
+  { name: 'tablet 820×1180', width: 820, height: 1180, touch: true },
+]) {
+  test.describe(`rozložení ${vp.name}`, () => {
+    test.use({ viewport: { width: vp.width, height: vp.height }, hasTouch: vp.touch });
+
+    test('mega obálka rad: 6 možností v jedné řadě nad dobranou rukou, tlačítka v jedné linii', async ({
+      page,
+    }) => {
+      const log = watchConsole(page);
+      await presetSettings(page, { animations: false });
+      const opened = openedBooster(boosterShop('E2EMEGA-1', 'rada_mega'));
+      expect(opened.booster!.options).toHaveLength(6);
+      expect(opened.booster!.hand.length).toBeGreaterThan(0);
+      await seedSavedRun(page, opened);
+      await continueRun(page);
+      await expect(game(page)).toHaveAttribute('data-phase', 'booster');
+      await expect(page.locator('.booster-option')).toHaveCount(6);
+
+      // Jedna řada (druhá by zajela pod ruku).
+      const options = await boxes(page, '.booster-option');
+      expect(new Set(options.map((b) => Math.round(b.y))).size).toBe(1);
+      // Žádné tlačítko nezajede pod dobranou ruku ani pod balíček.
+      const hand = (await page.getByTestId('hand').boundingBox())!;
+      const deck = (await page.getByTestId('deck').boundingBox())!;
+      for (const btn of await boxes(page, '.booster-option .btn')) {
+        expect(overlaps(btn, hand)).toBe(false);
+        expect(overlaps(btn, deck)).toBe(false);
+      }
+      // Použít / Nechat si ve všech možnostech v jedné linii i pod dvouřádkovým názvem (± stín stisknutí).
+      for (const kind of ['use', 'keep']) {
+        const tops = (await boxes(page, `.booster-option [data-testid^="booster-${kind}-"]`)).map((b) => b.y);
+        expect(tops).toHaveLength(6);
+        expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(3);
+      }
+      expectCleanConsole(log);
+    });
+  });
+}
+
+test.describe('rozložení tablet 820×1180 — hlášky', () => {
+  test.use({ viewport: { width: 820, height: 1180 }, hasTouch: true });
+
+  test('hláška ve Večerce jde do volného místa pod panelem a nezakryje zboží', async ({ page }) => {
+    const log = watchConsole(page);
+    await presetSettings(page, { animations: false });
+    await seedSavedRun(
+      page,
+      shopState('E2EHLASKA-TABLET', 20, {
+        items: [
+          shopConsumable(consumable(900, 'medard_drop'), 3),
+          shopConsumable(consumable(901, 'chili'), 3),
+        ],
+      }),
+    );
+    await continueRun(page);
+    await expect(game(page)).toHaveAttribute('data-phase', 'shop');
+    await page.getByTestId('shop-use-1').tap({ force: true });
+    const toastEl = page.getByTestId('toast-shop-use');
+    await expect(toastEl).toContainText(t('game.shop.useNeedsHand'));
+    const toastBox = (await toastEl.boundingBox())!;
+    const panel = (await page.getByTestId('shop').boundingBox())!;
+    expect(toastBox.y).toBeGreaterThanOrEqual(panel.y + panel.height);
+    expect(toastBox.y + toastBox.height).toBeLessThanOrEqual(1180);
+    for (const slot of await boxes(page, '.shop-slot')) expect(overlaps(toastBox, slot)).toBe(false);
+    expect(overlaps(toastBox, (await page.getByTestId('deck').boundingBox())!)).toBe(false);
+    expectCleanConsole(log);
+  });
 });

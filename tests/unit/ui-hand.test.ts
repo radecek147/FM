@@ -465,6 +465,22 @@ describe('hlášky (toast)', () => {
     stage.getBoundingClientRect = () => new DOMRect(0, 0, 0, 0);
     toast('Bez rozměrů');
     expect(region.classList.contains('toast-region--anchored')).toBe(false);
+    // Kotva jako funkce (herní obrazovka: pod záhlavím panelu).
+    setToastAnchor(() => new DOMRect(100, 300, 600, 200));
+    toast('Pod záhlavím');
+    expect(region.style.left).toBe('400px');
+    expect(region.style.top).toBe('308px');
+    // Funkce dostane výšku sloupce (herní obrazovka podle ní volí volné místo pod panelem, nebo záhlaví).
+    const seen: number[] = [];
+    Object.defineProperty(region, 'offsetHeight', { configurable: true, get: () => 120 });
+    setToastAnchor((needed) => {
+      seen.push(needed);
+      return needed <= 150 ? new DOMRect(100, 500, 600, 200) : new DOMRect(100, 300, 600, 400);
+    });
+    toast('Pod panelem');
+    expect(seen).toContain(120);
+    expect(region.style.top).toBe('508px');
+    Reflect.deleteProperty(region, 'offsetHeight');
     setToastAnchor(null);
     expect(region.style.left).toBe('');
     stage.remove();

@@ -3,12 +3,14 @@
  *
  *   toast(t('settings.export.done'), { kind: 'success' })
  *   toast(t('errors.generic'), { kind: 'error' })
- *   setToastAnchor(stage)   // herní obrazovka: sloupec nahoře uprostřed nad stolem; null = zpět do rohu
+ *   setToastAnchor(stage)              // sloupec nahoře uprostřed prvku; null = zpět do rohu
+ *   setToastAnchor((needed) => rect)   // nebo obdélník spočítaný až při umístění podle výšky sloupce (hra)
  *
  * - Oblast oznámení je mimo #app (router ji nemaže) a mimo modální vrstvu (zůstává klikací).
- * - Umístění: bez kotvy vpravo dole; s kotvou (herní obrazovka → jeviště se stolem) sloupec nahoře uprostřed
- *   kotvy, aby se hlášky nevršily přes ruku, tlačítka Zahrát / Zahodit a balíček. Poloha se změří při každém
- *   novém oznámení a při změně velikosti okna (žádné čtení layoutu v animaci).
+ * - Umístění: bez kotvy vpravo dole; s kotvou (herní obrazovka → jeviště nad stolem; u panelu Večerky či obálky
+ *   volné místo pod panelem, když se tam sloupec celý vejde, jinak hned pod záhlavím) sloupec nahoře uprostřed
+ *   kotvy, aby se hlášky nevršily přes ruku, tlačítka a balíček. Poloha se změří při každém novém oznámení a při
+ *   změně velikosti okna (žádné čtení layoutu v animaci).
  * - Fronta: nejvýš `MAX_VISIBLE` (3) naráz, nejnovější dole; když přijde další, nejstarší odejde. Stejné oznámení
  *   znovu (např. opakovaná chyba) nepřibude, jen se obnoví jeho čas a naskočí počet „×2“.
  * - Rychlost hry (CSS `--speed`, 1×–4×) zkracuje výchozí dobu zobrazení (s dolní mezí, aby šlo dočíst), vypnuté
@@ -46,7 +48,7 @@ const DEFAULT_DURATION: Record<ToastKind, number> = { info: 4000, success: 4000,
 const MIN_DURATION: Record<ToastKind, number> = { info: 2200, success: 2200, warning: 2800, error: 4000 };
 const ICONS: Record<ToastKind, string> = { info: 'i', success: '✓', warning: '!', error: '✕' };
 /** Odstup sloupce od horního okraje kotvy (px). */
-const ANCHOR_GAP = 8;
+export const TOAST_ANCHOR_GAP = 8;
 /** Nejširší sloupec v kotvě (px) — užší než oblast v rohu, ať nezakryje tlačítka v záhlaví panelů. */
 const ANCHOR_MAX_WIDTH = 384;
 
@@ -60,7 +62,13 @@ interface ToastState {
 }
 
 let region: HTMLElement | null = null;
-let anchor: HTMLElement | null = null;
+/**
+ * Kotva: prvek, nebo funkce, která vrátí obdélník (v souřadnicích okna) až při umístění. Funkce dostane výšku
+ * sloupce (px, i s odcházejícími hláškami), aby ho mohla dát tam, kde se celý vejde.
+ */
+export type ToastAnchor = HTMLElement | ((needed: number) => DOMRect | null);
+
+let anchor: ToastAnchor | null = null;
 let resizeBound = false;
 const states = new WeakMap<HTMLElement, ToastState>();
 const handles = new WeakMap<HTMLElement, ToastHandle>();
@@ -101,12 +109,12 @@ export function toastRegion(): HTMLElement {
 }
 
 /**
- * Kotva oznámení: sloupec nahoře uprostřed prvku (herní obrazovka → jeviště nad stolem). `null` = výchozí
- * umístění vpravo dole (menu, nastavení).
+ * Kotva oznámení: sloupec nahoře uprostřed prvku / obdélníku (herní obrazovka → jeviště nad stolem). `null` =
+ * výchozí umístění vpravo dole (menu, nastavení).
  */
-export function setToastAnchor(el: HTMLElement | null): void {
-  anchor = el;
-  if (el && !resizeBound && typeof window !== 'undefined') {
+export function setToastAnchor(next: ToastAnchor | null): void {
+  anchor = next;
+  if (next && !resizeBound && typeof window !== 'undefined') {
     resizeBound = true;
     window.addEventListener('resize', () => placeRegion(), { passive: true });
   }
@@ -117,24 +125,29 @@ export function setToastAnchor(el: HTMLElement | null): void {
 function placeRegion(): void {
   const r = region;
   if (!r) return;
-  const a = anchor?.isConnected ? anchor : null;
-  const rect = a?.getBoundingClientRect();
+  const a = anchor;
+  const first = typeof a === 'function' ? a(0) : a?.isConnected ? a.getBoundingClientRect() : null;
   // Kotva mimo stránku nebo bez rozměrů (skrytá, test bez layoutu) → výchozí roh.
-  if (!rect || rect.width < 160 || rect.height <= 0) {
+  if (!first || first.width < 160 || first.height <= 0) {
     r.classList.remove('toast-region--anchored');
     r.style.removeProperty('left');
     r.style.removeProperty('top');
     r.style.removeProperty('width');
     return;
   }
+  const width = Math.min(ANCHOR_MAX_WIDTH, first.width - 2 * TOAST_ANCHOR_GAP);
+  r.classList.add('toast-region--anchored');
+  r.style.width = `${Math.round(width)}px`;
+  // Kotva-funkce dostane výšku sloupce v jeho šířce (jedno měření) a může ho posunout tam, kde se celý vejde.
+  const rect = typeof a === 'function' && r.childElementCount > 0 ? (a(r.offsetHeight) ?? first) : first;
   const vh = window.innerHeight || document.documentElement.clientHeight;
   // Jeviště odscrollované nahoru (telefon) → sloupec u horního okraje okna.
-  const top = Math.min(Math.max(ANCHOR_GAP, rect.top + ANCHOR_GAP), Math.max(ANCHOR_GAP, vh - 160));
-  const width = Math.min(ANCHOR_MAX_WIDTH, rect.width - 2 * ANCHOR_GAP);
-  r.classList.add('toast-region--anchored');
+  const top = Math.min(
+    Math.max(TOAST_ANCHOR_GAP, rect.top + TOAST_ANCHOR_GAP),
+    Math.max(TOAST_ANCHOR_GAP, vh - 160),
+  );
   r.style.left = `${Math.round(rect.left + rect.width / 2)}px`;
   r.style.top = `${Math.round(top)}px`;
-  r.style.width = `${Math.round(width)}px`;
 }
 
 /** Viditelná oznámení (bez odcházejících) od nejstaršího. */
@@ -175,7 +188,6 @@ function startTimer(st: ToastState, dismiss: () => void): void {
 export function toast(message: string, opts: ToastOptions = {}): ToastHandle {
   const kind = opts.kind ?? 'info';
   const container = toastRegion();
-  placeRegion();
   const key = `${kind}\u0000${opts.title ?? ''}\u0000${message}`;
   const duration = opts.duration ?? toastDuration(kind, gameSpeed());
 
@@ -250,13 +262,17 @@ export function toast(message: string, opts: ToastOptions = {}): ToastHandle {
   const handle: ToastHandle = { el, dismiss };
   handles.set(el, handle);
 
-  withFlip(container, () => container.appendChild(el));
-  // Nejstarší oznámení ustoupí, když jich je moc.
-  const all = visibleToasts(container);
-  for (let i = 0; i < all.length - MAX_VISIBLE; i++) {
-    const old = all[i];
-    if (old) (handles.get(old)?.dismiss ?? (() => old.remove()))();
-  }
+  withFlip(container, () => {
+    container.appendChild(el);
+    // Nejstarší oznámení ustoupí, když jich je moc.
+    const all = visibleToasts(container);
+    for (let i = 0; i < all.length - MAX_VISIBLE; i++) {
+      const old = all[i];
+      if (old) (handles.get(old)?.dismiss ?? (() => old.remove()))();
+    }
+    // Umístění až s novou hláškou (výška sloupce); případný přesun sloupce plynule dorovná FLIP.
+    placeRegion();
+  });
 
   startTimer(st, dismiss);
   return handle;

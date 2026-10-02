@@ -35,41 +35,49 @@ v `docs/DECISIONS.md`, 2026-10-02 „Revize a uzavření fáze 3“). Run jde v 
   (46 souborů, 1 999 testů), `build` (hlavní chunk 357 kB / 118 kB gzip, ikony 344 kB / 155 kB gzip), `test:e2e`
   (29 testů: `smoke`, `menu`, `game`, `a11y`, `jokers`; 60 snímků `visual.spec.ts` jen s `KARBAN_VISUAL=1`).
 
-**Fáze 5 (spotřebky, obálky, kupóny, úpravy karet):** obsah i engine hotové a odškrtnuté — pranostiky (13), babské
-rady (22), razítka (16), obálky (15 = 5 druhů × 3 velikosti), kupóny (24), 9 vylepšení, 4 pečetě, 4 edice
+**Fáze 5 (spotřebky, obálky, kupóny, úpravy karet):** všechny podúkoly odškrtnuté, **čeká jen na commit**
+`feat: consumables, boosters, vouchers, card modifiers` (většinu UI práce už přibral commit `b6a0e52` paralelního
+workflow fáze 7; zbytek je v pracovním stromu). Obsah a engine: pranostiky (13), babské rady (22), razítka (16), obálky
+(15 = 5 druhů × 3 velikosti), kupóny (24, 12 párů), 9 vylepšení, 4 pečetě, 4 edice
 (`src/content/{modifiers,pranostiky,rady,razitka,boosters,vouchers}.ts`, testy
-`tests/unit/{pranostiky,rady,razitka,boosters,vouchers,modifiers,phase5-review}*.test.ts`). UI ověřené při revizi
-fáze 6 dočasným Playwright skriptem (koupě a použití pranostiky ze slotu, kupón, obálka rad s dobranou rukou a cílem,
-obálka „nechat si“, prodej, babská rada na vybranou kartu v kole; vylepšení, pečetě a edice vidět na kartách;
-konzole čistá). **Chybí:** přesun karet v ruce tažením a e2e test „otevřít obálku, vybrat kartu, použít spotřebku“
-v `tests/e2e/` (UI workflow), pak commit `feat: consumables, boosters, vouchers, card modifiers`.
+`tests/unit/{pranostiky,rady,razitka,boosters,vouchers,modifiers,phase5-review}*.test.ts`). UI: Večerka (Koupit /
+Koupit a použít — u spotřebek s cíli neaktivní s vysvětlením), obálky s dobranou rukou pro cíle, sloty spotřebek,
+úpravy karet na kartách, **přesun karet v ruce** tažením myší i prstem a Shift + ← / → (`src/ui/components/dragSort.ts`,
+`handArea.ts`, sdílené s řadou žolíků), náhled balíčku bez prozrazení karet lícem dolů, fronta hlášek (nejvýš 3, „×2“,
+u panelů pod panelem nebo pod záhlavím). e2e `tests/e2e/{consumables,hand}.spec.ts` (+ `helpers.ts`), unit
+`tests/unit/ui-hand.test.ts`. Vizuální kontrola snímky na 1366 × 768 a tabletu 820 × 1180 opravila mega obálku
+(6 možností zajelo pod ruku na 1024 × 768 a tabletu), zarovnání tlačítek obálky, hlášky přes zboží a čísla kláves při
+tažení (DECISIONS 2026-10-02 „Fáze 5 (UI): vizuální kontrola snímky“).
 
-**Fáze 6 (šéfové a štítky) je hotová** a zrevidovaná (`docs/DECISIONS.md`, 2026-10-02 „Revize fáze 6“), čeká na
-commit `feat: bosses and tags`: 25 běžných + 5 finálových šéfů (`src/content/bosses/{a,b,final}.ts`, texty
-`src/i18n/cs/bosses/*.ts` s čísly jen přes `{param}`), 20 štítků (`src/content/tags.ts`, `src/i18n/cs/tags.ts`), engine
-(`BossHooks.isJokerDebuffed`, `adjustHandScore`, `TagHooks.roundEndMoney`/`onRoundLost`/`passive`, Odvolání, třídění
-ruky bez prozrazení karet lícem dolů), UI (`src/ui/screens/game/bossBanner.ts`, výběr útraty, levý panel, pitva,
+**Fáze 6 (šéfové a štítky) je hotová** a commitnutá (`06c6d2f feat: complete phase 6 bosses and tags`; revize
+v `docs/DECISIONS.md`, 2026-10-02 „Revize fáze 6“): 25 běžných + 5 finálových šéfů
+(`src/content/bosses/{a,b,final}.ts`, texty `src/i18n/cs/bosses/*.ts`), 20 štítků (`src/content/tags.ts`,
+`src/i18n/cs/tags.ts`), engine (`BossHooks`, `TagHooks`), UI (`bossBanner.ts`, výběr útraty, levý panel, pitva,
 `tests/e2e/bosses.spec.ts`), ladění simulací (DESIGN 8.2/8.3, DECISIONS „Fáze 6: ladění se šéfy“), testy
 `tests/unit/{bosses-a,bosses-b,bosses-final,tags,sim-bosses,ui-bosses,phase6-review}.test.ts`.
 
-Kontroly (2026-10-02, celý pracovní strom včetně rozpracované fáze 7): `typecheck` zelený, `eslint` zelený
-(`prettier --check` hlásí jen dočasný `scripts/.review-jokers.ts` paralelního workflow fáze 7), `build` zelený
-(hlavní chunk 420 kB / 136 kB gzip), `test:e2e` 38 testů zelených (60 snímků `visual.spec.ts` jen s
-`KARBAN_VISUAL=1`), `npm test` 3 056 / 3 070 — padá jen 14 testů rozpracovaných žolíků fáze 7
-(`jokers-common2.test.ts`, `jokers-rare2.test.ts`; paralelní workflow).
+**Fáze 7 (obsah naplno)** běží v paralelním workflow (`b6a0e52 content: complete phase 7 jokers to 101, 12 decks`;
+v pracovním stromu přejmenování kupónů, štítků a finálových šéfů).
+
+Kontroly (2026-10-02, celý pracovní strom včetně rozpracované fáze 7): `typecheck` a `eslint src tests` zelené,
+`build` zelený (hlavní chunk 428 kB / 139 kB gzip), `test:e2e` 53 testů zelených (+ 60 snímků `visual.spec.ts`
+s `KARBAN_VISUAL=1` taky zelených), `vitest run` 3 288 / 3 289 — padá jen kouřový test hodnoty žolíků
+`tests/unit/jokers-value.test.ts` („Stálý host“: 15,3 místo 16 ± 0,5 mult; měření na obsahu, který paralelní workflow
+fáze 7 právě mění).
 
 **Známé otevřené body (řešit v uvedené fázi):**
 
-- fáze 5: ruku jde přeskládat jen tříděním (S / B) — přidat přesun karet v ruce tažením (myš i dotyk) a klávesovou
-  alternativu (engine `reorderHand` existuje; babské rady „karta nejvíc vlevo“); e2e test spotřebek a obálek;
-- fáze 6/9 (UI): náhled balíčku pod Výlukou / Bílou paní prozradí zakryté karty v ruce (ztlumené karty mimo dobírací
-  balíček); toasty se při více hláškách vrší přes pravou část ruky;
+- fáze 7: `tests/unit/jokers-value.test.ts` (Stálý host) po změnách obsahu — přeměřit / naladit (paralelní workflow);
 - fáze 6–7: konečná kalibrace křivek cílů (patro 8 má podle CLAUDE.md kap. 3 vyžadovat statisíce až miliony) a
   přeměření letality šéfů po uzavření obsahu fáze 7 (DECISIONS „Fáze 6: ladění se šéfy“, „Mimo pásmo / otevřené“);
+- fáze 9: na 1366 × 768 se pod Večerku vejdou jen 1–2 hlášky — tři vyšší jdou pod záhlaví a na chvíli zakryjí obrázek
+  zboží (ne tlačítka); pořadí hlášek po pranostice („… je teď na úrovni 2“ před „Použito: …“) podle pořadí událostí;
 - fáze 10: střední síly piva mimo pásmo (ekonomika Jedenáctky a Ležáku), Imperial — cíl pravidla šéfa ve Velké útratě.
 
-**Další krok:** commit fáze 6 (`feat: bosses and tags`) — až paralelní workflow fáze 7 dotáhne své testy, aby byl
-`npm test` zelený; pak dokončit fázi 5 (přesun karet v ruce, e2e spotřebek) a commit, potom fáze 7.
+**Další krok:** commit fáze 5 (`feat: consumables, boosters, vouchers, card modifiers`) — soubory fáze 5 v pracovním
+stromu: `src/ui/components/{toast,consumableCard}.ts`, `src/ui/screens/game/index.ts`, `src/ui/styles/game.css`,
+`tests/e2e/{consumables,bosses}.spec.ts`, `tests/unit/ui-hand.test.ts`, `docs/{DESIGN,DECISIONS}.md`, `ROADMAP.md`
+(ostatní změny patří paralelnímu workflow fáze 7); pak dokončit fázi 7.
 
 ## Jak pokračovat v nové session
 
@@ -212,9 +220,11 @@ podle pořadí; každý žolík má test; kontroly zelené; commit `feat: jokers
 - [x] Rozhodnout o případném 4. typu spotřebky (zapsat do DECISIONS) — ne v 1.0 (DECISIONS 2026-10-01)
 - [x] **5 druhů boosterů** (pranostiky, babské rady, razítka, žolíci, hrací karty) ve velikostech normal/jumbo/mega + obrazovka výběru z boosteru
 - [x] **24 kupónů** (12 párů základ → vylepšení), slot ve Večerce, tier 2 vyžaduje tier 1
-- [x] UI: vylepšení, pečetě a edice viditelné na kartách (SVG vrstvy), lišta spotřebek x/2, použití s výběrem cílů (ověřeno Playwright skriptem při revizi fáze 6; chybí přesun karet v ruce tažením — viz „Známé otevřené body“)
+- [x] UI: vylepšení, pečetě a edice viditelné na kartách (SVG vrstvy), lišta spotřebek x/2, použití s výběrem cílů (v kole i v dobrané ruce obálky)
+- [x] Přesun karet v ruce tažením myší i prstem + Shift + ← / → (`src/ui/components/dragSort.ts`, `handArea.ts`; v kole i v ruce obálky), náhled balíčku bez prozrazení karet lícem dolů, fronta hlášek (nejvýš 3, „×2“, mimo ruku a tlačítka)
 - [x] Testy: každá spotřebka, vylepšení, pečeť, edice a kupón; pořadí v pipeline; prasknutí skla (RNG); retrigger červené pečeti
-- [ ] e2e: otevřít booster, vybrat kartu, použít spotřebku — _tok funguje (ověřeno dočasným skriptem při revizi fáze 6), test v `tests/e2e/` zatím chybí (UI workflow)_
+- [x] e2e: otevřít booster, vybrat kartu, použít spotřebku (`tests/e2e/consumables.spec.ts`: Večerka, kupóny, obálky rad / pranostik / karet, spotřebky v kole, rozložení mega obálky na 1024 × 768 a tabletu; `tests/e2e/hand.spec.ts`: přesun karet, náhled balíčku, hlášky)
+- [x] Vizuální kontrola snímky (1366 × 768, tablet 820 × 1180; obálky i na 1024 × 768, 1280 × 720, 1920 × 1080, telefonu) a opravy (DECISIONS „Fáze 5 (UI): vizuální kontrola snímky“)
 
 **Hotovo, když:** všechny tři typy spotřebek, boostery a kupóny jdou v UI koupit/použít a správně
 mění skóre i balíček; kontroly zelené; commit `feat: consumables, boosters, vouchers, card modifiers`; fáze odškrtnutá.

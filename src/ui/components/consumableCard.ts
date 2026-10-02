@@ -3,7 +3,7 @@
  * balíček, síla piva, výzva, vylepšení, pečeť) — vše podle registru.
  *
  *   createConsumableCard(c, { onClick: () => openUse(c.uid), sellValue: 2 })
- *   createContentCard('voucher', 'loyalty_card', { price: 10, onClick: buy })
+ *   createContentCard('voucher', 'yellow_price', { price: 10, onClick: buy })
  *
  * Stejné chování jako jokerCard: `<button>`/`<div role="img">`, `aria-label`, `aria-pressed`, edice třídou
  * `ed-<id>`, cenovka, tooltip (hover/focus/dlouhý stisk).

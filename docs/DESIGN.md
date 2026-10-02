@@ -91,7 +91,7 @@ Po porážce šéfa patra 8 → VÝHRA (titulky, statistika) → nabídka Nekone
   base(a) = nice( base(8) × g(a)^(a − 8) ),   g(a) = 2,2 + 0,15 × (a − 9)
   ```
 
-  kde `base(8)` je základ patra 8 zvolené křivky (21 000 / 23 000 / 26 000, kalibrace fáze 6 — kap. 2.3.1).
+  kde `base(8)` je základ patra 8 zvolené křivky (23 000 / 26 000 / 29 000, kalibrace po fázi 7 — kap. 2.3.1).
   Růst je nadexponenciální (poměr mezi patry se zvyšuje z ×2,2 v patře 9 na zhruba ×4,5 v patře 16 a dál roste).
 
 - `nice(x)` je stejné zaokrouhlení jako v hlavní hře (kap. 2.3.2). Útraty pak `nice(base × 1 / 1,5 / 2)`.
@@ -215,25 +215,29 @@ Cíl útraty = `nice(base(patro) × násobek útraty × Modifiers.targetMult)`. 
 | Patro | Křivka 1: Malá |  Velká |    Šéf | Křivka 2: Malá |  Velká |    Šéf | Křivka 3: Malá |  Velká |    Šéf |
 | ----: | -------------: | -----: | -----: | -------------: | -----: | -----: | -------------: | -----: | -----: |
 |     1 |            250 |    380 |    500 |            250 |    380 |    500 |            250 |    380 |    500 |
-|     2 |            550 |    830 |  1 100 |            550 |    830 |  1 100 |            550 |    830 |  1 100 |
-|     3 |          1 100 |  1 650 |  2 200 |          1 100 |  1 650 |  2 200 |          1 150 |  1 750 |  2 300 |
-|     4 |          2 200 |  3 300 |  4 400 |          2 300 |  3 500 |  4 600 |          2 400 |  3 600 |  4 800 |
-|     5 |          4 300 |  6 500 |  8 600 |          4 500 |  6 800 |  9 000 |          4 700 |  7 100 |  9 400 |
-|     6 |          7 800 | 11 500 | 15 500 |          8 000 | 12 000 | 16 000 |          8 600 | 13 000 | 17 000 |
-|     7 |         13 500 | 20 000 | 27 000 |         14 000 | 21 000 | 28 000 |         15 500 | 23 000 | 31 000 |
-|     8 |         21 000 | 32 000 | 42 000 |         23 000 | 35 000 | 46 000 |         26 000 | 39 000 | 52 000 |
+|     2 |            550 |    830 |  1 100 |            550 |    830 |  1 100 |            600 |    900 |  1 200 |
+|     3 |          1 100 |  1 650 |  2 200 |          1 200 |  1 800 |  2 400 |          1 300 |  1 950 |  2 600 |
+|     4 |          2 300 |  3 500 |  4 600 |          2 600 |  3 900 |  5 200 |          2 800 |  4 200 |  5 600 |
+|     5 |          4 500 |  6 800 |  9 000 |          5 100 |  7 700 | 10 000 |          5 600 |  8 400 | 11 000 |
+|     6 |          8 200 | 12 500 | 16 500 |          9 300 | 14 000 | 18 500 |         10 000 | 15 000 | 20 000 |
+|     7 |         14 500 | 22 000 | 29 000 |         16 500 | 25 000 | 33 000 |         18 000 | 27 000 | 36 000 |
+|     8 |         23 000 | 35 000 | 46 000 |         26 000 | 39 000 | 52 000 |         29 000 | 44 000 | 58 000 |
 
 Engine má v tabulce jen základy křivek (sloupce „Malá“); Velkou a Šéfa počítá přes `nice()`. Celá tabulka slouží
 jako test.
 
-**Kalibrace se šéfy a štítky (fáze 6, 2026-10-02):** křivky jsou naladěné simulací na obsah s 101 žolíky (fáze 7
-rozpracovaná), spotřebkami, obálkami, kupóny, 30 šéfy (cíle šéfů kap. 8.2/8.3) a 20 štítky tak, aby nejlepší rozumný
-bot na Desítce vyhrál 25–35 % runů (naměřeno ~31–35 %) a na Imperialu < 3 % (~1 %). Křivka 1 dostala vyšší patra 5–7
-a nižší patro 8 (vrchol proher má být v patrech 5–7); křivky 2 a 3 mají patra 1–3 skoro jako křivka 1 (vyšší síly
-piva dřív končily v patře 2 ve 20–30 % runů kvůli ekonomice — Jedenáctka a Ležák) a přidávají až od patra 4.
-Fáze 5 (bez šéfů) měla patro 8 22 000 / 27 000 / 35 000, původní návrh 80 000 / 150 000 / 250 000. Dlouhodobý cíl
-CLAUDE.md kap. 3 (patro 8 řádově statisíce) dnešní obsah a boti nedosáhnou — viz `docs/DECISIONS.md` („Fáze 6:
-ladění se šéfy“), co je pro to potřeba; křivky se znovu naladí po dokončení fáze 7 a ve fázi 10.
+**Kalibrace po fázi 7 (2026-10-02, plný obsah: 101 žolíků, 30 šéfů, 20 štítků, 51 spotřebek, 24 kupónů;
+`docs/DECISIONS.md` „Balanc po fázi 7“):** nejlepší rozumný bot na Desítce vyhraje 34 % runů (`flush`; `max` 31 %,
+`pairs` 26 %), na Imperialu 2,3 % a všechny střední síly piva leží v pásmech kap. 10. Křivka 1 je oproti fázi 6
+o ~5 % výš od patra 4 (Desítka byla na 36 %); křivky 2 a 3 jsou od patra 3 o ~13 % a ~23 % nad křivkou 1, protože
+Jedenáctka a Ležák mají mírnější ekonomické ztížení (platí až od 2. / 3. patra) a Dvanáctka, Speciál a Bock by
+jinak byly nad pásmem. Pořadí křivek (1 ≤ 2 ≤ 3 v každém patře) zůstává.
+
+Historie: fáze 6 měla patro 8 21 000 / 23 000 / 26 000, fáze 5 (bez šéfů) 22 000 / 27 000 / 35 000, původní návrh
+80 000 / 150 000 / 250 000. **Dlouhodobý cíl CLAUDE.md kap. 3 (patro 8 řádově statisíce)** dnešní boti nedosáhnou:
+vítězné runy mají v patře 8 medián nejlepší ruky ~60 000 (p90 ~160–190 000) a kolo finálového šéfa končí na
+mediánu 1,27× cíle. Plán, jak se k cíli dostat (silnější boti a škálování obsahu, pak zvednout křivky po krocích), je
+v `docs/DECISIONS.md` („Balanc po fázi 7“, bod Patro 8) — patří do fáze 10.
 
 #### 2.3.2 Zaokrouhlení `nice(x)`
 
@@ -255,16 +259,16 @@ z balíčků, výzev a kupónů, nekonečný režim).
 
 | Patro |    g | Křivka 1: Malá |       Velká |         Šéf | Křivka 2: Malá |         Šéf | Křivka 3: Malá |         Šéf |
 | ----: | ---: | -------------: | ----------: | ----------: | -------------: | ----------: | -------------: | ----------: |
-|     9 | 2,20 |         46 000 |      69 000 |      92 000 |         51 000 |     100 000 |         57 000 |     115 000 |
-|    10 | 2,35 |        115 000 |     175 000 |     230 000 |        125 000 |     250 000 |        145 000 |     290 000 |
-|    11 | 2,50 |        330 000 |     500 000 |     660 000 |        360 000 |     720 000 |        410 000 |     820 000 |
-|    12 | 2,65 |      1 050 000 |   1 600 000 |   2 100 000 |      1 150 000 |   2 300 000 |      1 300 000 |   2 600 000 |
-|    13 | 2,80 |      3 600 000 |   5 400 000 |   7 200 000 |      4 000 000 |   8 000 000 |      4 500 000 |   9 000 000 |
-|    14 | 2,95 |     14 000 000 |  21 000 000 |  28 000 000 |     15 000 000 |  30 000 000 |     17 000 000 |  34 000 000 |
-|    15 | 3,10 |     58 000 000 |  87 000 000 | 115 000 000 |     63 000 000 | 125 000 000 |     72 000 000 | 145 000 000 |
-|    16 | 3,25 |    260 000 000 | 390 000 000 | 520 000 000 |    290 000 000 | 580 000 000 |    320 000 000 | 640 000 000 |
+|     9 | 2,20 |         51 000 |      77 000 |     100 000 |         57 000 |     115 000 |         64 000 |     130 000 |
+|    10 | 2,35 |        125 000 |     190 000 |     250 000 |        145 000 |     290 000 |        160 000 |     320 000 |
+|    11 | 2,50 |        360 000 |     540 000 |     720 000 |        410 000 |     820 000 |        450 000 |     900 000 |
+|    12 | 2,65 |      1 150 000 |   1 750 000 |   2 300 000 |      1 300 000 |   2 600 000 |      1 450 000 |   2 900 000 |
+|    13 | 2,80 |      4 000 000 |   6 000 000 |   8 000 000 |      4 500 000 |   9 000 000 |      5 000 000 |  10 000 000 |
+|    14 | 2,95 |     15 000 000 |  23 000 000 |  30 000 000 |     17 000 000 |  34 000 000 |     19 000 000 |  38 000 000 |
+|    15 | 3,10 |     63 000 000 |  95 000 000 | 125 000 000 |     72 000 000 | 145 000 000 |     80 000 000 | 160 000 000 |
+|    16 | 3,25 |    290 000 000 | 440 000 000 | 580 000 000 |    320 000 000 | 640 000 000 |    360 000 000 | 720 000 000 |
 
-Pro orientaci (křivka 1): patro 20 ≈ 220 000 000 000, patro 24 ≈ 5e14, patro 32 ≈ 2,4e22, patro 40 ≈ 1,15e31
+Pro orientaci (křivka 1): patro 20 ≈ 240 000 000 000, patro 24 ≈ 5,4e14, patro 32 ≈ 2,6e22, patro 40 ≈ 1,25e31
 (zápis jako ve hře: od 1e15 vědecky, koncové nuly mantisy se ořezávají).
 
 ### 2.4 Kolo a peníze
@@ -367,7 +371,7 @@ Výchozí podíl: žolík 70 %, pranostika 15 %, babská rada 15 %.
 **Vzácnost žolíka** v obchodě i v Žolíkové obálce: běžný 68, vzácný 26, epický 6, legendární 0.
 
 **Hrací karta** v obchodě: hodnota a barva rovnoměrně z výchozího složení startovního balíčku; vylepšení 20 %
-(s „Kartářkou“ 50 %), pečeť 0 % (s „Kartářkou“ 20 %), edice podle 2.6.
+(se „Sběratelskou burzou“ 50 %), pečeť 0 % (se „Sběratelskou burzou“ 20 %), edice podle 2.6.
 
 ### 2.6 Edice
 
@@ -1027,14 +1031,14 @@ Nápad po 1.0 (zapsat do `docs/IDEAS.md`): **Stírací losy** — okamžitá lot
 ## 6. Kupóny (24 = 12 párů)
 
 - Ve Večerce je **1 kupón za patro**; drží se ve všech Večerkách patra, po porážce šéfa se nabídne nový.
-  Nekoupený kupón se vrací do poolu. Štítek „Úřední poukaz“ přidá další.
+  Nekoupený kupón se vrací do poolu. Štítek „Leták ve schránce“ přidá další.
 - **Tier 2** se může objevit jen tehdy, když hráč vlastní příslušný tier 1. Každý kupón jde koupit jednou za run.
 - Efekty jsou trvalé do konce runu (`passive` → `Modifiers`, jednorázové věci v `onRedeem`).
 
 |   # | Tier 1 (`id`)                        | Cena | Efekt                                                                       | Tier 2 (`id`)                         | Cena | Efekt                                                                                                   |
 | --: | ------------------------------------ | ---: | --------------------------------------------------------------------------- | ------------------------------------- | ---: | ------------------------------------------------------------------------------------------------------- |
 |   1 | Druhý regál (`second_shelf`)         |    9 | +1 kartový slot ve Večerce.                                                 | Regál u pokladny (`checkout_shelf`)   |   12 | +1 slot obálky ve Večerce.                                                                              |
-|   2 | Věrnostní karta (`loyalty_card`)     |   10 | Vše ve Večerce o 20 % levnější.                                             | Zlatá věrnostní (`gold_loyalty`)      |   13 | Vše ve Večerce o 40 % levnější (celkem).                                                                |
+|   2 | Žlutá cenovka (`yellow_price`)       |   10 | Vše ve Večerce o 20 % levnější.                                             | Přelepená cenovka (`relabeled_price`) |   13 | Vše ve Večerce o 40 % levnější (celkem).                                                                |
 |   3 | Kamarád za pultem (`counter_buddy`)  |    9 | Přehození je o 1 Kč levnější (začíná na 3 Kč).                              | Švagr vedoucí (`manager_inlaw`)       |   11 | Cena přehození v téže Večerce neroste.                                                                  |
 |   4 | Prodloužená otvíračka (`late_hours`) |   12 | +1 ruka v každém kole.                                                      | Nonstop (`nonstop`)                   |   15 | +1 ruka v každém kole a +1 Kč navíc za každou nevyužitou ruku.                                          |
 |   5 | Kontejner před domem (`dumpster`)    |    9 | +1 zahození v každém kole.                                                  | Sběrný dvůr (`recycling_yard`)        |   12 | +1 zahození v každém kole a +1 Kč za každé nevyužité zahození.                                          |
@@ -1042,7 +1046,7 @@ Nápad po 1.0 (zapsat do `docs/IDEAS.md`): **Stírací losy** — okamžitá lot
 |   7 | Spořicí účet (`savings_account`)     |    9 | Strop úroku 8 Kč.                                                           | Stavební spoření (`building_savings`) |   12 | Strop úroku 12 Kč.                                                                                      |
 |   8 | Úzký věšák (`narrow_rack`)           |   11 | +1 slot žolíka, ale −1 karta v ruce.                                        | Pořádný věšák (`proper_rack`)         |   13 | +1 karta v ruce (ruší postih Úzkého věšáku).                                                            |
 |   9 | Trhací kalendář (`tear_calendar`)    |    8 | Pranostiky a babské rady se ve Večerce objevují častěji (váha každé 3 → 7). | Babiččina spíž (`grandmas_pantry`)    |   11 | +1 slot spotřebky; ve Večerce se objevují i úřední razítka; pranostiky a rady ještě o polovinu častěji. |
-|  10 | Stánek s kartami (`card_stall`)      |    9 | Ve Večerce se objevují hrací karty.                                         | Kartářka (`card_reader`)              |   12 | Hrací karty ve Večerce mají 50 % šanci na vylepšení a 20 % na pečeť.                                    |
+|  10 | Stánek s kartami (`card_stall`)      |    9 | Ve Večerce se objevují hrací karty.                                         | Sběratelská burza (`collectors_fair`) |   12 | Hrací karty ve Večerce mají 50 % šanci na vylepšení a 20 % na pečeť.                                    |
 |  11 | Leštěnka (`polish`)                  |    9 | Edice (lesklá, holografická, duhová) se objevují 2,5× častěji.              | Hologramová fólie (`holo_foil`)       |   12 | Edice se objevují 3,5× častěji (celkem).                                                                |
 |  12 | Úřední škrt (`official_strike`)      |   12 | −1 patro; cíle všech útrat do konce runu ×1,1.                              | Amnestie (`amnesty`)                  |   14 | −1 patro; ve Večerce stojí do konce runu všechno o 1 Kč víc.                                            |
 
@@ -1059,14 +1063,14 @@ Výhra stále vyžaduje porazit šéfa patra 8 — hráč tedy dostane víc kol 
 postih.
 
 Flavor: Druhý regál „Konečně je kam dát chipsy.“ · Regál u pokladny „Impulzivní nákupy na dosah ruky.“ ·
-Věrnostní karta „Sbíráte body? — Ne. — Tak je máte.“ · Zlatá věrnostní „Platinová by byla moc nápadná.“ ·
+Žlutá cenovka „Žlutá barva, menší číslo. Víc vědět nepotřebuješ.“ · Přelepená cenovka „Pod novou cenovkou stará, pod ní ještě starší. Archeologie slev.“ ·
 Kamarád za pultem „Pro tebe to přehodím.“ · Švagr vedoucí „Rodina je rodina.“ · Prodloužená otvíračka „Otevřeno do
 posledního hosta.“ · Nonstop „Zavíráme? To slovo neznáme.“ · Kontejner před domem „Vyhodit můžeš cokoli. Kromě gauče.“ ·
 Sběrný dvůr „Třídit se vyplácí.“ · Větší stůl „Ze sklepa, po dědovi.“ · Rozkládací stůl „Když přijde šéf, rozkládá se až do předsíně.“ ·
 Spořicí účet „Úrok skoro jako za první republiky.“ · Stavební spoření „Se státní podporou, bez stavby.“ ·
 Úzký věšák „Vejde se tam ještě jeden žolík. Kabát ne.“ · Pořádný věšák „Konečně i na bundu.“ ·
 Trhací kalendář „Každý den jedna moudrost.“ · Babiččina spíž „Zavařeniny na příštích dvacet let.“ ·
-Stánek s kartami „Z druhé ruky, jako nové.“ · Kartářka „Vyložila mi budoucnost. Je v ní Barva.“ ·
+Stánek s kartami „Z druhé ruky, jako nové.“ · Sběratelská burza „Tahle je ještě s pečetí z první republiky. Pro tebe za pade.“ ·
 Leštěnka „Lesk jako nedělní boty.“ · Hologramová fólie „Duha v každém balení.“ ·
 Úřední škrt „Patro škrtnuto. Razítko, podpis.“ · Amnestie „Na co se zapomene, to se nestalo.“
 
@@ -1077,28 +1081,28 @@ Leštěnka „Lesk jako nedělní boty.“ · Hologramová fólie „Duha v kaž
   různé štítky. Štítky se hromadí (i stejné) a ukazují se v levém panelu.
 - „Příští Večerka / příští kolo“ = první Večerka / kolo **po** získání štítku (po přeskočení se Večerka vynechá).
 
-|   # | Název (`id`)                           | Od patra | Efekt                                                                                                        | Spotřebuje se  | Flavor                                              |
-| --: | -------------------------------------- | -------: | ------------------------------------------------------------------------------------------------------------ | -------------- | --------------------------------------------------- |
-|   1 | Drobné v kabátě (`coat_change`)        |        1 | +6 Kč.                                                                                                       | hned           | „Z loňské zimy, ještě s účtenkou.“                  |
-|   2 | Termínovaný vklad (`term_deposit`)     |        1 | Po porážce šéfa tohoto patra +15 Kč.                                                                         | po šéfovi      | „Výběr před splatností zpoplatněn.“                 |
-|   3 | Zálohy (`advance_payment`)             |        1 | +3 Kč za každou útratu přeskočenou v tomto runu (včetně této).                                               | hned           | „Doplatek přijde v březnu.“                         |
-|   4 | Brigáda na chmelu (`hop_picking`)      |        1 | +1 Kč za každé 2 ruce zahrané v tomto runu (nejvýš +15 Kč).                                                  | hned           | „Za dědy povinná, dnes aspoň placená.“              |
-|   5 | Otevřené dveře (`open_doors`)          |        1 | V příští Večerce 3 přehození zdarma.                                                                         | příští Večerka | „Den otevřených dveří: vstup i přehazování zdarma.“ |
-|   6 | Obálka od strýce (`uncle_envelope`)    |        1 | Zdarma Tlustá obálka žolíků (otevře se hned).                                                                | hned           | „Na zub. A nic neříkej mámě.“                       |
-|   7 | Kalendář z trafiky (`kiosk_calendar`)  |        1 | Zdarma Tlustá obálka pranostik.                                                                              | hned           | „S hasičskými motivy, jako každý rok.“              |
-|   8 | Balík od babičky (`grandma_parcel`)    |        1 | Zdarma Tlustá obálka babských rad.                                                                           | hned           | „Buchty, ponožky a dobré rady.“                     |
-|   9 | Úřední dopis (`official_letter`)       |        2 | Zdarma normální Obálka razítek.                                                                              | hned           | „Do vlastních rukou. Bohužel.“                      |
-|  10 | Mariáš na chalupě (`cottage_marias`)   |        1 | Zdarma Tlustá obálka hracích karet.                                                                          | hned           | „Hraje se do tmy a o drobné.“                       |
-|  11 | Vyleštěné příbory (`polished_cutlery`) |        1 | Příští žolík ve Večerce dostane náhodnou edici (lesklá 55 %, holografická 30 %, duhová 15 %) bez příplatku.  | příští Večerka | „Na návštěvu se vytahuje to nejlepší.“              |
-|  12 | Fotonegativ (`photo_negative`)         |        2 | Příští žolík ve Večerce bude negativní, bez příplatku.                                                       | příští Večerka | „Z alba, kde všichni vypadají jako duchové.“        |
-|  13 | Doporučení od známého (`referral`)     |        1 | V příští Večerce navíc slot se vzácným žolíkem za poloviční cenu.                                            | příští Večerka | „Řekni, že jdeš ode mě.“                            |
-|  14 | Protekce (`connections`)               |        3 | V příští Večerce navíc slot s epickým žolíkem (plná cena).                                                   | příští Večerka | „Nejde o to, co umíš, ale koho znáš.“               |
-|  15 | Úřední poukaz (`voucher_slip`)         |        1 | V příští Večerce navíc 1 kupón.                                                                              | příští Večerka | „Platí do konce měsíce. Kterého, neuvedeno.“        |
-|  16 | Šéf má chřipku (`boss_flu`)            |        1 | Cíl šéfa tohoto patra −25 %.                                                                                 | v kole šéfa    | „Omluvenka od doktora, podpis nečitelný.“           |
-|  17 | Rozložené noviny (`spread_newspaper`)  |        1 | V příštím kole +2 karty v ruce a +1 zahození.                                                                | příští kolo    | „Kdo čte noviny, má přehled. A víc místa na stole.“ |
-|  18 | Předpověď počasí (`forecast`)          |        1 | +2 úrovně tvé nejčastěji hrané kombinace v runu (při shodě silnější; bez zahraných rukou Vysoká karta).      | hned           | „Zítra jasno, místy Full house.“                    |
-|  19 | Lékařské potvrzení (`sick_note`)       |        2 | Když v příštím kole nedosáhneš cíle, ale máš aspoň 50 %, kolo se počítá jako vyhrané (bez odměny za útratu). | příští kolo    | „Neschopenka zpětně? Udělám výjimku.“               |
-|  20 | Bazar u silnice (`roadside_bazaar`)    |        1 | Vytvoří náhodného běžného žolíka; bez volného slotu místo toho +4 Kč.                                        | hned           | „Starožitnosti, tašky a jeden žolík.“               |
+|   # | Název (`id`)                           | Od patra | Efekt                                                                                                        | Spotřebuje se  | Flavor                                                    |
+| --: | -------------------------------------- | -------: | ------------------------------------------------------------------------------------------------------------ | -------------- | --------------------------------------------------------- |
+|   1 | Drobné v kabátě (`coat_change`)        |        1 | +6 Kč.                                                                                                       | hned           | „Z loňské zimy, ještě s účtenkou.“                        |
+|   2 | Termínovaný vklad (`term_deposit`)     |        1 | Po porážce šéfa tohoto patra +15 Kč.                                                                         | po šéfovi      | „Výběr před splatností zpoplatněn.“                       |
+|   3 | Zálohy (`advance_payment`)             |        1 | +3 Kč za každou útratu přeskočenou v tomto runu (včetně této).                                               | hned           | „Doplatek přijde v březnu.“                               |
+|   4 | Brigáda na chmelu (`hop_picking`)      |        1 | +1 Kč za každé 2 ruce zahrané v tomto runu (nejvýš +15 Kč).                                                  | hned           | „Za dědy povinná, dnes aspoň placená.“                    |
+|   5 | Otevřené dveře (`open_doors`)          |        1 | V příští Večerce 3 přehození zdarma.                                                                         | příští Večerka | „Den otevřených dveří: vstup i přehazování zdarma.“       |
+|   6 | Obálka od strýce (`uncle_envelope`)    |        1 | Zdarma Tlustá obálka žolíků (otevře se hned).                                                                | hned           | „Na zub. A nic neříkej mámě.“                             |
+|   7 | Kalendář z trafiky (`kiosk_calendar`)  |        1 | Zdarma Tlustá obálka pranostik.                                                                              | hned           | „S hasičskými motivy, jako každý rok.“                    |
+|   8 | Balík od babičky (`grandma_parcel`)    |        1 | Zdarma Tlustá obálka babských rad.                                                                           | hned           | „Buchty, ponožky a dobré rady.“                           |
+|   9 | Úřední dopis (`official_letter`)       |        2 | Zdarma normální Obálka razítek.                                                                              | hned           | „Do vlastních rukou. Bohužel.“                            |
+|  10 | Mariáš na chalupě (`cottage_marias`)   |        1 | Zdarma Tlustá obálka hracích karet.                                                                          | hned           | „Hraje se do tmy a o drobné.“                             |
+|  11 | Vyleštěné příbory (`polished_cutlery`) |        1 | Příští žolík ve Večerce dostane náhodnou edici (lesklá 55 %, holografická 30 %, duhová 15 %) bez příplatku.  | příští Večerka | „Na návštěvu se vytahuje to nejlepší.“                    |
+|  12 | Rentgen od zubaře (`dental_xray`)      |        2 | Příští žolík ve Večerce bude negativní, bez příplatku.                                                       | příští Večerka | „Na snímku je vidět skrz. Proto nezabere místo.“          |
+|  13 | Doporučení od známého (`referral`)     |        1 | V příští Večerce navíc slot se vzácným žolíkem za poloviční cenu.                                            | příští Večerka | „Řekni, že jdeš ode mě.“                                  |
+|  14 | Protekce (`connections`)               |        3 | V příští Večerce navíc slot s epickým žolíkem (plná cena).                                                   | příští Večerka | „Nejde o to, co umíš, ale koho znáš.“                     |
+|  15 | Leták ve schránce (`mailbox_flyer`)    |        1 | V příští Večerce navíc 1 kupón.                                                                              | příští Večerka | „Na schránce je cedulka proti reklamě. Leták číst neumí.“ |
+|  16 | Šéf má chřipku (`boss_flu`)            |        1 | Cíl šéfa tohoto patra −25 %.                                                                                 | v kole šéfa    | „Omluvenka od doktora, podpis nečitelný.“                 |
+|  17 | Rozložené noviny (`spread_newspaper`)  |        1 | V příštím kole +2 karty v ruce a +1 zahození.                                                                | příští kolo    | „Kdo čte noviny, má přehled. A víc místa na stole.“       |
+|  18 | Předpověď počasí (`forecast`)          |        1 | +2 úrovně tvé nejčastěji hrané kombinace v runu (při shodě silnější; bez zahraných rukou Vysoká karta).      | hned           | „Zítra jasno, místy Full house.“                          |
+|  19 | Lékařské potvrzení (`sick_note`)       |        2 | Když v příštím kole nedosáhneš cíle, ale máš aspoň 50 %, kolo se počítá jako vyhrané (bez odměny za útratu). | příští kolo    | „Neschopenka zpětně? Udělám výjimku.“                     |
+|  20 | Bazar u silnice (`roadside_bazaar`)    |        1 | Vytvoří náhodného běžného žolíka; bez volného slotu místo toho +4 Kč.                                        | hned           | „Starožitnosti, tašky a jeden žolík.“                     |
 
 ## 8. Šéfové
 
@@ -1148,18 +1152,18 @@ poslední 4), aby i první patro mělo pestrost a těžší pravidla přišla a�
 šéfy“): žádný šéf nemá být výrazně smrtelnější než ostatní, měřeno letalitou při setkání **normovanou podle patra**
 (šéfové s `minAnte 1` potkávají hráče v prvních patrech, kde se skoro neumírá). Tvrdá pravidla (polovina ruky
 zakrytá, jedna ruka, bez úrovní, bez nejcennějšího nebo poloviny žolíků, bez Postupek a Barev) mají nižší cíl, mírná
-pravidla (peníze, karta navíc pryč) vyšší. Šanon na šanonu (3×) a Protihluková stěna (4,5×) mají číslo v textu
+pravidla (peníze, karta navíc pryč) vyšší. Šanon na šanonu (3×) a Fronta na banány (4,5×) mají číslo v textu
 pravidla — změna cíle = změna textu v `src/i18n/cs/bosses/`.
 
 ### 8.3 Finální šéfové (5, jen patro 8 a každé 8. patro)
 
-|   # | Název (`id`)                         | Pravidlo                                                                                |   Cíl | Příchod                                                     | Porážka                                           |
-| --: | ------------------------------------ | --------------------------------------------------------------------------------------- | ----: | ----------------------------------------------------------- | ------------------------------------------------- |
-|  F1 | Pan starosta (`mayor`)               | Ruka se započítá, jen když má vyšší skóre než předchozí ruka v tomto kole (první vždy). |  2,5× | „Slibuji, že každá další ruka bude lepší než ta předchozí!“ | „Volby prohrál. Funkci si nechal v jiném výboru.“ |
-|  F2 | Krajský úřad (`regional_office`)     | Po každé zahrané ruce se náhodný fungující žolík vypne do konce kola.                   | 2,25× | „Vaše žolíky prověříme. Jednoho po druhém.“                 | „Kontrola skončila bez nálezu. A bez oběda.“      |
-|  F3 | Protihluková stěna (`noise_barrier`) | Vyšší cíl.                                                                              |  4,5× | „Čtyři metry betonu. A ani jeden strom.“                    | „Zeď padla. Sousedi děkují.“                      |
-|  F4 | Velká voda (`great_flood`)           | Každá zahraná ruka zmenší velikost ruky o 1 (do konce kola).                            |  2,5× | „Voda stoupá! Karty do vyšších pater!“                      | „Voda opadla. Bláto zůstalo.“                     |
-|  F5 | Bílá paní (`white_lady`)             | Po každé zahrané ruce i zahození se všechny karty v ruce otočí lícem dolů a zamíchají.  |  1,5× | „O půlnoci se zjevuje na zámku. A otáčí karty.“             | „Zmizela. Klíče od sklepa taky.“                  |
+|   # | Název (`id`)                      | Pravidlo                                                                                |   Cíl | Příchod                                                     | Porážka                                           |
+| --: | --------------------------------- | --------------------------------------------------------------------------------------- | ----: | ----------------------------------------------------------- | ------------------------------------------------- |
+|  F1 | Pan starosta (`mayor`)            | Ruka se započítá, jen když má vyšší skóre než předchozí ruka v tomto kole (první vždy). |  2,5× | „Slibuji, že každá další ruka bude lepší než ta předchozí!“ | „Volby prohrál. Funkci si nechal v jiném výboru.“ |
+|  F2 | Krajský úřad (`regional_office`)  | Po každé zahrané ruce se náhodný fungující žolík vypne do konce kola.                   | 2,25× | „Vaše žolíky prověříme. Jednoho po druhém.“                 | „Kontrola skončila bez nálezu. A bez oběda.“      |
+|  F3 | Fronta na banány (`banana_queue`) | Vyšší cíl.                                                                              |  4,5× | „Stojí se od šesti ráno. Banány prý přivezou.“              | „Fronta se pohnula. Banány jsou tvoje.“           |
+|  F4 | Velká voda (`great_flood`)        | Každá zahraná ruka zmenší velikost ruky o 1 (do konce kola).                            |  2,5× | „Voda stoupá! Karty do vyšších pater!“                      | „Voda opadla. Bláto zůstalo.“                     |
+|  F5 | Bílá paní (`white_lady`)          | Po každé zahrané ruce i zahození se všechny karty v ruce otočí lícem dolů a zamíchají.  |  1,5× | „O půlnoci se zjevuje na zámku. A otáčí karty.“             | „Zmizela. Klíče od sklepa taky.“                  |
 
 Cíle finálových šéfů jsou laděné simulací na letalitu 20–40 % (kap. 12.1): Bílá paní (hráč po každé akci vidí jen
 nově dobrané karty) má 1,5×, Pan starosta a Velká voda 2,5×, Krajský úřad 2,25×.
@@ -1170,7 +1174,7 @@ nově dobrané karty) má 1,5×, Pan starosta a Velká voda 2,5×, Krajský úř
 | --: | --------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------- | --------------------------------------------------- |
 |   1 | Hospodský (`pub`)           | Standardních 52 karet, pravidla beze změny.                                                                   | od začátku                            | „Lepkavé karty a tácek pod sklenicí.“               |
 |   2 | Štamgastův (`regulars`)     | +1 slot žolíka (6); start s 0 Kč.                                                                             | od začátku                            | „Má tu vlastní věšák. Na žolíky.“                   |
-|   3 | Úřednický (`clerk`)         | Start s kupóny Věrnostní karta a Trhací kalendář.                                                             | kup celkem 5 kupónů                   | „Všechno vyřízeno předem. Na razítko.“              |
+|   3 | Úřednický (`clerk`)         | Start s kupóny Trhací kalendář a Kamarád za pultem.                                                           | kup celkem 5 kupónů                   | „Všechno vyřízeno předem. Na razítko.“              |
 |   4 | Turistický (`tourist`)      | Postupka i Barva stačí ze 4 karet; cíle všech útrat ×1,2.                                                     | zahraj celkem 25 Postupek             | „Po červené, pak po modré, pak se ztratit.“         |
 |   5 | Mariášový (`marias`)        | 32 karet: 7–A ve 4 barvách (bez 2–6). Postupka A-2-3-4-5 tu není možná.                                       | zahraj Čtveřici                       | „Kdo nehraje, nevyhraje. Kdo hraje, flekuje.“       |
 |   6 | Obrázkový (`court`)         | 32 karet: J, Q, K, A ve 4 barvách, každá karta 2×; −1 karta v ruce (7); cíle ×1,5.                            | vyhraj run s Mariášovým               | „Samí páni, žádní pěšáci.“                          |
@@ -1200,17 +1204,21 @@ Upřesnění:
 Každá úroveň zahrnuje všechna ztížení nižších úrovní a přidává jedno nové. **Výhra na úrovni N s daným balíčkem
 odemkne úroveň N + 1 pro tento balíček.** Desítka je odemčená vždy.
 
-| Úr. | Název (`id`)              | Nové ztížení                                                                                                                                           | Implementace                                 | Cíl výher (simulace) |
-| --: | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- | -------------------: |
-|   1 | Desítka (`desitka`)       | Základní pravidla, křivka cílů 1.                                                                                                                      | `targetCurve: 1`                             |              25–35 % |
-|   2 | Jedenáctka (`jedenactka`) | **Dražší pivo:** ve Večerce stojí všechno o 1 Kč víc (žolíci, spotřebky, karty, obálky, kupóny, přehození). Prodejní ceny se nemění.                   | `shopPriceAdd +1` (nové pole)                |              20–30 % |
-|   3 | Dvanáctka (`dvanactka`)   | Křivka cílů 2.                                                                                                                                         | `targetCurve: 2`                             |              14–22 % |
-|   4 | Speciál (`special`)       | **Zvětrávání:** 25 % žolíků v obchodě a obálkách je zvětrávajících (po 6 kolech přestanou fungovat).                                                   | `stickerChance.perishable: 0,25`             |              10–17 % |
-|   5 | Ležák (`lezak`)           | **Bez dýška:** nevyužité ruce nedávají peníze.                                                                                                         | `moneyPerUnusedHand −1`                      |               7–12 % |
-|   6 | Bock (`bock`)             | Křivka cílů 3.                                                                                                                                         | `targetCurve: 3`                             |                4–8 % |
-|   7 | Doppelbock (`doppelbock`) | **Bazar a půjčovna:** 20 % žolíků v nabídce je přibitých a 15 % zapůjčených.                                                                           | `stickerChance.eternal: 0,2`, `rental: 0,15` |                3–6 % |
-|   8 | Imperial (`imperial`)     | **Šéf i ve Velké:** Velká útrata má navíc pravidlo náhodného běžného šéfa (jiného než šéf patra, `minAnte ≤ patro`); cíl 1,5× a odměna 4 Kč zůstávají. | `bigBlindBoss: true` (nové pole)             |        1–3 % (< 3 %) |
+| Úr. | Název (`id`)              | Nové ztížení                                                                                                                                           | Implementace                                       | Cíl výher (simulace) |
+| --: | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------- | -------------------: |
+|   1 | Desítka (`desitka`)       | Základní pravidla, křivka cílů 1.                                                                                                                      | `targetCurve: 1`                                   |              25–35 % |
+|   2 | Jedenáctka (`jedenactka`) | **Dražší pivo:** od 2. patra stojí ve Večerce všechno o 1 Kč víc (žolíci, spotřebky, karty, obálky, kupóny, přehození). Prodejní ceny se nemění.       | `shopPriceAdd +1` od patra 2 (`passive` čte patro) |              20–30 % |
+|   3 | Dvanáctka (`dvanactka`)   | Křivka cílů 2.                                                                                                                                         | `targetCurve: 2`                                   |              14–22 % |
+|   4 | Speciál (`special`)       | **Zvětrávání:** 25 % žolíků v obchodě a obálkách je zvětrávajících (po 6 kolech přestanou fungovat).                                                   | `stickerChance.perishable: 0,25`                   |              10–17 % |
+|   5 | Ležák (`lezak`)           | **Bez dýška:** od 3. patra nevyužité ruce nedávají peníze.                                                                                             | `moneyPerUnusedHand −1` od patra 3                 |               7–12 % |
+|   6 | Bock (`bock`)             | Křivka cílů 3.                                                                                                                                         | `targetCurve: 3`                                   |                4–8 % |
+|   7 | Doppelbock (`doppelbock`) | **Bazar a půjčovna:** 20 % žolíků v nabídce je přibitých a 15 % zapůjčených.                                                                           | `stickerChance.eternal: 0,2`, `rental: 0,15`       |                3–6 % |
+|   8 | Imperial (`imperial`)     | **Šéf i ve Velké:** Velká útrata má navíc pravidlo náhodného běžného šéfa (jiného než šéf patra, `minAnte ≤ patro`); cíl 1,5× a odměna 4 Kč zůstávají. | `bigBlindBoss: true` (nové pole)                   |        1–3 % (< 3 %) |
 
+- **Jedenáctka a Ležák platí až od 2. / 3. patra** (kalibrace po fázi 7, `docs/DECISIONS.md` „Balanc po fázi 7“):
+  ekonomické ztížení od prvního kola srazilo výhry Jedenáctky z ~33 na ~20 % a Ležáku ze ~13 na ~3 % a přes
+  kumulaci táhlo pod pásmo i Bock a Doppelbock. Patro se zvedá při výplatě po šéfovi, takže Večerka po šéfovi
+  1. patra už stojí o 1 Kč víc. Zapůjčený žolík stojí 1 Kč plus příplatek Jedenáctky (od 2. patra 2 Kč).
 - Nálepky se losují v pořadí přibitý → zapůjčený → zvětrávající, takže skutečné podíly na Doppelbocku a výš jsou
   přibližně 20 % přibitých, 12 % zapůjčených, 17 % zvětrávajících a 51 % bez nálepky.
 - Imperial: pro Velkou útratu se nelosují šéfové, jejichž pravidlo je jen vyšší cíl (Šanon na šanonu), ani šéf
@@ -1503,7 +1511,7 @@ Rozvržení a chování UI podle `CLAUDE.md` kap. 4 a 7. Všechny texty jsou v `
 | Herní obrazovka    | viz 13.2                                                                                                           |
 | Konec kola         | rozpis odměn (kap. 2.4.2) s animací po řádcích → **Vyplatit**                                                      |
 | Večerka            | kartové sloty, obálky, kupón, Přehodit (s cenou), Pokračovat; prodej z řady žolíků/spotřebek; prázdný stav (2.5.1) |
-| Výběr z obálky     | N karet, „Vyber {n}“, Přeskočit; u babských rad a razítek dole dobraná ruka pro výběr cílů                         |
+| Výběr z obálky     | N karet v jedné řadě (i 6 u mega obálky), „Vyber {n}“, Přeskočit; u rad a razítek dole dobraná ruka pro cíle       |
 | Pitva              | příčina (útrata / šéf + hláška `death`), statistiky runu, seed ke zkopírování, Nová hra / Menu                     |
 | Výhra              | titulky se statistikou runu → Konec / Nekonečný režim                                                              |
 | Info o runu        | úrovně kombinací (tajné „???“), složení balíčku, aktivní štítky, kupóny, ztížení síly piva, seed                   |
@@ -1524,8 +1532,10 @@ Rozvržení a chování UI podle `CLAUDE.md` kap. 4 a 7. Všechny texty jsou v `
   stůl, odpad) jsou v náhledu ztlumené — kromě karet **lícem dolů**: když nějaké mimo dobírací balíček jsou (Výluka na
   trati, Mlha nad Labem, Bílá paní, zakryté zahozené), náhled ukáže jen dobírací balíček a počet zakrytých karet
   (ruby), aby neprozradil jejich hodnotu ani místem v řadě barvy.
-- **Hlášky (toasty):** sloupec nahoře uprostřed jeviště nad stolem — nikdy přes ruku, Zahrát / Zahodit a balíček
-  (mimo hru vpravo dole). Nejvýš 3 naráz, nejnovější dole, starší ustupují; stejná hláška znovu jen přičte „×2“.
+- **Hlášky (toasty):** sloupec uprostřed jeviště nad stolem — u panelu Večerky, obálky, výběru útraty… ve volném
+  místě pod panelem, když se tam celý vejde (tablet, Večerka s málo zbožím), jinak hned pod záhlavím panelu
+  s tlačítky — nikdy přes ruku, Zahrát / Zahodit a balíček (mimo hru vpravo dole). Nejvýš 3 naráz, nejnovější dole,
+  starší ustupují; stejná hláška znovu jen přičte „×2“.
   Výchozí doba zobrazení (info 4 s, varování 5 s, chyba 6 s) se při rychlosti hry 2×–4× zkracuje (÷ √rychlost,
   nejméně 2,2 / 2,8 / 4 s); s vypnutými animacemi přicházejí a odcházejí bez animace.
 
@@ -1666,7 +1676,7 @@ Každý šéf a obě běžné útraty mají hlášku `death` (fáze 6 doplní v�
 | Polední pauza         | „Přijďte po obědě. Zítra.“                             |
 | Pan starosta          | „Sliby chyby.“                                         |
 | Krajský úřad          | „Vaše žádost byla zamítnuta. Odvolání není přípustné.“ |
-| Protihluková stěna    | „Hlavou zeď neprorazíš.“                               |
+| Fronta na banány      | „Na tebe už nezbyly. Fronta se rozchází.“              |
 | Velká voda            | „Topíš se v kartách.“                                  |
 | Bílá paní             | „Strašidelně slabý výkon.“                             |
 
