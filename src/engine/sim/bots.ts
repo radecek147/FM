@@ -34,7 +34,6 @@ import type {
   JokerInstance,
   RoundState,
   RunState,
-  ShopItem,
 } from '../types';
 import { HAND_TYPES, SUITS } from '../types';
 import {
@@ -201,8 +200,8 @@ const STICKER_VALUE: Readonly<Record<string, number>> = { eternal: 0.95, perisha
 
 // ─────────────────────────── Měřená hodnota žolíků (src/engine/sim/lab.ts) ───────────────────────────
 
-/** Kč za jednotku ln(skóre typických rukou) — ×1,5 ve skórování ≈ 8 Kč. */
-const POWER_KC = 20;
+/** Kč za jednotku ln(skóre typických rukou) — ×1,5 ve skórování ≈ 18 Kč. */
+const POWER_KC = 45;
 /** Štítky efektů, které se projeví přímo ve skórování (měří je laboratoř). */
 const SCORING_TAGS: readonly JokerTag[] = ['chips', 'mult', 'xmult', 'retrigger', 'copy'];
 /** Žolík bez skórovacího efektu (ekonomika, užitek): heuristika × tolik Kč za jednotku hodnocení. */
@@ -262,14 +261,13 @@ const SUIT_FAVOR_PER_JOKER = 1.5;
 /** Nejvýš tolik přehození v jedné Večerce (rozumný bot / náhodný bot) — počítadlo je ve stavu Večerky. */
 const MAX_SHOP_REROLLS = 3;
 const RANDOM_MAX_SHOP_REROLLS = 10;
-/** S penězi nad rezervou aspoň `REROLL_RICH_KC` smí přehodit až `MAX_SHOP_REROLLS_RICH`×. */
-const MAX_SHOP_REROLLS_RICH = 5;
-const REROLL_RICH_KC = 20;
-/** Přehazovat kvůli výměně žolíka jen s penězi nad rezervou aspoň cena + tolik a se žolíkem horším než tolik. */
+/** S volným slotem +1 přehození za každých `REROLL_RICH_KC` Kč nad rezervou, celkem nejvýš `MAX_SHOP_REROLLS_RICH`. */
+const MAX_SHOP_REROLLS_RICH = 6;
+const REROLL_RICH_KC = 10;
+/** S plnými sloty přehazovat jen s penězi nad rezervou aspoň cena + tolik (1 přehození za každých tolik Kč). */
 const REROLL_UPGRADE_KC = 6;
-const UPGRADE_WORST_MAX = 2;
-/** Výměna žolíka: nový musí být aspoň o tolik lepší (násobek hodnocení). */
-const UPGRADE_RATIO = 1.3;
+/** Rezerva na úrok se rozpouští: za posledních tolik kol 0, za dvojnásobek polovina. */
+const RESERVE_END_ROUNDS = 3;
 
 // ─────────────────────────── Spotřebky, obálky, kupóny (Kč, src/engine/sim/value.ts) ───────────────────────────
 
@@ -550,8 +548,7 @@ class StrategyBot implements Bot {
     const safeCount = s.jokers.length - off.size;
     // Žolík vypnutý jinak než pozicí (Exekutor) nefunguje nikde — fungující pozici nepotřebuje.
     const ruled = new Set(s.round?.ruleJokerDebuffs ?? []);
-    const rating = (j: JokerInstance): number =>
-      j.debuffed && !ruled.has(j.uid) ? 0 : this.jokerRating(game, j);
+    const rating = (j: JokerInstance): number => (j.debuffed && !ruled.has(j.uid) ? 0 : this.keepKc(game, j));
     const ranked = [...keyed].sort((a, b) => rating(b.j) - rating(a.j) || a.i - b.i);
     const good = ranked.slice(0, safeCount).sort(byKey);
     const rest = ranked.slice(safeCount).sort(byKey);
@@ -581,8 +578,11 @@ class StrategyBot implements Bot {
   private lab(game: Game): BuildLab {
     if (this.labCache?.game === game) return this.labCache.lab;
     const favor = suitFavor(game);
-    const lab = makeLab(game, makeEnv(game, this.handPref(game)), (cards) =>
-      this.filler(cards, drawInfo(cards, favor)),
+    const lab = makeLab(
+      game,
+      makeEnv(game, this.handPref(game)),
+      (cards) => this.filler(cards, drawInfo(cards, favor)),
+      this.name,
     );
     this.labCache = { game, lab };
     return lab;
@@ -647,25 +647,35 @@ class StrategyBot implements Bot {
   }
 
   /**
-   * Měřená hodnota žolíka `j` v Kč: přidání do sestavy (bez `replaceUid`, nebo místo žolíka `replaceUid`) proti
-   * současné sestavě. Skórovací část × podíl zbytku runu, kdy žolík funguje (zvětrávání).
+   * Měřená hodnota žolíka `j` v Kč: přidání do sestavy proti současné sestavě (skórovací část × podíl zbytku runu,
+   * kdy žolík funguje — zvětrávání) a nejlepší výměna: sestava s `j` bez jednoho vlastního žolíka (mimo přibité),
+   * odhadnutá přehráním z téhož přepočtu. `swap` = null, když není koho prodat.
    */
-  private addKc(game: Game, j: JokerInstance, replaceUid?: number): number {
+  private offerKc(game: Game, j: JokerInstance): { add: number; swap: { uid: number; kc: number } | null } {
     const lab = this.lab(game);
     const cur = game.state.jokers;
-    const rest = replaceUid === undefined ? [...cur] : cur.filter((x) => x.uid !== replaceUid);
-    const gained = this.powerKc(lab.base, lab.score(this.ordered(game, [...rest, j])));
-    const removed = replaceUid === undefined ? null : cur.find((x) => x.uid === replaceUid);
-    return (
-      gained * this.activeShare(game, j) + this.extrasKc(game, j) - (removed ? this.extrasKc(game, removed) : 0)
-    );
+    const v = lab.variants(this.ordered(game, [...cur, j]));
+    const share = this.activeShare(game, j);
+    const extra = this.extrasKc(game, j);
+    const add = this.powerKc(lab.base, v.total) * share + extra;
+    let swap: { uid: number; kc: number } | null = null;
+    for (const w of cur) {
+      if (w.stickers.includes('eternal')) continue;
+      const kc = this.powerKc(lab.base, v.without(w.uid)) * share + extra - this.extrasKc(game, w);
+      if (!swap || kc > swap.kc) swap = { uid: w.uid, kc };
+    }
+    return { add, swap };
+  }
+
+  /** Měřená hodnota žolíka `j` přidaného do volného slotu (Kč). */
+  private addKc(game: Game, j: JokerInstance): number {
+    return this.offerKc(game, j).add;
   }
 
   /** Měřená hodnota vlastního žolíka v Kč: o kolik je sestava s ním lepší než bez něj. */
   private keepKc(game: Game, j: JokerInstance): number {
     const lab = this.lab(game);
-    const without = game.state.jokers.filter((x) => x.uid !== j.uid);
-    return Math.max(0, this.powerKc(lab.score(without), lab.base)) + this.extrasKc(game, j);
+    return Math.max(0, this.powerKc(lab.without(j.uid), lab.base)) + this.extrasKc(game, j);
   }
 
   /**
@@ -674,7 +684,7 @@ class StrategyBot implements Bot {
    */
   private levelKc(game: Game, hand: HandType): number {
     const lab = this.lab(game);
-    const measured = lab.typeShare[hand] ? this.powerKc(lab.base, lab.score(game.state.jokers, hand)) : 0;
+    const measured = lab.typeShare[hand] ? this.powerKc(lab.base, lab.levelUp(hand)) : 0;
     const played = game.state.stats.handTypeCounts[hand] ?? 0;
     const total = Math.max(1, game.state.stats.handsPlayed);
     const prior = (this.style.favorHands.includes(hand) ? 0.6 : 0) + (0.8 * played) / total;
@@ -1102,7 +1112,10 @@ class StrategyBot implements Bot {
     const full = Math.max(0, mods.interestStep * mods.interestCap);
     if (this.style.fullReserve) return full;
     if (game.state.jokers.length === 0) return 0;
-    return Math.min(full, Math.max(0, mods.interestStep * (game.state.ante - 1)));
+    const r = Math.min(full, Math.max(0, mods.interestStep * (game.state.ante - 1)));
+    // Úrok se vyplatí jen za zbývající kola: na konci runu se rezerva rozpustí.
+    const left = roundsLeft(game);
+    return left <= RESERVE_END_ROUNDS ? 0 : left <= 2 * RESERVE_END_ROUNDS ? r / 2 : r;
   }
 
   private affordable(game: Game, price: number, extra = 0): boolean {
@@ -1159,16 +1172,6 @@ class StrategyBot implements Bot {
     return r;
   }
 
-  private worstJoker(game: Game): { uid: number; rating: number } | null {
-    let worst: { uid: number; rating: number } | null = null;
-    for (const j of game.state.jokers) {
-      if (j.stickers.includes('eternal')) continue;
-      const rating = this.jokerRating(game, j);
-      if (!worst || rating < worst.rating) worst = { uid: j.uid, rating };
-    }
-    return worst;
-  }
-
   /** Peníze navíc nad rezervu na úrok (po zaplacení `price` zbyde aspoň `extra`). */
   private surplus(game: Game, price: number, extra: number): boolean {
     return this.affordable(game, price, extra);
@@ -1189,33 +1192,38 @@ class StrategyBot implements Bot {
   }
 
   /**
-   * Nákup nebo výměna žolíka: nejlépe hodnocená nabídka nad `minJokerRating`, do volného slotu (i na dluh, když to
-   * dluhový limit dovolí), při plných slotech prodá nejslabšího, je-li nabídka o 30 % lepší.
+   * Nákup nebo výměna žolíka podle měřené hodnoty (laboratoř): do volného slotu nabídka s největším přebytkem
+   * hodnoty nad cenou × poměr × pocit z ceny (i na dluh, když to dluhový limit dovolí; při málo žolících stačí
+   * nižší poměr), při plných slotech prodá nejslabšího, když výměna přinese víc než čistou cenu a rezervu.
+   * Bot `econ` navíc kupuje jen nad prahem heuristického hodnocení (`minJokerRating`).
    */
   private jokerPurchase(game: Game): Action | null {
     const shop = game.state.shop;
     if (!shop || !this.style.buysJokers) return null;
-    const offers = shop.items
-      .map((it, i) => ({ it, i }))
-      .filter(
-        (x): x is { it: ShopItem & { kind: 'joker' }; i: number } => x.it.kind === 'joker' && !x.it.sold,
-      )
-      .map((x) => ({ ...x, rating: this.jokerRating(game, x.it.joker) }))
-      .sort((a, b) => b.rating - a.rating || a.i - b.i);
-    for (const o of offers) {
-      if (o.rating < this.style.minJokerRating) continue;
-      if (jokerRoom(game, o.it.joker)) {
-        if (this.affordable(game, o.it.price) || this.debtAffordable(game, o.it.price))
-          return { type: 'buy', slot: o.i };
-        continue;
+    const s = game.state;
+    const few = s.jokers.length < Math.min(game.modifiers().jokerSlots, s.ante + 1);
+    const pf = this.priceFactor(game);
+    let best: { action: Action; score: number } | null = null;
+    shop.items.forEach((it, i) => {
+      if (it.kind !== 'joker' || it.sold) return;
+      if (this.style.minJokerRating > 1 && this.jokerRating(game, it.joker) < this.style.minJokerRating) return;
+      if (jokerRoom(game, it.joker)) {
+        if (!(this.affordable(game, it.price) || this.debtAffordable(game, it.price))) return;
+        const surplus = this.addKc(game, it.joker) - it.price * (few ? JOKER_FEW_RATIO : JOKER_BUY_RATIO) * pf;
+        if (surplus >= 0 && (!best || surplus > best.score)) best = { action: { type: 'buy', slot: i }, score: surplus };
+        return;
       }
-      const worst = this.worstJoker(game);
-      if (worst && o.rating > worst.rating * UPGRADE_RATIO) {
-        const net = o.it.price - game.sellValue(worst.uid);
-        if (this.affordable(game, net)) return { type: 'sellJoker', uid: worst.uid };
-      }
-    }
-    return null;
+      const maxSell = Math.max(0, ...s.jokers.map((j) => game.sellValue(j.uid)));
+      if (!this.affordable(game, it.price - maxSell)) return;
+      const swap = this.offerKc(game, it.joker).swap;
+      if (!swap) return;
+      const net = it.price - game.sellValue(swap.uid);
+      if (!this.affordable(game, net)) return;
+      const surplus = swap.kc - Math.max(0, net) * JOKER_SWAP_RATIO * pf - JOKER_SWAP_MARGIN_KC;
+      if (surplus >= 0 && (!best || surplus > best.score))
+        best = { action: { type: 'sellJoker', uid: swap.uid }, score: surplus };
+    });
+    return (best as { action: Action; score: number } | null)?.action ?? null;
   }
 
   /** Pranostiky, které teď může nabídnout obchod nebo obálka (tajné až po objevu). */
@@ -1352,12 +1360,17 @@ class StrategyBot implements Bot {
     ) {
       const free = s.money - this.reserve(game);
       const room = jokerRoom(game);
-      const worst = room ? null : this.worstJoker(game);
-      const upgrade = Boolean(worst && worst.rating < UPGRADE_WORST_MAX);
-      const limit = free >= REROLL_RICH_KC ? MAX_SHOP_REROLLS_RICH : MAX_SHOP_REROLLS;
+      // S volným slotem stačí 2× cena přehození nad rezervou (DESIGN 12.2); s plnými sloty se přehazuje kvůli
+      // výměně — jen s penězi na koupi po přehození a víckrát, čím víc peněz nad rezervou bot má.
+      const limit = Math.min(
+        MAX_SHOP_REROLLS_RICH,
+        room
+          ? MAX_SHOP_REROLLS + Math.floor(free / REROLL_RICH_KC)
+          : Math.floor((free - REROLL_UPGRADE_KC) / REROLL_UPGRADE_KC),
+      );
       if (
         shop.rerollsThisShop < limit &&
-        ((room && free >= 2 * shop.rerollCost) || (upgrade && free >= shop.rerollCost + REROLL_UPGRADE_KC))
+        ((room && free >= 2 * shop.rerollCost) || (!room && free >= shop.rerollCost + REROLL_UPGRADE_KC))
       )
         return { type: 'reroll' };
     }
@@ -1394,14 +1407,14 @@ class StrategyBot implements Bot {
       const pick: Action = { type: 'pickBooster', index };
       if (opt.kind === 'joker') {
         if (!this.style.buysJokers) return;
-        const rating = this.jokerRating(game, opt.joker);
         if (jokerRoom(game, opt.joker)) {
-          offer(rating * JOKER_KC, pick);
+          offer(this.addKc(game, opt.joker), pick);
           return;
         }
-        const worst = this.worstJoker(game);
-        if (worst && rating > worst.rating * UPGRADE_RATIO)
-          offer((rating - worst.rating) * JOKER_KC - 0.5, { type: 'sellJoker', uid: worst.uid });
+        const swap = this.offerKc(game, opt.joker).swap;
+        if (!swap) return;
+        const gain = swap.kc - JOKER_SWAP_MARGIN_KC;
+        if (gain > 0) offer(gain + game.sellValue(swap.uid), { type: 'sellJoker', uid: swap.uid });
       } else if (opt.kind === 'card') {
         offer(((cardWorth(view, opt.card) - avg) * 52) / (n + 1), pick);
       } else {
