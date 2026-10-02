@@ -126,6 +126,30 @@ export function formatMoney(n: number): string {
   return `${formatNumber(n)}${NBSP}${CURRENCY}`;
 }
 
+/**
+ * Vokalizuje se předložka „z“ před číslem? Podle prvního čteného slova: „ze dvou, ze tří, ze čtyř, ze šesti,
+ * ze sedmi, ze sta“, ale „z pěti, z osmi, z deseti, z tisíce“. Desetinná a záporná čísla → „z“.
+ */
+export function vocalizesZ(n: number): boolean {
+  if (!Number.isInteger(n) || n < 0) return false;
+  if (n >= 1000) {
+    const thousands = Math.floor(n / 1000);
+    return thousands === 1 ? false : vocalizesZ(thousands);
+  }
+  if (n >= 100) {
+    const hundreds = Math.floor(n / 100);
+    return hundreds === 1 || vocalizesZ(hundreds);
+  }
+  if (n >= 20) return vocalizesZ(Math.floor(n / 10));
+  // 2–4, 6, 7 i dvanáct, třináct, čtrnáct, šestnáct, sedmnáct
+  return [2, 3, 4, 6, 7].includes(n % 10);
+}
+
+/** Předložka „z“ / „ze“ s číslem: `ze 2`, `z 5`, `ze 78` (s NBSP, aby se nezalomilo). */
+export function formatFrom(n: number): string {
+  return `${vocalizesZ(n) ? 'ze' : 'z'}${NBSP}${formatNumber(n)}`;
+}
+
 // ─────────────────────────── Typografie ───────────────────────────
 
 /**
@@ -202,6 +226,8 @@ function applyFilter(value: string | number, filter: string | undefined, arg: st
       return formatSigned(n);
     case 'x':
       return formatXMult(n);
+    case 'z':
+      return formatFrom(n);
     default:
       return formatValue(value);
   }
@@ -213,7 +239,8 @@ function applyFilter(value: string | number, filter: string | undefined, arg: st
  *  - `{key}` — číslo se naformátuje česky (`formatNumber`), řetězec se vloží beze změny,
  *  - `{key|plural:karta,karty,karet}` — číslo + tvar slova (`3 karty` s NBSP),
  *  - `{key|word:karta,karty,karet}` — jen tvar slova (`karty`),
- *  - `{key|money}` → `5 Kč`, `{key|signed}` → `+5`, `{key|x}` → `×1,5`, `{key|raw}` → bez formátování.
+ *  - `{key|money}` → `5 Kč`, `{key|signed}` → `+5`, `{key|x}` → `×1,5`, `{key|raw}` → bez formátování,
+ *  - `{key|z}` → předložka s číslem: `ze 2`, `z 5` (místo natvrdo psaného „z {key}“).
  *
  * Chybějící parametr nechá zástupný symbol beze změny (aby chyba byla v UI vidět).
  */

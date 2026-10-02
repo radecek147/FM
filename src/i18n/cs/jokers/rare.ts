@@ -4,7 +4,7 @@ import type { TextTree } from '../../cs';
 export const jokersRare = {
   late_train: {
     name: 'Zpožděný rychlík',
-    desc: '{xmult|x} mult; {chance} z {odds}, že efekt „nabere zpoždění“ a nenastane.',
+    desc: '{xmult|x} mult; {chance} {odds|z}, že efekt „nabere zpoždění“ a nenastane.',
     flavor: 'Mult přijede s mírným zpožděním.',
     delay: 'Zpoždění! Mult dorazí příště.',
   },
@@ -44,9 +44,8 @@ export const jokersRare = {
     flavor: 'Haló! …haló …aló …ló …ó.',
   },
   lucky_seven: {
-    // „ze 7“: předložka před „sedmi“ se vokalizuje — při změně `odds` zkontrolovat (z 6, ze 7, z 8).
     name: 'Šťastná sedmička',
-    desc: 'Každá skórující karta: {chance} ze {odds}, že skóruje ještě {retriggers}×.',
+    desc: 'Každá skórující karta: {chance} {odds|z}, že skóruje ještě {retriggers}×.',
     flavor: 'Automat v nádražce sype jednou za čas. Zato pořádně.',
   },
   tab: {

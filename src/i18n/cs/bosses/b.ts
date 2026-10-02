@@ -90,7 +90,7 @@ export const bossesB = {
   },
   even_days: {
     name: 'Sudé dny',
-    rule: 'Liché karty (A, 3, 5, 7, 9) jsou mimo provoz; figury nejsou liché ani sudé.',
+    rule: 'Liché karty (esa, trojky, pětky, sedmičky a devítky) jsou mimo provoz; figury nejsou liché ani sudé.',
     intro: 'Smogová regulace: dnes hrají jen sudé.',
     defeat: 'Regulace odvolána, liché zpátky v provozu.',
     death: 'Dnes nebyl tvůj den. Ani sudý, ani lichý.',

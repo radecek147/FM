@@ -310,10 +310,10 @@ describe('běžní žolíci fáze 7 – texty', () => {
     );
     expect(rendered).toEqual({
       helpline_aunt:
-        'Po použití babské rady 1 z 2, že vznikne další náhodná babská rada (potřebuje volný slot).',
+        'Po použití babské rady 1 ze 2, že vznikne další náhodná babská rada (potřebuje volný slot).',
       weekend_cottager: '+3 mult za každý prázdný slot spotřebky.',
       shooting_gallery: 'Každá skórující desítka nebo figura dá +3 mult.',
-      tobacconist: 'Při vstupu do Večerky 1 z 2, že ti dá náhodnou pranostiku (potřebuje volný slot).',
+      tobacconist: 'Při vstupu do Večerky 1 ze 2, že ti dá náhodnou pranostiku (potřebuje volný slot).',
       ticket_inspector: '+50 čipů, pokud mezi zahranými kartami není žádná figura.',
       doorman: 'Každá figura držená v ruce dá +4 mult.',
       goldsmith: 'Na konci kola promění náhodnou kartu bez vylepšení drženou v ruce na zlatou.',
@@ -324,15 +324,15 @@ describe('běžní žolíci fáze 7 – texty', () => {
       grill_dad: '+60 čipů, pokud se v tomto kole zahazovalo právě 1×.',
       teacher:
         '+15 mult, pokud mají všechny skórující karty sudou hodnotu (dvojky, čtyřky, šestky, osmičky a desítky).',
-      hejkal: '1 z 3, že zahraná ruka dostane +15 mult.',
+      hejkal: '1 ze 3, že zahraná ruka dostane +15 mult.',
       tram_driver: '+18 mult, pokud to není první ruka kola a v kole už se zahazovalo.',
-      punter: 'Na konci kola 1 z 3, že vyhraje 7 Kč.',
+      punter: 'Na konci kola 1 ze 3, že vyhraje 7 Kč.',
       pavlac_gossip: '×1,5 mult, pokud je zahraná kombinace stejná jako v minulé ruce.',
       round_for_everyone: '×1,4 mult, pokud zahraješ 5 karet a všechny skórují.',
       pickled_cheese: '+6 čipů za každou kartu drženou v ruce.',
       thirteenth_salary: 'Po porážce šéfa dostaneš v odměnách navíc 8 Kč.',
       temp_worker: 'Na konci kola +2 Kč za každou ruku zahranou v tomto kole.',
-      fisherman: 'Po každém zahození 1 z 2, že něco chytí: náhodnou babskou radu (potřebuje volný slot).',
+      fisherman: 'Po každém zahození 1 ze 2, že něco chytí: náhodnou babskou radu (potřebuje volný slot).',
       garbage_man: 'Každá zahozená karta s hodnotou nejvýš 5 mu trvale přidá +1 čip (teď +0 čipů).',
       jukebox: 'Skórující karty s nejvyšší hodnotou skórují ještě 1×.',
       tool_shed: '+1 slot spotřebky.',

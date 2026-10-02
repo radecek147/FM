@@ -7,7 +7,7 @@ import { DEATH_QUOTES } from './game';
 export const cli = {
   usage:
     'Použití: npm run simulate -- [--runs 500] [--stake 1] [--deck pub] [--bot all|max,flush,…] [--seed-prefix A] [--json [soubor]]\n' +
-    '         npm run simulate -- --play [--seed SEED] [--deck pub] [--stake 1] [--script „v;h 1 2 3;d“]',
+    "         npm run simulate -- --play [--seed SEED] [--deck pub] [--stake 1] [--script 'v;h 1 2 3;d']",
   errors: {
     prefix: 'simulate:',
     positiveInt: 'Volba --{name} chce kladné celé číslo (zadáno „{value}“).',
@@ -56,7 +56,7 @@ export const cli = {
     content:
       'Obsah: {jokers|plural:žolík,žolíci,žolíků}, {bosses|plural:šéf,šéfové,šéfů}, {consumables|plural:spotřebka,spotřebky,spotřebek}, {boosters|plural:obálka,obálky,obálek}',
     bot: 'Bot {id} – {name}: {desc}',
-    wins: 'Výhry: {wins} z {runs} ({rate} %)',
+    wins: 'Výhry: {wins} {runs|z} ({rate} %)',
     reached: 'Dosažená patra: {list}',
     losses: 'Prohry podle patra: {list}',
     anteItem: '{ante}: {pct} %',
@@ -134,7 +134,7 @@ export const cli = {
     round: {
       boss: 'Šéf: {boss} – {rule}',
       target: 'Dosáhni aspoň {target} · skóre kola {score}',
-      status: 'Ruce {hands} · zahození {discards} · peníze {money|money} · v balíčku {left} z {total}',
+      status: 'Ruce {hands} · zahození {discards} · peníze {money|money} · v balíčku {left} {total|z}',
       hand: 'Ruka: {cards}',
       best: 'V ruce je: {hand} ({cards})',
       hint: '„h 1 2 3“ zahrát, „z 4 5“ zahodit, „n 1 2“ náhled, „s“/„b“ třídění',
@@ -169,8 +169,8 @@ export const cli = {
       voucher: 'kupón',
     },
     owned: {
-      jokers: 'Žolíci ({n} z {max}): {list}',
-      consumables: 'Spotřebky ({n} z {max}): {list}',
+      jokers: 'Žolíci ({n} {max|z}): {list}',
+      consumables: 'Spotřebky ({n} {max|z}): {list}',
       tags: 'Štítky: {list}',
       none: 'nic',
     },
@@ -182,7 +182,7 @@ export const cli = {
     },
     gameOver: {
       title: 'pitva',
-      line: 'Run skončil v patře {ante} – {blind}: skóre {score} z {target}.',
+      line: 'Run skončil v patře {ante} – {blind}: skóre {score} {target|z}.',
       cause: 'Příčina: {cause}',
       stats: 'Vyhraná kola: {rounds} · nejlepší ruka: {best} ({hand})',
       noHand: 'žádná',
@@ -198,7 +198,7 @@ export const cli = {
       played: '{cards} → {hand} (úroveň {level}): {chips} × {mult} = {score} · skóre kola {round}',
       blocked: '{cards} → {hand}: ruka se nepočítá – {reason}',
       discarded: 'Zahozeno: {cards}',
-      roundWon: 'Kolo vyhráno: {score} z {target}.',
+      roundWon: 'Kolo vyhráno: {score} {target|z}.',
       cashedOut: 'Vyplaceno: {amount|money}.',
       bought: 'Koupeno: {name} za {price|money}.',
       sold: 'Prodáno: {name} za {price|money}.',

@@ -160,7 +160,7 @@ describe('výzvy – obsah (DESIGN 11.1)', () => {
         .replace(/\u00a0/g, ' ');
     expect(rules('dry_february')).toContain(t('vouchers.tear_calendar.name'));
     expect(rules('greenhouse')).toContain(t('consumables.apple_tree.name'));
-    expect(rules('greenhouse')).toContain('1 z 2');
+    expect(rules('greenhouse')).toContain('1 ze 2');
     expect(rules('quarry')).toContain(t('jokers.golem.name'));
     expect(rules('quarry')).toContain('64 karet');
     expect(rules('svejk_anabasis')).toContain(t('jokers.svejk.name'));
@@ -229,7 +229,7 @@ describe('výzvy – start runu', () => {
 // ─────────────────────────── Pravidla ───────────────────────────
 
 describe('výzvy – pravidla', () => {
-  it('Skleník: ♥ a ♦ skleněné, ostatní bez vylepšení; sklo praská 1 z 2 (i v popisku)', () => {
+  it('Skleník: ♥ a ♦ skleněné, ostatní bez vylepšení; sklo praská 1 ze 2 (i v popisku)', () => {
     const g = run('greenhouse');
     for (const c of g.state.deck)
       expect(c.enhancement, `${c.rank}${c.suit}`).toBe(c.suit === 'H' || c.suit === 'D' ? 'glass' : null);
@@ -237,7 +237,7 @@ describe('výzvy – pravidla', () => {
     expect(REG.enhancements.glass!.describe!(g.modifiers())).toEqual({ odds: 2 });
     expect(
       enhancementTexts('glass', { registry: REG, mods: g.modifiers() }).desc.replace(/\u00a0/g, ' '),
-    ).toContain('1 z 2');
+    ).toContain('1 ze 2');
   });
 
   it('Minimalista: nejvýš 3 karty; Vysoká karta, Dvojice a Trojice na úrovni 3', () => {

@@ -5,21 +5,19 @@
 
 ## Aktuální stav
 
-_Aktualizováno: 2026-10-02 (fáze 10: balanc)_
+_Aktualizováno: 2026-10-02 (fáze 10: vydání 1.0)_
 
-**Shrnutí:** fáze 0–9 jsou hotové a commitnuté. **Fáze 10 (Dokončení 1.0) rozpracovaná:** hotový výkon (code
-splitting, hlavní chunk 93 kB), offline (service worker), Lighthouse > 90, bugfix z průchodů UI, README česky se
-snímky a GIFem (DECISIONS „Fáze 10 (výkon, offline, přístupnost, bugfix)“ a „Fáze 10: README, snímky a GIF, licence
-MIT“) a **balanc** (DECISIONS „Fáze 10: balanc (silnější boti, cíle patra 8, žolíci, balíčky)“): silnější boti
-s laboratoří buildu a metrikou síly v `npm run simulate` (`src/engine/sim/*`), přírůstky úrovní kombinací ×2
-(`src/content/hands.ts`), křivky cílů s patrem 8 na 95 000 / 110 000 / 115 000 (`src/engine/run/targets.ts`),
-6 přeladěných žolíků, finální šéfové Fronta na banány 3,5× a Bílá paní 1,25×, Jedenáctka (+1 Kč jen za přehození),
-Speciál 40 %, Imperial cíle šéfů ×1,1 (`src/content/stakes.ts`) a 6 balíčků (`src/content/decks.ts`: Turistický,
-Obrázkový, Notářský, Zbohatlík, Babiččin, Kalendářový). Výsledek (souhrn sad A–C): Desítka 31,2 %, Jedenáctka 28 %,
-Dvanáctka 19 %, Speciál 15,2 %, Ležák 7,8 %, Bock 7,3 %, Doppelbock 4,2 %, Imperial 2,0 %; balíčky v pásmu
-DESIGN 12.1. Balanc je zatím jen v pracovním stromu (necommitnuto po `302d09b`).
-**Další krok:** commit balancu, jazyková korektura všech textů, `ASSETS.md` a atribuce v Titulcích, pokrytí enginu
-≥ 80 % a e2e, deploy na GitHub Pages, kontrola definice hotovo, tag `v1.0.0`.
+**Shrnutí:** fáze 0–10 jsou hotové, **verze 1.0.0** je otagovaná (`v1.0.0`). Fáze 10 (DECISIONS „Fáze 10 (výkon,
+offline, přístupnost, bugfix)“, „Fáze 10: README, snímky a GIF, licence MIT“, „Fáze 10: balanc (silnější boti, cíle
+patra 8, žolíci, balíčky)“ a „Fáze 10: korektura textů, předložka z/ze, vydání 1.0“): code splitting a offline
+(service worker), Lighthouse > 90, README se snímky a GIFem, balanc (Desítka 31,2 %, Imperial 2,0 %, všech
+8 sil piva i 12 balíčků v pásmu), jazyková korektura (35 oprav, filtr `{n|z}` pro „z / ze“ před číslem), pokrytí
+enginu 97,6 % příkazů / 93 % větví, test minimálních počtů obsahu, `ASSETS.md` i s odvozeným písmem.
+**Zbývá jen deploy na GitHub Pages:** vlastník repozitáře musí jednorázově zapnout Pages (Settings → Pages →
+Source = GitHub Actions), pak stačí znovu spustit workflow „Deploy to GitHub Pages“ (ručně nebo pushem tagu);
+adresa bude https://radecek147.github.io/FM/.
+**Další krok:** po zapnutí Pages ověřit nasazení a odškrtnout ho; pak obsahové patche (sekce „Obsahové patche
+(po 1.0)“ níže, nápady v `docs/IDEAS.md`).
 Pozn.: e2e spouštět vždy jen z jednoho procesu (sdílený port 4173). Simulace: `npm run simulate -- --runs 300
 --stake 1 --bot all --seed-prefix A` trvá ~25 min (run ~1 s na bota).
 
@@ -348,14 +346,14 @@ průměrném notebooku; kontroly zelené; commit `feat(ui): juice and audio`; f�
 - [x] Bugfix, konzole bez chyb a varování (45 průchodů `ui-walkthrough` přes balíčky, síly piva, výzvy a denní run, s animacemi i bez; e2e `sweep.spec.ts` přes všechny obrazovky mimo hru; opraveno třesení prvků při hoveru, Štamgast bez ikon, Enter po zavření detailu žolíka a pořadí debuffů žolíků závislé na cestě — DECISIONS „Fáze 10 (výkon, offline, přístupnost, bugfix)“)
 - [x] Výkon: code splitting — hlavní chunk 93 kB / 33 kB gzip (dřív 630 / 202 kB), obrazovky mimo menu jako líné chunky s přednačtením, ikony až po vykreslení menu (ARCHITECTURE 8.1)
 - [x] Lighthouse: výkon a přístupnost > 90 na herní obrazovce (desktop: menu výkon 99–100 / přístupnost 100, přechod do hry 100, herní obrazovka přístupnost 100; mobil: menu 97–98; přístupnost 100 na všech obrazovkách a fázích hry)
-- [ ] Jazyková korektura všech textů (pravopis, typografie, `plural()`, tykání)
-- [ ] `ASSETS.md` kompletní s licencemi, atribuce (game-icons.net, Pixelify Sans) i v Titulcích
+- [x] Jazyková korektura všech textů (pravopis, typografie, `plural()`, tykání) — ~2 600 textů, hunspell + regexy, 35 oprav ve 14 souborech, filtr `{n|z}` (ze 2 / z 5), všech ~300 popisků obsahu porovnáno s kódem (DECISIONS „Fáze 10: korektura textů, předložka z/ze, vydání 1.0“)
+- [x] `ASSETS.md` kompletní s licencemi, atribuce (game-icons.net, Pixelify Sans) i v Titulcích (`src/ui/screens/credits.ts`; doplněno odvozené písmo Karban Digits, OFL 1.1)
 - [x] README česky: popis, screenshoty, GIF, jak spustit, „inspirováno hrou Balatro“, licence (`README.md`, `LICENSE` = MIT, snímky a GIF v `docs/media/` ze skriptu `scripts/readme-media.ts`; DECISIONS „Fáze 10: README, snímky a GIF, licence MIT“)
 - [x] Hra funguje offline po prvním načtení: ručně psaný service worker s precache buildu (`src/sw/sw.ts`, plugin `scripts/sw-plugin.ts`), bezpečná aktualizace; e2e `offline.spec.ts` i pod `BASE_PATH=/FM/` (ARCHITECTURE 8.2)
 - [ ] Deploy na GitHub Pages (`base`)
-- [ ] Testy a e2e zelené, pokrytí enginu ≥ 80 %
-- [ ] Kontrola definice hotovo v1.0 (`CLAUDE.md` kap. 10)
-- [ ] Tag `v1.0.0`
+- [x] Testy a e2e zelené, pokrytí enginu ≥ 80 % (příkazy 97,6 %, větve 93,0 %, funkce 99,1 %, řádky 99,2 %; 80 souborů unit testů, e2e zelené)
+- [x] Kontrola definice hotovo v1.0 (`CLAUDE.md` kap. 10): dohratelnost na všech balíčcích (simulace + `ui-walkthrough`), minimální počty obsahu hlídá `tests/unit/content-minimums.test.ts`, texty jen v `src/i18n` (test `index.html` a `t()`), offline (`offline.spec.ts`), konzole bez chyb (e2e), `ASSETS.md`, žádný převzatý obsah (audity názvů ve fázích 7 a 10)
+- [x] Tag `v1.0.0` (verze 1.0.0 v `package.json`)
 
 **Hotovo, když:** splněna definice hotovo v1.0, hra běží z GitHub Pages, tag `v1.0.0` existuje; fáze odškrtnutá.
 

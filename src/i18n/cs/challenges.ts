@@ -8,7 +8,7 @@ import type { TextTree } from '../cs';
 export const challenges = {
   dry_february: {
     name: 'Suchý únor',
-    desc: 'Měsíc bez žolíků. Nikde žádný nebude, zato se do kapsy vejdou {slots|plural:spotřebka,spotřebky,spotřebek} navíc.',
+    desc: 'Měsíc bez žolíků. Nikde žádný nebude, zato se do kapsy {slots|word:vejde,vejdou,vejde} {slots|plural:spotřebka,spotřebky,spotřebek} navíc.',
     flavor: 'Únor je nejkratší měsíc. Tenhle bude dlouhý.',
     rules: {
       noJokers:
@@ -24,7 +24,7 @@ export const challenges = {
     flavor: 'Kdo sedí ve skleníku, neměl by hrát karty.',
     rules: {
       glass: 'Všechny ♥ a ♦ v balíčku jsou skleněné.',
-      odds: 'Skleněná karta, která skórovala, pak praskne se šancí 1 z {odds}.',
+      odds: 'Skleněná karta, která skórovala, pak praskne se šancí 1 {odds|z}.',
       start: 'Start: {count|plural:babská rada,babské rady,babských rad} Jablko od stromu.',
     },
   },
@@ -79,17 +79,17 @@ export const challenges = {
   },
   minimalist: {
     name: 'Minimalista',
-    desc: 'Méně je více: vybrat jde nejvýš {cards|plural:karta,karty,karet}, zato malé kombinace začínají silnější.',
+    desc: 'Méně je více: vybrat jde nejvýš {cards|plural:kartu,karty,karet}, zato malé kombinace začínají silnější.',
     flavor: 'Tři karty, jedna židle a žádné zbytečnosti.',
     rules: {
-      maxSelect: 'Vybrat, zahrát i zahodit jde naráz nejvýš {cards|plural:karta,karty,karet}.',
+      maxSelect: 'Vybrat, zahrát i zahodit jde naráz nejvýš {cards|plural:kartu,karty,karet}.',
       levels: 'Vysoká karta, Dvojice a Trojice začínají na úrovni {level}.',
     },
   },
   flat_price: {
     name: 'Jednotná cena',
     desc: 'Všechno za {price|money}: žolík, obálka, kupón i přehození. A prodává se vždycky za {sell|money}.',
-    flavor: 'Jako v obchodě „Vše za pětku“. Jen to nejde reklamovat.',
+    flavor: 'Jako v obchodě ‚Vše za pětku‘. Jen to nejde reklamovat.',
     rules: {
       price:
         'Vše ve Večerce stojí {price|money} – žolíci, spotřebky, hrací karty, obálky, kupóny i přehození. Slevy neplatí.',

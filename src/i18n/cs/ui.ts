@@ -76,7 +76,7 @@ export const newGame = {
     label: 'Výběr balíčku',
     count: '{n|plural:balíček,balíčky,balíčků}',
     /** Počet odemčených z celkového počtu. */
-    unlockedCount: 'odemčeno {n} z {total}',
+    unlockedCount: 'odemčeno {n} {total|z}',
     locked: 'Zamčeno',
     lockedLabel: '{name}, zamčeno',
     condition: 'Jak odemknout: {text}',

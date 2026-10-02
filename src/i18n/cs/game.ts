@@ -66,8 +66,8 @@ export const game = {
     jokers: 'Žolíci',
     consumables: 'Spotřebky',
     count: '{n}/{max}',
-    jokersLabel: 'Řada žolíků, {n} z {max}',
-    consumablesLabel: 'Spotřebky, {n} z {max}',
+    jokersLabel: 'Řada žolíků, {n} {max|z}',
+    consumablesLabel: 'Spotřebky, {n} {max|z}',
     jokersEmpty: 'Žádní žolíci. Zatím.',
     consumablesEmpty: 'Prázdná kapsa.',
     dragHint: 'Pořadí žolíků změníš tažením nebo v detailu žolíka.',
@@ -79,7 +79,7 @@ export const game = {
     cannotSell: 'Přibitého žolíka prodat nejde.',
     moveLeft: 'Posunout doleva',
     moveRight: 'Posunout doprava',
-    position: 'Pozice {n} z {max}',
+    position: 'Pozice {n} {max|z}',
     orderHint: 'Žolíci se vyhodnocují zleva doprava. +mult patří doleva, ×mult doprava.',
     sold: 'Prodáno za {price|money}. Večerka si nechala zbytek.',
   },
@@ -123,7 +123,7 @@ export const game = {
     handSizeUpBoss: '{name}: ruka se zvětšila na {n|plural:kartu,karty,karet}.',
     reorderHint:
       'Kartu přesuneš tažením myší nebo prstem. Klávesnicí: vyber kartu a posuň ji Shift a šipkou doleva nebo doprava.',
-    moved: '{name}: teď {n}. karta zleva z {max}.',
+    moved: '{name}: teď {n}. karta zleva {max|z}.',
     moveEdge: 'Dál to nejde, karta už je na kraji. Stůl nenatáhneš.',
   },
 

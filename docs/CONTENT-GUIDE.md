@@ -480,6 +480,9 @@ Osvědčené vzorce (vlastní příklady formátu **Název** — mechanika. _Fla
   (Malá útrata, Velká útrata, Šéf), Večerka. Figury a barvy v textu malými („za každého krále“, „kárová
   karta“).
 - **Jednotky hry:** `+4 mult`, `×2 mult` („mult“ se neskloňuje), `+30 čipů`, peníze vždy `Kč`.
+- **Předložka z / ze před číslem:** nikdy ji nepiš ručně před proměnnou — použij filtr `{odds|z}`, který vypíše
+  „ze 2“, „z 5“, „ze 6“, „ze 78“ podle prvního čteného slova čísla (šance se mění za běhu). U pevného čísla
+  v textu piš „1 ze 3“, „1 z 5“.
 - **Skloňování:** kdekoli se proměnné číslo pojí se slovem, použij
   `plural(n, 'karta', 'karty', 'karet')` (1 / 2–4 / 0 a 5+):
 

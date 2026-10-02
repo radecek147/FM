@@ -63,7 +63,7 @@ export const vouchers = {
   },
   folding_table: {
     name: 'Rozkládací stůl',
-    desc: '+{cards|plural:karta,karty,karet} v ruce; v kole Šéfa ještě +{bossCards} navíc.',
+    desc: '+{cards|plural:karta,karty,karet} v ruce; v kole se šéfem ještě +{bossCards|plural:karta,karty,karet} navíc.',
     flavor: 'Když přijde šéf, rozkládá se až do předsíně.',
   },
   savings_account: {
@@ -103,7 +103,7 @@ export const vouchers = {
   },
   collectors_fair: {
     name: 'Sběratelská burza',
-    desc: 'Hrací karty ve Večerce mají {enhancePct} % šanci na vylepšení a {sealPct} % šanci na pečeť.',
+    desc: 'Hrací karty ve Večerce mají {enhancePct}% šanci na vylepšení a {sealPct}% šanci na pečeť.',
     flavor: 'Tahle je ještě s pečetí z první republiky. Pro tebe za pade.',
   },
   polish: {

@@ -23,7 +23,7 @@ export const bossesA = {
   },
   inventory: {
     name: 'Inventura',
-    rule: 'Figury (J, Q, K) jsou mimo provoz.',
+    rule: 'Figury (kluci, dámy a králové) jsou mimo provoz.',
     intro: 'Zavřeno z důvodu inventury. Figury se přepočítávají.',
     defeat: 'Inventura sedí. Až na jednoho kluka.',
     death: 'Manko se strhává ze mzdy.',

@@ -9,7 +9,7 @@ export const jokersCommon2 = {
   // ── ze zásobníku DESIGN 4.9 ──
   helpline_aunt: {
     name: 'Teta z poradny',
-    desc: 'Po použití babské rady {chance} z {odds}, že vznikne další náhodná babská rada (potřebuje volný slot).',
+    desc: 'Po použití babské rady {chance} {odds|z}, že vznikne další náhodná babská rada (potřebuje volný slot).',
     flavor: 'Poradí ti, i když se neptáš. Hlavně když se neptáš.',
     advice: 'Teta přidala ještě jednu radu.',
   },
@@ -25,7 +25,7 @@ export const jokersCommon2 = {
   },
   tobacconist: {
     name: 'Trafikant',
-    desc: 'Při vstupu do Večerky {chance} z {odds}, že ti dá náhodnou pranostiku (potřebuje volný slot).',
+    desc: 'Při vstupu do Večerky {chance} {odds|z}, že ti dá náhodnou pranostiku (potřebuje volný slot).',
     flavor: 'Noviny, losy, cigarety. Předpověď počasí dostaneš zadarmo, ať chceš, nebo ne.',
     forecast: 'Trafikant přihodil pranostiku.',
   },
@@ -74,7 +74,7 @@ export const jokersCommon2 = {
   },
   hejkal: {
     name: 'Hejkal',
-    desc: '{chance} z {odds}, že zahraná ruka dostane +{mult} mult.',
+    desc: '{chance} {odds|z}, že zahraná ruka dostane +{mult} mult.',
     flavor: 'Hejká po lese, až se ozvěna stydí. Občas se trefí do noty.',
   },
   tram_driver: {
@@ -84,7 +84,7 @@ export const jokersCommon2 = {
   },
   punter: {
     name: 'Sázkař',
-    desc: 'Na konci kola {chance} z {odds}, že vyhraje {money|money}.',
+    desc: 'Na konci kola {chance} {odds|z}, že vyhraje {money|money}.',
     flavor: 'Má systém. Systém má jeho výplatu.',
   },
 
@@ -116,7 +116,7 @@ export const jokersCommon2 = {
   },
   fisherman: {
     name: 'Rybář',
-    desc: 'Po každém zahození {chance} z {odds}, že něco chytí: náhodnou babskou radu (potřebuje volný slot).',
+    desc: 'Po každém zahození {chance} {odds|z}, že něco chytí: náhodnou babskou radu (potřebuje volný slot).',
     flavor: 'Největší kapr mu zase utekl. Domů nese aspoň dobrou radu.',
     catch: 'Zabralo! Rybář přinesl babskou radu.',
   },

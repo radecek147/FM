@@ -29,7 +29,7 @@ export const jokersCommon = {
   },
   crusader: {
     name: 'Křižák',
-    desc: '+{mult} mult, pokud skórují aspoň {count|plural:křížová karta,křížové karty,křížových karet}.',
+    desc: '+{mult} mult, pokud {count|word:skóruje,skórují,skóruje} aspoň {count|plural:křížová karta,křížové karty,křížových karet}.',
     flavor: 'Na výpravu se nechodí sám.',
   },
   early_bird: {
@@ -59,7 +59,7 @@ export const jokersCommon = {
   },
   gardener: {
     name: 'Zahrádkář Venca',
-    desc: 'Na konci kola +{money|money} za každé {cards} karty držené v ruce.',
+    desc: 'Na konci kola +{money|money} za {cards|word:každou,každé,každých} {cards|plural:kartu drženou,karty držené,karet držených} v ruce.',
     flavor: 'Kompost nelže.',
   },
   svejk: {

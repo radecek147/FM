@@ -9,17 +9,17 @@ export const rady = {
   // ── vylepšení ──
   chamomile: {
     name: 'Heřmánkový čaj',
-    desc: 'Až {cards} vybrané karty dostanou vylepšení Prémiová (+{chips|plural:čip,čipy,čipů}, když skórují).',
+    desc: 'Až {cards|plural:vybraná karta,vybrané karty,vybraných karet} {cards|word:dostane,dostanou,dostane} vylepšení Prémiová (+{chips|plural:čip,čipy,čipů}, když skórují).',
     flavor: 'Na všechno pomůže heřmánek.',
   },
   chili: {
     name: 'Pálivá paprička',
-    desc: 'Až {cards} vybrané karty dostanou vylepšení Pálivá (+{mult} mult, když skórují).',
+    desc: 'Až {cards|plural:vybraná karta,vybrané karty,vybraných karet} {cards|word:dostane,dostanou,dostane} vylepšení Pálivá (+{mult} mult, když skórují).',
     flavor: 'Kdo nepálí, nehraje.',
   },
   glass_cabinet: {
     name: 'Babiččina vitrína',
-    desc: 'Vybraná karta dostane vylepšení Skleněná ({xmult|x} mult, ale {chance} z {odds}, že po ruce praskne).',
+    desc: 'Vybraná karta dostane vylepšení Skleněná ({xmult|x} mult, ale {chance} {odds|z}, že po ruce praskne).',
     flavor: 'Na to se nesahá, to je na neděli.',
   },
   cast_iron_pot: {
@@ -29,7 +29,7 @@ export const rady = {
   },
   cabbage_stone: {
     name: 'Kámen na zelí',
-    desc: 'Až {cards} vybrané karty dostanou vylepšení Kamenná (+{chips|plural:čip,čipy,čipů}, ale bez hodnoty a barvy).',
+    desc: 'Až {cards|plural:vybraná karta,vybrané karty,vybraných karet} {cards|word:dostane,dostanou,dostane} vylepšení Kamenná (+{chips|plural:čip,čipy,čipů}, ale bez hodnoty a barvy).',
     flavor: 'Zelí se samo nezatíží.',
   },
   ducat: {
@@ -39,24 +39,24 @@ export const rady = {
   },
   four_leaf: {
     name: 'Čtyřlístek',
-    desc: 'Až {cards} vybrané karty dostanou vylepšení Šťastná ({multChance} z {multOdds}: +{mult} mult; {moneyChance} z {moneyOdds}: +{money|money}).',
+    desc: 'Až {cards|plural:vybraná karta,vybrané karty,vybraných karet} {cards|word:dostane,dostanou,dostane} vylepšení Šťastná ({multChance} {multOdds|z}: +{mult} mult; {moneyChance} {moneyOdds|z}: +{money|money}).',
     flavor: 'Hledala ho celé léto. U kontejnerů.',
   },
   fern_bloom: {
     name: 'Kvetoucí kapradí',
-    desc: 'Až {cards} vybrané karty dostanou vylepšení Divoká (patří do všech barev).',
+    desc: 'Až {cards|plural:vybraná karta,vybrané karty,vybraných karet} {cards|word:dostane,dostanou,dostane} vylepšení Divoká (patří do všech barev).',
     flavor: 'Kvete jen o svatojánské noci. Pak je z ní všechno.',
   },
   grandpas_wallet: {
     name: 'Dědova peněženka',
-    desc: 'Až {cards} vybrané karty dostanou vylepšení Ohmataná (po každé ruce, ve které skórují, trvale +{chips|plural:čip,čipy,čipů}).',
+    desc: 'Až {cards|plural:vybraná karta,vybrané karty,vybraných karet} {cards|word:dostane,dostanou,dostane} vylepšení Ohmataná (po každé ruce, ve které skórují, trvale +{chips|plural:čip,čipy,čipů}).',
     flavor: 'Ohmataná od lepších časů.',
   },
 
   // ── barva a hodnota ──
   grandmas_dye: {
     name: 'Babiččina barva',
-    desc: 'Vyber {min}–{max} karty: všechny převezmou barvu té, která je nejvíc vlevo.',
+    desc: 'Vyber {min}–{max|plural:kartu,karty,karet}: všechny převezmou barvu té, která je nejvíc vlevo.',
     flavor: 'Pletla jen z jedné vlny.',
   },
   hall_mirror: {
@@ -95,7 +95,7 @@ export const rady = {
   },
   tree_frog: {
     name: 'Rosnička',
-    desc: 'Vytvoří pranostiku tvé nejčastěji hrané kombinace (při shodě silnější, bez zahraných rukou Vysoká karta) a k ní {random} náhodnou; potřebuje volný slot.',
+    desc: 'Vytvoří pranostiku tvé nejčastěji hrané kombinace (při shodě silnější, bez zahraných rukou Vysoká karta) a k ní {random|plural:náhodnou,náhodné,náhodných}; potřebuje volný slot.',
     flavor: 'Když leze nahoru, bude hezky.',
   },
   grandmas_recipe: {
@@ -107,7 +107,7 @@ export const rady = {
   // ── žolíci ──
   knock_on_wood: {
     name: 'Zaklepat na dřevo',
-    desc: '{chance} z {odds}: náhodný z tvých žolíků bez edice se stane lesklým, nebo holografickým (napůl); jinak dostaneš +{money|money} útěchou.',
+    desc: '{chance} {odds|z}: náhodný z tvých žolíků bez edice se stane lesklým, nebo holografickým (napůl); jinak dostaneš +{money|money} útěchou.',
     flavor: 'Ťuk, ťuk, ťuk. Hlavně to nezakřiknout.',
   },
   cauldron: {

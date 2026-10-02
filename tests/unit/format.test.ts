@@ -3,6 +3,7 @@ import {
   MINUS,
   NBSP,
   formatChips,
+  formatFrom,
   formatMoney,
   formatMult,
   formatNumber,
@@ -12,6 +13,7 @@ import {
   plural,
   pluralize,
   typo,
+  vocalizesZ,
 } from '../../src/i18n/format';
 
 const KARTA = ['karta', 'karty', 'karet'] as const;
@@ -180,5 +182,22 @@ describe('interpolate', () => {
     expect(interpolate('Cíl {target}', {})).toBe('Cíl {target}');
     expect(interpolate('Cíl {target}')).toBe('Cíl {target}');
     expect(interpolate('{toString}', {})).toBe('{toString}');
+  });
+});
+
+describe('předložka z / ze před číslem', () => {
+  it('vokalizuje podle prvního čteného slova', () => {
+    const ze = [2, 3, 4, 6, 7, 12, 13, 14, 16, 17, 20, 34, 47, 62, 78, 100, 101, 150, 200, 700, 2000, 100000];
+    const z = [0, 1, 5, 8, 9, 10, 11, 15, 18, 19, 52, 85, 96, 500, 1000, 1500, 5000, 1.5, -2];
+    for (const n of ze) expect(vocalizesZ(n), String(n)).toBe(true);
+    for (const n of z) expect(vocalizesZ(n), String(n)).toBe(false);
+  });
+
+  it('formatFrom a filtr z', () => {
+    expect(formatFrom(2)).toBe(`ze${NBSP}2`);
+    expect(formatFrom(5)).toBe(`z${NBSP}5`);
+    expect(interpolate('{chance} {odds|z}', { chance: 1, odds: 3 })).toBe(`1 ze${NBSP}3`);
+    expect(interpolate('{n} {total|z}', { n: 12, total: 52 })).toBe(`12 z${NBSP}52`);
+    expect(interpolate('{n} {total|z}', { n: 12, total: 78 })).toBe(`12 ze${NBSP}78`);
   });
 });

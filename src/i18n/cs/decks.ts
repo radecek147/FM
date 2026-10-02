@@ -21,7 +21,7 @@ export const decks = {
   },
   tourist: {
     name: 'Turistický',
-    desc: 'Postupka i Barva stačí ze {cards} karet. Cíle všech útrat jsou ale {target|x}.',
+    desc: 'Postupka i Barva stačí {cards|z} karet. Cíle všech útrat jsou ale {target|x}.',
     flavor: 'Po červené, pak po modré, pak se ztratit.',
   },
   marias: {

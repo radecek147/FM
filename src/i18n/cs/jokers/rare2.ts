@@ -20,7 +20,7 @@ export const jokersRare2 = {
   },
   chimney_sweep: {
     name: 'Kominík',
-    desc: 'Každá skórující piková, křížová nebo šťastná karta: {chance} z {odds}, že dá +{mult} mult.',
+    desc: 'Každá skórující piková, křížová nebo šťastná karta: {chance} {odds|z}, že dá +{mult} mult.',
     flavor: 'Kdo ho potká, chytí se za knoflík. Kdo ho nepotká, chytí se za hlavu.',
   },
   glassblower: {
@@ -38,7 +38,7 @@ export const jokersRare2 = {
   witch: {
     name: 'Čarodějnice',
     desc: 'Po porážce šéfa vytvoří náhodné úřední razítko (potřebuje volný slot).',
-    flavor: 'Na Filipojakubskou noc se pálí. Zbytek roku razítkuje.',
+    flavor: 'Na filipojakubskou noc se pálí. Zbytek roku razítkuje.',
     brewed: 'Čarodějnice uvařila razítko.',
   },
   water_goblin: {

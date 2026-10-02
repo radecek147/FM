@@ -159,7 +159,7 @@ describe('babské rady – obsah', () => {
     expect(desc('glass_cabinet')).toContain('1\u00a0z\u00a05');
     expect(desc('under_mattress')).toContain('50\u00a0%');
     expect(desc('under_mattress')).toContain('12\u00a0Kč');
-    expect(desc('knock_on_wood')).toMatch(/^1\u00a0z\u00a03/);
+    expect(desc('knock_on_wood')).toMatch(/^1\u00a0ze\u00a03/);
     expect(desc('cold_compress')).toContain('+2\u00a0zahození');
   });
 

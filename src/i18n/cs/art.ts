@@ -114,10 +114,11 @@ export const art = {
     boss: 'Šéf',
   },
 
-  /** Obálky (boostery): název ze velikosti a druhu, pokud obálka nemá vlastní text v `boosters.<id>`. */
+  /** Obálky (boostery): název z velikosti a druhu, pokud obálka nemá vlastní text v `boosters.<id>`. */
   booster: {
     name: '{size} · {kind}',
-    desc: 'Vyber {picks} z {options}.',
+    // Bez předložky před číslem („1 ze 3“, ale „1 z 5“) — stejně jako popisky v boosters.ts.
+    desc: 'Nabídne {options}, vybereš {picks}.',
     size: { normal: 'Obálka', jumbo: 'Tlustá obálka', mega: 'Krabice od bot' },
     kind: {
       pranostika: 'Pranostiky',

@@ -144,7 +144,7 @@ describe('štítky — obsah (DESIGN 7)', () => {
     expect(desc('coat_change')).toBe('Dostaneš 6 Kč.');
     expect(desc('term_deposit')).toContain('15 Kč');
     expect(desc('advance_payment')).toContain('+3 Kč za každou útratu');
-    expect(desc('hop_picking')).toBe('+1 Kč za každé 2 ruce zahrané v tomto runu (nejvýš +15 Kč).');
+    expect(desc('hop_picking')).toBe('+1 Kč za každé 2 zahrané ruce v tomto runu (nejvýš +15 Kč).');
     expect(desc('open_doors')).toContain('3 přehození zdarma');
     expect(desc('polished_cutlery')).toContain('lesklá 55 %, holografická 30 %, duhová 15 %');
     expect(desc('referral')).toContain('o 50 % levněji');

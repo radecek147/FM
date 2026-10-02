@@ -3193,3 +3193,36 @@ je těžké záměrně, cíl patra 8 je hlavní test buildu. Peníze při vstupu
 **Proč:** CLAUDE.md kap. 3 (patro 8 řádově statisíce až miliony) a kap. 8 (Desítka 25–35 %, Imperial < 3 %,
 žádný žolík bezcenný ani auto-win), DESIGN 12.1 a 12.4. Silnější boti byli podmínkou: se starými boty by vyšší
 cíle odrážely slabost botů, ne obtížnost pro hráče.
+
+## 2026-10-02 — Fáze 10: korektura textů, předložka z/ze, vydání 1.0
+
+**Co:**
+
+- **Jazyková korektura** všech ~2 600 textů (`src/i18n/cs*`, `index.html`) — kontrola českým slovníkem (hunspell)
+  a regexy na čárky, i/y, s/z, mě/mně, uvozovky. Překlepy se nenašly. Opraveno 35 míst ve 14 souborech:
+  - skloňování s proměnnou (`plural` / `word`: „za každou zahranou ruku / každé zahrané ruce“, „Až 5 vybraných
+    karet dostane“, „zbývají 4 ruce“, „{small8|plural:bod,body,bodů}“);
+  - konzistence pojmů: figury vypsané slovy (kluci, dámy, králové), „ve Večerce“ místo „v obchodě“, „v kole se
+    šéfem“;
+  - typografie: „50% šanci“ jako přídavné jméno, vnořené ‚…‘ ve flavor textech, apostrofy v nápovědě CLI místo
+    českých uvozovek, aby šel příkaz zkopírovat do shellu;
+  - „filipojakubská noc“ s malým písmenem.
+
+  Všech ~300 popisků obsahu bylo vyrenderováno se skutečnými parametry a porovnáno s kódem, rozpor se nenašel.
+
+- **Filtr `{n|z}`** (`src/i18n/format.ts`: `vocalizesZ`, `formatFrom`) vypíše předložku s číslem a NBSP: „ze 2“,
+  „z 5“, „ze 6“, „ze 78“, „z 52“. Předložka se volí podle prvního čteného slova čísla: dvou, tří, čtyř, šesti,
+  sedmi, dvanácti… a „sta“ dostanou „ze“; ostatní „z“. Filtr nahradil všech ~30 ručně psaných „z {x}“ / „ze {x}“
+  (šance žolíků, rad a vylepšení, počítadla „12 ze 78“, CLI).
+  Důvod: šance se mění za běhu (Skleněná karta má ve výzvě Skleník 1 ze 2, jinak 1 z 5) a ruční předložky by
+  se rozešly s čísly. NBSP navíc brání zalomení mezi „ze“ a číslem.
+- **Verze 1.0.0** (`package.json`, menu ukazuje „verze 1.0.0“), test minimálních počtů obsahu podle CLAUDE.md
+  (`tests/unit/content-minimums.test.ts`), v `ASSETS.md` doplněné odvozené písmo Karban Digits (OFL 1.1).
+- **Pokrytí enginu** (`npm run test:coverage`): příkazy 97,6 %, větve 93,0 %, funkce 99,1 %, řádky 99,2 %.
+- **Tag `v1.0.0`** na commitu vydání. Deploy na GitHub Pages: `deploy.yml` běží na tagy `v*`, `main` a ručně
+  (`workflow_dispatch`). Výchozí větev repozitáře je pracovní větev `claude/clever-ride-anbk0m`. Pages musí
+  vlastník repozitáře jednorázově zapnout (Settings → Pages → Source = GitHub Actions); token Actions to sám
+  udělat nesmí.
+
+**Proč:** CLAUDE.md kap. 6 (správná čeština, skloňování všude, kde se číslo pojí se slovem) a kap. 9–10 (definice
+hotovo, tag `v1.0.0`).

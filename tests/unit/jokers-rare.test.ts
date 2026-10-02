@@ -122,7 +122,7 @@ describe('vzácní žolíci — definice a texty', () => {
   });
 
   it('popisky čtou čísla z params (stejná čísla jako mechanika)', () => {
-    expect(descOf('late_train')).toBe('×1,5 mult; 1 z 6, že efekt „nabere zpoždění“ a nenastane.');
+    expect(descOf('late_train')).toBe('×1,5 mult; 1 ze 6, že efekt „nabere zpoždění“ a nenastane.');
     expect(descOf('head_waiter')).toBe('×2 mult, pokud zahraná ruka má nejvýš 3 karty.');
     expect(descOf('old_guard')).toBe('×1,5 mult, pokud má zahraná kombinace úroveň aspoň 3.');
     expect(descOf('herbalist')).toBe('Po každé použité babské radě trvale +1 mult (teď +0 mult).');

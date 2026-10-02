@@ -22,7 +22,7 @@ export const tags = {
   },
   hop_picking: {
     name: 'Brigáda na chmelu',
-    desc: '+{money|money} za každé {hands|plural:ruka,ruce,rukou} zahrané v tomto runu (nejvýš +{cap|money}).',
+    desc: '+{money|money} za {hands|word:každou,každé,každých} {hands|plural:zahranou ruku,zahrané ruce,zahraných rukou} v tomto runu (nejvýš +{cap|money}).',
     flavor: 'Za dědy povinná, dnes aspoň placená.',
   },
   open_doors: {

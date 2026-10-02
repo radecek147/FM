@@ -185,7 +185,7 @@ describe('kupóny – definice (DESIGN 6)', () => {
     expect(d('building_savings')).toContain(`na 12${NBSP}Kč`);
     expect(d('tear_calendar')).toContain('(váha každé 3 → 7, žolíci mají 14)');
     expect(d('grandmas_pantry')).toContain('7 → 8,5');
-    expect(d('collectors_fair')).toContain(`50${NBSP}% šanci na vylepšení a${NBSP}20${NBSP}% šanci na pečeť`);
+    expect(d('collectors_fair')).toContain(`50% šanci na vylepšení a${NBSP}20% šanci na pečeť`);
     expect(d('polish')).toContain('2,5× častěji');
     expect(d('holo_foil')).toContain('3,5× častěji (místo 2,5×)');
     expect(d('official_strike')).toContain('×1,1');

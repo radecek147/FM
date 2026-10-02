@@ -314,7 +314,7 @@ describe('vzácní žolíci fáze 7 – texty', () => {
     expect(rendered).toEqual({
       office_connection: 'Cíl šéfa je o 20 % nižší a po každém přeskočení útraty přelosuje šéfa patra.',
       chronicler: 'Za každou kombinaci, kterou od jeho koupě zahraješ poprvé, trvale +2 mult (teď +0 mult).',
-      chimney_sweep: 'Každá skórující piková, křížová nebo šťastná karta: 1 z 2, že dá +6 mult.',
+      chimney_sweep: 'Každá skórující piková, křížová nebo šťastná karta: 1 ze 2, že dá +6 mult.',
       glassblower:
         'Při získání přidá do balíčku 1 skleněnou kartu; každou zničenou skleněnou kartu hned vyfoukne do balíčku znovu.',
       notary_public:

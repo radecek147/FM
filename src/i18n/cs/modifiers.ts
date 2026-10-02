@@ -2,7 +2,7 @@
  * Texty úprav hracích karet: vylepšení, pečetě, edice (definice v src/content/modifiers.ts).
  * Klíče `enhancements.<id>|seals.<id>|editions.<id>` → `name`, `desc`, `flavor`.
  * `{param}` v `desc` dosadí UI z `params` definice — čísla se tak nikdy nerozejdou s mechanikou
- * (pravděpodobnosti `{chance} z {odds}` UI navíc vynásobí `Modifiers.probabilityMult`).
+ * (pravděpodobnosti `{chance} {odds|z}` UI navíc vynásobí `Modifiers.probabilityMult`).
  * Názvy a flavory podle docs/DESIGN.md kap. 2.6–2.8.
  */
 
@@ -20,7 +20,7 @@ export const enhancements = {
   },
   glass: {
     name: 'Skleněná',
-    desc: '{xmult|x} mult, když karta skóruje. Po vyhodnocení ruky {chance} z {odds}, že praskne a zničí se.',
+    desc: '{xmult|x} mult, když karta skóruje. Po vyhodnocení ruky {chance} {odds|z}, že praskne a zničí se.',
     flavor: 'Křehká jako slib před volbami.',
   },
   steel: {
@@ -40,7 +40,7 @@ export const enhancements = {
   },
   lucky: {
     name: 'Šťastná',
-    desc: 'Při skórování {multChance} z {multOdds}: +{mult} mult; nezávisle {moneyChance} z {moneyOdds}: +{money|money}.',
+    desc: 'Při skórování {multChance} {multOdds|z}: +{mult} mult; nezávisle {moneyChance} {moneyOdds|z}: +{money|money}.',
     flavor: 'Kominík jí podal ruku.',
   },
   wild: {

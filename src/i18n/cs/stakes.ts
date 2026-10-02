@@ -6,7 +6,7 @@
 export const stakes = {
   desitka: {
     name: 'Desítka',
-    desc: 'Základní pravidla a nejmírnější cíle: Malá útrata v osmém patře chce {small8} bodů.',
+    desc: 'Základní pravidla a nejmírnější cíle: Malá útrata v osmém patře chce {small8|plural:bod,body,bodů}.',
     flavor: 'Na rozehřátí. Zatím se nikdo nezranil.',
   },
   jedenactka: {
@@ -16,12 +16,12 @@ export const stakes = {
   },
   dvanactka: {
     name: 'Dvanáctka',
-    desc: 'Cíle rostou rychleji: Malá útrata v osmém patře chce {small8} bodů.',
+    desc: 'Cíle rostou rychleji: Malá útrata v osmém patře chce {small8|plural:bod,body,bodů}.',
     flavor: 'Klasika. Cíle rostou rychleji než útrata.',
   },
   special: {
     name: 'Speciál',
-    desc: 'Zvětrávání: {perishable} % žolíků v obchodě a obálkách je zvětrávajících – po {rounds|plural:kole,kolech,kolech} ve slotu přestanou fungovat.',
+    desc: 'Zvětrávání: {perishable} % žolíků ve Večerce a v obálkách je zvětrávajících – po {rounds|plural:kole,kolech,kolech} ve slotu přestanou fungovat.',
     flavor: 'Speciál se pije pomalu. Žolíci zvětrají rychle.',
   },
   lezak: {
@@ -31,7 +31,7 @@ export const stakes = {
   },
   bock: {
     name: 'Bock',
-    desc: 'Cíle až do stropu: Malá útrata v osmém patře chce {small8} bodů.',
+    desc: 'Cíle až do stropu: Malá útrata v osmém patře chce {small8|plural:bod,body,bodů}.',
     flavor: 'Tmavé, silné a cíle až do stropu.',
   },
   doppelbock: {
