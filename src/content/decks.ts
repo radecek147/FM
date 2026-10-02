@@ -14,8 +14,9 @@ import { RADY } from './rady';
 export const REGULARS_JOKER_SLOTS = 1;
 export const REGULARS_STARTING_MONEY = 0;
 /**
- * Turistický: Postupka i Barva ze 4 karet, cíle ×1,5. Fáze 10: s ×1,2 vyhrával nejlepší bot 46 % proti 31 %
- * Hospodského (s úrovněmi ×2 se Barvy a Postupky vyplatí víc), ×1,4 37,5 %, ×1,6 28 % (DECISIONS „Fáze 10…“).
+ * Turistický: Postupka i Barva ze 4 karet, cíle ×1,5. Fáze 10 (nejlepší z botů `max`/`flush`, seedy A+B): s ×1,2
+ * vyhrával 46 % proti 29 % Hospodského (s úrovněmi ×2 se Barvy a Postupky vyplatí víc), ×1,4 37,5 %, ×1,5 30,5 %,
+ * ×1,6 28 % (DECISIONS „Fáze 10: balanc…“).
  */
 export const TOURIST_CARDS = 4;
 export const TOURIST_TARGET_MULT = 1.5;
@@ -26,22 +27,22 @@ export const TOURIST_TARGET_MULT = 1.5;
 export const MARIAS_LOWEST_RANK: Rank = 7;
 export const MARIAS_TARGET_MULT = 1.2;
 /**
- * Obrázkový: J, Q, K, A, každá karta 2×; −1 karta v ruce; cíle ×2,1. Fáze 10: s ×1,5 53 % (Hospodský 31 %),
- * ×1,9 36 %, ×2,3 29 %.
+ * Obrázkový: J, Q, K, A, každá karta 2×; −1 karta v ruce; cíle ×2,1. Fáze 10: s ×1,5 53 % (Hospodský 29 %),
+ * ×1,9 36 %, ×2,1 28,5 %, ×2,3 29 % (průměr botů 34 / 27 / 25 %).
  */
 export const COURT_LOWEST_RANK: Rank = 11;
 export const COURT_COPIES = 2;
 export const COURT_HAND_SIZE = -1;
 export const COURT_TARGET_MULT = 2.1;
 /**
- * Notářský: šance na náhodnou pečeť u každé karty; −1 slot spotřebky. Fáze 10: s 25 % 59 % výher (Hospodský 31 %;
+ * Notářský: šance na náhodnou pečeť u každé karty; −1 slot spotřebky. Fáze 10: s 25 % 59 % výher (Hospodský 29 %;
  * silnější boti pečetě i karty s úpravami — Pan farář — využijí naplno), s 12 % 42 %, se 6 % 37 %.
  */
 export const NOTARY_SEAL_CHANCE = 0.06;
 export const NOTARY_CONSUMABLE_SLOTS = -1;
 /**
  * Zbohatlík: odměny za útraty ×2, úrok ×1,5, nevyužitá ruka +1 Kč navíc, −2 ruce. Fáze 10: s úrokem ×2 48 % výher
- * (Hospodský 31 %), s ×1,5 35 %; odměny i úrok ×1,5 jen 17,5 % (DECISIONS „Fáze 10…“).
+ * (Hospodský 29 %), s ×1,5 35 %; odměny i úrok ×1,5 jen 17,5 % (DECISIONS „Fáze 10: balanc…“).
  */
 export const RICH_REWARD_MULT = 2;
 export const RICH_INTEREST_MULT = 1.5;
@@ -58,8 +59,8 @@ export const DEBTOR_INTEREST_MULT = 2;
  */
 export const CLERK_VOUCHERS: readonly string[] = ['tear_calendar', 'counter_buddy'];
 /**
- * Babiččin: +1 slot spotřebky, start s 1 náhodnou babskou radou. Fáze 10: se 2 radami 41 % výher (Hospodský 31 %),
- * s 1 radou 36 %; bez slotu navíc (2 rady) 39 %.
+ * Babiččin: +1 slot spotřebky, start s 1 náhodnou babskou radou. Fáze 10: se 2 radami 41 % výher (Hospodský 29 %),
+ * s 1 radou 36–38 %; bez slotu navíc (2 rady) 39 % — slot navíc sílu nedělá, takže zůstává.
  */
 export const GRANDMAS_CONSUMABLE_SLOTS = 1;
 export const GRANDMAS_RADY = 1;
@@ -67,11 +68,13 @@ export const GRANDMAS_RADY = 1;
 export const JUNK_SHOP_RARITY: JokerRarity = 'rare';
 export const JUNK_SHOP_SHOP_SLOTS = -1;
 /**
- * Kalendářový: po porážce šéfa pranostika nejčastěji hrané kombinace, bez místa peníze; −2 zahození. Fáze 10:
- * s −1 zahozením 43 % výher (Hospodský 31 %; s úrovněmi ×2 je pranostika zdarma cennější), s −2 38 %.
+ * Kalendářový: po porážce šéfa pranostika nejčastěji hrané kombinace, bez místa peníze; −2 zahození; cíle ×1,1.
+ * Fáze 10: s −1 zahozením 43 % výher (Hospodský 29 %; s úrovněmi ×2 je pranostika zdarma cennější), s −2 38 %,
+ * s −2 a cíli ×1,1 33 %, ×1,15 30 % (DECISIONS „Fáze 10: balanc…“).
  */
 export const ALMANAC_FULL_MONEY = 2;
 export const ALMANAC_DISCARDS = -2;
+export const ALMANAC_TARGET_MULT = 1.1;
 /** Kalendářový bez jediné zahrané ruky (šéf poražený bez skórování) — pranostika Vysoké karty. */
 const ALMANAC_FALLBACK_HAND: HandType = 'high_card';
 const MSG_ALMANAC_MADE = 'decks.almanac.made';
@@ -240,9 +243,9 @@ export const DECKS: DeckDef[] = [
   },
   {
     id: 'almanac',
-    passive: () => ({ discards: ALMANAC_DISCARDS }),
+    passive: () => ({ discards: ALMANAC_DISCARDS, targetMult: ALMANAC_TARGET_MULT }),
     onBossDefeated: almanacBossDefeated,
-    params: { money: ALMANAC_FULL_MONEY, discards: -ALMANAC_DISCARDS },
+    params: { money: ALMANAC_FULL_MONEY, discards: -ALMANAC_DISCARDS, target: ALMANAC_TARGET_MULT },
     art: { icon: 'calendar', bg: '#1f4e5f', fg: '#ecfeff', accent: '#facc15', pattern: 'rays' },
     unlock: { type: 'custom', id: 'handLevel6' },
   },

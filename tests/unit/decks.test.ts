@@ -93,6 +93,7 @@ describe('balíčky – seznam a texty', () => {
     const almanac = t('decks.almanac.desc', DECKS.find((d) => d.id === 'almanac')!.params);
     expect(almanac).toContain(typo('dostaneš 2 Kč'));
     expect(almanac).toContain(typo('o 2 zahození méně'));
+    expect(almanac).toContain('cíle všech útrat jsou ×1,1');
     expect(t('decks.almanac.full', { money: 2 })).toContain(typo('2 Kč'));
     expect(hasKey('decks.almanac.made')).toBe(true);
   });
@@ -335,9 +336,12 @@ describe('balíčky fáze 7 – pravidla', () => {
     expect(g.state.shop!.boosters).toHaveLength(newGame('pub').modifiers().shopBoosterSlots);
   });
 
-  it('Kalendářový: −2 zahození (1); po porážce šéfa pranostika nejčastěji hrané kombinace (při shodě silnější)', () => {
-    expect(modsDiff('almanac')).toEqual({ discards: 1 });
+  it('Kalendářový: −2 zahození (1), cíle ×1,1; po porážce šéfa pranostika nejčastěji hrané kombinace (při shodě silnější)', () => {
+    expect(modsDiff('almanac')).toEqual({ discards: 1, targetMult: 1.1 });
     const g = newGame('almanac');
+    // 250 × 1,1 = 275 → nice() 280; šéf 500 × 1,1 = 550.
+    expect(g.blindTarget('small')).toBe(280);
+    expect(g.blindTarget('boss')).toBe(550);
     g.dispatch({ type: 'selectBlind' });
     expect(g.state.round!.discardsLeft).toBe(1);
     // Malá útrata nic nevytvoří.

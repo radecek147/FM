@@ -5,24 +5,23 @@
 
 ## Aktuální stav
 
-_Aktualizováno: 2026-10-02 (fáze 10: výkon, offline, přístupnost, bugfix)_
+_Aktualizováno: 2026-10-02 (fáze 10: balanc)_
 
-**Shrnutí:** fáze 0–9 jsou hotové a commitnuté (poslední: `feat(ui): juice and audio`). Kontroly zelené: `typecheck`,
-`lint`, `npm test` (76 souborů, 3 776 testů), `build`, `test:e2e` (67 prošlo; vizuální a „juice“ sady běží jen
-s `KARBAN_VISUAL=1` / `KARBAN_JUICE=1`). Fáze 9: částice, screen shake, velké skóre, tilt karet, přechody obrazovek
-(`src/ui/fx/*`), syntetizované SFX a procedurální chiptune hudba (`src/ui/audio/*`), ztlumení klávesou M.
-
-**Fáze 10 (Dokončení 1.0) rozpracovaná** (necommitnuto v pracovním stromu): hotový výkon (code splitting, hlavní
-chunk 93 kB místo 630 kB), offline (service worker, `src/sw/sw.ts`, `scripts/sw-plugin.ts`, `src/ui/serviceWorker.ts`),
-Lighthouse > 90 (výkon i přístupnost, opravy kontrastu a ARIA) a bugfix z průchodů přes UI (třesení při hoveru,
-Štamgast bez ikon, Enter po detailu žolíka, pořadí debuffů žolíků); nové testy `tests/unit/{app-lazy,service-worker}.test.ts`, e2e `tests/e2e/{offline,sweep,hover}.spec.ts`.
-Shrnutí v DECISIONS „Fáze 10 (výkon, offline, přístupnost, bugfix)“, popis v ARCHITECTURE kap. 8. Kontroly
-(2026-10-02): `typecheck`, `eslint`, `npx vitest run` (78 souborů, 3 794 testů), `build` (bez varování o velikosti
-chunku), `test:e2e` (71 prošlo); `prettier --check` hlásí jen rozpracované soubory balancu v `src/engine/sim/`.
-**Další krok:** balanc simulací (silnější boti a zvednutí cíle patra 8 podle plánu v DECISIONS „Balanc po fázi 7“,
-bod 5; střední síly piva; balíčky nad Hospodským), jazyková korektura, README česky se screenshoty a GIFem, deploy na
-GitHub Pages, tag `v1.0.0`.
-Pozn.: e2e spouštět vždy jen z jednoho procesu (sdílený port 4173).
+**Shrnutí:** fáze 0–9 jsou hotové a commitnuté. **Fáze 10 (Dokončení 1.0) rozpracovaná:** hotový výkon (code
+splitting, hlavní chunk 93 kB), offline (service worker), Lighthouse > 90, bugfix z průchodů UI, README česky se
+snímky a GIFem (DECISIONS „Fáze 10 (výkon, offline, přístupnost, bugfix)“ a „Fáze 10: README, snímky a GIF, licence
+MIT“) a **balanc** (DECISIONS „Fáze 10: balanc (silnější boti, cíle patra 8, žolíci, balíčky)“): silnější boti
+s laboratoří buildu a metrikou síly v `npm run simulate` (`src/engine/sim/*`), přírůstky úrovní kombinací ×2
+(`src/content/hands.ts`), křivky cílů s patrem 8 na 95 000 / 110 000 / 115 000 (`src/engine/run/targets.ts`),
+6 přeladěných žolíků, finální šéfové Fronta na banány 3,5× a Bílá paní 1,25×, Jedenáctka (+1 Kč jen za přehození),
+Speciál 40 %, Imperial cíle šéfů ×1,1 (`src/content/stakes.ts`) a 6 balíčků (`src/content/decks.ts`: Turistický,
+Obrázkový, Notářský, Zbohatlík, Babiččin, Kalendářový). Výsledek (souhrn sad A–C): Desítka 31,2 %, Jedenáctka 28 %,
+Dvanáctka 19 %, Speciál 15,2 %, Ležák 7,8 %, Bock 7,3 %, Doppelbock 4,2 %, Imperial 2,0 %; balíčky v pásmu
+DESIGN 12.1. Balanc je zatím jen v pracovním stromu (necommitnuto po `302d09b`).
+**Další krok:** commit balancu, jazyková korektura všech textů, `ASSETS.md` a atribuce v Titulcích, pokrytí enginu
+≥ 80 % a e2e, deploy na GitHub Pages, kontrola definice hotovo, tag `v1.0.0`.
+Pozn.: e2e spouštět vždy jen z jednoho procesu (sdílený port 4173). Simulace: `npm run simulate -- --runs 300
+--stake 1 --bot all --seed-prefix A` trvá ~25 min (run ~1 s na bota).
 
 **Fáze 0–2 jsou hotové** (commity `chore: …`, `feat(engine): complete phase 1 …`, `feat(engine): complete phase 2 …`).
 Z fáze 2 zůstal jen podúkol „První kalibrace křivky cílů“ — předběžná kalibrace proběhla ve fázi 5
@@ -342,10 +341,10 @@ průměrném notebooku; kontroly zelené; commit `feat(ui): juice and audio`; f�
 
 ## Fáze 10 — Dokončení 1.0
 
-- [ ] Balanc simulací: na Desítce rozumná strategie vyhraje ~25–35 % runů, na Imperialu < 3 %; tabulky v `docs/DESIGN.md` aktuální
-- [ ] Žádný žolík zjevně bezcenný ani „auto-win“ (porovnání s cílovými hodnotami vzácností)
-- [ ] Patro 8 řádově statisíce: metrika síly bota v `simulate`, silnější boti, pak křivky po krocích (plán v DECISIONS „Balanc po fázi 7“, bod 5)
-- [ ] Ztížení Speciálu, které boty i hráče opravdu stojí; balíčky v ±7 p. b. od Hospodského (DESIGN 12.1); Δ výher žolíků normalizovaná na patro koupě
+- [x] Balanc simulací: na Desítce rozumná strategie vyhraje ~25–35 % runů, na Imperialu < 3 %; tabulky v `docs/DESIGN.md` aktuální (Desítka 31,2 %, Imperial 2,0 %, všech 8 sil piva v pásmu v souhrnu sad A–C; DESIGN 2.3.1, 9, 10; DECISIONS „Fáze 10: balanc (silnější boti, cíle patra 8, žolíci, balíčky)“)
+- [x] Žádný žolík zjevně bezcenný ani „auto-win“ (porovnání s cílovými hodnotami vzácností; přeměření tabulky 4.3 se silnějšími boty, 6 žolíků upraveno — DESIGN 4.10)
+- [x] Patro 8 řádově statisíce: metrika síly bota v `simulate`, silnější boti (laboratoř buildu), přírůstky úrovní ×2, křivka 1 v patře 8 23 000 → 95 000; vítězové mají v patře 8 medián nejlepší ruky 205 000–255 000
+- [x] Ztížení Speciálu, které boty i hráče opravdu stojí (zvětrávajících 40 %); balíčky v pásmu DESIGN 12.1 (průměr botů −5,8 až +6,3 p. b., nejlepší bot −3,3 až +8,9 p. b. od Hospodského); Δ výher žolíků normalizovaná na patro koupě
 - [x] Bugfix, konzole bez chyb a varování (45 průchodů `ui-walkthrough` přes balíčky, síly piva, výzvy a denní run, s animacemi i bez; e2e `sweep.spec.ts` přes všechny obrazovky mimo hru; opraveno třesení prvků při hoveru, Štamgast bez ikon, Enter po zavření detailu žolíka a pořadí debuffů žolíků závislé na cestě — DECISIONS „Fáze 10 (výkon, offline, přístupnost, bugfix)“)
 - [x] Výkon: code splitting — hlavní chunk 93 kB / 33 kB gzip (dřív 630 / 202 kB), obrazovky mimo menu jako líné chunky s přednačtením, ikony až po vykreslení menu (ARCHITECTURE 8.1)
 - [x] Lighthouse: výkon a přístupnost > 90 na herní obrazovce (desktop: menu výkon 99–100 / přístupnost 100, přechod do hry 100, herní obrazovka přístupnost 100; mobil: menu 97–98; přístupnost 100 na všech obrazovkách a fázích hry)

@@ -62,7 +62,7 @@ export const decks = {
   },
   almanac: {
     name: 'Kalendářový',
-    desc: 'Po porážce každého šéfa vznikne pranostika tvé nejčastěji hrané kombinace (když není volný slot, dostaneš {money|money}). Zato o {discards|plural:zahození,zahození,zahození} méně v každém kole.',
+    desc: 'Po porážce každého šéfa vznikne pranostika tvé nejčastěji hrané kombinace (když není volný slot, dostaneš {money|money}). Zato o {discards|plural:zahození,zahození,zahození} méně v každém kole a cíle všech útrat jsou {target|x}.',
     flavor: 'Pranostika na každý den, i na ty, kdy se nehraje.',
     made: 'Kalendář vytrhl list: máš novou pranostiku.',
     full: 'Na pranostiku není místo, kalendář ji vyplatil: {money|money}.',

@@ -237,7 +237,7 @@ const voucherPrivatization: JokerDef = {
 // ─────────────────────────── Lázeňský host ───────────────────────────
 
 const SPA_BASE = 1;
-/** Fáze 10: 0,15 → 0,13 (R2 127 % nad pásmem epického, DECISIONS „Fáze 10: silnější boti…“). */
+/** Fáze 10: 0,15 → 0,13 (R2 127 % nad pásmem epického, DECISIONS „Fáze 10: balanc…“). */
 const SPA_XMULT = 0.13;
 
 const spaXmult = (self: JokerInstance): number => cents(SPA_BASE + SPA_XMULT * stateNum(self, 'rounds'));

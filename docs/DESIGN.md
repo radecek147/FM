@@ -143,7 +143,7 @@ Poznámky k designu tabulky:
 
 - **Přírůstky za úroveň jsou od fáze 10 dvojnásobné** proti návrhu z fáze 0 (dřív např. Barva +18 / +2, Dvojice
   +14 / +1): pozdní hra škáluje hlavně úrovněmi hlavní kombinace a s původními přírůstky nejlepší rozumný bot
-  na cílech se základem patra 8 100 000 vyhrál jen ~12 % runů (×1,5 od Trojice 17 %, ×1,5 u všech 19 %, ×2 u všech
+  na cílech se základem patra 8 100 000 vyhrál jen ~12 % runů (×1,5 od Trojice 17 %, ×1,5 u všech 20 %, ×2 u všech
   ~29 %; po přeměření žolíků je základ patra 8 na Desítce 95 000). Rozjezd (patra 1–3) se mění málo — úrovně tam ještě skoro nejsou (`docs/DECISIONS.md` „Fáze 10: balanc
   (silnější boti, cíle patra 8, žolíci, balíčky)“).
 
@@ -232,21 +232,20 @@ Cíl útraty = `nice(base(patro) × násobek útraty × Modifiers.targetMult)`. 
 Engine má v tabulce jen základy křivek (sloupce „Malá“); Velkou a Šéfa počítá přes `nice()`. Celá tabulka slouží
 jako test.
 
-**Kalibrace po fázi 7 (2026-10-02, plný obsah: 101 žolíků, 30 šéfů, 20 štítků, 51 spotřebek, 24 kupónů;
-`docs/DECISIONS.md` „Balanc po fázi 7“):** nejlepší rozumný bot na Desítce vyhraje 34 % runů (sady `SIM-A` i `SIM-B`;
-`max` 31–34 %, `flush` 29–34 %, `pairs` 26–27 %), na Imperialu 2,0 % (sady A–D 2,0–2,3 %) a všechny střední síly
-piva leží v pásmech kap. 10 (souhrn dvou až čtyř sad po 200–300 runech na bota). Křivka 1 je oproti fázi 6 o ~5 %
-výš od patra 4 (Desítka byla na 36 %); křivka 2 je od patra 3 o ~13 % nad křivkou 1 a křivka 3 od patra 4 o ~35–40 %,
-protože Jedenáctka a Ležák mají mírnější ekonomické ztížení (platí až od 2. / 3. patra), Speciál boty skoro nebrzdí
-a Doppelbock s Imperialem byly s nižší křivkou 3 nad pásmem. Pořadí křivek (1 ≤ 2 ≤ 3 v každém patře) zůstává.
+**Kalibrace fáze 10 (2026-10-02; `docs/DECISIONS.md` „Fáze 10: balanc (silnější boti, cíle patra 8, žolíci,
+balíčky)“):** se silnějšími boty (laboratoř buildu, kap. 12.2) a dvojnásobnými přírůstky úrovní kombinací (2.2.1)
+je patro 8 křivky 1 na **95 000** (dřív 23 000, ×4,1); patra 1–3 se nezměnila, od patra 4 rostou cíle zhruba
+geometricky (×2,4 na patro). Křivka 2 je v patře 8 o 16 % a křivka 3 o 21 % nad křivkou 1. Výsledek (Hospodský,
+souhrn sad `SIM-A`–`SIM-C`, nejlepší z botů `max`, `flush`, `pairs`): Desítka **31,2 %** (sady 27,7 / 31,7 /
+36 %), Imperial **2,0 %** (1,7 / 2,3 / 2,0 %), všechny střední síly piva v pásmech kap. 10. Vítězné runy na Desítce
+mají v patře 8 medián nejlepší ruky **205 000–255 000** podle bota a sady (p90 450 000–610 000; dřív 70 000 / p90
+231 000) a kolo finálového šéfa končí na mediánu 1,04–1,15× cíle — cíl CLAUDE.md kap. 3 (patro 8 řádově statisíce)
+je splněný. Pořadí křivek (1 ≤ 2 ≤ 3 v každém patře) zůstává.
 
-Historie: fáze 6 měla patro 8 21 000 / 23 000 / 26 000, fáze 5 (bez šéfů) 22 000 / 27 000 / 35 000, původní návrh
-80 000 / 150 000 / 250 000. **Dlouhodobý cíl CLAUDE.md kap. 3 (patro 8 řádově statisíce)** dnešní boti nedosáhnou:
-vítězné runy na Desítce (542 výher z 1 800 runů) mají v patře 8 medián nejlepší ruky 70 000 (p25 46 000, p75
-114 000, p90 231 000), ruku za ≥ 100 000 zahraje jen 30 % vítězů a kolo finálového šéfa končí na mediánu 1,28× cíle.
-Pokus se základem patra 8 50 000 (geometrický náběh od patra 4) srazil Desítku na 12 % výher, se 100 000 na 3 %.
-Plán (metrika síly bota, silnější boti, pak křivky po krocích, případně škálování pozdního obsahu) je
-v `docs/DECISIONS.md` („Balanc po fázi 7“, bod 5) — patří do fáze 10.
+Historie (základ patra 8, křivky 1 / 2 / 3): fáze 7 23 000 / 26 000 / 32 000, fáze 6 21 000 / 23 000 / 26 000,
+fáze 5 (bez šéfů) 22 000 / 27 000 / 35 000, původní návrh 80 000 / 150 000 / 250 000. Kroky fáze 10 na Desítce
+(sada A, 150 runů): 35 000 → 49 %, 50 000 → 34 %, 100 000 → 12 %; s přírůstky úrovní ×1,5 od Trojice 17 %, ×1,5 u všech
+20 %, ×2 u všech 31 %; po přeměření žolíků a finálových šéfů 100 000 → 25 %, 95 000 → 28 % (300 runů).
 
 #### 2.3.2 Zaokrouhlení `nice(x)`
 
@@ -1191,20 +1190,20 @@ nově dobrané karty) má 1,25× (do fáze 10 1,5×), Pan starosta a Velká voda
 
 ## 9. Startovní balíčky (12)
 
-|   # | Název (`id`)                | Pravidla                                                                                                      | Odemčení                              | Flavor                                              |
-| --: | --------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------- | --------------------------------------------------- |
-|   1 | Hospodský (`pub`)           | Standardních 52 karet, pravidla beze změny.                                                                   | od začátku                            | „Lepkavé karty a tácek pod sklenicí.“               |
-|   2 | Štamgastův (`regulars`)     | +1 slot žolíka (6); start s 0 Kč.                                                                             | od začátku                            | „Má tu vlastní věšák. Na žolíky.“                   |
-|   3 | Úřednický (`clerk`)         | Start s kupóny Trhací kalendář a Kamarád za pultem.                                                           | kup celkem 5 kupónů                   | „Všechno vyřízeno předem. Na razítko.“              |
-|   4 | Turistický (`tourist`)      | Postupka i Barva stačí ze 4 karet; cíle všech útrat ×1,5.                                                     | zahraj celkem 25 Postupek             | „Po červené, pak po modré, pak se ztratit.“         |
-|   5 | Mariášový (`marias`)        | 32 karet: 7–A ve 4 barvách (bez 2–6). Postupka A-2-3-4-5 tu není možná; cíle všech útrat ×1,2.                | zahraj Čtveřici                       | „Kdo nehraje, nevyhraje. Kdo hraje, flekuje.“       |
-|   6 | Obrázkový (`court`)         | 32 karet: J, Q, K, A ve 4 barvách, každá karta 2×; −1 karta v ruce (7); cíle ×2,1.                            | vyhraj run s Mariášovým               | „Samí páni, žádní pěšáci.“                          |
-|   7 | Notářský (`notary`)         | Každá karta má při stavbě balíčku 6% šanci na náhodnou pečeť (4 druhy rovnoměrně); −1 slot spotřebky.         | měj v jednom runu 5 karet s pečetí    | „Ověřeno, orazítkováno, zaplombováno.“              |
-|   8 | Zbohatlík (`nouveau_riche`) | Odměny za útraty ×2, úrok ×1,5, nevyužitá ruka +2 Kč; −2 ruce (2).                                           | měj najednou 50 Kč                    | „Peníze jsou, čas není.“                            |
-|   9 | Dlužník (`debtor`)          | Start −10 Kč; dluh smí jít až do −20 Kč; úrok ×2 (jen z kladného zůstatku).                                   | dokonči kolo se záporným zůstatkem    | „Půjčka? Já? Jen na chvilku.“                       |
-|  10 | Babiččin (`grandmas`)       | +1 slot spotřebky (3); start s 1 náhodnou babskou radou.                                                      | použij celkem 30 babských rad         | „Babička ví všechno. A ráda to řekne.“              |
-|  11 | Vetešnický (`junk_shop`)    | Start s 1 náhodným vzácným žolíkem; Večerka má o 1 kartový slot méně (1).                                     | prodej celkem 25 žolíků               | „Všechno z druhé ruky, něco i ze třetí.“            |
-|  12 | Kalendářový (`almanac`)     | Po porážce každého šéfa vznikne pranostika tvé nejčastěji hrané kombinace (bez místa +2 Kč); −2 zahození (1). | zvyš libovolnou kombinaci na úroveň 6 | „Pranostika na každý den, i na ty, kdy se nehraje.“ |
+|   # | Název (`id`)                | Pravidla                                                                                                                             | Odemčení                              | Flavor                                              |
+| --: | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------- | --------------------------------------------------- |
+|   1 | Hospodský (`pub`)           | Standardních 52 karet, pravidla beze změny.                                                                                          | od začátku                            | „Lepkavé karty a tácek pod sklenicí.“               |
+|   2 | Štamgastův (`regulars`)     | +1 slot žolíka (6); start s 0 Kč.                                                                                                    | od začátku                            | „Má tu vlastní věšák. Na žolíky.“                   |
+|   3 | Úřednický (`clerk`)         | Start s kupóny Trhací kalendář a Kamarád za pultem.                                                                                  | kup celkem 5 kupónů                   | „Všechno vyřízeno předem. Na razítko.“              |
+|   4 | Turistický (`tourist`)      | Postupka i Barva stačí ze 4 karet; cíle všech útrat ×1,5.                                                                            | zahraj celkem 25 Postupek             | „Po červené, pak po modré, pak se ztratit.“         |
+|   5 | Mariášový (`marias`)        | 32 karet: 7–A ve 4 barvách (bez 2–6). Postupka A-2-3-4-5 tu není možná; cíle všech útrat ×1,2.                                       | zahraj Čtveřici                       | „Kdo nehraje, nevyhraje. Kdo hraje, flekuje.“       |
+|   6 | Obrázkový (`court`)         | 32 karet: J, Q, K, A ve 4 barvách, každá karta 2×; −1 karta v ruce (7); cíle ×2,1.                                                   | vyhraj run s Mariášovým               | „Samí páni, žádní pěšáci.“                          |
+|   7 | Notářský (`notary`)         | Každá karta má při stavbě balíčku 6% šanci na náhodnou pečeť (4 druhy rovnoměrně); −1 slot spotřebky.                                | měj v jednom runu 5 karet s pečetí    | „Ověřeno, orazítkováno, zaplombováno.“              |
+|   8 | Zbohatlík (`nouveau_riche`) | Odměny za útraty ×2, úrok ×1,5, nevyužitá ruka +2 Kč; −2 ruce (2).                                                                   | měj najednou 50 Kč                    | „Peníze jsou, čas není.“                            |
+|   9 | Dlužník (`debtor`)          | Start −10 Kč; dluh smí jít až do −20 Kč; úrok ×2 (jen z kladného zůstatku).                                                          | dokonči kolo se záporným zůstatkem    | „Půjčka? Já? Jen na chvilku.“                       |
+|  10 | Babiččin (`grandmas`)       | +1 slot spotřebky (3); start s 1 náhodnou babskou radou.                                                                             | použij celkem 30 babských rad         | „Babička ví všechno. A ráda to řekne.“              |
+|  11 | Vetešnický (`junk_shop`)    | Start s 1 náhodným vzácným žolíkem; Večerka má o 1 kartový slot méně (1).                                                            | prodej celkem 25 žolíků               | „Všechno z druhé ruky, něco i ze třetí.“            |
+|  12 | Kalendářový (`almanac`)     | Po porážce každého šéfa vznikne pranostika tvé nejčastěji hrané kombinace (bez místa +2 Kč); −2 zahození (1); cíle všech útrat ×1,1. | zvyš libovolnou kombinaci na úroveň 6 | „Pranostika na každý den, i na ty, kdy se nehraje.“ |
 
 Upřesnění:
 
@@ -1218,11 +1217,14 @@ Upřesnění:
 - **Dlužník:** `startingMoney −10`, `debtLimit +20`, `interestMult ×2`. Odemyká se stejnou podmínkou jako
   achievement „Na sekeru“ (dokončit kolo v mínusu jde se žolíkem Sekera nebo ve výzvě Byrokracie) — dluh si hráč
   musí nejdřív „vyzkoušet“.
-- **Síla balíčků** (Desítka, nejlepší z botů `max` a `flush`, 200 runů `SIM-A-*`, 2026-10-02 po kalibraci fáze 7;
-  `docs/DECISIONS.md` „Balanc po fázi 7“): Hospodský 34 %, Štamgastův 39,5 %, Úřednický 34,5 %, Turistický 41 %,
-  Mariášový 40 % (bez cílů ×1,2 60,5 %), Obrázkový 50,5 %, Notářský 50 %, Zbohatlík 30,5 %, Dlužník 30,5 %,
-  Babiččin 44 %, Vetešnický 35 %, Kalendářový 43 %. Obrázkový, Notářský, Babiččin a Kalendářový jsou nad pásmem
-  kap. 12.1 (±7 p. b. od Hospodského) — ladění ve fázi 10 spolu se silnějšími boty.
+- **Síla balíčků** (Desítka, boti `max` a `flush`, sady `SIM-A` + `SIM-B` po 200 runech, Hospodský po 300;
+  2026-10-02 po kalibraci fáze 10, `docs/DECISIONS.md` „Fáze 10: balanc…“) — nejlepší bot / průměr obou botů:
+  Hospodský 28,8 / 28,6 %, Štamgastův 32,3 / 31,8 %, Úřednický 31,5 / 31,4 %, Turistický 30,5 / 30,4 %, Mariášový
+  36,5 / 33,4 %, Obrázkový 28,5 / 26,6 %, Notářský 37 / 33,1 %, Zbohatlík 35,3 / 32,3 %, Dlužník 31,8 / 29,5 %,
+  Babiččin 37,8 / 34,9 %, Vetešnický 25,5 / 22,8 %, Kalendářový 32,8 / 31,3 %. Rozpětí proti Hospodskému: nejlepší
+  bot −3,3 až +8,9 p. b., průměr botů −5,8 až +6,3 p. b. (pásmo kap. 12.1). Fáze 10 zpřísnila Turistický (cíle ×1,2 →
+  ×1,5), Obrázkový (×1,5 → ×2,1), Notářský (pečeť 25 → 6 %), Zbohatlíka (úrok ×2 → ×1,5), Babiččin (2 → 1 rada)
+  a Kalendářový (−1 → −2 zahození a cíle ×1,1): se silnějšími boty a úrovněmi ×2 vyhrávaly 41–59 % proti 29 %.
 - Pořadí v menu = pořadí v tabulce. Balíček s vyšší dosaženou silou piva má na obálce „tácek“ s číslem úrovně.
 
 ## 10. Obtížnosti „Síla piva“ (8)
@@ -1248,10 +1250,14 @@ odemkne úroveň N + 1 pro tento balíček.** Desítka je odemčená vždy.
   o 1 Kč): silnější boti nakupují víc položek za run a plošný příplatek je stál ~20 p. b. (Desítka ~30 % →
   Jedenáctka ~10 %, i s příplatkem až od 6. patra ~21 %); příplatek na přehození stojí ~3–6 p. b. Zapůjčený žolík
   stojí 2 Kč i na Jedenáctce a výš.
-- **Kalibrace vyšších sil piva po fázi 7** (sady `SIM-A` až `SIM-D`, `docs/DECISIONS.md` „Balanc po fázi 7“):
-  Doppelbock a Imperial byly nad pásmem (5,8 % a 4,0 %), proto je křivka 3 od patra 4 o ~12 % výš, Doppelbock má
-  25 % přibitých a 25 % zapůjčených (dřív 20 % / 15 %; 30 % je číslo žebříčku předlohy, příloha A) a Imperial
-  navíc cíle šéfů ×1,2. Výsledek: Bock 6,5 %, Doppelbock 3,5 %, Imperial 2,0 % (každá sada 2,0–2,3 %).
+- **Kalibrace fáze 10** (Hospodský, `npm run simulate`, sady `SIM-A`–`SIM-C`; Desítka a Imperial 300 runů na bota
+  `max`, `flush`, `pairs`, ostatní 200 runů na bota `max` a `flush`; `docs/DECISIONS.md` „Fáze 10: balanc…“) —
+  nejlepší bot souhrnu sad (sady A / B / C): Desítka 31,2 % (27,7 / 31,7 / 36), Jedenáctka 28 % (23 / 33 / 28,5),
+  Dvanáctka 19 % (16 / 17,5 / 24), Speciál 15,2 % (14 / 18,5 / 16), Ležák 7,8 % (9 / 8,5 / 8), Bock 7,3 %
+  (6 / 10 / 7), Doppelbock 4,2 % (3,5 / 6 / 4), Imperial 2,0 % (1,7 / 2,3 / 2). Všech osm v pásmu; sady se při
+  200–300 runech liší až o 10 p. b. (směrodatná chyba ~2,6 p. b. na sadu), rozhoduje souhrn. Proti fázi 7 se
+  změnily cíle (2.3.1), Jedenáctka (jen přehození), Speciál (40 %), Imperial (cíle šéfů ×1,2 → ×1,1); křivky 2 a 3
+  drží odstup od křivky 1 (patro 8: +16 % a +21 %), Doppelbock 25 % / 25 % zůstal.
 - Nálepky se losují v pořadí přibitý → zapůjčený → zvětrávající, takže skutečné podíly na Doppelbocku a výš jsou
   přibližně 25 % přibitých, 19 % zapůjčených, 22 % zvětrávajících a 34 % bez nálepky.
 - **Speciál 40 % (dřív 25 %):** boti fáze 10 oceňují zvětrávajícího žolíka jen za podíl zbytku runu, kdy bude
@@ -1541,18 +1547,18 @@ podle vzácnosti/názvu/četnosti použití.
 
 ### 12.1 Cíle
 
-| Metrika                                                             | Cíl                                                                                                                                 |
-| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| % výher rozumné strategie (nejlepší z botů `max`, `flush`, `pairs`) | Desítka 25–35 %, Jedenáctka 20–30 %, Dvanáctka 14–22 %, Speciál 10–17 %, Ležák 7–12 %, Bock 4–8 %, Doppelbock 3–6 %, Imperial < 3 % |
-| Bot bez žolíků (`nojoker`) na Desítce                               | medián prohry v patře 3–4 (kalibrace křivky a kombinací)                                                                            |
-| Náhodný bot (`random`)                                              | prohra v patrech 1–2 v > 90 % runů (kontrola, že hra není triviální)                                                                |
-| Rozložení proher (Desítka, rozumná strategie)                       | < 10 % runů skončí v patrech 1–2; vrchol proher v patrech 5–7                                                                       |
-| Letalita běžného šéfa (Desítka)                                     | 4–15 % proher při setkání; finální šéfové 20–40 %; žádný šéf výrazně nad ostatními (letalita normovaná podle patra)                 |
-| Výhry balíčků (Desítka)                                             | ±7 p. b. od Hospodského; Obrázkový, Zbohatlík a Dlužník smí být až o 10 p. b. těžší                                                 |
-| Žolíci                                                              | Δ výher podle vzácnosti v pásmu tabulky 4.3; žádný žolík s Δ < 0 p. b. ani nad horní hranicí                                        |
-| Ekonomika                                                           | peníze při vstupu do Večerky: patro 1 → 8–14 Kč, patro 4 → 15–30 Kč; úrok tvoří 15–25 % příjmů                                      |
-| Poměr skóre/cíl (medián nejlepší ruky × počet rukou)                | ≥ 1,0 do patra 6; v patře 8 kolem 0,8–1,2 (drama na konci)                                                                          |
-| Délka runu                                                          | výhra ≈ 24 kol a 60–80 zahraných rukou (u člověka ~45–60 minut)                                                                     |
+| Metrika                                                             | Cíl                                                                                                                                            |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| % výher rozumné strategie (nejlepší z botů `max`, `flush`, `pairs`) | Desítka 25–35 %, Jedenáctka 20–30 %, Dvanáctka 14–22 %, Speciál 10–17 %, Ležák 7–12 %, Bock 4–8 %, Doppelbock 3–6 %, Imperial < 3 %            |
+| Bot bez žolíků (`nojoker`) na Desítce                               | medián prohry v patře 3–4 (kalibrace křivky a kombinací)                                                                                       |
+| Náhodný bot (`random`)                                              | prohra v patrech 1–2 v > 90 % runů (kontrola, že hra není triviální)                                                                           |
+| Rozložení proher (Desítka, rozumná strategie)                       | < 10 % runů skončí v patrech 1–2; vrchol proher v patrech 5–7                                                                                  |
+| Letalita běžného šéfa (Desítka)                                     | 4–15 % proher při setkání; finální šéfové 20–40 %; žádný šéf výrazně nad ostatními (letalita normovaná podle patra)                            |
+| Výhry balíčků (Desítka)                                             | průměr botů `max` a `flush` ±7 p. b. od Hospodského, nejlepší bot nejvýš +10 p. b.; Obrázkový, Zbohatlík a Dlužník smí být až o 10 p. b. těžší |
+| Žolíci                                                              | Δ výher podle vzácnosti v pásmu tabulky 4.3; žádný žolík s Δ < 0 p. b. ani nad horní hranicí                                                   |
+| Ekonomika                                                           | peníze při vstupu do Večerky: patro 1 → 8–14 Kč, patro 4 → 15–30 Kč; úrok tvoří 15–25 % příjmů                                                 |
+| Poměr skóre/cíl (medián nejlepší ruky × počet rukou)                | ≥ 1,0 do patra 6; v patře 8 kolem 0,8–1,2 (drama na konci)                                                                                     |
+| Délka runu                                                          | výhra ≈ 24 kol a 60–80 zahraných rukou (u člověka ~45–60 minut)                                                                                |
 
 ### 12.2 Boti
 

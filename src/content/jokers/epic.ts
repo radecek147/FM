@@ -58,7 +58,7 @@ const snowman: JokerDef = {
 // ─────────────────────────── #27 Sběrač hub ───────────────────────────
 
 const MUSHROOM_BASE = 1;
-/** Fáze 10: 0,25 → 0,22 — silnější boti ničí víc karet, R2 123 % nad pásmem epického (DECISIONS „Fáze 10: silnější boti…“). */
+/** Fáze 10: 0,25 → 0,22 — silnější boti ničí víc karet, R2 123 % nad pásmem epického (DECISIONS „Fáze 10: balanc…“). */
 const MUSHROOM_XMULT_PER_CARD = 0.22;
 
 const mushroomXmult = (self: JokerInstance): number =>

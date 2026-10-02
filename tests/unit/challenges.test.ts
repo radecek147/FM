@@ -536,21 +536,25 @@ describe('výzvy – pravidla', () => {
 // ─────────────────────────── Bot ───────────────────────────
 
 describe('výzvy – dohratelnost botem', () => {
-  it.each(ORDER)('%s: bot dohraje run bez neplatných akcí', (id) => {
-    const bot = createBot('max');
-    for (let i = 1; i <= 2; i++) {
-      const r = simulateRun(REG, {
-        seed: simSeed(`CH-${id}`, i),
-        deckId: REG.challenges[id]!.deckId,
-        stake: 1,
-        bot,
-        challengeId: id,
-      });
-      expect(r.invalidActions, `${r.seed}: ${JSON.stringify(r.invalidByCode)}`).toBe(0);
-      expect(r.cause, r.seed).not.toBe('actionLimit');
-      expect([r.deckId, r.stake]).toEqual([REG.challenges[id]!.deckId, 1]);
-    }
-  }, 60_000);
+  it.each(ORDER)(
+    '%s: bot dohraje run bez neplatných akcí',
+    (id) => {
+      const bot = createBot('max');
+      for (let i = 1; i <= 2; i++) {
+        const r = simulateRun(REG, {
+          seed: simSeed(`CH-${id}`, i),
+          deckId: REG.challenges[id]!.deckId,
+          stake: 1,
+          bot,
+          challengeId: id,
+        });
+        expect(r.invalidActions, `${r.seed}: ${JSON.stringify(r.invalidByCode)}`).toBe(0);
+        expect(r.cause, r.seed).not.toBe('actionLimit');
+        expect([r.deckId, r.stake]).toEqual([REG.challenges[id]!.deckId, 1]);
+      }
+    },
+    60_000,
+  );
 
   it('boti respektují zákaz přeskakování a přehazování (Rychlík bez zastávky)', () => {
     for (const name of ['random', 'econ', 'flush', 'pairs'] as const) {

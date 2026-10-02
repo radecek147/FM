@@ -1,7 +1,7 @@
 /**
  * Základní hodnoty kombinací (vlastní čísla; tabulka v docs/DESIGN.md kap. 2.2.1, laděno simulací). Přírůstky
  * za úroveň jsou od fáze 10 dvojnásobné (pozdní hra škáluje hlavně úrovněmi — patro 8 se základem 100 000,
- * docs/DECISIONS.md „Fáze 10: silnější boti, úrovně ×2 a cíle patra 8“).
+ * docs/DECISIONS.md „Fáze 10: balanc (silnější boti, cíle patra 8, žolíci, balíčky)“).
  */
 import type { HandType, HandTypeDef } from '../engine/types';
 

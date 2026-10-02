@@ -24,8 +24,9 @@ export const MAX_CONSECUTIVE_INVALID = 3;
 
 /**
  * Cílové pásmo % výher rozumné strategie podle síly piva (DESIGN 10 a 12.1) — [min, max] v procentech, pro hotovou
- * hru se šéfy. Kalibrace fáze 10 (silnější boti, úrovně ×2, patro 8 se základem 100 000): všech 8 sil piva v pásmu
- * (docs/DECISIONS.md „Fáze 10: silnější boti, úrovně ×2 a cíle patra 8“).
+ * hru se šéfy. Kalibrace fáze 10 (silnější boti, úrovně ×2, patro 8 Desítky se základem 95 000): všech 8 sil piva
+ * v pásmu, souhrn 3 sad seedů A–C (docs/DECISIONS.md „Fáze 10: balanc (silnější boti, cíle patra 8, žolíci,
+ * balíčky)“).
  */
 export const WIN_RATE_TARGETS: Readonly<Record<number, readonly [number, number]>> = Object.freeze({
   1: [25, 35],
@@ -106,8 +107,12 @@ export function simulateRun(registry: ContentRegistry, opts: SimulateRunOptions)
       } else if (e.type === 'roundWon') {
         for (const j of game.state.jokers) jokerFirstAnte[j.defId] ??= e.ante;
         if (e.ante === FINAL_ANTE && e.blind === 'boss' && e.target > 0) finalBossRatio = e.score / e.target;
-      }
-      else if (e.type === 'gameOver' && e.info.ante === FINAL_ANTE && e.info.blind === 'boss' && e.info.target > 0)
+      } else if (
+        e.type === 'gameOver' &&
+        e.info.ante === FINAL_ANTE &&
+        e.info.blind === 'boss' &&
+        e.info.target > 0
+      )
         finalBossRatio = e.info.score / e.info.target;
     }
   }

@@ -13,7 +13,7 @@ import { shopPrice } from '../engine/shop/prices';
 /**
  * Jedenáctka: příplatek k ceně každého přehození ve Večerce (Kč) — od patra `REROLL_PRICE_FROM_ANTE`. Dřív +1 Kč ke
  * všemu ve Večerce: se silnějšími boty fáze 10 (víc nákupů za run) srazil výhry z ~29 na ~10 % (i od 6. patra jen
- * na ~21 %); příplatek jen na přehození stojí ~6 p. b. (DECISIONS 2026-10-02 „Fáze 10: silnější boti…“).
+ * na ~21 %); příplatek jen na přehození stojí ~6 p. b. (DECISIONS 2026-10-02 „Fáze 10: balanc…“).
  */
 export const REROLL_PRICE_ADD = 1;
 export const REROLL_PRICE_FROM_ANTE = 2;
@@ -38,8 +38,8 @@ export const RENTAL_CHANCE = 0.25;
 
 /**
  * Imperial: násobek cílů útrat Šéf (vedle pravidla šéfa ve Velké útratě). Po fázi 7 ×1,2; s cíli fáze 10 (patro 8
- * se základem 100 000) a ×1,2 vyhrával nejlepší bot pod 1 %, s ×1,1 v pásmu 1–3 % (DECISIONS 2026-10-02 „Fáze 10:
- * silnější boti…“).
+ * se základem 95 000) a ×1,2 vyhrával nejlepší bot pod 1 %, s ×1,1 v pásmu 1–3 % (DECISIONS 2026-10-02 „Fáze 10:
+ * balanc…“).
  */
 export const IMPERIAL_BOSS_TARGET_MULT = 1.1;
 

@@ -12,7 +12,7 @@ import type { BossCtx, BossDef } from '../../engine/content-types';
 
 /**
  * Fronta na banány: násobek základního cíle patra. Fáze 10: 4,5 → 3,5 — s cíli patra 8 fáze 10 a silnějšími boty
- * letalita 55 % (pásmo 20–40 %, DECISIONS „Fáze 10: silnější boti…“).
+ * letalita 55 % (pásmo 20–40 %, DECISIONS „Fáze 10: balanc…“).
  */
 const BANANA_QUEUE_TARGET_MULT = 3.5;
 /**
