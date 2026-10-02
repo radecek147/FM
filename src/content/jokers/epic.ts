@@ -21,6 +21,7 @@ const snowman: JokerDef = {
   id: 'snowman',
   rarity: 'epic',
   cost: 8,
+  unlock: { type: 'stat', stat: 'firstHandRoundWins', atLeast: 1 },
   tags: ['xmult'],
   params: { xmult: SNOWMAN_XMULT, decay: SNOWMAN_DECAY, min: SNOWMAN_MELT_AT },
   initState: () => ({ xmult: SNOWMAN_XMULT }),
@@ -66,6 +67,7 @@ const mushroomPicker: JokerDef = {
   id: 'mushroom_picker',
   rarity: 'epic',
   cost: 9,
+  unlock: { type: 'stat', stat: 'cardsDestroyed', atLeast: 20 },
   tags: ['xmult', 'scaling', 'deck'],
   params: { base: MUSHROOM_BASE, xmult: MUSHROOM_XMULT_PER_CARD },
   initState: () => ({ destroyed: 0 }),
@@ -114,6 +116,7 @@ const impersonator: JokerDef = {
   id: 'impersonator',
   rarity: 'epic',
   cost: 10,
+  unlock: { type: 'stat', stat: 'maxJokers', atLeast: 5 },
   tags: ['copy'],
   // Kopírující žolíci se navzájem nekopírují (DESIGN 4.4.7).
   copyable: false,

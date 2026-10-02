@@ -1,11 +1,12 @@
 /**
- * Hlavní menu: Nová hra, Pokračovat (jen s uloženým runem), Výzvy / Denní run / Sbírka / Statistiky
- * („Už brzy“ — fáze 8), Nastavení, Titulky; náhodná rada Štamgasta, verze a kontrolní věta pro font.
- * Ovládání: Tab / šipky nahoru a dolů mezi položkami, Enter / mezerník aktivuje.
+ * Hlavní menu: Nová hra, Pokračovat (jen s uloženým runem), Výzvy / Denní run („Už brzy“ — fáze 8),
+ * Sbírka (s počtem novinek), Statistiky, Nastavení, Titulky; náhodná rada Štamgasta, verze a kontrolní věta
+ * pro font. Ovládání: Tab / šipky nahoru a dolů mezi položkami, Enter / mezerník aktivuje.
  */
 import { version } from '../../../package.json';
 import { t, tList } from '../../i18n/cs';
 import type { App, ScreenFactory } from '../app';
+import { unseenCount } from '../../engine/meta';
 import { button, focusWhenMounted } from '../components/button';
 import { toast } from '../components/toast';
 import { GameController } from '../controller';
@@ -33,7 +34,8 @@ export function hasContinuableRun(app: App): boolean {
 /** Pokračuje v rozehraném runu: nejdřív ten v paměti, jinak obnoví uložený. Vrací false, když není co. */
 export function continueRun(app: App): boolean {
   let c = app.controller && app.controller.state.phase !== 'game_over' ? app.controller : null;
-  c ??= GameController.resume({ registry: app.registry, store: app.store });
+  // Obnovený run se připojí k profilu (statistiky, odemykání); ten v paměti je připojený od začátku.
+  c ??= app.profiles.resume();
   if (!c) return false;
   app.controller = c;
   app.go('game');
@@ -56,6 +58,10 @@ export const menuScreen: ScreenFactory = (app) => {
       primary?: boolean;
       disabled?: boolean;
       soon?: boolean;
+      /** Cedulka vpravo (počet novinek ve sbírce). */
+      badge?: string;
+      /** Přístupný popisek, když se liší od textu (cedulka je aria-hidden). */
+      ariaLabel?: string;
     },
   ): HTMLElement => {
     const hintId = `menu-hint-${id}`;
@@ -68,6 +74,7 @@ export const menuScreen: ScreenFactory = (app) => {
       describedBy: hintId,
       disabled: opts.disabled,
       onClick: opts.onClick,
+      ...(opts.badge ? { badge: opts.badge, ariaLabel: opts.ariaLabel } : {}),
       ...(opts.soon ? { comingSoon: soon, onComingSoon: notifySoon, badge: t('menu.comingSoonBadge') } : {}),
       className: 'menu__item',
     });
@@ -80,6 +87,7 @@ export const menuScreen: ScreenFactory = (app) => {
   };
 
   const canContinue = hasContinuableRun(app);
+  const fresh = unseenCount(app.profile);
 
   const tipText = h('span', { class: 'menu__tip-text', 'data-testid': 'loading-tip' }, tip ?? '');
   const tipEl = tip
@@ -126,8 +134,16 @@ export const menuScreen: ScreenFactory = (app) => {
       }),
       item('challenges', { soon: true }),
       item('daily', { soon: true }),
-      item('collection', { soon: true }),
-      item('stats', { soon: true }),
+      item('collection', {
+        onClick: () => app.go('collection'),
+        ...(fresh > 0
+          ? {
+              badge: t('menu.collection.badge', { n: fresh }),
+              ariaLabel: t('menu.collection.labelNew', { n: fresh }),
+            }
+          : {}),
+      }),
+      item('stats', { onClick: () => app.go('stats') }),
       item('settings', { onClick: () => app.go('settings') }),
       item('credits', { onClick: () => app.go('credits') }),
     ),

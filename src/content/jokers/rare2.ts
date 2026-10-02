@@ -107,6 +107,7 @@ export const RARE2_JOKERS: JokerDef[] = [
     id: 'office_connection',
     rarity: 'rare',
     cost: 6,
+    unlock: { type: 'beatBoss', boss: 'tax_audit' },
     tags: ['utility'],
     params: { pct: CONNECTION_PCT },
     copyable: false,
@@ -188,6 +189,7 @@ export const RARE2_JOKERS: JokerDef[] = [
     id: 'glassblower',
     rarity: 'rare',
     cost: 7,
+    unlock: { type: 'stat', stat: 'glassBroken', atLeast: 5 },
     tags: ['deck', 'xmult'],
     params: { cards: GLASSBLOWER_CARDS },
     copyable: false,
@@ -234,6 +236,7 @@ export const RARE2_JOKERS: JokerDef[] = [
     id: 'notary_public',
     rarity: 'rare',
     cost: 6,
+    unlock: { type: 'stat', stat: 'maxSealedCards', atLeast: 3 },
     tags: ['economy', 'deck'],
     noRental: true,
     hooks: {
@@ -262,6 +265,7 @@ export const RARE2_JOKERS: JokerDef[] = [
     id: 'witch',
     rarity: 'rare',
     cost: 6,
+    unlock: { type: 'useConsumable', kind: 'razitko', count: 5 },
     tags: ['consumable'],
     hooks: {
       onBossDefeated: (ctx) => {
@@ -397,6 +401,7 @@ export const RARE2_JOKERS: JokerDef[] = [
     id: 'seer',
     rarity: 'rare',
     cost: 6,
+    unlock: { type: 'useConsumable', kind: 'pranostika', count: 10 },
     tags: ['consumable', 'hand'],
     hooks: {
       afterHandScored: (ctx) => {
@@ -457,6 +462,7 @@ export const RARE2_JOKERS: JokerDef[] = [
     id: 'trodden_path',
     rarity: 'rare',
     cost: 6,
+    unlock: { type: 'stat', stat: 'blindsSkipped', atLeast: 10 },
     tags: ['utility', 'hand'],
     params: { hand: 'straight' },
     copyable: false,
@@ -480,6 +486,7 @@ export const RARE2_JOKERS: JokerDef[] = [
     id: 'war_loot',
     rarity: 'rare',
     cost: 6,
+    unlock: { type: 'beatBoss', count: 10 },
     tags: ['economy', 'scaling'],
     params: { money: LOOT_MONEY },
     initState: () => ({ bosses: 0 }),
@@ -554,6 +561,7 @@ export const RARE2_JOKERS: JokerDef[] = [
     id: 'carbon_paper',
     rarity: 'rare',
     cost: 7,
+    unlock: { type: 'stat', stat: 'jokersBought', atLeast: 15 },
     tags: ['copy'],
     copyable: false,
     initState: () => ({ target: null }),
@@ -585,6 +593,7 @@ export const RARE2_JOKERS: JokerDef[] = [
     id: 'defenestration',
     rarity: 'rare',
     cost: 6,
+    unlock: { type: 'stat', stat: 'cardsDiscarded', atLeast: 150 },
     tags: ['economy', 'discard', 'face'],
     params: { money: DEFENESTRATION_MONEY },
     noRental: true,

@@ -45,11 +45,20 @@ export {
   maxHandLevel,
   totalRunsPlayed,
   challengesCompleted,
+  distinctHandsPlayed,
+  CUSTOM_UNLOCK_PARAMS,
   type UnlockProgress,
   type UnlockEvalCtx,
   type CustomUnlockFn,
   type PoolMode,
 } from './unlocks';
+export {
+  UNLOCK_TEXT_PREFIX,
+  unlockItemKey,
+  unlockText,
+  unlockTextFor,
+  type UnlockTextSpec,
+} from './unlockText';
 export {
   achievementList,
   achievementCtx,

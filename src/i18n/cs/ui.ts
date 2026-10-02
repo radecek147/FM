@@ -40,7 +40,13 @@ export const menu = {
   },
   challenges: { label: 'Výzvy', hint: 'Runy se zvláštními pravidly. Pro ty, kterým normální hra nestačí.' },
   daily: { label: 'Denní run', hint: 'Stejné karty pro celou republiku. Kdo prohraje, platí rundu.' },
-  collection: { label: 'Sbírka', hint: 'Všichni žolíci, šéfové a pranostiky, které ti prošly rukama.' },
+  collection: {
+    label: 'Sbírka',
+    hint: 'Všichni žolíci, šéfové a pranostiky, které ti prošly rukama.',
+    /** Cedulka s počtem novinek (štítek „Nové“). */
+    badge: '{n}',
+    labelNew: 'Sbírka ({n|plural:novinka,novinky,novinek})',
+  },
   stats: { label: 'Statistiky', hint: 'Čísla, kterými se můžeš chlubit. Nebo je radši nikomu neukazuj.' },
   settings: { label: 'Nastavení', hint: 'Hlasitost, rychlost a další šroubky.' },
   credits: { label: 'Titulky', hint: 'Kdo za to všechno může a odkud jsou ikony.' },
@@ -57,6 +63,15 @@ export const newGame = {
     title: 'Balíček',
     label: 'Výběr balíčku',
     count: '{n|plural:balíček,balíčky,balíčků}',
+    /** Počet odemčených z celkového počtu. */
+    unlockedCount: 'odemčeno {n} z {total}',
+    locked: 'Zamčeno',
+    lockedLabel: '{name}, zamčeno',
+    condition: 'Jak odemknout: {text}',
+    progress: '({progress})',
+    /** Tácek s nejsilnější silou piva, na které hráč s balíčkem vyhrál (DESIGN 9). */
+    coaster: '{level}°',
+    coasterLabel: 'Nejsilnější výhra: {stake}',
   },
   stake: {
     title: 'Síla piva',
@@ -67,6 +82,10 @@ export const newGame = {
     coaster: '{level}°',
     rules: 'Co na tomhle stole platí',
     newRule: 'nově',
+    lockedLabel: '{name}, úroveň {level}, zamčeno',
+    locked: 'Zamčeno',
+    lockedHint: 'Pro balíček {deck} zatím zamčeno. {condition}',
+    challengeNote: 'Výzvy a denní run mají sílu piva danou předem.',
   },
   seed: {
     title: 'Seed',
@@ -75,6 +94,18 @@ export const newGame = {
     random: 'Náhodný',
     randomLabel: 'Vylosovat náhodný seed',
     hint: 'Stejný seed rozdá stejné karty. Pošli ho kamarádovi a porovnejte, kdo to pokazil víc.',
+    /** Run se zadaným seedem (DESIGN 11.6). */
+    seededNote:
+      'Run se zadaným seedem se nepočítá do odemykání, statistik ani achievementů – jen do historie. Zato se hraje s celým obsahem, přesně jako u kamaráda.',
+    dailyNote:
+      'Denní run z {date} mimo soutěž: balíček {deck} a sílu piva {stake} určuje seed. Do statistik se nepočítá.',
+    errors: {
+      invalidChars: 'Seed smí mít jen písmena a číslice bez I, O, 0 a 1 – ať se nepletou.',
+      tooShort: 'Seed je moc krátký – potřebuje přesně {n|plural:znak,znaky,znaků}.',
+      tooLong: 'Seed je moc dlouhý – stačí přesně {n|plural:znak,znaky,znaků}.',
+      invalidDate: 'Takový den v kalendáři nenajdeš. Denní seed má tvar DEN-RRRRMMDD.',
+      reserved: 'Tenhle tvar si hra nechává pro sebe. Zadej {n|plural:znak,znaky,znaků}, nebo DEN-RRRRMMDD.',
+    },
   },
   start: 'Rozdat karty',
   overwrite: {

@@ -96,6 +96,7 @@ const herbalist: JokerDef = {
   id: 'herbalist',
   rarity: 'rare',
   cost: 6,
+  unlock: { type: 'useConsumable', kind: 'rada', count: 10 },
   tags: ['mult', 'scaling', 'consumable'],
   params: { mult: HERBALIST_MULT },
   initState: () => ({ mult: 0 }),
@@ -197,6 +198,7 @@ const carousel: JokerDef = {
   id: 'carousel',
   rarity: 'rare',
   cost: 6,
+  unlock: { type: 'playHand', hand: 'straight', count: 10 },
   tags: ['mult', 'utility', 'hand'],
   // `hand` čtou boti při nákupu (styl „Postupky“), v popisku není.
   params: { mult: CAROUSEL_MULT, hand: 'straight' },
@@ -250,6 +252,7 @@ const luckySeven: JokerDef = {
   id: 'lucky_seven',
   rarity: 'rare',
   cost: 6,
+  unlock: { type: 'stat', stat: 'handsPlayed', atLeast: 77 },
   tags: ['retrigger'],
   params: { chance: LUCKY_SEVEN_CHANCE, odds: LUCKY_SEVEN_ODDS, retriggers: LUCKY_SEVEN_RETRIGGERS },
   hooks: {
@@ -278,6 +281,7 @@ const tab: JokerDef = {
   id: 'tab',
   rarity: 'rare',
   cost: 6,
+  unlock: { type: 'roundEndMoney', atMost: 0 },
   tags: ['economy', 'mult'],
   params: { debt: TAB_DEBT, mult: TAB_MULT, cap: TAB_CAP },
   hooks: {

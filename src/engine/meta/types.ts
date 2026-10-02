@@ -385,6 +385,14 @@ export interface AchievementDef {
   allowSeeded?: boolean;
   /** Ikona (název z `ICON_NAMES`) pro sbírku a toast. */
   icon?: string;
-  /** Čistá funkce (nic nemění); výjimka = nesplněno. Texty: `achievements.<id>.name|desc`. */
+  /**
+   * Čísla do textů (`{param}` v `achievements.<id>.desc|hint`) — stejné konstanty čte `check`, takže text a podmínka
+   * nemůžou odjet od sebe (jako `JokerDef.params`).
+   */
+  params?: Record<string, number | string>;
+  /**
+   * Čistá funkce (nic nemění); výjimka = nesplněno. Texty: `achievements.<id>.name|desc|flavor`, skrytý navíc
+   * `hint` (nápověda místo „???“).
+   */
   check(ctx: AchievementCtx): AchievementResult;
 }

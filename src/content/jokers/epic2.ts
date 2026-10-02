@@ -32,6 +32,7 @@ const beerSommelier: JokerDef = {
   id: 'beer_sommelier',
   rarity: 'epic',
   cost: 9,
+  unlock: { type: 'custom', id: 'distinctHands8' },
   tags: ['xmult', 'hand'],
   params: { base: SOMMELIER_BASE, xmult: SOMMELIER_XMULT },
   hooks: {
@@ -73,6 +74,7 @@ const archivist: JokerDef = {
   id: 'archivist',
   rarity: 'epic',
   cost: 10,
+  unlock: { type: 'discover', category: 'jokers', count: 30 },
   tags: ['copy'],
   // Kopírující žolíci se navzájem nekopírují (DESIGN 4.4.7).
   copyable: false,
@@ -142,6 +144,7 @@ const tourGuide: JokerDef = {
   id: 'tour_guide',
   rarity: 'epic',
   cost: 8,
+  unlock: { type: 'winRun', deck: 'tourist' },
   tags: ['chips', 'utility', 'hand'],
   // `hand` čtou boti (honí Barvu), v popisku není.
   params: { chips: GUIDE_CHIPS, hand: 'flush' },
@@ -175,6 +178,7 @@ const spartakiada: JokerDef = {
   id: 'spartakiada',
   rarity: 'epic',
   cost: 9,
+  unlock: { type: 'stat', stat: 'cardsPlayed', atLeast: 500 },
   tags: ['retrigger'],
   params: { retriggers: SPARTAKIADA_RETRIGGERS },
   hooks: {
@@ -205,6 +209,7 @@ const voucherPrivatization: JokerDef = {
   id: 'voucher_privatization',
   rarity: 'epic',
   cost: 8,
+  unlock: { type: 'stat', stat: 'vouchersBought', atLeast: 10 },
   tags: ['economy'],
   params: { money: PRIVATIZATION_MONEY, pct: PRIVATIZATION_PCT, max: PRIVATIZATION_MAX },
   copyable: false,
@@ -391,6 +396,7 @@ const exchangeOffice: JokerDef = {
   id: 'exchange_office',
   rarity: 'epic',
   cost: 9,
+  unlock: { type: 'stat', stat: 'moneyEarned', atLeast: 500 },
   tags: ['xmult'],
   params: { base: EXCHANGE_BASE, xmult: EXCHANGE_XMULT, chips: EXCHANGE_CHIPS, max: EXCHANGE_MAX },
   hooks: {
@@ -422,6 +428,7 @@ const newYearsEve: JokerDef = {
   id: 'new_years_eve',
   rarity: 'epic',
   cost: 8,
+  unlock: { type: 'winRun' },
   tags: ['xmult', 'scaling'],
   params: { xmult: NYE_XMULT },
   initState: () => ({ bosses: 0 }),
