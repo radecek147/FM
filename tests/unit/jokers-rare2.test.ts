@@ -14,6 +14,7 @@ import { newJokerInstance } from '../../src/engine/effects/api';
 import { Game } from '../../src/engine/run/game';
 import { deserializeRun, serializeRun } from '../../src/engine/save/save';
 import { createBot } from '../../src/engine/sim/index';
+import { copyStatusText } from '../../src/ui/describe';
 import type {
   Action,
   Card,
