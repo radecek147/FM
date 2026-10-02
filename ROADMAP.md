@@ -359,6 +359,49 @@ průměrném notebooku; kontroly zelené; commit `feat(ui): juice and audio`; f�
 
 ---
 
+## Opravy po testu 1.0 (1.0.1)
+
+Komplexní test 2026-10-02: hráčský průchod (UX), lov chyb v okrajových případech, revize designu a obsahu se
+simulacemi. Seřazeno podle priority.
+
+**Chyby a čitelnost**
+
+- [ ] Číslice „3“ v písmu Karban Digits vypadá jako „8“ („Patro 3/8“ se čte „8/8“); „C“ jako „O“, „č“ jako „ċ“
+      (`src/ui/art/digitFont.ts`, malé velikosti v levém panelu)
+- [ ] Toasty (achievementy, odemčení) se zobrazují uprostřed plochy a zakrývají obálku, zboží, skórování i výhru
+      a jsou i nad modály — přesunout do rohu, pod modaly, během skórování pozdržet
+- [ ] „Koupit a použít“ ve Večerce počítá použitelnost se vším zbožím naráz (`src/ui/screens/game/shop.ts`
+      `prospective()`) — Výjimka z vyhlášky zamčená, Zaklepat na dřevo hlásí chybu
+- [ ] Pan starosta: náhled nevaruje, že ruka nepřekoná předchozí; ukázat „Překonej: X“
+- [ ] Denní run jde natrénovat ručním seedem `DEN-dnešek` a zadat i budoucí den (`src/engine/meta/daily.ts`)
+- [ ] Dvě karty prohlížeče si přepisují profil i run (chybí posluchač `storage` / zámek)
+- [ ] Návrat do hry po odchodu do menu během animace: hra až několik sekund nereaguje
+      (`src/ui/controller.ts`, presenter se neruší)
+- [ ] Import runu: hlubší validace (karty v ruce, `round`, neznámí žolíci) — dnes import projde a hra pak padá
+- [ ] Obálka: „Použít“ nekontroluje `canUse`; Minimalista + Babiččina barva: UI pustí 3 cíle, rada chce až 4
+- [ ] Velká čísla v levém panelu se lámou uprostřed skupiny číslic; focus po výběru útraty padá na `<body>`
+- [ ] Nová hra: zamčené balíčky zaberou obrazovku, chyba seedu je mimo viewport pod plovoucím tlačítkem;
+      achievement „Semínko zaseto“ odporuje nápovědě o seedovaných runech
+- [ ] Tutoriál: rady 7 a 9 se vracejí každé kolo, číslování skáče, bublina zakrývá Skóre kola
+- [ ] Dotyk: popisy zboží jen na hover / dlouhý stisk; telefon: ruka a tlačítka pod přehybem
+
+**Balanc a design**
+
+- [ ] Dechovka + skleněné karty = auto-win (Trojice 3× sklo ≈ 96 milionů, Čtveřice ≈ 2,3e12); omezit opakování
+      ×mult z karet
+- [ ] Patro 8 je zeď (42–59 % runů, které tam dojdou, padne) a patra 1–5 jsou bez napětí (14 z 23 kol vyhráno
+      první rukou); přeladit růst cílů a finální šéfy (Fronta na banány 3,5×)
+- [ ] Garsonka 1+kk zabíjí Barvu (37,5 % pro bota flush); Nová vyhláška; Bílá paní bez zamíchání
+- [ ] Ruce jsou levné (−1 ruka nic nestojí), žolíci „na první ruku“ platí skoro vždy
+- [ ] Přeskakování za štítky se nevyplácí; legendární žolíci se skoro neobjeví
+- [ ] Systémový obsah blízko Balatru (kupóny, štítky, nálepky, tabulka kombinací, váhy obchodu ±10 %) —
+      nahradit část vlastními mechanikami a čísly
+- [ ] Nekonečný režim končí na patře 10–11; achievement „Tepelná smrt vesmíru“ (1,8e308) je nesplnitelný
+- [ ] Texty: kolize názvů Zabijačka (žolík i šéf), opakované motivy, anglické slovní hříčky (piky, káry),
+      „Hrací automat“ → „Hudební automat“, pitva Malé a Velké útraty potřebuje víc hlášek
+
+---
+
 ## Obsahové patche (po 1.0)
 
 Po vydání 1.0 pokračuj patchi. Každý patch: obsah podle `docs/CONTENT-GUIDE.md`, testy, simulace,
