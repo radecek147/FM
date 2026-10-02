@@ -13,25 +13,38 @@ import { RADY } from './rady';
 /** Štamgastův: sloty žolíků navíc a startovní peníze. */
 export const REGULARS_JOKER_SLOTS = 1;
 export const REGULARS_STARTING_MONEY = 0;
-/** Turistický: Postupka i Barva ze 4 karet, cíle ×1,2. */
+/**
+ * Turistický: Postupka i Barva ze 4 karet, cíle ×1,5. Fáze 10: s ×1,2 vyhrával nejlepší bot 46 % proti 31 %
+ * Hospodského (s úrovněmi ×2 se Barvy a Postupky vyplatí víc), ×1,4 37,5 %, ×1,6 28 % (DECISIONS „Fáze 10…“).
+ */
 export const TOURIST_CARDS = 4;
-export const TOURIST_TARGET_MULT = 1.2;
+export const TOURIST_TARGET_MULT = 1.5;
 /**
  * Mariášový: hodnoty 7–A; cíle ×1,2. Bez cílů navíc bot s 32 kartami vyhrával 60 % proti 34 % Hospodského (v malém
  * balíčku chodí Barva i Postupka skoro samy); s ×1,2 ~40 % (DECISIONS 2026-10-02 „Balanc po fázi 7“).
  */
 export const MARIAS_LOWEST_RANK: Rank = 7;
 export const MARIAS_TARGET_MULT = 1.2;
-/** Obrázkový: J, Q, K, A, každá karta 2×; −1 karta v ruce; cíle ×1,5. */
+/**
+ * Obrázkový: J, Q, K, A, každá karta 2×; −1 karta v ruce; cíle ×2,1. Fáze 10: s ×1,5 53 % (Hospodský 31 %),
+ * ×1,9 36 %, ×2,3 29 %.
+ */
 export const COURT_LOWEST_RANK: Rank = 11;
 export const COURT_COPIES = 2;
 export const COURT_HAND_SIZE = -1;
-export const COURT_TARGET_MULT = 1.5;
-/** Notářský: šance na náhodnou pečeť u každé karty; −1 slot spotřebky. */
-export const NOTARY_SEAL_CHANCE = 0.25;
+export const COURT_TARGET_MULT = 2.1;
+/**
+ * Notářský: šance na náhodnou pečeť u každé karty; −1 slot spotřebky. Fáze 10: s 25 % 59 % výher (Hospodský 31 %;
+ * silnější boti pečetě i karty s úpravami — Pan farář — využijí naplno), s 12 % 42 %, se 6 % 37 %.
+ */
+export const NOTARY_SEAL_CHANCE = 0.06;
 export const NOTARY_CONSUMABLE_SLOTS = -1;
-/** Zbohatlík: odměny za útraty a úrok ×2, nevyužitá ruka +1 Kč navíc, −2 ruce. */
+/**
+ * Zbohatlík: odměny za útraty ×2, úrok ×1,5, nevyužitá ruka +1 Kč navíc, −2 ruce. Fáze 10: s úrokem ×2 48 % výher
+ * (Hospodský 31 %), s ×1,5 35 %; odměny i úrok ×1,5 jen 17,5 % (DECISIONS „Fáze 10…“).
+ */
 export const RICH_REWARD_MULT = 2;
+export const RICH_INTEREST_MULT = 1.5;
 export const RICH_UNUSED_HAND_BONUS = 1;
 export const RICH_HANDS = -2;
 /** Dlužník: start −10 Kč, dluh až do −20 Kč, úrok ×2 (jen z kladného zůstatku — to hlídá engine). */
@@ -44,15 +57,21 @@ export const DEBTOR_INTEREST_MULT = 2;
  * s Kamarádem za pultem 34,5 %, v rozmezí ostatních balíčků (DECISIONS 2026-10-02 „Balanc po fázi 7“).
  */
 export const CLERK_VOUCHERS: readonly string[] = ['tear_calendar', 'counter_buddy'];
-/** Babiččin: +1 slot spotřebky, start se 2 různými náhodnými babskými radami. */
+/**
+ * Babiččin: +1 slot spotřebky, start s 1 náhodnou babskou radou. Fáze 10: se 2 radami 41 % výher (Hospodský 31 %),
+ * s 1 radou 36 %; bez slotu navíc (2 rady) 39 %.
+ */
 export const GRANDMAS_CONSUMABLE_SLOTS = 1;
-export const GRANDMAS_RADY = 2;
+export const GRANDMAS_RADY = 1;
 /** Vetešnický: start s 1 náhodným vzácným žolíkem; Večerka má o 1 kartový slot méně. */
 export const JUNK_SHOP_RARITY: JokerRarity = 'rare';
 export const JUNK_SHOP_SHOP_SLOTS = -1;
-/** Kalendářový: po porážce šéfa pranostika nejčastěji hrané kombinace, bez místa peníze; −1 zahození. */
+/**
+ * Kalendářový: po porážce šéfa pranostika nejčastěji hrané kombinace, bez místa peníze; −2 zahození. Fáze 10:
+ * s −1 zahozením 43 % výher (Hospodský 31 %; s úrovněmi ×2 je pranostika zdarma cennější), s −2 38 %.
+ */
 export const ALMANAC_FULL_MONEY = 2;
-export const ALMANAC_DISCARDS = -1;
+export const ALMANAC_DISCARDS = -2;
 /** Kalendářový bez jediné zahrané ruky (šéf poražený bez skórování) — pranostika Vysoké karty. */
 const ALMANAC_FALLBACK_HAND: HandType = 'high_card';
 const MSG_ALMANAC_MADE = 'decks.almanac.made';
@@ -180,11 +199,16 @@ export const DECKS: DeckDef[] = [
     id: 'nouveau_riche',
     passive: () => ({
       blindRewardMult: RICH_REWARD_MULT,
-      interestMult: RICH_REWARD_MULT,
+      interestMult: RICH_INTEREST_MULT,
       moneyPerUnusedHand: RICH_UNUSED_HAND_BONUS,
       hands: RICH_HANDS,
     }),
-    params: { reward: RICH_REWARD_MULT, hand: RICH_UNUSED_HAND_BONUS, hands: -RICH_HANDS },
+    params: {
+      reward: RICH_REWARD_MULT,
+      interest: RICH_INTEREST_MULT,
+      hand: RICH_UNUSED_HAND_BONUS,
+      hands: -RICH_HANDS,
+    },
     art: { icon: 'money-stack', bg: '#14532d', fg: '#f0fdf4', accent: '#eab308', pattern: 'stripes' },
     unlock: { type: 'haveMoney', atLeast: 50 },
   },

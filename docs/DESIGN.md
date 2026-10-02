@@ -1196,15 +1196,15 @@ nově dobrané karty) má 1,25× (do fáze 10 1,5×), Pan starosta a Velká voda
 |   1 | Hospodský (`pub`)           | Standardních 52 karet, pravidla beze změny.                                                                   | od začátku                            | „Lepkavé karty a tácek pod sklenicí.“               |
 |   2 | Štamgastův (`regulars`)     | +1 slot žolíka (6); start s 0 Kč.                                                                             | od začátku                            | „Má tu vlastní věšák. Na žolíky.“                   |
 |   3 | Úřednický (`clerk`)         | Start s kupóny Trhací kalendář a Kamarád za pultem.                                                           | kup celkem 5 kupónů                   | „Všechno vyřízeno předem. Na razítko.“              |
-|   4 | Turistický (`tourist`)      | Postupka i Barva stačí ze 4 karet; cíle všech útrat ×1,2.                                                     | zahraj celkem 25 Postupek             | „Po červené, pak po modré, pak se ztratit.“         |
+|   4 | Turistický (`tourist`)      | Postupka i Barva stačí ze 4 karet; cíle všech útrat ×1,5.                                                     | zahraj celkem 25 Postupek             | „Po červené, pak po modré, pak se ztratit.“         |
 |   5 | Mariášový (`marias`)        | 32 karet: 7–A ve 4 barvách (bez 2–6). Postupka A-2-3-4-5 tu není možná; cíle všech útrat ×1,2.                | zahraj Čtveřici                       | „Kdo nehraje, nevyhraje. Kdo hraje, flekuje.“       |
-|   6 | Obrázkový (`court`)         | 32 karet: J, Q, K, A ve 4 barvách, každá karta 2×; −1 karta v ruce (7); cíle ×1,5.                            | vyhraj run s Mariášovým               | „Samí páni, žádní pěšáci.“                          |
-|   7 | Notářský (`notary`)         | Každá karta má při stavbě balíčku 25% šanci na náhodnou pečeť (4 druhy rovnoměrně); −1 slot spotřebky.        | měj v jednom runu 5 karet s pečetí    | „Ověřeno, orazítkováno, zaplombováno.“              |
-|   8 | Zbohatlík (`nouveau_riche`) | Odměny za útraty a úrok ×2, nevyužitá ruka +2 Kč; −2 ruce (2).                                                | měj najednou 50 Kč                    | „Peníze jsou, čas není.“                            |
+|   6 | Obrázkový (`court`)         | 32 karet: J, Q, K, A ve 4 barvách, každá karta 2×; −1 karta v ruce (7); cíle ×2,1.                            | vyhraj run s Mariášovým               | „Samí páni, žádní pěšáci.“                          |
+|   7 | Notářský (`notary`)         | Každá karta má při stavbě balíčku 6% šanci na náhodnou pečeť (4 druhy rovnoměrně); −1 slot spotřebky.         | měj v jednom runu 5 karet s pečetí    | „Ověřeno, orazítkováno, zaplombováno.“              |
+|   8 | Zbohatlík (`nouveau_riche`) | Odměny za útraty ×2, úrok ×1,5, nevyužitá ruka +2 Kč; −2 ruce (2).                                           | měj najednou 50 Kč                    | „Peníze jsou, čas není.“                            |
 |   9 | Dlužník (`debtor`)          | Start −10 Kč; dluh smí jít až do −20 Kč; úrok ×2 (jen z kladného zůstatku).                                   | dokonči kolo se záporným zůstatkem    | „Půjčka? Já? Jen na chvilku.“                       |
-|  10 | Babiččin (`grandmas`)       | +1 slot spotřebky (3); start se 2 náhodnými babskými radami.                                                  | použij celkem 30 babských rad         | „Babička ví všechno. A ráda to řekne.“              |
+|  10 | Babiččin (`grandmas`)       | +1 slot spotřebky (3); start s 1 náhodnou babskou radou.                                                      | použij celkem 30 babských rad         | „Babička ví všechno. A ráda to řekne.“              |
 |  11 | Vetešnický (`junk_shop`)    | Start s 1 náhodným vzácným žolíkem; Večerka má o 1 kartový slot méně (1).                                     | prodej celkem 25 žolíků               | „Všechno z druhé ruky, něco i ze třetí.“            |
-|  12 | Kalendářový (`almanac`)     | Po porážce každého šéfa vznikne pranostika tvé nejčastěji hrané kombinace (bez místa +2 Kč); −1 zahození (2). | zvyš libovolnou kombinaci na úroveň 6 | „Pranostika na každý den, i na ty, kdy se nehraje.“ |
+|  12 | Kalendářový (`almanac`)     | Po porážce každého šéfa vznikne pranostika tvé nejčastěji hrané kombinace (bez místa +2 Kč); −2 zahození (1). | zvyš libovolnou kombinaci na úroveň 6 | „Pranostika na každý den, i na ty, kdy se nehraje.“ |
 
 Upřesnění:
 
@@ -1214,7 +1214,7 @@ Upřesnění:
   Šéf Inventura je pro tento balíček noční můra — záměrně (¾ balíčku debuffnuté).
 - **Mariášový** a **Obrázkový**: malý balíček se může v kole vyčerpat (8 + 4×5 + 3×5 = 43 > 32) — to je jejich
   přirozená cena. Karetní obálky a hrací karty ve Večerce respektují složení balíčku.
-- **Zbohatlík:** `blindRewardMult ×2`, `interestMult ×2`, `moneyPerUnusedHand +1`, `hands −2`.
+- **Zbohatlík:** `blindRewardMult ×2`, `interestMult ×1,5` (do fáze 10 ×2), `moneyPerUnusedHand +1`, `hands −2`.
 - **Dlužník:** `startingMoney −10`, `debtLimit +20`, `interestMult ×2`. Odemyká se stejnou podmínkou jako
   achievement „Na sekeru“ (dokončit kolo v mínusu jde se žolíkem Sekera nebo ve výzvě Byrokracie) — dluh si hráč
   musí nejdřív „vyzkoušet“.

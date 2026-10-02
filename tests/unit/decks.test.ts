@@ -80,19 +80,19 @@ describe('balíčky – seznam a texty', () => {
       expect(t(`decks.${d.id}.flavor`)).toBe(typo(flavors[d.id]!));
     }
     expect(t('decks.debtor.desc', DECKS.find((d) => d.id === 'debtor')!.params)).toContain('−10 Kč');
-    expect(t('decks.court.desc', DECKS.find((d) => d.id === 'court')!.params)).toContain('×1,5');
+    expect(t('decks.court.desc', DECKS.find((d) => d.id === 'court')!.params)).toContain('×2,1');
     expect(t('decks.marias.desc', DECKS.find((d) => d.id === 'marias')!.params)).toContain(
       'cíle všech útrat jsou ×1,2',
     );
     expect(t('decks.grandmas.desc', DECKS.find((d) => d.id === 'grandmas')!.params)).toContain(
-      typo('o 1 slot víc. Na startu dostaneš 2 různé náhodné babské rady'),
+      typo('o 1 slot víc. Na startu dostaneš 1 náhodnou babskou radu'),
     );
     expect(t('decks.junk_shop.desc', DECKS.find((d) => d.id === 'junk_shop')!.params)).toContain(
       typo('o 1 kartový slot méně'),
     );
     const almanac = t('decks.almanac.desc', DECKS.find((d) => d.id === 'almanac')!.params);
     expect(almanac).toContain(typo('dostaneš 2 Kč'));
-    expect(almanac).toContain(typo('o 1 zahození méně'));
+    expect(almanac).toContain(typo('o 2 zahození méně'));
     expect(t('decks.almanac.full', { money: 2 })).toContain(typo('2 Kč'));
     expect(hasKey('decks.almanac.made')).toBe(true);
   });
@@ -147,11 +147,11 @@ describe('balíčky – pravidla', () => {
     expect(newGame('regulars').state.deck).toHaveLength(52);
   });
 
-  it('Turistický: Postupka i Barva ze 4 karet, cíle ×1,2', () => {
-    expect(modsDiff('tourist')).toEqual({ fourCardStraightFlush: true, targetMult: 1.2 });
+  it('Turistický: Postupka i Barva ze 4 karet, cíle ×1,5', () => {
+    expect(modsDiff('tourist')).toEqual({ fourCardStraightFlush: true, targetMult: 1.5 });
     const g = newGame('tourist');
-    expect(g.blindTarget('small')).toBe(300);
-    expect(g.blindTarget('boss')).toBe(600);
+    expect(g.blindTarget('small')).toBe(380);
+    expect(g.blindTarget('boss')).toBe(750);
     const cards = setupRound(g, '2H 7H 9H KH 3S');
     expect(g.preview(cards.slice(0, 4).map((c) => c.id)).hand?.type).toBe('flush');
     const run = setupRound(g, '5C 6D 7S 8H KD');
@@ -168,7 +168,7 @@ describe('balíčky – pravidla', () => {
     expect([g.blindTarget('small'), g.blindTarget('big'), g.blindTarget('boss')]).toEqual([300, 450, 600]);
   });
 
-  it('Obrázkový: 32 karet J–A, každá 2×; 7 karet v ruce; cíle ×1,5', () => {
+  it('Obrázkový: 32 karet J–A, každá 2×; 7 karet v ruce; cíle ×2,1', () => {
     const g = newGame('court');
     expect(g.state.deck).toHaveLength(32);
     const counts = new Map<string, number>();
@@ -177,13 +177,13 @@ describe('balíčky – pravidla', () => {
     expect(counts.size).toBe(16);
     expect([...counts.values()].every((n) => n === 2)).toBe(true);
     expect(g.state.deck.every((c) => c.rank >= 11)).toBe(true);
-    expect(modsDiff('court')).toEqual({ handSize: 7, targetMult: 1.5 });
-    expect(g.blindTarget('small')).toBe(380);
+    expect(modsDiff('court')).toEqual({ handSize: 7, targetMult: 2.1 });
+    expect(g.blindTarget('small')).toBe(530);
     g.dispatch({ type: 'selectBlind' });
     expect(g.state.round!.hand).toHaveLength(7);
   });
 
-  it('Notářský: −1 slot spotřebky, ~25 % karet s náhodnou pečetí, deterministicky podle seedu', () => {
+  it('Notářský: −1 slot spotřebky, ~6 % karet s náhodnou pečetí, deterministicky podle seedu', () => {
     expect(modsDiff('notary')).toEqual({ consumableSlots: 1 });
     const a = newGame('notary', 'NOTARY1');
     const b = newGame('notary', 'NOTARY1');
@@ -201,16 +201,16 @@ describe('balíčky – pravidla', () => {
           kinds.add(c.seal);
         }
     }
-    expect(sealed / total).toBeGreaterThan(0.2);
-    expect(sealed / total).toBeLessThan(0.3);
+    expect(sealed / total).toBeGreaterThan(0.04);
+    expect(sealed / total).toBeLessThan(0.08);
     expect([...kinds].sort()).toEqual(Object.keys(reg.seals).sort());
   });
 
-  it('Zbohatlík: odměny a úrok ×2, nevyužitá ruka o 1 Kč víc, 2 ruce', () => {
+  it('Zbohatlík: odměny ×2, úrok ×1,5, nevyužitá ruka o 1 Kč víc, 2 ruce', () => {
     expect(modsDiff('nouveau_riche')).toEqual({
       hands: 2,
       blindRewardMult: 2,
-      interestMult: 2,
+      interestMult: 1.5,
       moneyPerUnusedHand: 2,
     });
     const g = newGame('nouveau_riche');
@@ -221,7 +221,8 @@ describe('balíčky – pravidla', () => {
     const r = g.state.rewards!;
     expect(r.blindReward).toBe(6);
     expect(r.unusedHands).toBe(2);
-    expect(r.interest).toBe(2);
+    // Úrok 1 Kč × 1,5 = 1,5 → dolů na celé koruny.
+    expect(r.interest).toBe(1);
   });
 
   it('Dlužník: start −10 Kč, dluh do −20 Kč, úrok ×2 jen z kladného zůstatku', () => {
@@ -283,7 +284,7 @@ describe('balíčky fáze 7 – pravidla', () => {
     expect(loaded.modifiers()).toEqual(g.modifiers());
   });
 
-  it('Babiččin: +1 slot spotřebky (3), start se 2 různými babskými radami, deterministicky podle seedu', () => {
+  it('Babiččin: +1 slot spotřebky (3), start s 1 náhodnou babskou radou, deterministicky podle seedu', () => {
     expect(modsDiff('grandmas')).toEqual({ consumableSlots: 3 });
     const a = newGame('grandmas', 'GRANNY1');
     expect(a.state.consumables.map((c) => c.defId)).toEqual(
@@ -293,8 +294,7 @@ describe('balíčky fáze 7 – pravidla', () => {
     for (let i = 0; i < 40; i++) {
       const g = newGame('grandmas', `GRANNY${i}`);
       const ids = g.state.consumables.map((c) => c.defId);
-      expect(ids).toHaveLength(2);
-      expect(new Set(ids).size).toBe(2);
+      expect(ids).toHaveLength(1);
       for (const id of ids) {
         expect(reg.consumables[id]!.kind).toBe('rada');
         expect(reg.consumables[id]!.noShop).not.toBe(true);
@@ -335,11 +335,11 @@ describe('balíčky fáze 7 – pravidla', () => {
     expect(g.state.shop!.boosters).toHaveLength(newGame('pub').modifiers().shopBoosterSlots);
   });
 
-  it('Kalendářový: −1 zahození (2); po porážce šéfa pranostika nejčastěji hrané kombinace (při shodě silnější)', () => {
-    expect(modsDiff('almanac')).toEqual({ discards: 2 });
+  it('Kalendářový: −2 zahození (1); po porážce šéfa pranostika nejčastěji hrané kombinace (při shodě silnější)', () => {
+    expect(modsDiff('almanac')).toEqual({ discards: 1 });
     const g = newGame('almanac');
     g.dispatch({ type: 'selectBlind' });
-    expect(g.state.round!.discardsLeft).toBe(2);
+    expect(g.state.round!.discardsLeft).toBe(1);
     // Malá útrata nic nevytvoří.
     winCurrent(g);
     expect(g.state.consumables).toEqual([]);

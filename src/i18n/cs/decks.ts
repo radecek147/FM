@@ -42,7 +42,7 @@ export const decks = {
   },
   nouveau_riche: {
     name: 'Zbohatlík',
-    desc: 'Odměny za útraty a úrok {reward|x}, každá nevyužitá ruka dává o {hand|money} víc. Zato o {hands|plural:ruku,ruce,rukou} méně v každém kole.',
+    desc: 'Odměny za útraty {reward|x} a úrok {interest|x}, každá nevyužitá ruka dává o {hand|money} víc. Zato o {hands|plural:ruku,ruce,rukou} méně v každém kole.',
     flavor: 'Peníze jsou, čas není.',
   },
   debtor: {
