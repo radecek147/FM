@@ -10,7 +10,7 @@
 
 - [ ] **Bábovka** (vzácný) — Po 4 kolech se „upeče“ a promění v náhodného epického žolíka. _Nedívej se do trouby, nebo spadne._
 - [ ] **Houbař** (běžný) — Na konci kola 1 z 3 šance na +2 Kč za každou křížovou kartu v ruce. _Kde rostou, neřekne ani na smrtelné posteli._
-- [ ] **Vodník** (vzácný) — Každá zahozená kárová karta mu trvale dá +1 mult. _Dušičky pod pokličkou. Jako koníček._ (V plánu fáze 7, `docs/DESIGN.md` 4.9.)
+- [x] **Vodník** (vzácný) — Každá zahozená kárová karta mu trvale dá +1 mult. _Dušičky pod pokličkou. Jako koníček._ (Hotovo ve fázi 7 se srdcovými kartami, `src/content/jokers/rare2.ts`.)
 - [ ] **Věžní hodiny** (epický) — Po každé ruce se posunou o hodinu (1–12); karty s hodnotou rovnou aktuální hodině dávají ×1,5 mult. _Apoštolové vylézají přesně na čas. Na rozdíl od vlaků._
 - [ ] **Cestující načerno** (běžný) — +6 mult; po každé ruce 1 z 8 šance, že zaplatíš pokutu 3 Kč. _Já jsem jen o jednu zastávku._
 - [ ] **Zlatá rybka** (epický) — První 3 použité spotřebky se použijí dvakrát, pak rybka odplave. _Čtvrté přání je za příplatek._
@@ -23,6 +23,8 @@
 - [ ] **Drbna z přízemí** (běžný) — Po prvním zahození v kole ti prozradí, jaká karta je navrchu balíčku. _Já bych ho na vašem místě opustila._
 - [ ] **Sponzorovaný příspěvek** (vzácný) — +1 mult za každých 10 Kč utracených v tomto runu ve Večerce. _Spolupráce. Ale fakt mi to chutná._
 - [ ] **Myslivec** (běžný) — +40 čipů, když ruka obsahuje právě jednu figuru. _Byl to zajíc. Teda srnec. Teda pařez._
+- [ ] **Zvoník** (vzácný, opakování) — Každá skórující karta s pečetí skóruje ještě 1×. _Zvoní, dokud ho někdo nezastaví. Nikdo ho nezastaví._ (Doplnění kategorie opakování, `docs/DESIGN.md` 4.9: 5 ze 7.)
+- [ ] **Hrst drobných** (běžný, +čipy) — Každá skórující dvojka, trojka, čtyřka nebo pětka dá +12 čipů. _Samé desetikoruny, ale na rohlíky to stačí._ (Doplnění kategorie +čipy, 9 z 10; pozor na rodinu s Popelářem a Učitelkou.)
 - [ ] **Blaničtí rytíři – varianta** (legendární, alternativa k `docs/DESIGN.md` 4.8) — V patrech 1–7 spí a nedělá nic; ve finálovém patře a v nekonečném režimu ×4 mult. _Až bude nejhůř. Tohle ještě není nejhůř._
 
 ## Šéfové

@@ -1,8 +1,9 @@
 /**
  * Horní řada: žolíci (x/sloty) a spotřebky (x/sloty) — DESIGN 13.2.
  *
- * - Žolíci: klik = detail s Prodat a posunem, tažení myší i prstem = změna pořadí (`reorderJokers`).
- *   Tažení je čistě přes transform; po puštění se uzly přeskládají hned (bez probliknutí) a pošle se akce.
+ * - Žolíci: klik = detail s Prodat a posunem, tažení myší i prstem = změna pořadí (`reorderJokers`) přes
+ *   `attachDragSort` (společné s rukou): čistě transform, po puštění se uzly přeskládají hned (bez probliknutí),
+ *   žolík dosedne na místo a pošle se akce.
  * - Spotřebky: klik = detail s Použít (vybrané karty v ruce jako cíle) a Prodat.
  * - Klíčované překreslování: prvek žolíka se překreslí jen při změně vzhledu nebo ceny.
  * Funguje obecně pro libovolný obsah z registru (žolíky doplňuje jiný workflow).
@@ -10,10 +11,12 @@
 import type { ConsumableInstance, JokerInstance } from '../../../engine';
 import { t } from '../../../i18n/cs';
 import { createConsumableCard } from '../../components/consumableCard';
+import { attachDragSort } from '../../components/dragSort';
 import { createJokerCard, updateJokerCard } from '../../components/jokerCard';
 import { hideTooltip } from '../../components/tooltip';
 import { copyTargetUid } from '../../describe';
 import { h } from '../../dom';
+import { animate } from '../../present';
 import type { GameCtx } from './shared';
 import { consumableSlots, jokerSlots } from './shared';
 
@@ -34,10 +37,6 @@ interface Item {
   card: HTMLElement;
   sig: string;
 }
-
-/** Posun (px), od kterého je stisk tažením (myš / dotyk). */
-const DRAG_THRESHOLD_MOUSE = 6;
-const DRAG_THRESHOLD_TOUCH = 10;
 
 export function createTopRow(ctx: GameCtx, actions: TopRowActions): TopRow {
   const c = ctx.controller;
@@ -133,10 +132,8 @@ export function createTopRow(ctx: GameCtx, actions: TopRowActions): TopRow {
           run: () => c.state,
           copying,
           copiedBy,
-          onClick: (joker) => {
-            if (suppressClick) return;
-            actions.openJoker(joker.uid);
-          },
+          // Klik po tažení pohltí `attachDragSort` (fáze capture), sem dojde jen skutečný klik.
+          onClick: (joker) => actions.openJoker(joker.uid),
         });
         card.dataset.jokerUid = String(j.uid);
         const li = h('li', { class: 'gt-item', 'data-uid': j.uid }, card);
@@ -220,144 +217,25 @@ export function createTopRow(ctx: GameCtx, actions: TopRowActions): TopRow {
 
   // ─────────────── Tažení žolíků (myš i dotyk) ───────────────
 
-  let suppressClick = false;
-  let drag: {
-    pointerId: number;
-    li: HTMLElement;
-    startX: number;
-    startY: number;
-    started: boolean;
-    touch: boolean;
-    items: HTMLElement[];
-    centers: number[];
-    from: number;
-    to: number;
-    shift: number;
-  } | null = null;
-
-  const resetTransforms = (): void => {
-    if (!drag) return;
-    for (const li of drag.items) {
-      li.style.transform = '';
-      li.classList.remove('is-dragging', 'is-shifting');
-    }
-    jokerList.classList.remove('is-sorting');
-  };
-
-  jokerList.addEventListener('pointerdown', (e) => {
-    if (drag || c.busy) return;
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-    const li = (e.target as Element).closest<HTMLElement>('.gt-item');
-    if (!li || !jokerList.contains(li)) return;
-    drag = {
-      pointerId: e.pointerId,
-      li,
-      startX: e.clientX,
-      startY: e.clientY,
-      started: false,
-      touch: e.pointerType === 'touch',
-      items: [],
-      centers: [],
-      from: 0,
-      to: 0,
-      shift: 0,
-    };
-  });
-
-  jokerList.addEventListener('pointermove', (e) => {
-    if (!drag || e.pointerId !== drag.pointerId) return;
-    const dx = e.clientX - drag.startX;
-    if (!drag.started) {
-      const dist = Math.hypot(dx, e.clientY - drag.startY);
-      if (dist < (drag.touch ? DRAG_THRESHOLD_TOUCH : DRAG_THRESHOLD_MOUSE)) return;
-      if (c.state.jokers.length < 2 || c.busy) {
-        drag = null;
-        return;
-      }
-      // Začátek tažení: změřit jednou (žádné čtení layoutu během pohybu).
-      drag.started = true;
-      drag.items = [...jokerList.querySelectorAll<HTMLElement>(':scope > .gt-item')];
-      const rects = drag.items.map((li) => li.getBoundingClientRect());
-      drag.centers = rects.map((r) => r.left + r.width / 2);
-      drag.from = drag.items.indexOf(drag.li);
-      drag.to = drag.from;
-      const second = rects[1];
-      const first = rects[0];
-      drag.shift = second && first ? second.left - first.left : (rects[drag.from]?.width ?? 0);
-      drag.li.classList.add('is-dragging');
-      jokerList.classList.add('is-sorting');
-      try {
-        drag.li.setPointerCapture(e.pointerId);
-      } catch {
-        // Některé prohlížeče capture odmítnou — tažení funguje i bez něj, dokud je ukazatel nad řadou.
-      }
-      hideTooltip();
-    }
-    e.preventDefault();
-    drag.li.style.transform = `translateX(${dx}px)`;
-    const center = (drag.centers[drag.from] ?? 0) + dx;
-    let to = 0;
-    drag.centers.forEach((cx, i) => {
-      if (i !== drag!.from && cx < center) to++;
-    });
-    if (to !== drag.to) {
-      drag.to = to;
-      drag.items.forEach((li, i) => {
-        if (i === drag!.from) return;
-        let offset = 0;
-        if (drag!.from < to && i > drag!.from && i <= to) offset = -drag!.shift;
-        else if (drag!.from > to && i < drag!.from && i >= to) offset = drag!.shift;
-        li.classList.add('is-shifting');
-        li.style.transform = offset ? `translateX(${offset}px)` : '';
-      });
-    }
-  });
-
-  const endDrag = (e: PointerEvent, cancelled: boolean): void => {
-    if (!drag || e.pointerId !== drag.pointerId) return;
-    const d = drag;
-    if (!d.started) {
-      drag = null;
-      return;
-    }
-    resetTransforms();
-    drag = null;
-    // Klik, který po tažení následuje, nesmí otevřít detail.
-    suppressClick = true;
-    window.setTimeout(() => (suppressClick = false), 0);
-    if (cancelled || d.to === d.from) return;
-    const ordered = [...d.items];
-    const [moved] = ordered.splice(d.from, 1);
-    if (!moved) return;
-    ordered.splice(d.to, 0, moved);
-    // Přeskládat hned (žádné probliknutí do starého pořadí), pak akce enginu.
-    syncOrder(jokerList, ordered);
-    const uids = ordered.map((li) => Number(li.dataset.uid));
-    void ctx.act({ type: 'reorderJokers', uids });
-  };
-  jokerList.addEventListener('pointerup', (e) => endDrag(e, false));
-  jokerList.addEventListener('pointercancel', (e) => endDrag(e, true));
-  jokerList.addEventListener('lostpointercapture', (e) => {
-    // Jen ztráta capture, které jsme nastavili na položku. Dotyk má implicitní capture na prvku pod prstem
-    // (SVG v kartě) — `setPointerCapture` ho přesune na položku a ten prvek dostane `lostpointercapture`, který
-    // tažení ukončit nesmí (jinak by se na dotykových zařízeních tažení hned po startu zrušilo).
-    if (drag?.started && e.pointerId === drag.pointerId && e.target === drag.li) endDrag(e, false);
-  });
-  // Zachycení kliku po tažení (fáze capture — dřív než klik karty).
-  jokerList.addEventListener(
-    'click',
-    (e) => {
-      if (!suppressClick) return;
-      e.preventDefault();
-      e.stopPropagation();
+  const sorter = attachDragSort(jokerList, {
+    item: (target) => {
+      const li = target.closest<HTMLElement>('.gt-item');
+      return li && li.parentElement === jokerList ? li : null;
     },
-    true,
-  );
+    canStart: () => !c.busy && c.state.jokers.length > 1,
+    onStart: () => hideTooltip(),
+    settle: (li, dx) =>
+      void animate(ctx.app.anim, li, [{ translate: `${dx}px 0` }, { translate: '0 0' }], 160),
+    onDrop: (ordered) => {
+      const uids = ordered.map((li) => Number(li.dataset.uid));
+      void ctx.act({ type: 'reorderJokers', uids });
+    },
+  });
 
   return {
     el,
     update() {
-      if (drag?.started) return;
+      if (sorter.dragging) return;
       updateJokers();
       updateConsumables();
     },

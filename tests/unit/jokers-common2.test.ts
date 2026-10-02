@@ -218,8 +218,8 @@ describe('běžní žolíci fáze 7 – definice', () => {
       grill_dad: { chips: 60, discards: 1 },
       teacher: { mult: 15 },
       hejkal: { chance: 1, odds: 3, mult: 15 },
-      tram_driver: { mult: 12 },
-      punter: { chance: 1, odds: 3, money: 6 },
+      tram_driver: { mult: 15 },
+      punter: { chance: 1, odds: 3, money: 7 },
       pavlac_gossip: { xmult: 1.5 },
       round_for_everyone: { xmult: 1.4, cards: 5 },
       pickled_cheese: { chips: 6 },
@@ -325,8 +325,8 @@ describe('běžní žolíci fáze 7 – texty', () => {
       teacher:
         '+15 mult, pokud mají všechny skórující karty sudou hodnotu (dvojky, čtyřky, šestky, osmičky a desítky).',
       hejkal: '1 z 3, že zahraná ruka dostane +15 mult.',
-      tram_driver: '+12 mult, pokud to není první ruka kola a v kole už se zahazovalo.',
-      punter: 'Na konci kola 1 z 3, že vyhraje 6 Kč.',
+      tram_driver: '+15 mult, pokud to není první ruka kola a v kole už se zahazovalo.',
+      punter: 'Na konci kola 1 z 3, že vyhraje 7 Kč.',
       pavlac_gossip: '×1,5 mult, pokud je zahraná kombinace stejná jako v minulé ruce.',
       round_for_everyone: '×1,4 mult, pokud zahraješ 5 karet a všechny skórují.',
       pickled_cheese: '+6 čipů za každou kartu drženou v ruce.',
@@ -709,12 +709,12 @@ describe('Hejkal (hejkal)', () => {
 });
 
 describe('Tramvaják (tram_driver)', () => {
-  it('+12 mult, když to není první ruka kola a už se zahazovalo', () => {
+  it('+15 mult, když to není první ruka kola a už se zahazovalo', () => {
     const game = roundGame(['tram_driver']);
     ok(game.dispatch({ type: 'discard', cardIds: [game.state.round!.hand[0]!] }));
     expect(jokerDelta(playHand(game, 'KS'), 'tram_driver').steps).toBe(0); // první ruka
     const r = playHand(game, 'KS');
-    expect([r.chips, r.mult, r.score]).toEqual([16, 13, 208]);
+    expect([r.chips, r.mult, r.score]).toEqual([16, 16, 256]);
   });
 
   it('bez zahození nic ani ve druhé ruce', () => {
@@ -725,10 +725,10 @@ describe('Tramvaják (tram_driver)', () => {
 });
 
 describe('Sázkař (punter)', () => {
-  it('na konci kola 1 z 3: +6 Kč v rozpisu odměn', () => {
+  it('na konci kola 1 z 3: +7 Kč v rozpisu odměn', () => {
     const lucky = makeGame({ registry: reg, jokers: ['punter'] });
     setChance(lucky, true);
-    expect(jokerReward(winWith(lucky, 'KS').rewards, 'punter')).toBe(6);
+    expect(jokerReward(winWith(lucky, 'KS').rewards, 'punter')).toBe(7);
     const unlucky = makeGame({ registry: reg, jokers: ['punter'] });
     setChance(unlucky, false);
     expect(jokerReward(winWith(unlucky, 'KS').rewards, 'punter')).toBe(0);
@@ -737,7 +737,7 @@ describe('Sázkař (punter)', () => {
   it('se základní šancí přes víc kol jednou vyhraje a jindy ne', () => {
     const game = makeGame({ registry: reg, jokers: ['punter'], seed: 'PUNTER' });
     const paid = Array.from({ length: 12 }, () => jokerReward(finishRound(game).rewards, 'punter'));
-    expect(new Set(paid)).toEqual(new Set([0, 6]));
+    expect(new Set(paid)).toEqual(new Set([0, 7]));
   });
 });
 

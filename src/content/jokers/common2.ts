@@ -42,11 +42,11 @@ const HEJKAL_CHANCE = 1;
 const HEJKAL_ODDS = 3;
 const HEJKAL_MULT = 15;
 /** Tramvaják: +mult, když to není první ruka kola a už se zahazovalo. */
-const TRAM_MULT = 12;
+const TRAM_MULT = 15;
 /** Sázkař: na konci kola „1 z 3“ výhra. */
 const PUNTER_CHANCE = 1;
 const PUNTER_ODDS = 3;
-const PUNTER_MONEY = 6;
+const PUNTER_MONEY = 7;
 /** Drbna z pavlače: ×mult za stejnou kombinaci jako v minulé ruce. */
 const GOSSIP_XMULT = 1.5;
 /** Rundu všem: ×mult, když zahraješ tolik karet a všechny skórují. */

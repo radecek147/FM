@@ -11,6 +11,7 @@ import { button } from '../../components/button';
 import { createCardView } from '../../components/card';
 import { createConsumableCard, createContentCard } from '../../components/consumableCard';
 import { createJokerCard } from '../../components/jokerCard';
+import { toast } from '../../components/toast';
 import { boosterTexts, capitalize, cardName, voucherTexts } from '../../describe';
 import { h } from '../../dom';
 import { formatMoney } from '../../../i18n/format';
@@ -32,34 +33,40 @@ function itemName(ctx: GameCtx, item: ShopItem): string {
 }
 
 /**
- * Prodejní ceny zboží po koupi (tooltip „Cena · Prodej za“), podle slotu. Počítá je engine (`Game.sellValue`) nad
- * kopií stavu, do které se zboží „přidá“ — vzorec prodejní ceny (edice, zapůjčený, `sellBonus`) tak zůstává na
- * jednom místě a skutečný run se nemění. Hrací karty se neprodávají (bez ceny).
+ * Zboží „jako po koupi“, spočítané enginem nad kopií stavu, do které se zboží „přidá“ — vzorce zůstávají na jednom
+ * místě a skutečný run se nemění:
+ *  - prodejní ceny (tooltip „Cena · Prodej za“) podle slotu (`Game.sellValue`: edice, zapůjčený, `sellBonus`);
+ *    hrací karty se neprodávají (bez ceny),
+ *  - jestli jde spotřebka bez cílů rovnou použít (`Game.canUseConsumable` — např. rada, která potřebuje žolíka).
  */
-function prospectiveSellValues(ctx: GameCtx): Map<number, number> {
-  const out = new Map<number, number>();
+function prospective(ctx: GameCtx): { sell: Map<number, number>; usable: Map<number, boolean> } {
+  const sell = new Map<number, number>();
+  const usable = new Map<number, boolean>();
   const s = ctx.controller.state;
   const items = s.shop?.items ?? [];
-  if (!items.some((i) => !i.sold && i.kind !== 'card')) return out;
+  if (!items.some((i) => !i.sold && i.kind !== 'card')) return { sell, usable };
   try {
     const copy = structuredClone(s) as RunState;
-    const slots: [number, number][] = [];
+    const slots: [number, number, boolean][] = [];
     items.forEach((item, slot) => {
       if (item.sold) return;
       if (item.kind === 'joker') {
         copy.jokers.push(structuredClone(item.joker));
-        slots.push([slot, item.joker.uid]);
+        slots.push([slot, item.joker.uid, false]);
       } else if (item.kind === 'consumable') {
         copy.consumables.push(structuredClone(item.consumable));
-        slots.push([slot, item.consumable.uid]);
+        slots.push([slot, item.consumable.uid, true]);
       }
     });
     const game = Game.fromState(copy, ctx.registry);
-    for (const [slot, uid] of slots) out.set(slot, game.sellValue(uid));
+    for (const [slot, uid, consumable] of slots) {
+      sell.set(slot, game.sellValue(uid));
+      if (consumable) usable.set(slot, game.canUseConsumable(uid, []));
+    }
   } catch {
-    // Bez prodejní ceny v tooltipu se dá nakupovat dál.
+    // Bez prodejní ceny v tooltipu (a s povoleným „Koupit a použít“ — engine ho případně odmítne) se dá nakupovat.
   }
-  return out;
+  return { sell, usable };
 }
 
 function itemVisual(ctx: GameCtx, item: ShopItem, sellValue: number | undefined): HTMLElement {
@@ -133,7 +140,7 @@ export function renderShop(ctx: GameCtx): HTMLElement {
   const s = c.state;
   const shop = s.shop;
 
-  const sellValues = prospectiveSellValues(ctx);
+  const { sell: sellValues, usable } = prospective(ctx);
   const items = (shop?.items ?? []).map((item, slot) => {
     const testId = `shop-item-${slot}`;
     if (item.sold) return soldSlot(testId);
@@ -155,19 +162,39 @@ export function renderShop(ctx: GameCtx): HTMLElement {
         onClick: () => void ctx.act({ type: 'buy', slot }),
       }),
     ];
-    // „Koupit a použít“ jen u spotřebek bez cílů (ve Večerce není ruka, ze které by šly vybrat).
-    if (item.kind === 'consumable' && !ctx.registry.consumables[item.consumable.defId]?.target) {
-      actions.push(
-        buyButton({
-          label: t('game.shop.buyAndUse'),
-          disabledReason: afford ? null : t('game.shop.cantAfford'),
-          testId: `shop-use-${slot}`,
-          focusKey: `use-${slot}`,
-          describedBy: `${testId}-name`,
-          variant: 'paper',
-          onClick: () => void ctx.act({ type: 'buyAndUse', slot }),
-        }),
-      );
+    // „Koupit a použít“. Spotřebka s cíli ho použít nemůže — ve Večerce není ruka, ze které by šly vybrat (engine
+    // akci odmítne): tlačítko je neaktivní, ale fokusovatelné (`aria-disabled`), a klik / Enter řekne proč — i na
+    // dotyku, kde `title` vidět není. Bez cílů jde použít, jen když by to něco udělalo.
+    if (item.kind === 'consumable') {
+      const targeted = !!ctx.registry.consumables[item.consumable.defId]?.target;
+      const use = buyButton({
+        label: t('game.shop.buyAndUse'),
+        disabledReason: targeted
+          ? null
+          : !afford
+            ? t('game.shop.cantAfford')
+            : usable.get(slot) === false
+              ? t('game.shop.useNotNow')
+              : null,
+        testId: `shop-use-${slot}`,
+        focusKey: `use-${slot}`,
+        describedBy: targeted ? `${testId}-name ${testId}-use-why` : `${testId}-name`,
+        variant: 'paper',
+        onClick: () => {
+          if (targeted) toast(t('game.shop.useNeedsHand'), { kind: 'warning', testId: 'toast-shop-use' });
+          else void ctx.act({ type: 'buyAndUse', slot });
+        },
+      });
+      if (targeted) {
+        use.setAttribute('aria-disabled', 'true');
+        use.classList.add('btn--inert');
+        use.title = t('game.shop.useNeedsHand');
+      }
+      actions.push(use);
+      if (targeted)
+        actions.push(
+          h('span', { class: 'visually-hidden', id: `${testId}-use-why` }, t('game.shop.useNeedsHand')),
+        );
     }
     const badge = itemBadge(item);
     return h(

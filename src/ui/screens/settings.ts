@@ -284,7 +284,7 @@ function speedControl(app: App): HTMLElement {
 }
 
 function keysTable(): HTMLElement {
-  const ids = ['select', 'play', 'discard', 'sort', 'skip', 'menu', 'focus'];
+  const ids = ['select', 'play', 'discard', 'sort', 'move', 'skip', 'menu', 'focus'];
   return h(
     'table',
     { class: 'keys-table', 'data-testid': 'keys-table' },

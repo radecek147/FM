@@ -93,6 +93,7 @@ export const game = {
     selected: 'Vybráno: {n|plural:karta,karty,karet}.',
     noTargets: 'Nepotřebuje žádné cíle.',
     cannotUse: 'Teď to použít nejde. Zkontroluj vybrané karty.',
+    needsHand: 'Potřebuje cíle v ruce. Ruku máš v kole nebo v obálce babských rad či razítek – tady ne.',
     used: 'Použito: {name}.',
   },
 
@@ -120,6 +121,10 @@ export const game = {
     handSizeUp: 'Ruka se zvětšila na {n|plural:kartu,karty,karet}.',
     handSizeDownBoss: '{name}: ruka se zmenšila na {n|plural:kartu,karty,karet}.',
     handSizeUpBoss: '{name}: ruka se zvětšila na {n|plural:kartu,karty,karet}.',
+    reorderHint:
+      'Kartu přesuneš tažením myší nebo prstem. Klávesnicí: vyber kartu a posuň ji Shift a šipkou doleva nebo doprava.',
+    moved: '{name}: teď {n}. karta zleva z {max}.',
+    moveEdge: 'Dál to nejde, karta už je na kraji. Stůl nenatáhneš.',
   },
 
   deck: {
@@ -128,6 +133,11 @@ export const game = {
     count: '{left}/{total}',
     remaining: 'Zbývá {left} z {total|plural:karty,karet,karet}.',
     legend: 'Zašedlé karty už jsou venku – v ruce, na stole nebo v odpadu.',
+    legendHidden:
+      'Ukazuju jen karty, které v balíčku zbývají. Některé karty jsou lícem dolů, tak ať se tu neprozradí.',
+    hidden: 'Lícem dolů ({n})',
+    hiddenLabel:
+      'Lícem dolů mimo balíček: {n|plural:karta,karty,karet}. Co jsou zač, zjistíš, až je zahraješ.',
     suitCount: '{symbol} {n}',
     stone: 'Bez hodnoty a barvy',
     rankCount: '{rank}: {n}',
@@ -210,6 +220,8 @@ export const game = {
     badgeTitle: 'Výhoda ze štítku: {text}',
     cantAfford: 'Na tohle nemáš.',
     noRoom: 'Nemáš volný slot.',
+    useNeedsHand: 'Potřebuje cíle v ruce, a ve Večerce žádnou ruku nemáš. Kup do slotu a použij v kole.',
+    useNotNow: 'Teď by to nic neudělalo. Schovej si to na horší časy.',
   },
 
   /** Výběr z obálky. */

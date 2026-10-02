@@ -2161,3 +2161,155 @@ v dosavadním pořadí (DESIGN 2.1, test; testovací bot `tests/unit/fixtures/bo
 
 **Proč:** CLAUDE.md kap. 3, 5, 6 a 8; CONTENT-GUIDE kap. 12 a 14 (všechna čísla přes `{param}`, test efektu
 i hranic, uložení a načtení).
+
+## 2026-10-02 — Revize obsahu fáze 7: 101 žolíků (texty, duplicity, kombinace s enginem, fuzz)
+
+**Co — počty:** 44 běžných (15 + 29), 32 vzácných (10 + 22), 17 epických (5 + 12), 8 legendárních = **101** (cíl
+DESIGN 4.1 ✔). Hlavní kategorie každého žolíka a finální seznam jsou v DESIGN 4.10; rozložení proti plánu 4.9:
++mult 18 / 18, +čipy 9 / 10, ×mult 21 / 16 (z toho 5 legendárních), ekonomika 12 / 12, škálování 13 / 14 (2 legendární),
+opakování 5 / 7, úpravy pravidel 10 / 10, kopírování 3 / 3, spotřebky a balíček 10 / 11 (1 legendární). Bez legendárních
+sedí +mult, ×mult, ekonomika, úpravy a kopírování přesně; odchylky jsou vědomé (legendární jsou z 5/8 ×mult podle 4.8,
+opakování u vzácných dělalo špičky nad pravidlem 3) a přijímám je — doplnění opakování a čipů je kandidát na obsahové
+patche.
+
+**Co — jak:** všech 101 popisků vyrenderovaných s `params` a `describe(self)` (scratch skript nad `jokerTexts`),
+přečtené proti kódu všech sedmi souborů a proti seznamu názvů komerční předlohy. Názvy jsou unikátní a nejvýš
+trojslovné, hlavní ikony i dvojice ikona + rekvizita jsou unikátní (hlídá `jokers-combos.test.ts`), štítky odpovídají
+kategorii, oslovení je rodově neutrální, žádné žijící osoby ani značky (Dálnice D1, Karlův most a Spartakiáda jsou
+místa a události, Žižka ve flavoru Válečné kořisti je historická postava).
+
+**Nálezy a opravy:**
+
+1. **Bludička = duplikát Zpožděného rychlíku** (DESIGN 4.4/10): obojí byl náhodný ×mult za ruku bez podmínky (×1,5 s
+   šancí 5/6 a ×2 s šancí 1/3), lišila se jen čísla. Nově **„V kole se šéfem dá každá ruka ×2 mult.“** (bludičky
+   svítí v noci, noc = šéf jako u Noční směny; rodina se stejnou podmínkou a jiným typem efektu). Bez náhody, kopie
+   násobí znovu, vypnutý šéf podmínku nemění (`round.bossId`). Naměřeno `joker-value.ts` 60 seedů: **R1 30,2 %,
+   R2 28,9 %, špička 100** (pásmo vzácného R2 20–60 ✔; dříve 34,5 / 36,4). Flavor: „Svítí jen v té největší tmě. Kam
+   vede, to už neřekne.“
+2. **Rybář = náhodná verze Stálého hosta**: obojí na konci kola trvale zvedalo +mult (jistě +1, nebo 1 z 3 +2). Nově
+   **„Po každém zahození 1 z 2, že něco chytí: náhodnou babskou radu (potřebuje volný slot).“** (zahození = nahození
+   udice). Kategorie škálování → spotřebky a balíček. Vzniká rodina zdrojů spotřebek s různým typem a spouštěčem
+   (Trafikant: pranostika ve Večerce, Rybář: rada při zahození, Čarodějnice: razítko po šéfovi); partner Tety
+   z poradny a Kořenářky, protihráč Hostinského a Lázeňského hosta. Bez volného slotu nehází (RNG se neposune), kopie
+   hodí znovu (jako Teta), stav ani `noPerishable` už nemá. Šance: 1 z 3 dávala jen 0,08–0,12 rady za kolo (boti mívají
+   sloty plné), **1 z 2 dává 0,11–0,17** (Trafikant 0,15–0,16; 40 runů na bota, scratch skript). `joker-value.ts`:
+   R1 2,9 / R2 0,7 % je šum z karet upravených radou, simulace Δ kol +0,3 — hodnotí se jako ostatní spotřebkoví
+   žolíci (jen simulace). Flavor: „Největší kapr mu zase utekl. Domů nese aspoň dobrou radu.“
+3. **Hlídač parkoviště → Vrátný** (`parking_attendant` → `doorman`): téma parkoviště spolu se spouštěčem „figury
+   držené v ruce“ kopírovalo téma i spouštěč žolíka komerční předlohy (CONTENT-GUIDE 13: inspirace mechanikou ano,
+   stejné téma ne). Mechanika beze změny (+4 mult za figuru v ruce), ikona klíč + císařská koruna, flavor „Pana
+   ředitele pozdraví, paní hlavní účetní taky. Tebe dál nepustí.“ `id` se mění — nic není vydané (CONTENT-GUIDE 2:
+   po vydání se `id` nemění).
+4. **Kopírák neukazoval cíl:** UI (`copyStatusText`, `copiedBy`) i boti (`slotOrderKey`) čtou cíl kopírujícího žolíka
+   ze `state.target` (konvence Napodobitele a Archiváře), Kopírák ho nezapisoval — tooltip v kole hlásil „V tomto kole
+   nemá koho kopírovat“, i když kopíroval (ověřeno skriptem: skóre s kopií Pivního tácku, text „nemá koho“). Nově
+   `initState: { target: null }` a `copyTarget` zapisuje cíl jako Archivář (jen originál). Test v `jokers-rare2.test.ts`.
+5. **Texty:** Třináctý plat — flavor „…z ní zbyde ohňostroj“ (nespisovné „zbyde“ a stejná pointa jako Silvestr:
+   půlnoc a ohňostroj) → „Prémie za splnění plánu. Plán zněl: porazit šéfa.“, rekvizita rachejtle → trofej (rachejtle
+   je hlavní ikona Silvestra). Hrací automat „tu samou“ → „stejnou“. Barvoslepý strýc „mají jednu barvu“ → „se
+   počítají jako jedna barva“ (přesnost mechaniky). Polednice — flavor „…dítě ztichlo…“ odkazoval na smrt dítěte
+   v Erbenově baladě (CONTENT-GUIDE 13) → „Kdo v poledne zlobí, toho si odnese. Kdo hraje, tomu zdvojnásobí mult.“
+6. **`tests/unit/jokers-combos.test.ts` — integrace všech skupin** (padal na 299 testech, protože chyběly scénáře):
+   pole scénáře `pick` (indexy zahraných karet), scénáře všech 71 nových žolíků (návrhy autorů skupin v DECISIONS,
+   upravené pro Vrátného, Rybáře a Bludičku), přesné znění všech 101 popisků. Test zesílený: debuff porovnává
+   **všechny** modifikátory (dřív jen `debtLimit` a `straightWrap`, takže nové `passive` žolíky — Kůlna, Dvorní malíř,
+   Barvoslepý strýc, Pěšina, D1, Kouzelník, Průvodce, Známý na úřadě — nepokrýval); nově **Archivář kopíruje každého
+   žolíka** (i epické a legendární; kopie = druhá instance, nekopírovatelného nevybere, stav po dvou kolech se zahozením
+   se kopií nezdvojí); fuzz pouští všech 101 žolíků naráz (testovací obsah i obsah hry) a 20 pětic, které pokrývají
+   všech 101 (střídavě testovací obsah a obsah hry, Napodobitel v každé druhé), s uložením a načtením uprostřed kola,
+   a nově hlídá **0 neplatných akcí bota** (dřív se nepočítaly, jen se po 3 obcházely).
+
+7. **Hodnota po fázi 6** (`npx tsx scripts/joker-value.ts --runs 60`, všech 101 žolíků, celý obsah včetně šéfů;
+   sporné přeměřené na 100 seedech). Mimo pásmo 4.3 vyšli tři, ladění číslem v `params` (pravidlo 5):
+   - **Hostinský** ×2,5 → **×2,2**: R1 / R2 124 / 126 % (NAD, R2 do 110) → **95 / 94 %**, špička 120. Boti se po fázi 6
+     s Hostinským zahazování vyhýbají (trest za zahození), takže ×mult platí v ~80 % rukou — a hráč to udělá taky.
+     DESIGN 4.7 č. 29 upravený; test botů (`jokers-bots.test.ts`) má ruku, kde rozhodnutí s ×2,2 pořád platí.
+   - **Tramvaják** +12 → **+15 mult**: 31,5 / 7,0 % (POD; autor měřil před fází 6 37 / 8,4) → **38,8 / 8,6 %**.
+   - **Sázkař** 6 → **7 Kč**: 1,9 Kč/kolo (POD, očekávaná hodnota přesně 2,0 na hraně) → **2,4 Kč/kolo**.
+
+   Ostatní hlášení nástroje („POD“, „jen simulace“, „ŠPIČKA“) jsou známá a zdůvodněná u skupin: ekonomika a spotřebky,
+   které nástroj neměří nebo měří šumem (Zahrádkář 2,1 Kč, Zabijačka 2,0 Kč na hraně — ničení nejnižší karty má cenu,
+   kterou nástroj nevidí, Válečná kořist, Defenestrace, Notář, Čarodějnice, Vědma, Rybář, Kupónová privatizace
+   5,6 Kč/kolo), čistá pravidla (Švejk, Dvorní malíř), úrovně kombinací (Praotec Čech, Krakonoš) a Sklář (špička 144 —
+   skleněná karta, kterou žolík sám přinesl). Pivní břicho je na hraně (60 seedů R2 19,3 %, 100 seedů 21,4 %) —
+   ponecháno.
+
+**Zkontrolováno a ponecháno:**
+
+- Rodiny se stejným spouštěčem a jiným typem efektu (DESIGN 4.4/10): Noční směna + Bludička (šéf), Ranní ptáče +
+  Spartakiáda + Virální video (první ruka), Sběrna surovin + Sběrač hub (zničená karta, +mult se stropem / ×mult),
+  Třináctý plat + Válečná kořist + Silvestr (šéf), Bazarník + Chatař (prázdné sloty), Golem + Dlaždič (kamenné karty),
+  Teta + Rybář (rady), kopírující trojice s různým cílem (nejdražší / nejpravější / soused vlevo, strop 3 ✔).
+- Sklář (téma sklo a spouštěč zničená skleněná karta) — téma je dané vylepšením, efekt je vlastní; Vědma — lidová
+  postava (Libuše), ne překlad názvu; Dvorní malíř, Barvoslepý strýc, Vyšlapaná pěšina, Kouzelník a Průvodce mají
+  pravidla inspirovaná předlohou, ale vlastní názvy i témata.
+- Noční směna má po fázi 6 R2 7,9–8,1 % (60 seedů), R1 41–44 % — pravidlo 1 (dolní hranice aspoň v jednom okně)
+  splněno.
+- Simulace (`npm run simulate -- --runs 60`): 0 neplatných akcí všech botů, žádná výjimka; výhry max 33 %, flush 37 %,
+  pairs 30 %. Dechovka a Dálnice D1 jsou v malých vzorcích (3–8 runů) mezi „nejsilnějšími“ u více botů — sledovat
+  při balancu ve fázi 10 (`joker-value.ts` je má v pásmu).
+
+**Mimo zadání (nahlášeno, neopraveno):** kupón „Věrnostní karta“ (fáze 5) nese český překlad názvu žolíka předlohy
+(Loyalty Card) — obecný pojem s jinou mechanikou, ale CONTENT-GUIDE 13 zakazuje i přeložené názvy; přejmenovat při
+revizi kupónů (balíček Úřednický ho uvádí jménem a test to hlídá). UI: `copyStatusText` mimo kolo hlásí „vybere na
+začátku kola“ i u Archiváře a Kopíráku, kteří kopírují i mimo kolo (soubory UI patří fázi 6).
+
+**Proč:** CLAUDE.md kap. 3 (100+ žolíků, data + hooky, test na každého), 5 (humor bez vulgarit a tragédií), 6
+(spisovné texty, rodová neutralita), 7 (žádné převzaté názvy), 8 (žádný bezcenný ani auto-win, žádný duplikát);
+DESIGN 4.3–4.5, 4.9; CONTENT-GUIDE kap. 11–14.
+
+## 2026-10-02 — Fáze 5 (UI): přesun karet v ruce, náhled balíčku bez zakrytých karet, fronta hlášek, e2e spotřebek
+
+**Přesun karet v ruce** (`src/ui/screens/game/handArea.ts`, akce `reorderHand` v kole i v dobrané ruce obálky):
+
+- Tažení myší i prstem přes nový společný `attachDragSort` (`src/ui/components/dragSort.ts`), na který přešla i řada
+  žolíků (`topRow.ts`) — obě řady se chovají stejně: krátký klik / tap = výběr (detail), tah od prahu 6 px (myš) /
+  10 px (prst) = přesun, klik po tahu se pohltí, `pointercancel` vrátí vše beze změny, po puštění se uzly přeskládají
+  hned (bez probliknutí) a položka „dosedne“ krátkou animací.
+- Posun přes CSS vlastnost `translate` (ne `transform`): skládá se s povytažením vybrané karty (`transform` z
+  `.is-selected`), takže tažená i tříděná vybraná karta zůstává nahoře. FLIP při třídění přešel na `translate` taky.
+  Tažená karta se nenaklání (tilt by se změřeným obdélníkem neseděl).
+- Dotyk: karty v ruce mají `touch-action: none` (jako žolíci) — s `pan-y` Chrome po rychlém tahu spustil setrvačný
+  pohyb a první následující tap spolkl (ověřeno v Playwrightu). Výjimka telefon ≤ 600 px, kde se obrazovka posouvá:
+  `pan-y pinch-zoom` (svislý tah posune stránku, vodorovný kartu).
+- Klávesnice: **Shift + ← / →** posune kartu o místo — zaměřenou, pokud je vybraná, jinak naposledy vybranou, jinak
+  zaměřenou (Tab) (`pickMoveTarget`). Focus zůstává na kartě (prohlížeč ho při `insertBefore` ztrácí — `updateHand`
+  ho vrací), živá oblast ohlásí novou pozici, na kraji jen hláška. Zapsáno v nápovědě kláves v Nastavení
+  (`settings.keys.items.move`) a v DESIGN 13.3.
+- Tooltip: nový stisk ruší pohlcení kliku z dlouhého stisku, po kterém klik nepřišel (tah po dlouhém stisku jinak
+  snědl příští tap).
+
+**Náhled balíčku** (`deckPreviewModel` v `modals.ts`): karty lícem dolů mimo dobírací balíček (zakrytá ruka pod
+Výlukou, Mlhou, Bílou paní; zakryté zahozené) jsou neznámé. Když nějaké jsou, náhled ukáže jen dobírací balíček
+(žádné ztlumené karty venku — jinak by zakrytou kartu prozradila mezera v řadě barvy) a řádek „Lícem dolů (n)“ s ruby;
+legenda to vysvětlí. Bez zakrytých karet beze změny (ztlumené karty venku podle hodnoty).
+
+**Hlášky** (`src/ui/components/toast.ts`):
+
+- Na herní obrazovce sloupec nahoře uprostřed jeviště (`setToastAnchor(stage)`, poloha se změří při každé nové hlášce
+  a při změně velikosti okna), široký nejvýš 24 rem — mimo ruku, Zahrát / Zahodit, balíček i tlačítka v záhlaví
+  Večerky a obálky. Mimo hru zůstává roh vpravo dole.
+- Nejvýš **3** naráz (dřív 4), nejnovější dole, nejstarší odchází animací; ostatní se posunou plynule (FLIP přes
+  `translate`). Stejná hláška znovu (druh + nadpis + text) nepřibude: obnoví se čas a naskočí počet „×2“
+  (`common.repeated`) — opakované chyby (X bez zahození) se nevrší.
+- Rychlost hry: výchozí doba ÷ √rychlost s dolní mezí (info/úspěch 4 s → nejméně 2,2 s, varování 5 → 2,8 s, chyba
+  6 → 4 s), aby šlo dočíst; čte se z `--speed` na `<html>`. Vypnuté animace / reduced motion: příchod i odchod bez
+  animace (odchod hned, ne až po 400 ms).
+
+**Večerka — „Koupit a použít“ u spotřebek s cíli:** engine ji odmítne (ve Večerce není ruka, `targetPool` je prázdný).
+Tlačítko se teď ukáže i u nich, ale neaktivní a fokusovatelné (`aria-disabled`, třída `btn--inert`, důvod v `title` i
+skrytém popisu); klik / Enter řekne proč (hláška `game.shop.useNeedsHand` — i na dotyku, kde `title` není vidět).
+U spotřebek bez cílů je neaktivní, když by použití nic neudělalo (`Game.canUseConsumable` nad kopií stavu, stejně jako
+prodejní ceny). Detail spotřebky s cíli mimo kolo a obálku vysvětlí, že chybí ruka (`game.consumable.needsHand`).
+
+**Písmo:** Pixelify Sans v použitých podmnožinách nemá ligatury „fi“ / „fl“ — vykreslovalo se „A“ („Kontrola
+z Anančáku“). `font-variant-ligatures: none` na `body`.
+
+**Testy:** e2e `tests/e2e/consumables.spec.ts` (Večerka: pranostika do slotu → použít → úroveň v Info o runu; rada
+s cíli bez ruky; prodej; kupón Druhý regál / Věrnostní karta; obálka rad s cílem v dobrané ruce → vylepšení na kartě
+i v uloženém stavu; obálka pranostik „Nechat si“; obálka hracích karet; v kole Babiččina barva a razítko s pečetí),
+`tests/e2e/hand.spec.ts` (tažení myší i prstem, Shift + šipka, ruka obálky, náhled balíčku pod Výlukou, hlášky mimo
+ruku a tlačítka), společní pomocníci `tests/e2e/helpers.ts`; unit `tests/unit/ui-hand.test.ts` (happy-dom).
+
+**Proč:** CLAUDE.md kap. 4 (drag & drop, klávesy, dotyk), 6 (texty přes `t()`), 8 (e2e); ROADMAP „Známé otevřené
+body“ fáze 5 a 6/9.

@@ -158,7 +158,7 @@ const impersonator: JokerDef = {
 
 // ─────────────────────────── #29 Hostinský ───────────────────────────
 
-const INNKEEPER_XMULT = 2.5;
+const INNKEEPER_XMULT = 2.2;
 
 const innkeeper: JokerDef = {
   id: 'innkeeper',

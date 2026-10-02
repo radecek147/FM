@@ -431,8 +431,8 @@ describe('žolíci – vyrenderované popisky (params + počáteční stav)', ()
       teacher:
         '+15 mult, pokud mají všechny skórující karty sudou hodnotu (dvojky, čtyřky, šestky, osmičky a desítky).',
       hejkal: '1 z 3, že zahraná ruka dostane +15 mult.',
-      tram_driver: '+12 mult, pokud to není první ruka kola a v kole už se zahazovalo.',
-      punter: 'Na konci kola 1 z 3, že vyhraje 6 Kč.',
+      tram_driver: '+15 mult, pokud to není první ruka kola a v kole už se zahazovalo.',
+      punter: 'Na konci kola 1 z 3, že vyhraje 7 Kč.',
       pavlac_gossip: '×1,5 mult, pokud je zahraná kombinace stejná jako v minulé ruce.',
       round_for_everyone: '×1,4 mult, pokud zahraješ 5 karet a všechny skórují.',
       pickled_cheese: '+6 čipů za každou kartu drženou v ruce.',
@@ -486,7 +486,7 @@ describe('žolíci – vyrenderované popisky (params + počáteční stav)', ()
       mushroom_picker: '×1 mult a navíc +×0,25 za každou hrací kartu zničenou od jeho koupě (teď ×1).',
       impersonator:
         'Při získání bez edice dostane duhovou; v každém kole kopíruje tvého nejdražšího běžného nebo vzácného žolíka.',
-      innkeeper: '×2,5 mult, dokud se v tomto kole nezahazovalo.',
+      innkeeper: '×2,2 mult, dokud se v tomto kole nezahazovalo.',
       grandmas_chest: '×1,3 mult za každou spotřebku, kterou držíš ve slotech.',
       beer_sommelier:
         '×1 mult a navíc +×0,7 za každou různou kombinaci zahranou v tomto kole (včetně této ruky).',

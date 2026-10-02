@@ -19,6 +19,8 @@ export const common = {
   loading: 'Chvilku strpení, hostinský hledá klíče…',
   notifications: 'Oznámení',
   dismiss: 'Zavřít oznámení',
+  /** Stejné oznámení vícekrát po sobě — počet na štítku místo dalšího oznámení. */
+  repeated: '×{n}',
   /** Dočasná herní obrazovka, než ji nahradí plnohodnotná. */
   placeholder: {
     game: 'Stůl se teprve staví. Rozehraný run čeká ve fázi „{phase}“.',
@@ -121,6 +123,10 @@ export const settings = {
       play: { key: 'Enter', action: 'Zahrát vybrané karty' },
       discard: { key: 'X', action: 'Zahodit vybrané karty' },
       sort: { key: 'S / B', action: 'Seřadit ruku podle hodnoty / podle barvy' },
+      move: {
+        key: 'Shift + ← / →',
+        action: 'Posunout vybranou kartu v ruce doleva / doprava (myší nebo prstem ji přetáhneš)',
+      },
       skip: { key: 'Mezerník', action: 'Přeskočit běžící animaci' },
       menu: { key: 'Esc', action: 'Menu nebo zavřít dialog' },
       focus: { key: 'Tab', action: 'Přejít na další tlačítko' },

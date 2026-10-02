@@ -1313,6 +1313,22 @@ html.modal-open {
   pointer-events: none;
 }
 
+/*
+ * Herní obrazovka: sloupec nahoře uprostřed jeviště nad stolem (src/ui/components/toast.ts `setToastAnchor` dosadí
+ * left / top / width) — mimo ruku, tlačítka Zahrát / Zahodit a balíček. Nejnovější oznámení dole.
+ */
+.toast-region--anchored {
+  right: auto;
+  bottom: auto;
+  align-items: stretch;
+  transform: translateX(-50%);
+}
+
+.toast-region--anchored .toast {
+  padding-block: 0.5rem;
+  box-shadow: 0 6px 16px rgb(0 0 0 / 45%);
+}
+
 .toast {
   display: flex;
   align-items: flex-start;
@@ -1405,8 +1421,32 @@ html.modal-open {
   border-radius: 50%;
 }
 
+/* Stejné oznámení znovu: počet „×2“ a krátké ťuknutí místo dalšího oznámení. */
+.toast__count {
+  flex: 0 0 auto;
+  align-self: center;
+  padding: 0.05rem 0.45rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--paper);
+  background: var(--toast-color, var(--felt-light));
+  border-radius: 999px;
+}
+
+.toast__count[hidden] {
+  display: none;
+}
+
+.toast--bump {
+  animation: toast-bump var(--t-med) ease-out;
+}
+
 .toast--leaving {
   animation: toast-out var(--t-fast) ease-in forwards;
+}
+
+.toast-region--anchored .toast--leaving {
+  animation-name: toast-out-up;
 }
 
 @keyframes toast-in {
@@ -1420,6 +1460,19 @@ html.modal-open {
   to {
     opacity: 0;
     transform: translateX(24px);
+  }
+}
+
+@keyframes toast-out-up {
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes toast-bump {
+  40% {
+    transform: scale(1.04);
   }
 }
 

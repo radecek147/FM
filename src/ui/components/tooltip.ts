@@ -252,6 +252,9 @@ export function attachTooltip(el: HTMLElement, source: TooltipSource): () => voi
     if (e.pointerType !== 'touch') close();
   };
   const onDown = (e: PointerEvent): void => {
+    // Nový stisk = nové gesto: pohlcení kliku po dlouhém stisku, po kterém klik nepřišel (prst se posunul
+    // a karta se táhla), nesmí sníst příští tap.
+    suppressClick = false;
     if (e.pointerType !== 'touch') return;
     pressStart = { x: e.clientX, y: e.clientY };
     window.clearTimeout(pressTimer);

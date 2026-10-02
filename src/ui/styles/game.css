@@ -401,7 +401,7 @@
 }
 
 .gt-item.is-shifting {
-  transition: transform var(--t-fast) ease-out;
+  transition: translate var(--t-fast) ease-out;
 }
 
 .gt-item.is-dragging {
@@ -1536,6 +1536,37 @@
   z-index: 2;
 }
 
+/*
+ * Přesun karet v ruce tažením (src/ui/components/dragSort.ts) — dotyk na kartě patří hře (stejně jako u žolíků:
+ * s posouváním stránky by prohlížeč po tahu „dojížděl“ a spolkl následující tap). Na telefonu, kde se obrazovka
+ * posouvá, zůstává svislý tah stránce (viz @media max-width 600px). Posun jde přes vlastnost `translate`, takže se
+ * skládá s povytažením vybrané karty.
+ */
+.gb-hand > .pcard {
+  touch-action: none;
+}
+
+.gb-hand > .pcard.is-shifting {
+  transition:
+    transform var(--t-fast) ease-out,
+    translate var(--t-fast) ease-out;
+}
+
+.gb-hand > .pcard.is-dragging {
+  z-index: 5;
+  cursor: grabbing;
+}
+
+.gb-hand > .pcard.is-dragging .pcard__inner {
+  box-shadow:
+    0 0 0 3px var(--accent),
+    0 16px 30px rgb(0 0 0 / 45%);
+}
+
+.gb-hand.is-sorting > .pcard:not(.is-dragging) {
+  pointer-events: none;
+}
+
 .gb-hint {
   margin-bottom: 0.4rem;
   font-size: 0.9rem;
@@ -2088,6 +2119,7 @@
 .no-anim .game-stage__decor,
 .no-anim .game-table .pcard,
 .no-anim .gt-item.is-shifting,
+.no-anim .gb-hand > .pcard.is-shifting,
 .no-anim .gb-deck {
   transition: none;
 }
@@ -2431,6 +2463,11 @@
 @media (max-width: 600px) {
   .blind-select__cards {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Obrazovka se posouvá: svislý tah na kartě posune stránku, vodorovný kartu přesune. */
+  .gb-hand > .pcard {
+    touch-action: pan-y pinch-zoom;
   }
 
   .game {

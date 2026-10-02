@@ -110,19 +110,25 @@ function bindTilt(el: HTMLElement): void {
   };
   el.addEventListener('pointerenter', remeasure);
   el.addEventListener('pointerdown', remeasure);
-  el.addEventListener('pointermove', (e) => {
-    if (e.pointerType === 'touch') return;
-    last = { x: e.clientX, y: e.clientY };
-    if (!frame) frame = requestAnimationFrame(apply);
-  });
-  el.addEventListener('pointerleave', () => {
+  const reset = (): void => {
     if (frame) cancelAnimationFrame(frame);
     frame = 0;
     last = null;
     rect = null;
     inner.style.removeProperty('--tilt-x');
     inner.style.removeProperty('--tilt-y');
+  };
+  el.addEventListener('pointermove', (e) => {
+    if (e.pointerType === 'touch') return;
+    // Tažená karta (přesun v ruce) se nenaklání — změřený obdélník by s posunem neseděl.
+    if (el.classList.contains('is-dragging')) {
+      if (last) reset();
+      return;
+    }
+    last = { x: e.clientX, y: e.clientY };
+    if (!frame) frame = requestAnimationFrame(apply);
   });
+  el.addEventListener('pointerleave', reset);
 }
 
 /** Vytvoří hrací kartu. */

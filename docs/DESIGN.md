@@ -686,7 +686,7 @@ přibitý → zapůjčený → zvětrávající (první úspěšný hod vyhráv�
 |  26 | Sněhulák (`snowman`)                | epický   |    8 | ×mult           | ×2,5 mult; po každém kole −×0,25; při ×1 roztaje (zničí se).                                                  | `onHandPlayed`, `onRoundEnd`       | „Na jaře z něj zbude jen mrkev.“                                  |
 |  27 | Sběrač hub (`mushroom_picker`)      | epický   |    9 | škálování       | ×1 mult a navíc +×0,25 za každou hrací kartu zničenou od jeho koupě.                                          | `onCardDestroyed`, `onHandPlayed`  | „Rostou tam, kde něco zmizelo.“                                   |
 |  28 | Napodobitel (`impersonator`)        | epický   |   10 | kopírování      | Při získání bez edice dostane duhovou; v každém kole kopíruje tvého nejdražšího běžného nebo vzácného žolíka. | `onAcquire`, `copyTarget`          | „V kulturáku napodobí kohokoli, jen na hvězdy mu flitry nestačí.“ |
-|  29 | Hostinský (`innkeeper`)             | epický   |    8 | ×mult           | ×2,5 mult, dokud v tomto kole nikdo nezahazoval.                                                              | `onHandPlayed`                     | „U mě se nic nevylévá.“                                           |
+|  29 | Hostinský (`innkeeper`)             | epický   |    8 | ×mult           | ×2,2 mult, dokud v tomto kole nikdo nezahazoval.                                                              | `onHandPlayed`                     | „U mě se nic nevylévá.“                                           |
 |  30 | Babiččina truhla (`grandmas_chest`) | epický   |    8 | ×mult           | ×1,3 mult za každou spotřebku, kterou držíš ve slotech.                                                       | `onHandPlayed`                     | „Na půdě je všechno, co jednou bude k něčemu.“                    |
 
 \* `onAcquire` je nový hook (žolík vstoupil do slotů — koupě, obálka, efekt); viz příloha B.
@@ -698,7 +698,8 @@ se spotřebkami ve fázi 5 („Fáze 5: boti se spotřebkami a předběžná kal
 Meteorolog a Stará garda jsou po přeměření v pásmu beze změny. Č. 7, 24, 25 a 28 (Noční směna, Šťastná sedmička,
 Sekera, Napodobitel) měly ve fázi 4 mechaniku, kterou číslem do pásma dostat nešlo; ve fázi 7 jsou přepracované
 (téma zůstalo, mechanika je nová) — staré → nové a naměřené hodnoty v `docs/DECISIONS.md` („Fáze 7: legendární žolíci
-a přepracování čtyř žolíků pod pásmem“).
+a přepracování čtyř žolíků pod pásmem“). Č. 29 (Hostinský) je při revizi fáze 7 přeměřený znovu: boti po fázi 6 se
+s ním zahazování vyhýbají, ×2,5 dávalo R2 126 % (nad pásmem) → **×2,2** (95 / 94 %); viz „Revize obsahu fáze 7“.
 
 Rozložení fáze 4: +mult 7, +čipy 3, ×mult 6, ekonomika 4, škálování 5, opakování 2, úpravy pravidel 2, kopírování 1.
 Pro start bez odemykání (fáze 4–7) jsou všichni dostupní; podmínky odemčení přijdou ve fázi 8.
@@ -825,8 +826,8 @@ skupin v `docs/DECISIONS.md`.
 |  26 | Táta u grilu (`grill_dad`)                     | běžný      |    4 | +čipy             | 7    | +60 čipů, pokud se v tomto kole zahazovalo právě 1×.                                                              | „Maso se otáčí jen jednou. A radit mu nebudeš.“                                       |
 |  27 | Učitelka (`teacher`)                           | běžný      |    4 | +mult             | 7    | +15 mult, pokud mají všechny skórující karty sudou hodnotu (dvojky, čtyřky, šestky, osmičky a desítky).           | „Samé sudé? Jednička s hvězdičkou. Lichá jde do žákovské.“                            |
 |  28 | Hejkal (`hejkal`)                              | běžný      |    4 | +mult             | 7    | 1 z 3, že zahraná ruka dostane +15 mult.                                                                          | „Hejká po lese, až se ozvěna stydí. Občas se trefí do noty.“                          |
-|  29 | Tramvaják (`tram_driver`)                      | běžný      |    4 | +mult             | 7    | +12 mult, pokud to není první ruka kola a v kole už se zahazovalo.                                                | „Ukončete výstup a nástup. Kdo zahazoval, ten jede dál.“                              |
-|  30 | Sázkař (`punter`)                              | běžný      |    4 | ekonomika         | 7    | Na konci kola 1 z 3, že vyhraje 6 Kč.                                                                             | „Má systém. Systém má jeho výplatu.“                                                  |
+|  29 | Tramvaják (`tram_driver`)                      | běžný      |    4 | +mult             | 7    | +15 mult, pokud to není první ruka kola a v kole už se zahazovalo.                                                | „Ukončete výstup a nástup. Kdo zahazoval, ten jede dál.“                              |
+|  30 | Sázkař (`punter`)                              | běžný      |    4 | ekonomika         | 7    | Na konci kola 1 z 3, že vyhraje 7 Kč.                                                                             | „Má systém. Systém má jeho výplatu.“                                                  |
 |  31 | Drbna z pavlače (`pavlac_gossip`)              | běžný      |    5 | ×mult             | 7    | ×1,5 mult, pokud je zahraná kombinace stejná jako v minulé ruce.                                                  | „Zase Dvojice? To už ví celý dům. Zítra celá ulice.“                                  |
 |  32 | Rundu všem (`round_for_everyone`)              | běžný      |    5 | ×mult             | 7    | ×1,4 mult, pokud zahraješ 5 karet a všechny skórují.                                                              | „Hospodský, rundu pro všech pět! Platí ten, kdo to řekl nahlas.“                      |
 |  33 | Nakládaný hermelín (`pickled_cheese`)          | běžný      |    4 | +čipy             | 7    | +6 čipů za každou kartu drženou v ruce.                                                                           | „Čím déle leží, tím víc voní. Celý lokál to ocení.“                                   |
@@ -876,7 +877,7 @@ skupin v `docs/DECISIONS.md`.
 |  77 | Sněhulák (`snowman`)                           | epický     |    8 | ×mult             | 4    | ×2,5 mult; po každém kole −×0,25, při ×1 roztaje a zničí se.                                                      | „Na jaře z něj zbude jen mrkev.“                                                      |
 |  78 | Sběrač hub (`mushroom_picker`)                 | epický     |    9 | škálování         | 4    | ×1 mult a navíc +×0,25 za každou hrací kartu zničenou od jeho koupě.                                              | „Rostou tam, kde něco zmizelo.“                                                       |
 |  79 | Napodobitel (`impersonator`)                   | epický     |   10 | kopírování        | 4    | Při získání bez edice dostane duhovou; v každém kole kopíruje tvého nejdražšího běžného nebo vzácného žolíka.     | „V kulturáku napodobí kohokoli, jen na hvězdy mu flitry nestačí.“                     |
-|  80 | Hostinský (`innkeeper`)                        | epický     |    8 | ×mult             | 4    | ×2,5 mult, dokud se v tomto kole nezahazovalo.                                                                    | „U mě se nic nevylévá.“                                                               |
+|  80 | Hostinský (`innkeeper`)                        | epický     |    8 | ×mult             | 4    | ×2,2 mult, dokud se v tomto kole nezahazovalo.                                                                    | „U mě se nic nevylévá.“                                                               |
 |  81 | Babiččina truhla (`grandmas_chest`)            | epický     |    8 | ×mult             | 4    | ×1,3 mult za každou spotřebku, kterou držíš ve slotech.                                                           | „Na půdě je všechno, co jednou bude k něčemu.“                                        |
 |  82 | Pivní sommelier (`beer_sommelier`)             | epický     |    9 | ×mult             | 7    | ×1 mult a navíc +×0,7 za každou různou kombinaci zahranou v tomto kole (včetně této ruky).                        | „Nejdřív ležák, pak polotmavé, nakonec řezané. Po čtvrtém už hodnotí jen pěnu.“       |
 |  83 | Archivář (`archivist`)                         | epický     |   10 | kopírování        | 7    | Při získání bez edice dostane duhovou; kopíruje schopnost žolíka nalevo od sebe.                                  | „Opis souhlasí s originálem. Kde je originál, ví jen on a regál číslo čtyřicet sedm.“ |
@@ -1517,21 +1518,36 @@ Rozvržení a chování UI podle `CLAUDE.md` kap. 4 a 7. Všechny texty jsou v `
 - **Nahoře:** řada žolíků (x/5, tažením přesun, klik = detail s Prodat) a spotřebek (x/2, klik = Použít/Prodat).
 - **Uprostřed:** stůl se zahranými kartami a animací skórování (`ScoreStep` jeden po druhém, bubliny +čipy / +mult /
   ×mult nad zdrojem).
-- **Dole:** ruka (výběr klikem/dotykem, max. `maxSelect`), **Zahrát** / **Zahodit**, třídění podle hodnoty / barvy.
-- **Vpravo dole:** balíček „zbývá/celkem“, klik = náhled zbývajících karet podle barev a hodnot.
+- **Dole:** ruka (výběr klikem/dotykem, max. `maxSelect`), **Zahrát** / **Zahodit**, třídění podle hodnoty / barvy,
+  **přesun karet tažením** myší i prstem (krátký klik / tap = výběr, tah = přesun; i v dobrané ruce obálky).
+- **Vpravo dole:** balíček „zbývá/celkem“, klik = náhled zbývajících karet podle barev a hodnot. Karty venku (ruka,
+  stůl, odpad) jsou v náhledu ztlumené — kromě karet **lícem dolů**: když nějaké mimo dobírací balíček jsou (Výluka na
+  trati, Mlha nad Labem, Bílá paní, zakryté zahozené), náhled ukáže jen dobírací balíček a počet zakrytých karet
+  (ruby), aby neprozradil jejich hodnotu ani místem v řadě barvy.
+- **Hlášky (toasty):** sloupec nahoře uprostřed jeviště nad stolem — nikdy přes ruku, Zahrát / Zahodit a balíček
+  (mimo hru vpravo dole). Nejvýš 3 naráz, nejnovější dole, starší ustupují; stejná hláška znovu jen přičte „×2“.
+  Výchozí doba zobrazení (info 4 s, varování 5 s, chyba 6 s) se při rychlosti hry 2×–4× zkracuje (÷ √rychlost,
+  nejméně 2,2 / 2,8 / 4 s); s vypnutými animacemi přicházejí a odcházejí bez animace.
 
 ### 13.3 Ovládání
 
-| Klávesa  | Akce                                         |
-| -------- | -------------------------------------------- |
-| 1–8      | vybrat / zrušit výběr karty na pozici v ruce |
-| Enter    | Zahrát                                       |
-| X        | Zahodit                                      |
-| S / B    | seřadit podle hodnoty / podle barvy          |
-| Mezerník | přeskočit (zrychlit) běžící animaci          |
-| Esc      | menu / zavřít dialog                         |
+| Klávesa       | Akce                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------ |
+| 1–8           | vybrat / zrušit výběr karty na pozici v ruce                                         |
+| Enter         | Zahrát                                                                               |
+| X             | Zahodit                                                                              |
+| S / B         | seřadit podle hodnoty / podle barvy                                                  |
+| Shift + ← / → | posunout vybranou kartu v ruce o místo doleva / doprava (bez výběru zaměřenou kartu) |
+| Mezerník      | přeskočit (zrychlit) běžící animaci                                                  |
+| Esc           | menu / zavřít dialog                                                                 |
 
-Myš i dotyk jsou rovnocenné (tablet plně funkční, telefon „best effort“); drag & drop žolíků funguje i dotykem.
+Shift + šipka posune kartu, na které je focus, pokud je vybraná; jinak naposledy vybranou; jinak zaměřenou (Tab).
+Focus zůstává na posunuté kartě a čtečka ohlásí novou pozici („…: teď 3. karta zleva z 8“). Funguje v kole i v dobrané
+ruce obálky; na kraji ruky se nic nestane (jen hláška pro čtečku).
+
+Myš i dotyk jsou rovnocenné (tablet plně funkční, telefon „best effort“); drag & drop žolíků i karet v ruce funguje
+i dotykem (tah od 10 px, myší od 6 px; kratší pohyb je klik). Na telefonu (≤ 600 px, obrazovka se posouvá) svislý tah
+na kartě posouvá stránku, vodorovný kartu přesouvá.
 Každý ovládací prvek je dosažitelný klávesnicí (Tab) a má viditelný focus a `aria-label`.
 
 ### 13.4 Nastavení (výchozí hodnoty)

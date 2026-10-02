@@ -103,6 +103,9 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   font-family: var(--font-game);
+  /* Ligatury „fi“ / „fl“ nejsou v podmnožinách písma Pixelify Sans — místo nich by se vykreslilo „A“
+     („Kontrola z Anančáku“). Bez ligatur se píše po písmenech. */
+  font-variant-ligatures: none;
   line-height: 1.4;
   color: var(--on-felt);
   background-color: var(--felt);
@@ -271,9 +274,18 @@ ol[role='list'] {
 }
 
 /* Neaktivní tlačítko: neprůhledné (sukno přes něj neprosvítá do „olivova“), vybledlé a zamáčknuté. */
-.btn:disabled {
+.btn:disabled,
+.btn.btn--inert {
   filter: saturate(0.3) brightness(0.8);
   box-shadow: 0 2px 0 rgb(0 0 0 / 30%);
+  transform: translateY(2px);
+}
+
+/* Neaktivní, ale fokusovatelné tlačítko (aria-disabled): klik jen vysvětlí, proč to nejde. */
+.btn.btn--inert,
+.btn.btn--inert:hover,
+.btn.btn--inert:active {
+  cursor: help;
   transform: translateY(2px);
 }
 

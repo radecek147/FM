@@ -3,13 +3,13 @@
  * a detail spotřebky (Použít s vybranými kartami jako cíli, Prodat). Vše přes `openModal` (focus trap,
  * Esc, návrat focusu) a akce controlleru.
  */
-import type { Card, HandType, JokerInstance, Suit } from '../../../engine';
+import type { Card, HandType, JokerInstance, RunState, Suit } from '../../../engine';
 import { HAND_TYPES, RANKS, SUITS, handValueAtLevel } from '../../../engine';
 import { t } from '../../../i18n/cs';
 import { formatNumber } from '../../../i18n/format';
 import { blindArt } from '../../art/art';
 import { button } from '../../components/button';
-import { createCardView } from '../../components/card';
+import { createCardBack, createCardView } from '../../components/card';
 import { createConsumableCard } from '../../components/consumableCard';
 import { createJokerCard } from '../../components/jokerCard';
 import { openModal } from '../../components/modal';
@@ -318,25 +318,45 @@ export function openRunInfo(ctx: GameCtx): void {
 
 // ─────────────────────────── Náhled balíčku ───────────────────────────
 
+/**
+ * Co náhled balíčku ukáže: zbývající karty (dobírací balíček v kole, jinak celý balíček) a karty venku. Karty lícem
+ * dolů mimo dobírací balíček (zakrytá ruka pod Výlukou, Mlhou, Bílou paní; zakryté zahozené) jsou neznámé —
+ * náhled je nesmí prozradit hodnotou ani místem v řadě barvy. Když nějaké jsou, ukazuje se jen dobírací balíček
+ * a počet zakrytých; jinak i ztlumené karty venku. Čistá funkce (testy).
+ */
+export function deckPreviewModel(s: Readonly<RunState>): {
+  remaining: Set<number>;
+  /** Karty v řadách náhledu (zbývající, případně i venku). */
+  shown: Card[];
+  /** Počet zakrytých karet mimo dobírací balíček. */
+  hidden: number;
+} {
+  const round = s.round;
+  const inRound = !!round && (s.phase === 'round' || s.phase === 'round_end');
+  const remaining = new Set(inRound ? round.drawPile : s.deck.map((x) => x.id));
+  const hidden = s.deck.filter((x) => !remaining.has(x.id) && x.faceDown).length;
+  const shown = hidden > 0 ? s.deck.filter((x) => remaining.has(x.id)) : [...s.deck];
+  return { remaining, shown, hidden };
+}
+
 export function openDeckPreview(ctx: GameCtx): void {
   // Bublina s detailem karty pod dialogem by překážela.
   hideTooltip();
   const c = ctx.controller;
   const s = c.state;
-  const round = s.round;
-  const inRound = !!round && (s.phase === 'round' || s.phase === 'round_end');
-  const remaining = new Set(inRound ? round.drawPile : s.deck.map((x) => x.id));
+  const { remaining, shown, hidden } = deckPreviewModel(s);
   const left = remaining.size;
   const byRank = (a: Card, b: Card): number => b.rank - a.rank;
+  // Zbývající karty líc nahoru: složení balíčku hráč zná, rub by v řadě barvy jen mátl.
   const mini = (card: Card): HTMLElement =>
-    createCardView(card, {
+    createCardView(card.faceDown ? { ...card, faceDown: false } : card, {
       registry: ctx.registry,
       className: remaining.has(card.id) ? 'deck-mini' : 'deck-mini is-out',
     });
 
-  const stones = s.deck.filter((x) => isRanklessCard(x, ctx.registry));
+  const stones = shown.filter((x) => isRanklessCard(x, ctx.registry));
   const suitRow = (suit: Suit): HTMLElement => {
-    const cards = s.deck.filter((x) => x.suit === suit && !isRanklessCard(x, ctx.registry)).sort(byRank);
+    const cards = shown.filter((x) => x.suit === suit && !isRanklessCard(x, ctx.registry)).sort(byRank);
     const n = cards.filter((x) => remaining.has(x.id)).length;
     return h(
       'div',
@@ -357,6 +377,29 @@ export function openDeckPreview(ctx: GameCtx): void {
       ).length;
       return h('li', null, t('game.deck.rankCount', { rank: t(`ranks.${rank}.short`), n }));
     });
+  // Zakryté karty mimo balíček: jen počet a rub (bez hodnoty, barvy i pořadí).
+  const hiddenRow =
+    hidden > 0
+      ? h(
+          'div',
+          {
+            class: 'deck-preview__row deck-preview__row--other deck-preview__row--hidden',
+            role: 'group',
+            'aria-label': t('game.deck.hiddenLabel', { n: hidden }),
+            'data-testid': 'deck-hidden',
+          },
+          h(
+            'p',
+            { class: 'deck-preview__suit', 'aria-hidden': 'true' },
+            t('game.deck.hidden', { n: hidden }),
+          ),
+          h(
+            'div',
+            { class: 'deck-preview__cards', 'aria-hidden': 'true' },
+            Array.from({ length: hidden }, () => createCardBack({ className: 'deck-mini' })),
+          ),
+        )
+      : null;
 
   openModal({
     title: t('game.deck.title'),
@@ -376,9 +419,14 @@ export function openDeckPreview(ctx: GameCtx): void {
             h('div', { class: 'deck-preview__cards' }, stones.map(mini)),
           )
         : null,
+      hiddenRow,
       h('p', { class: 'deck-preview__label' }, t('game.deck.byRank')),
       h('ul', { class: 'deck-preview__ranks', role: 'list' }, rankCounts),
-      h('p', { class: 'deck-preview__legend' }, t('game.deck.legend')),
+      h(
+        'p',
+        { class: 'deck-preview__legend', 'data-testid': 'deck-legend' },
+        hidden > 0 ? t('game.deck.legendHidden') : t('game.deck.legend'),
+      ),
     ),
     actions: [{ label: t('common.close'), variant: 'primary', autofocus: true, testId: 'deck-close' }],
   });
@@ -533,6 +581,15 @@ export function openConsumableDetail(ctx: GameCtx, uid: number): void {
       : t('game.consumable.targetsRange', { min: range.min, max: range.max })
     : t('game.consumable.noTargets');
   const sellValue = c.engine.sellValue(uid);
+  // Ruka, ze které jdou vybrat cíle: kolo, nebo dobraná ruka obálky (ve Večerce a výběru útraty žádná není).
+  const st = c.state;
+  const hasHand =
+    (st.phase === 'round' && !!st.round) || (st.phase === 'booster' && (st.booster?.hand.length ?? 0) > 0);
+  const warning = canUse
+    ? null
+    : range && !hasHand
+      ? t('game.consumable.needsHand')
+      : t('game.consumable.cannotUse');
 
   const m = openModal<'use' | 'sell'>({
     title: tx.name,
@@ -557,7 +614,7 @@ export function openConsumableDetail(ctx: GameCtx, uid: number): void {
         range
           ? h('p', { class: 'detail__hint' }, t('game.consumable.selected', { n: targets.length }))
           : null,
-        canUse ? null : h('p', { class: 'detail__warning' }, t('game.consumable.cannotUse')),
+        warning ? h('p', { class: 'detail__warning', 'data-testid': 'consumable-warning' }, warning) : null,
       ),
     ),
     actions: [

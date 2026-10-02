@@ -8,8 +8,8 @@
  * se změní jeho podpis. Animace událostí přehrává presenter (src/ui/present.ts), částice src/ui/fx.
  *
  * Klávesy: 1–8 výběr karty, Enter zahrát (i na zaměřené kartě; ve výběru útraty vybrat, na konci kola
- * vyplatit), X zahodit,
- * S / B třídění, Esc pauza (Pokračovat / Nastavení / Hlavní menu), mezerník přeskočí animaci (řeší App).
+ * vyplatit), X zahodit, S / B třídění, Shift + ← / → posun vybrané karty v ruce, Esc pauza (Pokračovat /
+ * Nastavení / Hlavní menu), mezerník přeskočí animaci (řeší App).
  */
 import '../../styles/game.css';
 import type { BlindKind, HandType, RunPhase } from '../../../engine';
@@ -18,6 +18,7 @@ import type { App, Screen, ScreenFactory } from '../../app';
 import { tableEmblem } from '../../art/table';
 import { backButton } from '../../components/button';
 import { closeAllModals, isModalOpen } from '../../components/modal';
+import { setToastAnchor } from '../../components/toast';
 import { hideTooltip, isTooltipVisible } from '../../components/tooltip';
 import { GameController } from '../../controller';
 import { h } from '../../dom';
@@ -122,6 +123,8 @@ class GameView implements PresentView {
       this.bossBanner.el,
     );
     this.main = h('div', { class: 'game-main' }, this.topRow.el, stage, this.handArea.el);
+    // Hlášky ve sloupci nahoře uprostřed jeviště — ne přes ruku, tlačítka a balíček (toast.ts).
+    setToastAnchor(stage);
     this.fx = h('div', { class: 'game-fx', 'aria-hidden': 'true' });
     this.live = h('p', { class: 'visually-hidden', 'aria-live': 'polite', 'data-testid': 'game-live' });
     this.el = h(
@@ -297,6 +300,10 @@ class GameView implements PresentView {
     if (c.busy) return false;
     const s = c.state;
     const selecting = s.phase === 'round' || (s.phase === 'booster' && (s.booster?.hand.length ?? 0) > 0);
+    // Shift + ← / → posune vybranou (nebo zaměřenou) kartu v ruce (DESIGN 13.3).
+    if (e.shiftKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      return selecting && this.handArea.moveCard(e.key === 'ArrowLeft' ? -1 : 1);
+    }
     const idx = digitIndex(e);
     if (idx !== null) {
       const id = c.handIds()[idx];
@@ -332,6 +339,7 @@ class GameView implements PresentView {
   }
 
   dispose(): void {
+    setToastAnchor(null);
     this.bossBanner.hide();
     this.unsubscribe();
     this.controller.setPresenter(async () => undefined);

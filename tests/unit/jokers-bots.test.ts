@@ -126,8 +126,8 @@ describe('boti a žolíci – nákup podle štítků a params', () => {
 
 describe('boti a žolíci – trest za zahození', () => {
   it('s Hostinským radši zahraje, než aby přišel o ×mult; bez něj zahazuje', () => {
-    // Dvě dvojice (QQ 99) a ještě jedna dvojice v ruce: bez žolíka se vyplatí honit Full house.
-    const hand = 'QH QS 9D 9C 5H 5S 8D 7C';
+    // Dvě dvojice (QQ 55): bez žolíka se vyplatí honit Full house, s Hostinským (×2,2) radši zahraje.
+    const hand = 'QH QS 9D 4C 5H 5S 8D 7C';
     expect(createBot('max').decide(roundWith(hand).game).type).toBe('discard');
     expect(createBot('max').decide(roundWith(hand, ['innkeeper']).game).type).toBe('play');
   });

@@ -122,7 +122,7 @@ describe('epičtí žolíci — definice a texty', () => {
     expect(descOf('impersonator')).toBe(
       'Při získání bez edice dostane duhovou; v každém kole kopíruje tvého nejdražšího běžného nebo vzácného žolíka.',
     );
-    expect(descOf('innkeeper')).toBe('×2,5 mult, dokud se v tomto kole nezahazovalo.');
+    expect(descOf('innkeeper')).toBe('×2,2 mult, dokud se v tomto kole nezahazovalo.');
     expect(descOf('grandmas_chest')).toBe('×1,3 mult za každou spotřebku, kterou držíš ve slotech.');
     const inst = (id: string, state: JokerInstance['state']) => ({
       ...newJokerInstance(game()._core, id),
@@ -403,24 +403,24 @@ describe('Napodobitel (impersonator)', () => {
 // ─────────────────────────── #29 Hostinský ───────────────────────────
 
 describe('Hostinský (innkeeper)', () => {
-  it('×2,5 mult, dokud se v kole nezahazovalo; po zahození nic; nové kolo zase ×2,5', () => {
+  it('×2,2 mult, dokud se v kole nezahazovalo; po zahození nic; nové kolo zase ×2,2', () => {
     const g = game(['innkeeper']);
-    // Dvojice králů: 32 čipů × 2 mult × 2,5 = 160.
-    expect(hand(g, 'KS KH').score).toBe(160);
+    // Dvojice králů: 32 čipů × 2 mult × 2,2 = 140,8 → 140.
+    expect(hand(g, 'KS KH').score).toBe(140);
     ok(g.dispatch({ type: 'discard', cardIds: [g.state.round!.hand[0]!] }));
     const r = hand(g, 'KS KH');
     expect(r.score).toBe(64);
     expect(jokerSteps(r, 'innkeeper')).toEqual([]);
     winRound(g);
     nextRound(g);
-    expect(hand(g, 'KS KH').score).toBe(160);
+    expect(hand(g, 'KS KH').score).toBe(140);
   });
 
   it('zahození efektem (ne hráčem) se nepočítá', () => {
     const g = game(['innkeeper']);
     const cards = setupRound(g, 'KS KH 2C');
     g._core.api.discardFromHand(cards[2]!.id);
-    expect(hand(g, 'KS KH').score).toBe(160);
+    expect(hand(g, 'KS KH').score).toBe(140);
   });
 });
 
