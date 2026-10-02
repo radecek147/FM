@@ -460,7 +460,7 @@ Osvědčené vzorce (vlastní příklady formátu **Název** — mechanika. _Fla
 - **Všechny texty jen v `src/i18n`**, diakritika všude správně, hráči **tykáme**.
 - **Rodově neutrálně:** hráč může být kdokoli, takže žádný minulý čas ani přídavná jména v 2. osobě
   („jsi zahrál“, „kdybys dupal“, „jsi hrdý“). Použij rozkazovací způsob, přítomný/budoucí čas nebo neosobní
-  tvar: „Dokud se v tomto kole nezahazovalo…“, „Zatím se ti neukázal.“ Postavy (šéfové, žolíci) mluví, jak chtějí.
+  tvar: „Dokud se v tomto kole nezahazovalo…“, „Zatím se ti to neukázalo.“ Postavy (šéfové, žolíci) mluví, jak chtějí.
 - Předložka **s/z** se před slovem na s-, z-, š-, ž- vokalizuje: „se žolíky“, „ze stolu“, „se sekerou“.
 - **Uvozovky:** české „takhle“ (U+201E a U+201C), vnořené ‚takhle‘. Nikdy rovné `"` v textu pro hráče.
 - **Nezlomitelná mezera (NBSP, U+00A0)** — v kódu ji piš jako `\u00a0` (nikdy jako neviditelný znak):

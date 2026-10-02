@@ -152,6 +152,9 @@ class GameView implements PresentView {
     this.refresh();
     // Výchozí focus po vložení do stránky (router fokusuje nadpis, který focus nebere).
     queueMicrotask(() => {
+      // Oznámení z doby před vložením (odemčení při obnovení / založení runu) se přesunou z rohu nad stůl — jinak
+      // by do příštího oznámení zakrývala ruku a tlačítko Zahodit.
+      if (stage.isConnected) setToastAnchor((needed) => this.toastRect(stage, needed));
       const active = document.activeElement;
       if (active && active !== document.body && active.isConnected) return;
       this.panelHost

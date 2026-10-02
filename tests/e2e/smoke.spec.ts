@@ -21,7 +21,7 @@ test('hlavní menu se načte bez chyb a vykreslí češtinu fontem Pixelify Sans
   expect(rawHtml).not.toContain('{{t:');
   expect(rawHtml).toMatch(/<title>Karban/);
 
-  await page.goto('/');
+  await page.goto('/?tutorial=off');
 
   await expect(page).toHaveTitle(/Karban/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Karban');

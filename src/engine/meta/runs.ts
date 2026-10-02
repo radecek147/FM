@@ -92,7 +92,10 @@ function createCurrent(
     const key = dailyKeyFromSeed(run.seed);
     if (key && key === dailyDateKey(ctx.nowIso)) {
       const rec = profile.daily[key];
-      official = !rec || (resume && rec.status === 'playing' && rec.seed === run.seed);
+      // Nový pokus je oficiální, jen když dnešní ještě nezačal. Pokračování runu, který profil nezná (import,
+      // ztracený zápis), je oficiální jen tehdy, když je dnešní pokus v profilu rozehraný se stejným seedem —
+      // jinak by z pokusu mimo soutěž mohl být druhý oficiální.
+      official = resume ? rec?.status === 'playing' && rec.seed === run.seed : !rec;
     }
   }
   const cur: CurrentRunMeta = {
@@ -116,7 +119,7 @@ function createCurrent(
     jokers: [],
     handsPlayed: 0,
     roundsWon: 0,
-    counters: emptyRunCounters(),
+    counters: { ...emptyRunCounters(), startUid: run.nextUid },
   };
   syncCurrent(cur, run);
   return cur;
@@ -124,8 +127,23 @@ function createCurrent(
 
 // ─────────────────────────── Objevy a rekordy ───────────────────────────
 
+/**
+ * Je žolík / spotřebka startovní výbava runu (z balíčku nebo výzvy), která se ještě nesmí objevit? Do sbírky jde
+ * až po první vyhrané útratě — jinak by opakované zakládání runu (Velký třesk, Vetešnický, Babiččin balíček)
+ * „vyfarmilo“ sbírku i achievementy za objevy (DESIGN 11.4: objev = obchod, obálka, šéf, štítek).
+ */
+export function isStartingItem(uid: number, run: Readonly<RunState>, cur: Readonly<CurrentRunMeta>): boolean {
+  return run.stats.roundsWon === 0 && uid < cur.counters.startUid;
+}
+
 /** Zapíše do sbírky všechno, co se hráči v runu právě ukazuje (DESIGN 11.4). */
-function discover(profile: Profile, run: Readonly<RunState>, ctx: MetaCtx, notices: MetaNotice[]): void {
+function discover(
+  profile: Profile,
+  run: Readonly<RunState>,
+  ctx: MetaCtx,
+  cur: Readonly<CurrentRunMeta>,
+  notices: MetaNotice[],
+): void {
   const reg = ctx.registry;
   const add = (cat: DiscoveryCategory, id: string | null | undefined, known: boolean): void => {
     if (!id || !known) return;
@@ -157,8 +175,8 @@ function discover(profile: Profile, run: Readonly<RunState>, ctx: MetaCtx, notic
   };
 
   add('decks', run.deckId, !!reg.decks[run.deckId]);
-  run.jokers.forEach(joker);
-  run.consumables.forEach(consumable);
+  for (const j of run.jokers) if (!isStartingItem(j.uid, run, cur)) joker(j);
+  for (const c of run.consumables) if (!isStartingItem(c.uid, run, cur)) consumable(c);
   for (const v of run.vouchers) add('vouchers', v, !!reg.vouchers[v]);
   for (const t of run.tags) add('tags', t.defId, !!reg.tags[t.defId]);
   run.deck.forEach(card);
@@ -416,7 +434,7 @@ function afterChange(
   event: GameEvent | undefined,
   notices: MetaNotice[],
 ): void {
-  discover(profile, run, ctx, notices);
+  discover(profile, run, ctx, cur, notices);
   updateRecords(profile, run);
   // Odemčení může záviset na achievementu a naopak — pár kol, dokud se něco mění.
   for (let i = 0; i < 4; i++) {

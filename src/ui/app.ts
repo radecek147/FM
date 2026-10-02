@@ -36,8 +36,11 @@ export class App {
   readonly profiles: ProfileController;
   /** Rozehraný run (pokud existuje). */
   controller: GameController | null = null;
+  /** Tutoriál Štamgast (src/ui/tutorial.ts) — null, když není nainstalovaný (testy, `?tutorial=off`). */
+  tutorial: { refresh(): void } | null = null;
   private current: { id: ScreenId; screen: Screen } | null = null;
   private screens = new Map<ScreenId, ScreenFactory>();
+  private screenListeners = new Set<(id: ScreenId) => void>();
 
   constructor(
     readonly root: HTMLElement,
@@ -79,6 +82,19 @@ export class App {
     // Přístupnost: focus na první nadpis nebo tlačítko nové obrazovky.
     const focusable = screen.el.querySelector<HTMLElement>('[autofocus], h1, h2, button:not([disabled])');
     focusable?.focus({ preventScroll: true });
+    for (const fn of [...this.screenListeners]) {
+      try {
+        fn(id);
+      } catch (e) {
+        console.error('[app] Posluchač změny obrazovky selhal', e);
+      }
+    }
+  }
+
+  /** Zavolá `fn` po každém přechodu na obrazovku (tutoriál). Vrací odhlášení. */
+  onScreenChange(fn: (id: ScreenId) => void): () => void {
+    this.screenListeners.add(fn);
+    return () => this.screenListeners.delete(fn);
   }
 
   /** Nastavení hráče (součást profilu, DESIGN 13.4). Měň ho jen přes `updateSettings`. */

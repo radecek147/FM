@@ -62,7 +62,7 @@ async function numberOf(locator: Locator): Promise<number> {
 
 /** Hlavní menu → Nová hra (výchozí balíček a síla piva) → daný seed → herní obrazovka. */
 async function startRun(page: Page, seed: string): Promise<void> {
-  await page.goto('/');
+  await page.goto('/?tutorial=off');
   await page.getByTestId('menu-new-game').click();
   await page.getByTestId('seed-input').fill(seed);
   await page.getByTestId('newgame-start').click();
@@ -101,7 +101,7 @@ async function seedSavedRun(page: Page, state: RunState): Promise<void> {
 
 /** Menu → Pokračovat → herní obrazovka. */
 async function continueRun(page: Page): Promise<void> {
-  await page.goto('/');
+  await page.goto('/?tutorial=off');
   await expect(page.getByTestId('menu-continue')).toBeEnabled();
   await page.getByTestId('menu-continue').click();
   await expect(page.locator('#app')).toHaveAttribute('data-screen', 'game');
@@ -175,7 +175,7 @@ test('kolo klávesnicí: výběr útraty, 1–5, živý náhled, Enter, X, hra d
 }) => {
   test.setTimeout(120_000);
   const log = watchConsole(page);
-  await startRun(page, 'KARBAN1');
+  await startRun(page, 'KARBAN22');
   await expect(game(page)).toHaveAttribute('data-phase', 'blind_select');
   await expect(page.locator('.blind-card')).toHaveCount(3);
   await expect(page.getByTestId('blind-small')).toHaveAttribute('data-status', 'current');
@@ -264,7 +264,7 @@ test('kolo klávesnicí: výběr útraty, 1–5, živý náhled, Enter, X, hra d
   if (phase === 'game_over') {
     // Prohra: pitva s hláškou a seedem (uložený run zmizel).
     await expect(page.getByTestId('death-quote')).toContainText('Malé útratě');
-    await expect(page.getByTestId('run-seed')).toHaveText('KARBAN1');
+    await expect(page.getByTestId('run-seed')).toHaveText('KARBAN22');
     return expectCleanConsole(log);
   }
 
@@ -311,7 +311,7 @@ test('autosave: po pár akcích reload → menu → Pokračovat obnoví stejné 
 }) => {
   const log = watchConsole(page);
   await presetSettings(page, { speed: 4 });
-  await startRun(page, 'ULOZENI1');
+  await startRun(page, 'SAVEGAME');
   await page.keyboard.press('Enter');
   await idle(page);
   for (const key of ['1', '2', '3']) await page.keyboard.press(key);
@@ -363,7 +363,7 @@ test('autosave: po pár akcích reload → menu → Pokračovat obnoví stejné 
 
 test('přeskočení Malé a Velké útraty: stav karet, focus, oznámení, šéf přeskočit nejde', async ({ page }) => {
   const log = watchConsole(page);
-  await startRun(page, 'SKIP1');
+  await startRun(page, 'SKAKEJTE');
   await expect(page.getByTestId('blind-skip-small')).toBeVisible();
   await expect(page.getByTestId('blind-skip-big')).toHaveCount(0);
 
@@ -410,7 +410,7 @@ test('Info o runu, Nastavení a pauza ze hry: otevřou se, Esc je zavře a kláv
   page,
 }) => {
   const log = watchConsole(page);
-  await startRun(page, 'DIALOGY1');
+  await startRun(page, 'DYALGY22');
   await page.getByTestId('blind-select-small').click();
   await idle(page);
 
@@ -421,7 +421,7 @@ test('Info o runu, Nastavení a pauza ze hry: otevřou se, Esc je zavře a kláv
   await expect(info.getByRole('dialog')).toHaveAttribute('aria-modal', 'true');
   await expect(page.getByTestId('run-info-hands').locator('tbody tr')).toHaveCount(13);
   await expect(page.getByTestId('run-info-hands').locator('tr.is-secret')).toHaveCount(3);
-  await expect(page.getByTestId('run-info-seed')).toContainText('DIALOGY1');
+  await expect(page.getByTestId('run-info-seed')).toContainText('DYALGY22');
   await page.screenshot({ path: 'test-results/game-run-info.png', animations: 'disabled' });
   // Číslice v dialogu nevybírá karty.
   await page.keyboard.press('1');
@@ -480,7 +480,7 @@ test('myš: klik vybere a zruší kartu, limit výběru, Zahrát, Zahodit, tří
   page,
 }) => {
   const log = watchConsole(page);
-  await startRun(page, 'MYS1');
+  await startRun(page, 'MYSMYS22');
   await page.getByTestId('blind-select-small').click();
   await expect(game(page)).toHaveAttribute('data-phase', 'round');
   await idle(page);
@@ -568,7 +568,7 @@ test.describe('dotyk', () => {
   test('tap vybere kartu, druhý tap výběr zruší, tap na Zahrát zahraje', async ({ page }) => {
     const log = watchConsole(page);
     await presetSettings(page, { speed: 4 });
-    await startRun(page, 'DOTYK1');
+    await startRun(page, 'DTYKDTYK');
     await page.getByTestId('blind-select-small').tap();
     await expect(game(page)).toHaveAttribute('data-phase', 'round');
     await idle(page);
@@ -727,7 +727,7 @@ test('pitva z uloženého runu: poslední ruka nestačí → hláška, statistik
 test('pitva bez animací: run do konce jednou kartou, Nová hra vede na výběr balíčku', async ({ page }) => {
   const log = watchConsole(page);
   await presetSettings(page, { animations: false });
-  await startRun(page, 'PITVA1');
+  await startRun(page, 'PTVAPTVA');
   await page.getByTestId('blind-select-small').click();
   for (let i = 0; i < 4; i++) {
     await expect(game(page)).toHaveAttribute('data-phase', 'round');
@@ -737,7 +737,7 @@ test('pitva bez animací: run do konce jednou kartou, Nová hra vede na výběr 
   }
   await expect(game(page)).toHaveAttribute('data-phase', 'game_over');
   await expect(page.getByTestId('death-quote')).toContainText('Malé útratě');
-  await expect(page.getByTestId('run-seed')).toHaveText('PITVA1');
+  await expect(page.getByTestId('run-seed')).toHaveText('PTVAPTVA');
   await page.getByTestId('game-over-new').click();
   await expect(page.locator('#app')).toHaveAttribute('data-screen', 'newGame');
   expectCleanConsole(log);

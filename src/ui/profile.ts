@@ -8,12 +8,21 @@
  *  - zakládá a obnovuje runy (`newRun` s `unlockedPool` podle druhu runu, `resume`, `attach`) a jako pozorovatel
  *    `GameController` předává události meta vrstvě (`applyRunEvents`); prohru uzavře hned (`finishRun`),
  *    výhru po odchodu z výherní obrazovky (`finish`),
- *  - oznámení (`MetaNotice`) ukáže jako toasty „Odemčeno: …“ / „Achievement: …“ — až doběhnou animace akce,
+ *  - oznámení (`MetaNotice`) ukáže jako toasty s ikonou, názvem a popisem ve frontě (src/ui/metaNotices.ts) — až
+ *    doběhnou animace akce; novinky rozehraného runu si pamatuje pro pitvu a výhru (`runNotices`),
  *  - nastavení čte a zapisuje přes profil (`updateSettings`).
  */
-import type { ContentRegistry, GameEvent } from '../engine';
+import type { ContentRegistry, GameEvent, RunState } from '../engine';
 import type { SaveErrorCode } from '../engine/save/save';
-import type { CollectionCategory, MetaCtx, MetaNotice, PoolMode, Profile, Settings } from '../engine/meta';
+import type {
+  CollectionCategory,
+  HistoryEntry,
+  MetaCtx,
+  MetaNotice,
+  PoolMode,
+  Profile,
+  Settings,
+} from '../engine/meta';
 import {
   applyRunEvents,
   createProfile,
@@ -30,12 +39,9 @@ import { t } from '../i18n/cs';
 import { toast } from './components/toast';
 import type { ControllerDeps, RunObserver } from './controller';
 import { GameController } from './controller';
-import { noticeText } from './metaText';
+import { NoticeQueue, uniqueNotices } from './metaNotices';
 import { restoreStoredProfile, saveStoredProfile } from './settings';
 import type { KeyValueStore } from './storage';
-
-/** Nejvíc oznámení naráz — zbytek shrne jedno „…a další novinky“. */
-export const MAX_NOTICE_TOASTS = 3;
 
 /** Problém s úložištěm profilu (oznámí se hráči). */
 export type ProfileProblem =
@@ -74,25 +80,30 @@ export function poolModeFor(req: Pick<NewRunRequest, 'seeded' | 'challengeId' | 
   return 'normal';
 }
 
-/** Výchozí oznámení: jeden toast na novinku, nejvýš `MAX_NOTICE_TOASTS` (poslední shrne zbytek). */
+/** Sdílené fronty oznámení podle registru (výchozí `showMetaNotices`). */
+const queues = new WeakMap<ContentRegistry, NoticeQueue>();
+
+/** Fronta oznámení pro registr (jedna na aplikaci). */
+export function noticeQueue(registry: ContentRegistry): NoticeQueue {
+  let q = queues.get(registry);
+  if (!q) {
+    q = new NoticeQueue(registry);
+    queues.set(registry, q);
+  }
+  return q;
+}
+
+/** Výchozí oznámení: toasty s ikonou, názvem a popisem ve frontě (nejvýš dvě naráz, src/ui/metaNotices.ts). */
 export function showMetaNotices(notices: readonly MetaNotice[], registry: ContentRegistry): void {
   if (notices.length === 0) return;
-  const overflow = notices.length > MAX_NOTICE_TOASTS;
-  const shown = overflow ? notices.slice(0, MAX_NOTICE_TOASTS - 1) : notices;
-  for (const n of shown) {
-    toast(noticeText(n, registry), {
-      kind: 'success',
-      testId: n.kind === 'achievement' ? 'toast-achievement' : 'toast-unlock',
-      className: `toast--meta toast--${n.kind}`,
-    });
-  }
-  if (overflow) {
-    toast(t('meta.notice.more', { n: notices.length - shown.length }), {
-      kind: 'success',
-      testId: 'toast-meta-more',
-      className: 'toast--meta',
-    });
-  }
+  noticeQueue(registry).push(notices);
+}
+
+/** Klíč runu pro novinky (stejný run = stejný seed, balíček, síla piva, výzva a druh). */
+function runKey(
+  run: Readonly<Pick<RunState, 'seed' | 'deckId' | 'stake' | 'challengeId' | 'daily'>>,
+): string {
+  return [run.seed, run.deckId, run.stake, run.challengeId ?? '', run.daily ? 'd' : ''].join('|');
 }
 
 /** Výchozí hlášení problému s profilem (toast). */
@@ -126,6 +137,8 @@ export class ProfileController implements RunObserver {
   private saveFailedReported = false;
   /** Oznámení akce čekající na doběhnutí animací. */
   private pending: MetaNotice[] = [];
+  /** Novinky rozehraného runu (pro pitvu a výhru) — jen v paměti, po načtení stránky je doplní `runNotices`. */
+  private runLog: { key: string; notices: MetaNotice[] } | null = null;
   private readonly now: () => Date;
   private readonly notifyFn: (notices: readonly MetaNotice[]) => void;
   private readonly problemFn: (problem: ProfileProblem) => void;
@@ -199,6 +212,8 @@ export class ProfileController implements RunObserver {
   /** Znovu načte profil z úložiště (po importu uložení) a přepočítá odemčení a achievementy. */
   reload(): void {
     this.pending = [];
+    this.runLog = null;
+    noticeQueue(this.registry).clear();
     this.current = this.load();
     this.refresh();
   }
@@ -206,6 +221,8 @@ export class ProfileController implements RunObserver {
   /** Čistý profil (po resetu — úložiště už smazal volající) se zachovaným nastavením `settings`, je-li dané. */
   reset(settings?: Settings): void {
     this.pending = [];
+    this.runLog = null;
+    noticeQueue(this.registry).clear();
     this.current = createProfile(this.now().toISOString(), settings);
     this.writable = true;
     this.saveFailedReported = false;
@@ -259,6 +276,8 @@ export class ProfileController implements RunObserver {
     );
     const notices = startRun(this.current, controller.state, { ...this.metaCtx(controller), seeded });
     this.save();
+    // Novinky ze začátku runu (např. „Semínko zaseto“) patří k němu — uzavření předchozího runu je vzácně má.
+    this.runLog = { key: runKey(controller.state), notices: [...notices] };
     this.notifyFn(notices);
     return controller;
   }
@@ -281,6 +300,7 @@ export class ProfileController implements RunObserver {
     if (state.phase === 'game_over' || currentMatches(this.current.current, state)) return;
     const notices = resumeRun(this.current, state, this.metaCtx(controller));
     this.save();
+    this.logRun(state, notices);
     this.notifyFn(notices);
   }
 
@@ -292,6 +312,7 @@ export class ProfileController implements RunObserver {
     if (!this.current.current) return;
     const notices = finishRun(this.current, controller.state, this.metaCtx(controller));
     this.save();
+    this.logRun(controller.state, notices);
     this.notifyFn(notices);
   }
 
@@ -304,6 +325,7 @@ export class ProfileController implements RunObserver {
     if (state.phase === 'game_over' && this.current.current)
       notices.push(...finishRun(this.current, state, ctx));
     this.save();
+    this.logRun(state, notices);
     this.pending.push(...notices);
   }
 
@@ -313,5 +335,50 @@ export class ProfileController implements RunObserver {
     const notices = this.pending;
     this.pending = [];
     this.notifyFn(notices);
+  }
+
+  // ─────────────────────────── Novinky runu ───────────────────────────
+
+  private logRun(run: Readonly<RunState>, notices: readonly MetaNotice[]): void {
+    const key = runKey(run);
+    if (!this.runLog || this.runLog.key !== key) this.runLog = { key, notices: [] };
+    this.runLog.notices.push(...notices);
+  }
+
+  /** Záznam runu v profilu: rozehraný (`current`), nebo poslední uzavřený se stejným seedem v historii. */
+  runRecord(
+    run: Readonly<RunState>,
+  ): { startedAt: string; finishedAt: string | null; counted: boolean; entry: HistoryEntry | null } | null {
+    const cur = this.current.current;
+    if (currentMatches(cur, run) && cur)
+      return { startedAt: cur.startedAt, finishedAt: null, counted: cur.counted, entry: null };
+    const entry = this.current.history.find(
+      (e) =>
+        e.seed === run.seed &&
+        e.deckId === run.deckId &&
+        e.stake === run.stake &&
+        e.challengeId === run.challengeId &&
+        (e.mode === 'daily') === run.daily,
+    );
+    if (!entry) return null;
+    const counted = !entry.seeded && (entry.mode !== 'daily' || entry.official);
+    return { startedAt: entry.startedAt, finishedAt: entry.finishedAt, counted, entry };
+  }
+
+  /**
+   * Novinky runu (odemčení, síly piva, achievementy) pro pitvu a výhru: co profil oznámil od začátku runu v tomto
+   * sezení, doplněné o achievementy získané od začátku runu podle data (po načtení stránky se oznámení nepamatují).
+   */
+  runNotices(run: Readonly<RunState>): MetaNotice[] {
+    const out: MetaNotice[] = this.runLog?.key === runKey(run) ? [...this.runLog.notices] : [];
+    const rec = this.runRecord(run);
+    if (rec) {
+      const from = rec.startedAt;
+      const to = rec.finishedAt;
+      for (const [id, at] of Object.entries(this.current.achievements.unlocked)) {
+        if (at >= from && (to === null || at <= to)) out.push({ kind: 'achievement', id });
+      }
+    }
+    return uniqueNotices(out);
   }
 }

@@ -21,7 +21,7 @@ const snowman: JokerDef = {
   id: 'snowman',
   rarity: 'epic',
   cost: 8,
-  unlock: { type: 'stat', stat: 'firstHandRoundWins', atLeast: 1 },
+  unlock: { type: 'stat', stat: 'firstHandRoundWins', atLeast: 3 },
   tags: ['xmult'],
   params: { xmult: SNOWMAN_XMULT, decay: SNOWMAN_DECAY, min: SNOWMAN_MELT_AT },
   initState: () => ({ xmult: SNOWMAN_XMULT }),

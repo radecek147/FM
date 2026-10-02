@@ -58,7 +58,7 @@ async function seedSavedRun(page: Page, state: RunState): Promise<void> {
 }
 
 async function continueRun(page: Page): Promise<void> {
-  await page.goto('/');
+  await page.goto('/?tutorial=off');
   await page.getByTestId('menu-continue').click();
   await expect(page.locator('#app')).toHaveAttribute('data-screen', 'game');
   await idle(page);
@@ -318,7 +318,7 @@ function finalBossState(seed: string): { state: RunState; play: number[] } {
 test('menu, nová hra, nastavení a titulky: názvy prvků a viditelný focus', async ({ page }) => {
   const log = watchConsole(page);
   await presetSettings(page);
-  await page.goto('/');
+  await page.goto('/?tutorial=off');
   await expect(page.getByTestId('menu-new-game')).toBeVisible();
   await audit(page, 'menu', 16);
 
@@ -345,9 +345,9 @@ test('hra: výběr útraty, kolo, dialogy (Info o runu, balíček, pauza) — n�
 }) => {
   const log = watchConsole(page);
   await presetSettings(page);
-  await page.goto('/');
+  await page.goto('/?tutorial=off');
   await page.getByTestId('menu-new-game').click();
-  await page.getByTestId('seed-input').fill('A11Y1');
+  await page.getByTestId('seed-input').fill('AXYAXY22');
   await page.getByTestId('newgame-start').click();
   await expect(game(page)).toHaveAttribute('data-phase', 'blind_select');
   await audit(page, 'výběr útraty');

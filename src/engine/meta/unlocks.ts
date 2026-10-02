@@ -106,7 +106,7 @@ export function distinctHandsPlayed(profile: Readonly<Profile>): number {
 
 /**
  * Čísla vestavěných vlastních podmínek — sdílí je vyhodnocovač i text podmínky ve sbírce (`unlockText` dosadí
- * `count` / `level` do `meta.unlock.custom.<id>`), takže text a pravidlo nemůžou odjet od sebe.
+ * `count` / `level` / `runs` / `wins` do `meta.unlock.cond.custom.<id>`), takže text a pravidlo nemůžou odjet od sebe.
  */
 export const CUSTOM_UNLOCK_PARAMS: Readonly<Record<string, Readonly<Record<string, number>>>> = {
   vouchersBought5: { count: 5 },

@@ -28,6 +28,164 @@ export const meta = {
     stake: 'Odemčeno: {stake} pro balíček {deck}',
     achievement: 'Achievement: {name}',
     more: '…a {n|plural:další novinka,další novinky,dalších novinek}. Mrkni do Sbírky.',
+    /** Štítek nad názvem v oznámení (toast s ikonou, src/ui/metaNotices.ts). */
+    eyebrow: {
+      achievement: 'Achievement',
+      decks: 'Odemčeno · balíček',
+      jokers: 'Odemčeno · žolík',
+      vouchers: 'Odemčeno · kupón',
+      challenges: 'Odemčeno · výzva',
+      stake: 'Odemčeno · síla piva',
+    },
+    /** Popis pod názvem odemčené věci. */
+    hint: {
+      decks: 'Čeká na tebe v Nové hře.',
+      jokers: 'Od teď se může objevit ve Večerce i v obálkách.',
+      vouchers: 'Od teď se může objevit ve Večerce.',
+      challenges: 'Najdeš ji v menu Výzvy.',
+      stake: 'Pro balíček {deck}. Na zdraví!',
+    },
+  },
+
+  /** Pitva a výhra: novinky z dohraného runu a výsledek denního runu ke sdílení. */
+  runEnd: {
+    title: 'Novinky z tohoto runu',
+    empty: 'Tentokrát nic nového. Štamgast říká, že příště to určitě klapne.',
+    notCounted:
+      'Run se zadaným seedem ani denní run mimo soutěž se do statistik, odemykání a achievementů nepočítá. Jen do historie.',
+    dailyTitle: 'Výsledek denního runu',
+    dailyUnofficial: 'Mimo soutěž – oficiální je jen první pokus dne.',
+  },
+
+  /** Obrazovka Výzvy (src/ui/screens/challenges.ts, DESIGN 11.1). */
+  challenges: {
+    title: 'Výzvy',
+    subtitle: 'Předpřipravené runy se zvláštními pravidly. Pro ty, kterým obyčejný karban nestačí.',
+    listLabel: 'Seznam výzev',
+    summaryLabel: 'Souhrn výzev',
+    completed: 'Dokončeno',
+    unlocked: 'Odemčeno',
+    wins: 'Vyhrané runy',
+    countValue: '{n} z {total}',
+    next: 'Další várka se odemkne po {wins|plural:výhře,výhrách,výhrách} – zatím máš {have}.',
+    allUnlocked: 'Všechny výzvy jsou odemčené. Teď je jen dohrát.',
+    group: '{n}. várka · po {wins|plural:výhře,výhrách,výhrách}',
+    status: {
+      locked: 'Zamčeno',
+      open: 'Nehráno',
+      tried: 'Zkoušeno',
+      completed: 'Dokončeno',
+      playing: 'Rozehráno',
+    },
+    itemLabel: '{n}. {name} – {status}',
+    newBadge: 'Nové',
+    detail: {
+      label: 'Detail výzvy',
+      deck: 'Balíček',
+      stake: 'Síla piva',
+      goal: 'Cíl',
+      goalValue: 'Poraz šéfa {ante}. patra.',
+      rules: 'Pravidla',
+      stats: 'Tvoje statistika',
+      attempts: 'Pokusy',
+      completedTimes: 'Dokončeno',
+      completedValue: '{n}×',
+      bestAnte: 'Nejvyšší patro',
+      never: 'Zatím nezkoušeno. Odvaha!',
+      condition: 'Jak odemknout',
+      progress: 'Průběh: {progress}',
+      badge: 'Dokončeno',
+      lockedNote: 'Výzva je zatím zamčená – pravidla se prozradí, až ji odemkneš.',
+    },
+    start: 'Hrát výzvu',
+    startLabel: 'Hrát výzvu {name}',
+    continue: 'Pokračovat v rozehrané',
+    failed: 'Výzvu se nepodařilo založit. Pravidla se zamotala do sebe.',
+    note: 'Výzva má balíček i sílu piva danou předem. Počítá se do achievementů a počítadel, výsledek má vlastní statistiku.',
+  },
+
+  /** Obrazovka Denní run (src/ui/screens/daily.ts, DESIGN 11.7). */
+  dailyRun: {
+    title: 'Denní run',
+    subtitle: 'Stejné karty pro celou republiku. Kdo prohraje, platí rundu.',
+    today: 'Dnešní run',
+    date: 'Datum',
+    seed: 'Seed',
+    deck: 'Balíček',
+    stake: 'Síla piva',
+    status: 'Stav',
+    state: {
+      available: 'Oficiální pokus čeká. Máš jen jeden, tak s rozvahou.',
+      playing: 'Oficiální pokus je rozehraný. Karty ještě nevychladly.',
+      lost: 'Oficiální pokus zůstal nedohraný a hra se ztratila. Další pokusy už jsou mimo soutěž.',
+      finished: 'Odehráno – {result}.',
+    },
+    result: 'patro {ante}, nejlepší ruka {score}',
+    outcome: {
+      won: 'výhra',
+      lost: 'prohra',
+      abandoned: 'opuštěno',
+    },
+    play: 'Hrát oficiální pokus',
+    continue: 'Pokračovat',
+    replay: 'Hrát znovu mimo soutěž',
+    replayHint: 'Další pokusy se nepočítají do statistik, odemykání ani achievementů.',
+    rules:
+      'Denní run se hraje s celým obsahem hry bez ohledu na to, co máš odemčené – ať mají všichni stejné podmínky. Balíček a sílu piva určuje seed. Počítá se jen první pokus dne.',
+    next: 'Nový denní run za {h|plural:hodinu,hodiny,hodin} a {m|plural:minutu,minuty,minut}.',
+    share: 'Výsledek ke sdílení',
+    streakTitle: 'Série',
+    historyTitle: 'Historie denních runů',
+    failed: 'Denní run se nepodařilo založit. Seed se zasekl v trafice.',
+  },
+
+  /** Tutoriál „Štamgast“ (src/ui/tutorial.ts, DESIGN 13.5). `{param}` dosadí UI ze stavu hry. */
+  tutorial: {
+    name: 'Štamgast',
+    label: 'Rada Štamgasta: {title}',
+    step: 'Rada {n} z {total}',
+    next: 'Rozumím',
+    nextLabel: 'Rozumím, další rada',
+    skipAll: 'Přeskočit tutoriál',
+    skipped: 'Štamgast se urazil a šel si sednout. V Nastavení ho můžeš zavolat zpátky.',
+    steps: {
+      select: {
+        title: 'Vyber karty',
+        text: 'Klikni na karty v ruce nebo zmáčkni 1–8 – vybrat můžeš až {max|plural:kartu,karty,karet}. Vlevo hned uvidíš kombinaci a živý náhled čipy × mult.',
+      },
+      play: {
+        title: 'Zahraj je',
+        text: 'Zahrát (nebo Enter) pošle karty na stůl. Počítá se zleva doprava: základ kombinace, každá karta, karty v ruce a nakonec žolíci. Skóre = čipy × mult.',
+      },
+      discard: {
+        title: 'Zahazuj s rozumem',
+        text: 'Nepotřebné karty vyber a dej Zahodit (X) – dobereš za ně nové. Zahození je ale málo: teď máš {n}.',
+      },
+      goal: {
+        title: 'Cíl a ruce',
+        text: 'Vlevo je cíl kola: aspoň {target|plural:bod,body,bodů}. Musíš ho dát dřív, než ti dojdou ruce – zbývá {hands|plural:ruka,ruce,rukou}.',
+      },
+      roundEnd: {
+        title: 'Výplata',
+        text: 'Za vyhrané kolo dostaneš odměnu, korunu za každou nevyužitou ruku a úrok: 1 Kč za každých 5 Kč v kapse, nejvýš {cap|money}. Šetřit se vyplácí.',
+      },
+      shop: {
+        title: 'Večerka',
+        text: 'Tady se utrácí. Kup si žolíka – slouží ti celý run, dokud ho neprodáš. Přehodit nabídku stojí pár korun.',
+      },
+      jokerOrder: {
+        title: 'Pořadí žolíků',
+        text: 'Žolíci se vyhodnocují zleva doprava. Ty s +mult dej doleva, ty s ×mult doprava – násobit se vyplatí až nakonec. Přesouvej je tažením.',
+      },
+      boss: {
+        title: 'Šéf',
+        text: 'Poslední útrata patra je Šéf: dvojnásobný cíl a jedno zlomyslné pravidlo. Přečti si ho dřív, než mu to spočítáš.',
+      },
+      skip: {
+        title: 'Přeskočit útratu',
+        text: 'Malou nebo Velkou útratu můžeš přeskočit. Přijdeš o odměnu i Večerku, zato dostaneš štítek s bonusem.',
+      },
+    },
   },
 
   /**
@@ -39,7 +197,7 @@ export const meta = {
    */
   unlock: {
     fromStart: 'Odemčeno od začátku.',
-    byDiscovery: 'Odemkne se, až ho poprvé získáš – legendy se rodí třeba z úředního razítka.',
+    byDiscovery: 'Odemkne se prvním získáním – legendy se rodí třeba z úředního razítka.',
     cond: {
       winRun: 'Vyhraj run.',
       winRunDeck: 'Vyhraj run s balíčkem {deck}.',
@@ -51,6 +209,7 @@ export const meta = {
       scoreInHand: 'Získej jednou rukou aspoň {score|plural:bod,body,bodů}.',
       haveMoney: 'Měj najednou aspoň {money|money}.',
       winsTotal: 'Vyhraj celkem {count|plural:run,runy,runů}.',
+      winsTotalFirst: 'Vyhraj svůj první run.',
       runsTotal: 'Odehraj celkem {count|plural:run,runy,runů}.',
       discover: {
         jokers: 'Objev {count|plural:žolíka,žolíky,žolíků}.',
@@ -115,13 +274,13 @@ export const meta = {
       /** Vlastní podmínky (`{ type: 'custom', id }`) — čísla z `CUSTOM_UNLOCK_PARAMS`. */
       custom: {
         vouchersBought5: 'Kup celkem {count|plural:kupón,kupóny,kupónů}.',
-        sealedCardsInRun: 'Měj v jednom runu v balíčku najednou {count|plural:kartu,karty,karet} s pečetí.',
+        sealedCardsInRun: 'Měj v balíčku najednou {count|plural:kartu,karty,karet} s pečetí.',
         roundEndInDebt: 'Dokonči kolo se záporným zůstatkem.',
         radyUsed30: 'Použij celkem {count|plural:babskou radu,babské rady,babských rad}.',
         jokersSold25: 'Prodej celkem {count|plural:žolíka,žolíky,žolíků}.',
         handLevel6: 'Zvyš libovolnou kombinaci na úroveň {level}.',
         voucherTier1TwoRuns:
-          'Kupón {voucher} kup ve Večerce v různých runech ({runs}×), nebo vyhraj celkem {wins|plural:run,runy,runů}.',
+          'Pořiď kupón {voucher} ve {runs} různých runech, nebo vyhraj celkem {wins|plural:run,runy,runů}.',
         voucherTier1Wins: 'Vyhraj celkem {wins|plural:run,runy,runů}.',
         distinctHands8:
           'Zahraj {count|plural:různou kombinaci,různé kombinace,různých kombinací} (napříč runy, každou aspoň jednou).',
@@ -132,7 +291,6 @@ export const meta = {
     items: {
       jokers: {
         carousel: 'Zahraj celkem {count|plural:Postupku,Postupky,Postupek}.',
-        snowman: 'Vyhraj kolo hned první rukou.',
         tour_guide: 'Vyhraj run s Turistickým balíčkem.',
         new_years_eve: 'Vyhraj run. Pak se slaví.',
       },
@@ -155,9 +313,9 @@ export const meta = {
     newCount: '{n|plural:nová položka,nové položky,nových položek}',
     locked: 'Zamčeno',
     unknownName: '???',
-    unknownHint: 'Zatím se ti neukázal.',
+    unknownHint: 'Zatím se ti to neukázalo.',
     /** Průběh podmínky odemčení (text podmínky skládá `unlockText` z `meta.unlock.*`). */
-    progress: '{progress} / {target}',
+    progress: '{progress}\u00a0/\u00a0{target}',
     /** Síla piva: výhra na předchozí úrovni s libovolným balíčkem. */
     stakeCondition: 'Vyhraj s libovolným balíčkem na síle piva {stake}.',
     hiddenAchievement: 'Skrytý achievement – prozradí se, až ho získáš.',
@@ -177,6 +335,7 @@ export const meta = {
       rady: 'Babské rady',
       razitka: 'Razítka',
       vouchers: 'Kupóny',
+      boosters: 'Obálky',
       tags: 'Štítky',
       bosses: 'Šéfové',
       decks: 'Balíčky',
@@ -191,7 +350,7 @@ export const meta = {
       seals: 'Pečetě',
       editions: 'Edice',
       bosses: 'Běžní šéfové',
-      finalBosses: 'Finální šéfové',
+      finalBosses: 'Fináloví šéfové',
     },
     filters: {
       label: 'Filtr a řazení',
@@ -234,11 +393,11 @@ export const meta = {
       stats: 'Statistika',
       flavor: '„{text}“',
       close: 'Zavřít',
-      finalBoss: 'Finální šéf (jen 8. patro)',
+      finalBoss: 'Finálový šéf (8. patro a každé další osmé)',
       bossAnte: 'Od {ante}. patra',
       level: 'Nejvyšší úroveň: {level}',
       base: 'Základ: {chips|plural:čip,čipy,čipů} × {mult} mult',
-      perLevel: 'Za úroveň: +{chips} čipů a +{mult} mult',
+      perLevel: 'Za úroveň: +{chips|plural:čip,čipy,čipů} a +{mult} mult',
       secret: 'Tajná kombinace',
       achievementCategory: 'Kategorie',
       earnedAt: 'Získáno {date}',
@@ -368,7 +527,7 @@ export const meta = {
       small: 'Malá útrata',
       big: 'Velká útrata',
       value: '{n}×',
-      none: 'Zatím žádná prohra. Buď jsi génius, nebo jsi ještě nehrál.',
+      none: 'Zatím žádná prohra. Buď je tu génius, nebo se ještě nehrálo.',
     },
     emptyDecks: 'Zatím žádný započítaný run. Balíčky čekají v šuplíku.',
     emptyBosses: 'Šéfové na tebe teprve čekají. Někteří netrpělivě.',
@@ -376,7 +535,7 @@ export const meta = {
 
   /** Historie runů (posledních 50). */
   history: {
-    title: 'Posledních {n|plural:run,runy,runů}',
+    title: 'Na tabuli: {n|plural:run,runy,runů} (pamatuje si posledních {limit})',
     empty: 'Zatím žádný run. Tabule u výčepu je čistá.',
     listLabel: 'Historie runů',
     run: 'Run č. {no}',

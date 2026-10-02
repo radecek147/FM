@@ -271,7 +271,7 @@ export const game = {
   /** Výhra. */
   victory: {
     title: 'Výhra!',
-    subtitle: 'Šéf osmého patra je poražený. Hospoda tleská, výčepní nalévá na účet podniku.',
+    subtitle: 'Šéf {ante}. patra je poražený. Hospoda tleská, výčepní nalévá na účet podniku.',
     creditsLabel: 'Titulky runu',
     starring: 'V hlavní roli: ty a balíček {deck}',
     stake: 'Síla piva: {stake}',

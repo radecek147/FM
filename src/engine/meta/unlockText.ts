@@ -84,7 +84,8 @@ export function unlockText(
       break;
     case 'winsTotal':
       params.count = cond.count;
-      key = 'winsTotal';
+      // „Vyhraj celkem 1 run“ zní úředně — první výhra má vlastní větu.
+      key = cond.count === 1 ? 'winsTotalFirst' : 'winsTotal';
       break;
     case 'runsTotal':
       params.count = cond.count;
@@ -100,7 +101,8 @@ export function unlockText(
       break;
     case 'roundEndMoney':
       params.money = cond.atMost;
-      key = cond.atMost === 0 ? 'roundEndMoneyZero' : cond.atMost === -1 ? 'roundEndMoneyDebt' : 'roundEndMoney';
+      key =
+        cond.atMost === 0 ? 'roundEndMoneyZero' : cond.atMost === -1 ? 'roundEndMoneyDebt' : 'roundEndMoney';
       break;
     case 'handLevel':
       params.level = cond.level;
@@ -162,7 +164,11 @@ export function unlockText(
  * Text odemčení položky podle její platné podmínky (`unlockConditionFor`): podmínka, nebo „odemkne se objevením“
  * (legendární žolík bez podmínky), nebo „odemčeno od začátku“.
  */
-export function unlockTextFor(registry: ContentRegistry, category: UnlockCategory, id: string): UnlockTextSpec {
+export function unlockTextFor(
+  registry: ContentRegistry,
+  category: UnlockCategory,
+  id: string,
+): UnlockTextSpec {
   const cond = unlockConditionFor(registry, category, id);
   if (cond) return unlockText(registry, cond, { category, id });
   const key = category === 'jokers' && unlockedByDiscovery(registry, id) ? 'byDiscovery' : 'fromStart';

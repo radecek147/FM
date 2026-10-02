@@ -38,8 +38,20 @@ export const menu = {
     none: 'Nemáš rozehranou hru. Tak hurá do nové!',
     failed: 'Rozehranou hru se nepodařilo načíst. Asi ji někdo polil pivem.',
   },
-  challenges: { label: 'Výzvy', hint: 'Runy se zvláštními pravidly. Pro ty, kterým normální hra nestačí.' },
-  daily: { label: 'Denní run', hint: 'Stejné karty pro celou republiku. Kdo prohraje, platí rundu.' },
+  challenges: {
+    label: 'Výzvy',
+    hint: 'Runy se zvláštními pravidly. Pro ty, kterým normální hra nestačí.',
+    /** Cedulka s počtem nově odemčených výzev. */
+    badge: '{n}',
+    labelNew: 'Výzvy ({n|plural:nová výzva,nové výzvy,nových výzev})',
+  },
+  daily: {
+    label: 'Denní run',
+    hint: 'Stejné karty pro celou republiku. Kdo prohraje, platí rundu.',
+    /** Cedulka, dokud čeká dnešní oficiální pokus. */
+    badge: 'Dnes',
+    labelOpen: 'Denní run (dnešní pokus čeká)',
+  },
   collection: {
     label: 'Sbírka',
     hint: 'Všichni žolíci, šéfové a pranostiky, které ti prošly rukama.',
@@ -84,7 +96,7 @@ export const newGame = {
     newRule: 'nově',
     lockedLabel: '{name}, úroveň {level}, zamčeno',
     locked: 'Zamčeno',
-    lockedHint: 'Pro balíček {deck} zatím zamčeno. {condition}',
+    lockedHint: 'Síla piva {stake} je pro balíček {deck} zatím zamčená. {condition}',
     challengeNote: 'Výzvy a denní run mají sílu piva danou předem.',
   },
   seed: {
@@ -146,6 +158,9 @@ export const settings = {
   uiScale: 'Velikost rozhraní',
   tutorial: 'Rady Štamgasta',
   tutorialHint: 'Štamgast tě provede prvním runem. Jde vypnout a kdykoli zase zapnout.',
+  tutorialRestart: 'Zapnout tutoriál znovu',
+  tutorialRestartHint: 'Štamgast začne od první rady – i když už to všechno jednou zaznělo.',
+  tutorialRestarted: 'Štamgast je zpátky u stolu. Rady se ukážou ve hře.',
   keys: {
     key: 'Klávesa',
     action: 'Co udělá',
@@ -175,8 +190,19 @@ export const settings = {
     fileLabel: 'Soubor s uložením',
     done: 'Uložení nahráno. Vítej zpátky u stolu.',
     confirmTitle: 'Přepsat současné uložení?',
-    confirmMessage: 'Import nahradí tvůj profil, nastavení i rozehranou hru tím, co je v souboru.',
+    confirmMessage:
+      'Import nahradí tvůj profil, nastavení i rozehranou hru tím, co je v souboru. Současný profil předtím schováme do zálohy.',
     confirm: 'Nahrát',
+    /** Co je v souboru (věta před potvrzením importu). */
+    summary: {
+      text: 'V souboru: {items}.',
+      profile:
+        'profil ({runs|plural:odehraný run,odehrané runy,odehraných runů}, {achievements|plural:achievement,achievementy,achievementů})',
+      profileShort: 'profil',
+      run: 'rozehraná hra ({deck}, patro {ante})',
+      runShort: 'rozehraná hra',
+      settingsOnly: 'jen nastavení',
+    },
     errors: {
       invalidJson: 'Tohle není JSON. Spíš nákupní seznam.',
       invalidFormat: 'Soubor nevypadá jako uložení Karbanu.',
@@ -185,18 +211,24 @@ export const settings = {
       migrationFailed: 'Staré uložení se nepodařilo převést na novou verzi.',
       unknownContent: 'Uložení počítá s balíčkem nebo silou piva, které tu nemáme.',
       readFailed: 'Soubor se nepodařilo přečíst.',
+      backupFailed:
+        'Současný profil se nepodařilo zazálohovat (prohlížeč asi nemá místo), tak jsme nic nepřepsali. Nejdřív si udělej export uložení.',
     },
   },
   reset: {
     label: 'Smazat profil',
-    hint: 'Smaže profil, nastavení i rozehranou hru. Nevratně.',
+    hint: 'Začneš od nuly: profil, nastavení i rozehraná hra zmizí. Profil předtím schováme do zálohy v prohlížeči – dostaneš se k ní přes export uložení.',
     confirm1Title: 'Smazat profil?',
-    confirm1Message: 'Přijdeš o všechno: statistiky, odemčené věci i rozehraný run.',
+    confirm1Message:
+      'Přijdeš o statistiky, odemčené věci, achievementy i rozehraný run. Profil pro jistotu schováme do zálohy.',
     confirm1: 'Smazat',
     confirm2Title: 'Fakt jako fakt?',
-    confirm2Message: 'Tohle už nevrátí ani Teta z poradny. Opravdu smazat úplně všechno?',
-    confirm2: 'Ano, smazat všechno',
-    done: 'Profil smazán. Čistý stůl, čistá hlava.',
+    confirm2Message:
+      'Ve hře už ho nevrátí ani Teta z poradny – záloha zůstane jen v exportu uložení. Opravdu začít od nuly?',
+    confirm2: 'Ano, začít od nuly',
+    done: 'Profil smazán, záloha schovaná. Čistý stůl, čistá hlava.',
+    backupFailed:
+      'Profil se nepodařilo zazálohovat (prohlížeč asi nemá místo), tak zůstává, jak byl. Nejdřív si udělej export uložení.',
   },
 };
 

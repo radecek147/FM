@@ -1,7 +1,8 @@
-import { appendFileSync, mkdirSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { registry } from '../../src/content';
 import { Game, createBot, serializeRun, type BoosterState, type RunState } from '../../src/engine';
+import { VIEWPORTS, takeShot, watchProblems, type Viewport } from './visualKit';
 
 /**
  * Vizuální kontrola (fáze 3, U5): jen fotí obrazovky do `test-results/visual/<rozlišení>/` a nic neověřuje
@@ -19,21 +20,6 @@ test.describe.configure({ mode: 'parallel' });
 // Pozor: běžné `playwright test` maže celé test-results/ — snímky jde přesměrovat proměnnou KARBAN_VISUAL_OUT.
 const OUT = process.env.KARBAN_VISUAL_OUT ?? 'test-results/visual';
 const SEED = 'VIZUAL01';
-
-interface Viewport {
-  name: string;
-  width: number;
-  height: number;
-  touch?: boolean;
-}
-
-const VIEWPORTS: Viewport[] = [
-  { name: '1366x768', width: 1366, height: 768 },
-  { name: '1024x768', width: 1024, height: 768 },
-  { name: '1920x1080', width: 1920, height: 1080 },
-  { name: 'tablet-820x1180', width: 820, height: 1180, touch: true },
-  { name: 'phone-390x844', width: 390, height: 844, touch: true },
-];
 
 // ─────────────────────────── Příprava stavů přes engine ───────────────────────────
 
@@ -68,7 +54,7 @@ async function seedSettings(page: Page, settings: Record<string, unknown>): Prom
 }
 
 async function continueRun(page: Page): Promise<void> {
-  await page.goto('/');
+  await page.goto('/?tutorial=off');
   await page.getByTestId('menu-continue').click();
   await expect(page.locator('#app')).toHaveAttribute('data-screen', 'game');
   await idle(page);
@@ -76,83 +62,11 @@ async function continueRun(page: Page): Promise<void> {
 
 // ─────────────────────────── Konzole a snímky ───────────────────────────
 
-function watchConsole(page: Page): string[] {
-  const problems: string[] = [];
-  page.on('console', (msg) => {
-    if (msg.type() === 'error' || msg.type() === 'warning') problems.push(`${msg.type()}: ${msg.text()}`);
-  });
-  page.on('pageerror', (err) => problems.push(`pageerror: ${err.message}`));
-  return problems;
-}
+const watchConsole = watchProblems;
 
 async function idle(page: Page): Promise<void> {
   const game = page.locator('.game');
   if ((await game.count()) > 0) await expect(game).not.toHaveClass(/is-busy/, { timeout: 30_000 });
-}
-
-/** Metriky pro ruční kontrolu (přetečení, uříznutý text, malé dotykové cíle). */
-async function metrics(page: Page, touch: boolean) {
-  return page.evaluate((isTouch) => {
-    const doc = document.documentElement;
-    const visible = (el: Element): boolean => {
-      const r = el.getBoundingClientRect();
-      if (r.width === 0 || r.height === 0) return false;
-      const cs = getComputedStyle(el);
-      return cs.visibility !== 'hidden' && cs.display !== 'none' && Number(cs.opacity) > 0.05;
-    };
-    const label = (el: Element): string => {
-      const id = el.getAttribute('data-testid');
-      const cls = (el.getAttribute('class') ?? '').split(' ')[0];
-      const text = (el.textContent ?? '').trim().slice(0, 40);
-      return `${el.tagName.toLowerCase()}${id ? `[${id}]` : ''}${cls ? `.${cls}` : ''} „${text}“`;
-    };
-    const clipped: string[] = [];
-    for (const el of Array.from(document.querySelectorAll('body *'))) {
-      if (!(el instanceof HTMLElement) || !visible(el)) continue;
-      if (!el.textContent?.trim()) continue;
-      const cs = getComputedStyle(el);
-      const hides = (v: string) => v === 'hidden' || v === 'clip';
-      if (el.classList.contains('visually-hidden')) continue;
-      const overX = el.scrollWidth > el.clientWidth + 1 && hides(cs.overflowX);
-      const overY = el.scrollHeight > el.clientHeight + 1 && hides(cs.overflowY);
-      if ((overX || overY) && el.clientWidth > 0)
-        clipped.push(`${label(el)} ${overX ? 'X' : ''}${overY ? 'Y' : ''}`);
-    }
-    // Prvky vyčnívající z okna (vodorovně).
-    const outside: string[] = [];
-    for (const el of Array.from(document.querySelectorAll('#app *'))) {
-      if (!visible(el)) continue;
-      const r = el.getBoundingClientRect();
-      if (r.right > innerWidth + 1 || r.left < -1) {
-        const parent = el.parentElement;
-        const pr = parent?.getBoundingClientRect();
-        // hlásit jen „nejvyšší“ vyčnívající prvek
-        if (pr && (pr.right > innerWidth + 1 || pr.left < -1)) continue;
-        outside.push(label(el));
-      }
-    }
-    const small: string[] = [];
-    if (isTouch) {
-      const sel =
-        'button, [role="button"], [role="radio"], [role="tab"], a[href], input, select, .pcard, .kcard';
-      for (const el of Array.from(document.querySelectorAll(sel))) {
-        if (!visible(el)) continue;
-        const r = el.getBoundingClientRect();
-        if (r.width < 44 || r.height < 44)
-          small.push(`${label(el)} ${Math.round(r.width)}×${Math.round(r.height)}`);
-      }
-    }
-    return {
-      scrollWidth: doc.scrollWidth,
-      innerWidth,
-      scrollHeight: doc.scrollHeight,
-      innerHeight,
-      hScroll: doc.scrollWidth > innerWidth + 1,
-      clipped: clipped.slice(0, 30),
-      outside: outside.slice(0, 30),
-      small: small.slice(0, 40),
-    };
-  }, touch);
 }
 
 async function shot(
@@ -161,17 +75,10 @@ async function shot(
   name: string,
   opts: { fullPage?: boolean; keepHover?: boolean } = {},
 ): Promise<void> {
-  // Kurzor po posledním kliknutí by nad kartou/žolíkem nechal otevřený tooltip (na dotyku by tam nebyl).
-  if (!opts.keepHover) {
-    await page.mouse.move(1, 1);
-    await page.waitForTimeout(200);
-  }
-  await page.evaluate(() => document.fonts.ready);
-  const dir = `${OUT}/${vp.name}`;
-  mkdirSync(dir, { recursive: true });
-  const m = await metrics(page, Boolean(vp.touch));
-  appendFileSync(`${OUT}/report.jsonl`, `${JSON.stringify({ viewport: vp.name, shot: name, ...m })}\n`);
-  await page.screenshot({ path: `${dir}/${name}.png`, fullPage: opts.fullPage ?? false });
+  // Metriky i u celostránkového snímku (jen před ním — po něm Chromium zapomene emulaci dotyku).
+  await takeShot(page, OUT, vp, name, { keepHover: opts.keepHover });
+  if (opts.fullPage)
+    await takeShot(page, OUT, vp, name, { fullPage: true, keepHover: true, noMetrics: true });
 }
 
 /** Krátká pauza na doběhnutí CSS přechodů (vstupní animace panelů). */
@@ -185,7 +92,7 @@ for (const vp of VIEWPORTS) {
 
     test('menu, nová hra, nastavení, titulky, galerie', async ({ page }) => {
       const problems = watchConsole(page);
-      await page.goto('/');
+      await page.goto('/?tutorial=off');
       await expect(page.locator('#app')).toHaveAttribute('data-screen', 'menu');
       await settle(page);
       await shot(page, vp, '01-menu');
@@ -195,13 +102,13 @@ for (const vp of VIEWPORTS) {
       await settle(page);
       await shot(page, vp, '02-new-game');
 
-      await page.goto('/');
+      await page.goto('/?tutorial=off');
       await page.getByTestId('menu-settings').click();
       await expect(page.locator('#app')).toHaveAttribute('data-screen', 'settings');
       await settle(page);
       await shot(page, vp, '03-settings');
 
-      await page.goto('/');
+      await page.goto('/?tutorial=off');
       await page.getByTestId('menu-credits').click();
       await expect(page.locator('#app')).toHaveAttribute('data-screen', 'credits');
       await settle(page, 900);
@@ -425,7 +332,7 @@ for (const vp of VIEWPORTS) {
       await cards.nth(1).click();
       await settle(page, 300);
       await shot(page, vp, '23-colorblind-ui140');
-      await page.goto('/');
+      await page.goto('/?tutorial=off');
       await settle(page);
       await shot(page, vp, '24-menu-ui140');
       expect(problems).toEqual([]);

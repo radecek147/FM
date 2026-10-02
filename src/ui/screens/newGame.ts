@@ -8,6 +8,7 @@
  * Ovládání klávesnicí: Tab mezi skupinami, šipky / Home / End uvnitř skupiny (radiogroup s roving tabindexem,
  * zamčené položky přeskakuje), Enter v poli seedu nebo na tlačítku spustí hru, Esc vrátí do menu.
  */
+import '../styles/meta.css';
 import type { ArtSpec, DeckDef, StakeDef } from '../../engine';
 import type { SeedParseResult } from '../../engine/meta';
 import {
@@ -22,11 +23,11 @@ import type { App, ScreenFactory } from '../app';
 import { artElement } from '../art/art';
 import { iconElement, safeColor } from '../art/icons';
 import { backButton, button, focusWhenMounted } from '../components/button';
-import { confirmModal } from '../components/modal';
 import { toast } from '../components/toast';
-import { GameController } from '../controller';
+import type { GameController } from '../controller';
 import { h } from '../dom';
 import { deckName, formatDateKey, stakeName, unlockConditionText, unlockInfo } from '../metaText';
+import { confirmOverwrite } from '../runStart';
 import { randomSeed, seedErrorText } from '../seed';
 
 /** Poslední volba balíčku a síly piva (pohodlí hráče; ztráta nevadí). */
@@ -299,6 +300,7 @@ export const newGameScreen: ScreenFactory = (app) => {
     const next = stakes.find((s) => s.level === max + 1);
     stakeLockNote.textContent = next
       ? t('newGame.stake.lockedHint', {
+          stake: stakeName(reg, next.level),
           deck: deckName(choice.deckId),
           condition: unlockConditionText({ type: 'winRun', deck: choice.deckId, stake: max }, reg),
         })
@@ -433,19 +435,7 @@ export const newGameScreen: ScreenFactory = (app) => {
       seedInput.focus();
       return;
     }
-    if (
-      GameController.hasSavedRun(app.store) ||
-      (app.controller && app.controller.state.phase !== 'game_over')
-    ) {
-      const ok = await confirmModal({
-        title: t('newGame.overwrite.title'),
-        message: t('newGame.overwrite.message'),
-        confirmLabel: t('newGame.overwrite.confirm'),
-        danger: true,
-        testId: 'overwrite-confirm',
-      });
-      if (!ok) return;
-    }
+    if (!(await confirmOverwrite(app))) return;
     try {
       let c: GameController;
       if (sc.kind === 'daily') {

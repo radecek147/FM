@@ -63,7 +63,7 @@ export function editionPriceAdd(core: GameCore, edition: EditionId | null): numb
 
 /**
  * Základní cena žolíka pro obchod: zapůjčený `RENTAL_BUY_PRICE` (místo ceny), jinak cena + edice
- * (s `noEditionSurcharge` bez příplatku za edici — štítky Vyleštěné příbory a Fotonegativ).
+ * (s `noEditionSurcharge` bez příplatku za edici — štítky Vyleštěné příbory a Rentgen od zubaře).
  */
 export function jokerBasePrice(core: GameCore, joker: JokerInstance, noEditionSurcharge = false): number {
   if (joker.stickers.includes('rental')) return RENTAL_BUY_PRICE;

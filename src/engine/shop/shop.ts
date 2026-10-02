@@ -304,7 +304,7 @@ export function setShopJokerEdition(core: GameCore, edition: EditionId, noSurcha
 }
 
 /**
- * Kupón navíc jen pro otevřenou Večerku (`EngineApi.addShopVoucher`; Úřední poukaz): stream `shop`, z kupónů, které jde
+ * Kupón navíc jen pro otevřenou Večerku (`EngineApi.addShopVoucher`; Leták ve schránce): stream `shop`, z kupónů, které jde
  * teď koupit (`eligibleVouchers`) a v nabídce nejsou. Do kupónů patra se nezapíše. Vrací id nebo null.
  */
 export function addShopVoucher(core: GameCore): string | null {

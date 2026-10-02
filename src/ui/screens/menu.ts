@@ -1,19 +1,17 @@
 /**
- * Hlavní menu: Nová hra, Pokračovat (jen s uloženým runem), Výzvy / Denní run („Už brzy“ — fáze 8),
- * Sbírka (s počtem novinek), Statistiky, Nastavení, Titulky; náhodná rada Štamgasta, verze a kontrolní věta
- * pro font. Ovládání: Tab / šipky nahoru a dolů mezi položkami, Enter / mezerník aktivuje.
+ * Hlavní menu: Nová hra, Pokračovat (jen s uloženým runem), Výzvy (s počtem nově odemčených), Denní run
+ * (cedulka „Dnes“, dokud čeká oficiální pokus), Sbírka (s počtem novinek), Statistiky, Nastavení, Titulky;
+ * náhodná rada Štamgasta, verze a kontrolní věta pro font. Ovládání: Tab / šipky nahoru a dolů mezi položkami,
+ * Enter / mezerník aktivuje.
  */
 import { version } from '../../../package.json';
 import { t, tList } from '../../i18n/cs';
 import type { App, ScreenFactory } from '../app';
-import { unseenCount } from '../../engine/meta';
+import { isDailyAvailable, unseenCount } from '../../engine/meta';
 import { button, focusWhenMounted } from '../components/button';
 import { toast } from '../components/toast';
 import { GameController } from '../controller';
 import { h } from '../dom';
-
-/** Fáze, ve které přibudou zatím neaktivní položky (ROADMAP: Fáze 8 — Meta). */
-const META_PHASE = 8;
 
 /** Náhodná rada (UI smí použít Math.random — náhoda enginu jde výhradně přes seedovaný RNG). */
 function pickTip(tips: readonly string[], previous?: string): string | null {
@@ -45,8 +43,6 @@ export function continueRun(app: App): boolean {
 export const menuScreen: ScreenFactory = (app) => {
   const tips = tList('loadingTips');
   let tip = pickTip(tips);
-  const soon = t('menu.comingSoon', { phase: META_PHASE });
-  const notifySoon = (): void => void toast(soon, { kind: 'info' });
 
   const hintEl = h('p', { class: 'menu__hint', 'aria-hidden': 'true' }, t('menu.newGame.hint'));
 
@@ -57,8 +53,7 @@ export const menuScreen: ScreenFactory = (app) => {
       onClick?: () => void;
       primary?: boolean;
       disabled?: boolean;
-      soon?: boolean;
-      /** Cedulka vpravo (počet novinek ve sbírce). */
+      /** Cedulka vpravo (počet novinek ve sbírce, „Dnes“ u denního runu). */
       badge?: string;
       /** Přístupný popisek, když se liší od textu (cedulka je aria-hidden). */
       ariaLabel?: string;
@@ -75,11 +70,10 @@ export const menuScreen: ScreenFactory = (app) => {
       disabled: opts.disabled,
       onClick: opts.onClick,
       ...(opts.badge ? { badge: opts.badge, ariaLabel: opts.ariaLabel } : {}),
-      ...(opts.soon ? { comingSoon: soon, onComingSoon: notifySoon, badge: t('menu.comingSoonBadge') } : {}),
       className: 'menu__item',
     });
     const show = (): void => {
-      hintEl.textContent = opts.soon ? `${hint} ${soon}` : hint;
+      hintEl.textContent = hint;
     };
     btn.addEventListener('pointerenter', show);
     btn.addEventListener('focus', show);
@@ -88,6 +82,8 @@ export const menuScreen: ScreenFactory = (app) => {
 
   const canContinue = hasContinuableRun(app);
   const fresh = unseenCount(app.profile);
+  const freshChallenges = app.profile.unseen.filter((k) => k.startsWith('challenges:')).length;
+  const dailyOpen = isDailyAvailable(app.profile, app.profiles.metaCtx().nowIso);
 
   const tipText = h('span', { class: 'menu__tip-text', 'data-testid': 'loading-tip' }, tip ?? '');
   const tipEl = tip
@@ -132,8 +128,19 @@ export const menuScreen: ScreenFactory = (app) => {
           }
         },
       }),
-      item('challenges', { soon: true }),
-      item('daily', { soon: true }),
+      item('challenges', {
+        onClick: () => app.go('challenges'),
+        ...(freshChallenges > 0
+          ? {
+              badge: t('menu.challenges.badge', { n: freshChallenges }),
+              ariaLabel: t('menu.challenges.labelNew', { n: freshChallenges }),
+            }
+          : {}),
+      }),
+      item('daily', {
+        onClick: () => app.go('daily'),
+        ...(dailyOpen ? { badge: t('menu.daily.badge'), ariaLabel: t('menu.daily.labelOpen') } : {}),
+      }),
       item('collection', {
         onClick: () => app.go('collection'),
         ...(fresh > 0

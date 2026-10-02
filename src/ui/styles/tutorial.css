@@ -1,0 +1,213 @@
+/*
+ * Tutoriál „Štamgast“ (src/ui/tutorial.ts): nemodální bublina s postavičkou a šipkou k cíli. Vrstva je nad jevištěm
+ * a bublinami skórování (800), pod dialogy (900) a oznámeními (950); kliknout jde jen na bublinu samotnou.
+ * Poloha jde přes `transform` (translate), příchod jen transform/opacity.
+ */
+
+.tutorial-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 850;
+  pointer-events: none;
+}
+
+.tutorial {
+  --arrow: 50%;
+
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  width: min(24rem, calc(100vw - 16px));
+  padding: 0.7rem 0.85rem 0.7rem;
+  color: var(--ink);
+  pointer-events: auto;
+  background: var(--paper);
+  border: 3px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow:
+    0 6px 0 rgb(0 0 0 / 25%),
+    0 14px 30px rgb(0 0 0 / 45%);
+}
+
+.tutorial[hidden] {
+  display: none;
+}
+
+.tutorial.is-entering .tutorial__avatar,
+.tutorial.is-entering .tutorial__body {
+  animation: tutorial-in var(--t-med) ease-out;
+}
+
+@keyframes tutorial-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.tutorial__avatar {
+  flex: 0 0 3rem;
+  width: 3rem;
+  height: 3rem;
+}
+
+.tutorial__avatar svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.tutorial__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.tutorial__meta {
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.tutorial__title {
+  margin-top: 0.1rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--wood);
+}
+
+.tutorial__text {
+  margin-top: 0.25rem;
+  font-size: 0.88rem;
+  line-height: 1.38;
+}
+
+.tutorial__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.5rem;
+  align-items: center;
+  margin-top: 0.55rem;
+}
+
+.tutorial__actions .btn {
+  min-height: 2.2rem;
+  padding: 0.3em 0.8em;
+  font-size: 0.85rem;
+}
+
+/* Zvýraznění cíle rady: rámeček nad prvkem (kliknutí jím propadne), pulzuje jen průhledností. */
+.tutorial-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 3px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow:
+    0 0 0 3px rgb(0 0 0 / 35%),
+    0 0 18px 2px rgb(232 169 42 / 55%);
+  animation: tutorial-ring 1.6s ease-in-out infinite;
+}
+
+.tutorial-ring[hidden] {
+  display: none;
+}
+
+@keyframes tutorial-ring {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.tutorial .btn--ghost {
+  min-width: 0;
+  color: var(--ink-soft);
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--paper-shade);
+}
+
+.tutorial .btn:focus-visible {
+  outline: 3px solid var(--wood);
+  outline-offset: 2px;
+}
+
+/* Šipka k cíli: čtverec otočený o 45°, poloha podél hrany z --arrow. */
+.tutorial__arrow {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: var(--paper);
+  border: 3px solid var(--accent);
+}
+
+.tutorial[data-side='none'] .tutorial__arrow {
+  display: none;
+}
+
+.tutorial[data-side='top'] .tutorial__arrow {
+  bottom: -10px;
+  left: calc(var(--arrow) - 8px);
+  border-top: 0;
+  border-left: 0;
+  transform: rotate(45deg);
+}
+
+.tutorial[data-side='bottom'] .tutorial__arrow {
+  top: -10px;
+  left: calc(var(--arrow) - 8px);
+  border-right: 0;
+  border-bottom: 0;
+  transform: rotate(45deg);
+}
+
+.tutorial[data-side='right'] .tutorial__arrow {
+  top: calc(var(--arrow) - 8px);
+  left: -10px;
+  border-top: 0;
+  border-right: 0;
+  transform: rotate(45deg);
+}
+
+.tutorial[data-side='left'] .tutorial__arrow {
+  top: calc(var(--arrow) - 8px);
+  right: -10px;
+  border-bottom: 0;
+  border-left: 0;
+  transform: rotate(45deg);
+}
+
+.no-anim .tutorial .tutorial__avatar,
+.no-anim .tutorial .tutorial__body,
+.no-anim .tutorial-ring {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tutorial .tutorial__avatar,
+  .tutorial .tutorial__body,
+  .tutorial-ring {
+    animation: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .tutorial__avatar {
+    flex-basis: 2.6rem;
+    width: 2.6rem;
+    height: 2.6rem;
+  }
+
+  .tutorial__text {
+    font-size: 0.85rem;
+  }
+}
+
+/* Dotyk: tlačítka bubliny aspoň 44 px vysoká (jinak drobnější tlačítka rady přebijí obecné pravidlo `.btn`). */
+@media (pointer: coarse) {
+  .tutorial__actions .btn {
+    min-height: 44px;
+  }
+}

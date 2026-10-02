@@ -22,7 +22,13 @@ import type {
   AchievementResult,
   Profile,
 } from '../engine/meta/types';
-import { challengesCompleted, distinctHandsPlayed, maxHandLevel, totalRunsPlayed } from '../engine/meta/unlocks';
+import { isStartingItem } from '../engine/meta/runs';
+import {
+  challengesCompleted,
+  distinctHandsPlayed,
+  maxHandLevel,
+  totalRunsPlayed,
+} from '../engine/meta/unlocks';
 import type { Card, GameEvent, HandType, JokerInstance, RunState } from '../engine/types';
 import { HAND_TYPES, SECRET_HAND_TYPES } from '../engine/types';
 
@@ -180,14 +186,26 @@ function a(
 const PROGRESS: AchievementDef[] = [
   a('first_round', 'progress', 'beer-stein', ({ profile }) => profile.stats.totals.roundsWon > 0),
   a('first_boss', 'progress', 'crowned-skull', ({ profile }) => profile.stats.totals.bossesDefeated > 0),
-  a('halftime', 'progress', 'hourglass', ({ profile }) => prog(profile.stats.records.highestAnte, HALFTIME_ANTE), {
-    params: { ante: HALFTIME_ANTE },
-  }),
+  a(
+    'halftime',
+    'progress',
+    'hourglass',
+    ({ profile }) => prog(profile.stats.records.highestAnte, HALFTIME_ANTE),
+    {
+      params: { ante: HALFTIME_ANTE },
+    },
+  ),
   a('closing_time', 'progress', 'exit-door', ({ profile }) => anyWins(profile) > 0),
   a('one_more', 'progress', 'cycle', (ctx) => !!on(ctx, 'bossDefeated') && !!ctx.run?.endless),
-  a('night_watchman', 'progress', 'old-lantern', ({ profile }) => prog(profile.stats.records.highestAnte, NIGHT_ANTE), {
-    params: { ante: NIGHT_ANTE },
-  }),
+  a(
+    'night_watchman',
+    'progress',
+    'old-lantern',
+    ({ profile }) => prog(profile.stats.records.highestAnte, NIGHT_ANTE),
+    {
+      params: { ante: NIGHT_ANTE },
+    },
+  ),
   a(
     'rooster_crows',
     'progress',
@@ -196,7 +214,9 @@ const PROGRESS: AchievementDef[] = [
     { params: { ante: ROOSTER_ANTE } },
   ),
   // Skóre ruky se při přetečení ořízne na Number.MAX_VALUE (nekonečno by JSON uložil jako null).
-  a('heat_death', 'progress', 'fire', ({ profile }) => bestHand(profile) >= Number.MAX_VALUE, { hidden: true }),
+  a('heat_death', 'progress', 'fire', ({ profile }) => bestHand(profile) >= Number.MAX_VALUE, {
+    hidden: true,
+  }),
 ];
 
 const SCORE: AchievementDef[] = [
@@ -250,7 +270,9 @@ const HANDS: AchievementDef[] = [
   a('coronation', 'hands', 'imperial-crown', ({ profile }) => (profile.stats.handTypes.royal_flush ?? 0) > 0),
   a('five_committee', 'hands', 'gavel', ({ profile }) => handSeen(profile, 'five'), { hidden: true }),
   a('color_tv', 'hands', 'tv', ({ profile }) => handSeen(profile, 'flush_house'), { hidden: true }),
-  a('like_two_eggs', 'hands', 'fried-eggs', ({ profile }) => handSeen(profile, 'flush_five'), { hidden: true }),
+  a('like_two_eggs', 'hands', 'fried-eggs', ({ profile }) => handSeen(profile, 'flush_five'), {
+    hidden: true,
+  }),
   a('career_ladder', 'hands', 'ladder', ({ profile }) => prog(maxHandLevel(profile), CAREER_LEVEL), {
     params: { level: CAREER_LEVEL },
   }),
@@ -274,16 +296,33 @@ const HANDS: AchievementDef[] = [
     },
     { params: { hands: HIGH_STANDARDS_HANDS } },
   ),
-  a('encyclopedist', 'hands', 'open-book', ({ profile }) => prog(distinctHandsPlayed(profile), HAND_TYPES.length), {
-    params: { count: HAND_TYPES.length },
-  }),
+  a(
+    'encyclopedist',
+    'hands',
+    'open-book',
+    ({ profile }) => prog(distinctHandsPlayed(profile), HAND_TYPES.length),
+    {
+      params: { count: HAND_TYPES.length },
+    },
+  ),
 ];
 
 const ECONOMY: AchievementDef[] = [
-  a('on_the_tab', 'economy', 'battle-axe', ({ profile }) => (profile.stats.records.minRoundEndMoney ?? 0) < 0),
-  a('stuffed_piggy', 'economy', 'piggy-bank', ({ profile }) => prog(profile.stats.records.maxMoney, PIGGY_MONEY), {
-    params: { money: PIGGY_MONEY },
-  }),
+  a(
+    'on_the_tab',
+    'economy',
+    'battle-axe',
+    ({ profile }) => (profile.stats.records.minRoundEndMoney ?? 0) < 0,
+  ),
+  a(
+    'stuffed_piggy',
+    'economy',
+    'piggy-bank',
+    ({ profile }) => prog(profile.stats.records.maxMoney, PIGGY_MONEY),
+    {
+      params: { money: PIGGY_MONEY },
+    },
+  ),
   a(
     'retirement',
     'economy',
@@ -339,7 +378,13 @@ const JOKERS: AchievementDef[] = [
     'out_of_the_mountain',
     'jokers',
     'mountains',
-    ({ run, registry }) => !!run?.jokers.some((j) => registry.jokers[j.defId]?.rarity === 'legendary'),
+    // Startovní výbava (Velký třesk) se počítá až po první vyhrané útratě — jinak by stačilo výzvu založit.
+    ({ run, registry, current }) =>
+      !!run?.jokers.some(
+        (j) =>
+          registry.jokers[j.defId]?.rarity === 'legendary' &&
+          !(current && isStartingItem(j.uid, run, current)),
+      ),
   ),
   a('old_czech_legends', 'jokers', 'castle', ({ profile, registry }) => {
     const ids = legendaryIds(registry);
@@ -380,15 +425,27 @@ const JOKERS: AchievementDef[] = [
 ];
 
 const CARDS: AchievementDef[] = [
-  a('tree_frog', 'cards', 'frog', ({ profile }) => prog(profile.stats.totals.pranostikyUsed, PRANOSTIKY_USED), {
-    params: { count: PRANOSTIKY_USED },
-  }),
+  a(
+    'tree_frog',
+    'cards',
+    'frog',
+    ({ profile }) => prog(profile.stats.totals.pranostikyUsed, PRANOSTIKY_USED),
+    {
+      params: { count: PRANOSTIKY_USED },
+    },
+  ),
   a('happy_grandma', 'cards', 'cake-slice', ({ profile }) => prog(profile.stats.totals.radyUsed, RADY_USED), {
     params: { count: RADY_USED },
   }),
-  a('stamp_on_stamp', 'cards', 'stamper', ({ profile }) => prog(profile.stats.totals.razitkaUsed, RAZITKA_USED), {
-    params: { count: RAZITKA_USED },
-  }),
+  a(
+    'stamp_on_stamp',
+    'cards',
+    'stamper',
+    ({ profile }) => prog(profile.stats.totals.razitkaUsed, RAZITKA_USED),
+    {
+      params: { count: RAZITKA_USED },
+    },
+  ),
   a('weather_wise', 'cards', 'farmer', ({ profile, registry }) => {
     const ids = pranostikaIds(registry);
     return prog(discoveredOf(profile.discovered.consumables, ids), Math.max(1, ids.length));
@@ -400,9 +457,15 @@ const CARDS: AchievementDef[] = [
     const all = Object.keys(ctx.registry.seals);
     return all.length > 0 && all.every((s) => seals.has(s));
   }),
-  a('lucky_shards', 'cards', 'broken-bottle', ({ profile }) => prog(profile.stats.totals.glassBroken, GLASS_BROKEN), {
-    params: { count: GLASS_BROKEN },
-  }),
+  a(
+    'lucky_shards',
+    'cards',
+    'broken-bottle',
+    ({ profile }) => prog(profile.stats.totals.glassBroken, GLASS_BROKEN),
+    {
+      params: { count: GLASS_BROKEN },
+    },
+  ),
   a(
     'iron_curtain',
     'cards',
@@ -411,7 +474,8 @@ const CARDS: AchievementDef[] = [
       const e = on(ctx, 'handPlayed');
       if (!e || !ctx.run) return false;
       const held = new Set<number>();
-      for (const step of e.result.steps) if (step.source === 'held' && step.cardId !== undefined) held.add(step.cardId);
+      for (const step of e.result.steps)
+        if (step.source === 'held' && step.cardId !== undefined) held.add(step.cardId);
       return cardsOf(ctx.run, [...held]).filter((c) => c.enhancement === 'steel').length >= STEEL_HELD;
     },
     { params: { count: STEEL_HELD } },
@@ -469,9 +533,15 @@ const STAKES: AchievementDef[] = [
 
 const CHALLENGES: AchievementDef[] = [
   a('challenger', 'challenges', 'fist', ({ profile }) => challengesCompleted(profile) > 0),
-  a('decathlon', 'challenges', 'stopwatch', ({ profile }) => prog(challengesCompleted(profile), CHALLENGES_DECATHLON), {
-    params: { count: CHALLENGES_DECATHLON },
-  }),
+  a(
+    'decathlon',
+    'challenges',
+    'stopwatch',
+    ({ profile }) => prog(challengesCompleted(profile), CHALLENGES_DECATHLON),
+    {
+      params: { count: CHALLENGES_DECATHLON },
+    },
+  ),
   a('national_champion', 'challenges', 'trophy', ({ profile, registry }) => {
     const ids = Object.keys(registry.challenges);
     const done = ids.filter((id) => (profile.stats.challenges[id]?.completed ?? 0) > 0).length;
@@ -511,9 +581,15 @@ const META: AchievementDef[] = [
       Object.values(profile.daily).some((d) => d.ante >= DAILY_ANTE),
     { params: { ante: DAILY_ANTE } },
   ),
-  a('week_straight', 'meta', 'calendar', ({ profile }) => prog(dailyStreak(profile).longest, DAILY_STREAK_DAYS), {
-    params: { days: DAILY_STREAK_DAYS },
-  }),
+  a(
+    'week_straight',
+    'meta',
+    'calendar',
+    ({ profile }) => prog(dailyStreak(profile).longest, DAILY_STREAK_DAYS),
+    {
+      params: { days: DAILY_STREAK_DAYS },
+    },
+  ),
   a('seed_sown', 'meta', 'wheat', ({ current }) => !!current?.seeded, { allowSeeded: true }),
   a('pub_inventory', 'meta', 'shop', ({ profile }) => prog(totalRunsPlayed(profile), RUNS_INVENTORY), {
     params: { count: RUNS_INVENTORY },
@@ -544,7 +620,12 @@ const CURIOSITY: AchievementDef[] = [
     { hidden: true, params: { pct: HAIR_PCT } },
   ),
   a('one_blow', 'curiosity', 'warhammer', ({ current }) => (current?.counters.bossesFirstHand ?? 0) > 0),
-  a('nothing_wasted', 'curiosity', 'wheelbarrow', (ctx) => !!on(ctx, 'victory') && ctx.run?.stats.discardsUsed === 0),
+  a(
+    'nothing_wasted',
+    'curiosity',
+    'wheelbarrow',
+    (ctx) => !!on(ctx, 'victory') && ctx.run?.stats.discardsUsed === 0,
+  ),
   a(
     'papers_in_order',
     'curiosity',

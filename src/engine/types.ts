@@ -149,9 +149,9 @@ export interface Modifiers {
    * i přehození. Prodejní ceny ani položky zdarma nemění.
    */
   shopPriceAdd: number;
-  /** Šance (0–1), že hrací karta nabízená ve Večerce má vylepšení (výchozí 0,2; Kartářka 0,5). */
+  /** Šance (0–1), že hrací karta nabízená ve Večerce má vylepšení (výchozí 0,2; Sběratelská burza 0,5). */
   playingCardEnhanceChance: number;
-  /** Šance (0–1), že hrací karta nabízená ve Večerce má pečeť (výchozí 0; Kartářka 0,2). */
+  /** Šance (0–1), že hrací karta nabízená ve Večerce má pečeť (výchozí 0; Sběratelská burza 0,2). */
   playingCardSealChance: number;
 
   /** Násobič čitatele všech pravděpodobností („1 z 4“ → „2 z 4“). */
@@ -316,7 +316,7 @@ export interface ShopPriced {
   free?: boolean;
   /** Násobek základní ceny před slevou a `shopPriceAdd` (Doporučení od známého: 0,5 = poloviční cena). */
   priceMult?: number;
-  /** Jen žolík: cena bez příplatku za edici (Vyleštěné příbory, Fotonegativ). */
+  /** Jen žolík: cena bez příplatku za edici (Vyleštěné příbory, Rentgen od zubaře). */
   noEditionSurcharge?: boolean;
   /** Položka navíc ze štítku (`EngineApi.addShopJoker`): přehození ji nemění a nepočítá se do `shopCardSlots`. */
   extra?: boolean;

@@ -74,6 +74,7 @@ export {
   finishRun,
   refreshMeta,
   currentMatches,
+  isStartingItem,
   type StartRunCtx,
 } from './runs';
 export {
@@ -86,6 +87,7 @@ export {
   parseSeedInput,
   isDailyAvailable,
   dailyStreak,
+  mergeDailyRecords,
   type DailySetup,
   type SeedErrorCode,
   type SeedParseResult,

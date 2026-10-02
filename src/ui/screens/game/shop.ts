@@ -90,7 +90,7 @@ function itemVisual(ctx: GameCtx, item: ShopItem, sellValue: number | undefined)
 
 /**
  * Nálepka zboží ze štítku: žolík navíc (Doporučení od známého, Protekce), sleva (`priceMult`) a edice bez příplatku
- * (Vyleštěné příbory, Fotonegativ). Jinak null.
+ * (Vyleštěné příbory, Rentgen od zubaře). Jinak null.
  */
 export function itemBadge(item: ShopItem): string | null {
   const parts: string[] = [];

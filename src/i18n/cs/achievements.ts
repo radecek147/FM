@@ -26,12 +26,12 @@ export const achievements = {
   closing_time: {
     name: 'Zavíračka',
     desc: 'Vyhraj run – poraz šéfa posledního patra.',
-    flavor: 'Hospodský zhasíná a ty odcházíš jako vítěz.',
+    flavor: 'Hospodský zhasíná a ty odcházíš vítězně.',
   },
   one_more: {
     name: 'Ještě jedno!',
     desc: 'Pokračuj po výhře v nekonečném režimu a poraz tam šéfa.',
-    flavor: 'Říkal jsi, že jdeš domů. Před třemi koly.',
+    flavor: 'Prý už jdeš domů. To bylo před třemi koly.',
   },
   night_watchman: {
     name: 'Ponocný',
@@ -112,7 +112,7 @@ export const achievements = {
   color_tv: {
     name: 'Barevná televize',
     desc: 'Zahraj Barevný full house.',
-    hint: 'Plný dům, a celý vymalovaný jednou barvou.',
+    hint: 'Plný dům – a celý vymalovaný jednou barvou.',
     flavor: 'Konec černobílé éry.',
   },
   like_two_eggs: {
@@ -203,7 +203,7 @@ export const achievements = {
   old_czech_legends: {
     name: 'Staré pověsti české',
     desc: 'Objev všechny legendární žolíky.',
-    flavor: 'Jirásek by to sepsal líp, ale ty jsi u toho byl.',
+    flavor: 'Jirásek by to sepsal líp. Jenže u toho nebyl.',
   },
   abstainer: {
     name: 'Abstinent',
@@ -294,7 +294,7 @@ export const achievements = {
 
   // ── síla piva ──
   warmed_up: {
-    name: 'Rozehřátý',
+    name: 'Rozehřívačka',
     desc: 'Vyhraj run na Jedenáctce (nebo silnějším pivu).',
     flavor: 'Pivo zdražilo. Ty taky.',
   },
@@ -311,7 +311,7 @@ export const achievements = {
   five_beers: {
     name: 'Pět piv a jdu domů',
     desc: 'Vyhraj run na Ležáku (nebo silnějším pivu).',
-    flavor: 'Řekl jsi pět. Bylo jich patnáct.',
+    flavor: 'Mělo jich být pět. Bylo jich patnáct.',
   },
   bock_on_side: {
     name: 'Bock na bok',
@@ -321,7 +321,7 @@ export const achievements = {
   double_hit: {
     name: 'Dvojitý zásah',
     desc: 'Vyhraj run na Doppelbocku (nebo silnějším pivu).',
-    flavor: 'Přibité, půjčené, a stejně to šlo.',
+    flavor: 'Přibité, půjčené – a stejně to šlo.',
   },
   tap_emperor: {
     name: 'Imperátor výčepu',
@@ -400,7 +400,7 @@ export const achievements = {
     name: 'Rychlé pivo',
     desc: 'Prohraj hned na první Malé útratě.',
     hint: 'Někdy to skončí dřív, než to začne.',
-    flavor: 'Ani jsi nestihl sundat bundu.',
+    flavor: 'Bunda na věšáku ještě ani nevychladla.',
   },
   by_a_hair: {
     name: 'O chlup',

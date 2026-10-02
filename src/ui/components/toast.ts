@@ -32,7 +32,11 @@ export interface ToastOptions {
   title?: string;
   /** Obrázek místo ikony druhu (žeton šéfa, štítek) — dekorativní, text musí stačit sám. */
   media?: Node;
+  /** Drobný štítek nad nadpisem („Achievement“, „Odemčeno · žolík“) — jen s `title`. */
+  eyebrow?: string;
   className?: string;
+  /** Zavoláno jednou, když oznámení odejde (vypršení, křížek, vytlačení novějším, `clearToasts`). */
+  onClose?: () => void;
 }
 
 export interface ToastHandle {
@@ -59,6 +63,7 @@ interface ToastState {
   timer: ReturnType<typeof setTimeout> | null;
   gone: boolean;
   countEl: HTMLElement;
+  onClose?: (() => void) | undefined;
 }
 
 let region: HTMLElement | null = null;
@@ -213,7 +218,15 @@ export function toast(message: string, opts: ToastOptions = {}): ToastHandle {
   }
 
   const countEl = h('span', { class: 'toast__count', 'data-testid': 'toast-count', hidden: true });
-  const st: ToastState = { key, count: 1, duration, timer: null, gone: false, countEl };
+  const st: ToastState = {
+    key,
+    count: 1,
+    duration,
+    timer: null,
+    gone: false,
+    countEl,
+    onClose: opts.onClose,
+  };
 
   const remove = (): void => {
     if (!el.isConnected) return;
@@ -223,6 +236,7 @@ export function toast(message: string, opts: ToastOptions = {}): ToastHandle {
     if (st.gone) return;
     st.gone = true;
     if (st.timer) clearTimeout(st.timer);
+    st.onClose?.();
     // Bez animací pryč hned; jinak po krátké animaci (pojistka: timeout, kdyby `animationend` nepřišel).
     if (animationsOff()) {
       remove();
@@ -247,6 +261,7 @@ export function toast(message: string, opts: ToastOptions = {}): ToastHandle {
       ? h(
           'div',
           { class: 'toast__body' },
+          opts.eyebrow ? h('p', { class: 'toast__eyebrow' }, opts.eyebrow) : null,
           h('p', { class: 'toast__title' }, opts.title),
           h('p', { class: 'toast__text' }, message),
         )
@@ -281,12 +296,16 @@ export function toast(message: string, opts: ToastOptions = {}): ToastHandle {
 /** Zavře všechna oznámení (např. při resetu profilu). */
 export function clearToasts(): void {
   if (!region) return;
+  const closed: (() => void)[] = [];
   for (const el of Array.from(region.querySelectorAll<HTMLElement>('.toast'))) {
     const st = states.get(el);
-    if (st) {
+    if (st && !st.gone) {
       st.gone = true;
       if (st.timer) clearTimeout(st.timer);
+      if (st.onClose) closed.push(st.onClose);
     }
   }
   region.replaceChildren();
+  // Až po vyčištění — fronta (např. oznámení meta vrstvy) smí hned ukázat další.
+  for (const fn of closed) fn();
 }

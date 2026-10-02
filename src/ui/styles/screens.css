@@ -1410,6 +1410,28 @@ html.modal-open {
   padding-top: 0.15rem;
 }
 
+/* Štítek nad nadpisem („Achievement“, „Odemčeno · žolík“). */
+.toast__eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+/* Oznámení meta vrstvy: ikona na tácku (src/ui/metaNotices.ts). */
+.toast--meta {
+  --toast-color: var(--accent);
+}
+
+.toast--meta .toast__media {
+  flex-basis: 3rem;
+}
+
+.toast--meta .toast__media .meta-icon {
+  width: 3rem;
+  height: 3rem;
+}
+
 .toast__close {
   flex: 0 0 auto;
   pointer-events: auto;
@@ -1501,6 +1523,11 @@ html.modal-open {
   .stake-row {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+
+  /* Podtitul pod 24 px už není „velký text“ — `--accent` na suknu má jen 3,8 : 1, světlejší zlatá stačí. */
+  .menu__subtitle {
+    color: var(--money);
+  }
 }
 
 @media (max-width: 600px) {
@@ -1569,6 +1596,13 @@ html.modal-open {
 
   .range {
     height: 44px;
+  }
+
+  /* Křížek oznámení: dotykový cíl 44 px, oznámení přitom nezvětšuje (záporný okraj). */
+  .toast__close {
+    width: 44px;
+    height: 44px;
+    margin: -0.45rem -0.45rem -0.45rem 0;
   }
 
   .credits__link {

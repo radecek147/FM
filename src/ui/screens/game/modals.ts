@@ -97,7 +97,9 @@ function handsTable(ctx: GameCtx): HTMLElement {
   const rows = HAND_TYPES.map((type: HandType) => {
     const def = ctx.registry.handTypes[type];
     const hl = s.handLevels[type] ?? { level: 1, played: 0 };
-    const secret = def.secret && !s.discoveredHands.includes(type);
+    // Tajná kombinace je vidět, když ji hráč zahrál v tomto runu, nebo ji už objevil v profilu (DESIGN 2.2.4).
+    const secret =
+      def.secret && !s.discoveredHands.includes(type) && !ctx.app.profile.discovered.hands.includes(type);
     if (secret) {
       return h(
         'tr',

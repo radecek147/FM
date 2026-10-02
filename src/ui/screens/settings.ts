@@ -1,7 +1,9 @@
 /**
  * Nastavení (docs/DESIGN.md 13.4): hlasitosti, rychlost 1×–4×, animace, screen shake, celá obrazovka,
- * barvoslepý režim, velikost UI 80–140 %, rady Štamgasta, přehled klávesových zkratek, export/import
- * uložení (JSON přes Blob, žádná síť) a reset profilu s dvojím potvrzením.
+ * barvoslepý režim, velikost UI 80–140 %, rady Štamgasta (a „Zapnout tutoriál znovu“), přehled klávesových
+ * zkratek, export/import uložení (JSON přes Blob, žádná síť; profil i rozehraný run, validace a migrace) a reset
+ * profilu s dvojím potvrzením. Profil se nikdy neztratí: import i reset ho předtím zazálohují do
+ * `karban.profile.backup.<ms>` (zálohy jdou do exportu).
  *
  * Funguje jako samostatná obrazovka (`settingsScreen`) i jako dialog ze hry (`openSettingsModal(app)`).
  * Změny jdou výhradně přes `app.updateSettings` (uloží a promítne do <html>).
@@ -17,6 +19,7 @@ import {
   serializeProfile,
   serializeRun,
 } from '../../engine';
+import { mergeDailyRecords, restartTutorial } from '../../engine/meta';
 import { t } from '../../i18n/cs';
 import type { App, ScreenFactory } from '../app';
 import { backButton, button } from '../components/button';
@@ -25,7 +28,7 @@ import { confirmModal, openModal } from '../components/modal';
 import { toast } from '../components/toast';
 import { h } from '../dom';
 import type { Settings } from '../settings';
-import { DEFAULT_SETTINGS, PROFILE_BACKUP_PREFIX, sanitizeSettings } from '../settings';
+import { DEFAULT_SETTINGS, PROFILE_BACKUP_PREFIX, sanitizeSettings, writeProfileBackup } from '../settings';
 import type { KeyValueStore } from '../storage';
 import { STORAGE_KEYS } from '../storage';
 
@@ -84,12 +87,23 @@ export function buildExport(store: KeyValueStore, settings: Settings, now: Date)
   return payload;
 }
 
-export type ImportErrorCode = SaveError['code'] | 'unknownContent' | 'readFailed';
+export type ImportErrorCode = SaveError['code'] | 'unknownContent' | 'readFailed' | 'backupFailed';
 
 export class ImportError extends Error {
   constructor(readonly code: ImportErrorCode) {
     super(code);
     this.name = 'ImportError';
+  }
+}
+
+/**
+ * Uložený profil nejde zazálohovat (plné nebo zablokované úložiště). Reset ani import pak nesmí profil přepsat —
+ * jinak by se ztratil (docs/ARCHITECTURE.md 5).
+ */
+export class ProfileBackupError extends Error {
+  constructor() {
+    super('profileBackupFailed');
+    this.name = 'ProfileBackupError';
   }
 }
 
@@ -152,18 +166,17 @@ export function parseImport(text: string, registry: ContentRegistry, now = new D
     const v = obj.version;
     if (typeof v !== 'number' || !Number.isInteger(v) || v < 1) throw new ImportError('invalidFormat');
     if (v > EXPORT_VERSION) throw new ImportError('tooNew');
-    let profile: string | null = null;
+    const plan: ImportPlan = {
+      run: obj.run === null || obj.run === undefined ? null : validateRun(obj.run, registry, now),
+    };
+    // Export bez profilu stávající profil nemaže (profil se nikdy nesmí ztratit); bez nastavení ho nepřebíjí.
     if (obj.profile !== null && obj.profile !== undefined) {
       if (isRecord(obj.profile) || typeof obj.profile === 'string')
-        profile = validateProfile(obj.profile, now);
+        plan.profile = validateProfile(obj.profile, now);
       else throw new ImportError('invalidFormat');
     }
-    const run = obj.run === null || obj.run === undefined ? null : validateRun(obj.run, registry, now);
-    return {
-      settings: sanitizeSettings(isRecord(obj.settings) ? obj.settings : {}),
-      profile,
-      run,
-    };
+    if (isRecord(obj.settings)) plan.settings = sanitizeSettings(obj.settings);
+    return plan;
   }
 
   if (obj.format === SAVE_FORMAT) {
@@ -176,27 +189,94 @@ export function parseImport(text: string, registry: ContentRegistry, now = new D
 
 /**
  * Zapíše import do úložiště a profil v paměti načte znovu (nastavení z exportu má přednost před nastavením
- * v profilu). Rozehraný controller zahodí (stav se změnil pod ním).
+ * v profilu). Rozehraný controller zahodí (stav se změnil pod ním). Když přepisovaný profil nejde zazálohovat,
+ * vyhodí `ProfileBackupError` a nezapíše nic.
  */
-export function applyImport(app: App, plan: ImportPlan): void {
+export function applyImport(app: App, plan: ImportPlan, now: Date = new Date()): void {
   const write = (key: string, value: string | null | undefined): void => {
     if (value === undefined) return;
     if (value === null) app.store.remove(key);
     else app.store.set(key, value);
   };
-  write(STORAGE_KEYS.profile, plan.profile);
+  // Přepisovaný profil se nejdřív zazálohuje (profil se nikdy nesmí ztratit).
+  let profile = plan.profile;
+  if (profile !== undefined) backupStoredProfile(app, now);
+  // Odehrané denní runy zůstanou: import staršího profilu nevrátí dnešní oficiální pokus (DESIGN 11.7).
+  if (typeof profile === 'string') {
+    const imported = deserializeProfile(profile);
+    if (mergeDailyRecords(imported, app.profile) > 0) profile = serializeProfile(imported, now.toISOString());
+  }
+  write(STORAGE_KEYS.profile, profile);
   write(STORAGE_KEYS.run, plan.run);
   app.controller = null;
   if (plan.profile !== undefined) app.profiles.reload();
   if (plan.settings) app.updateSettings(plan.settings);
 }
 
-/** Smaže všechno, co hra uložila (i zálohy profilu), a začne s čistým profilem a výchozím nastavením. */
-export function resetProfile(app: App): void {
-  for (const key of app.store.keys()) if (key.startsWith(STORAGE_PREFIX)) app.store.remove(key);
+/**
+ * Zazálohuje uložený profil do `karban.profile.backup.<ms>` (před resetem a importem). Vrací klíč zálohy, nebo
+ * null, když není co zálohovat; když zálohu nejde zapsat, vyhodí `ProfileBackupError`. Aktuální profil v paměti
+ * se předtím uloží, ať záloha není pozadu.
+ */
+export function backupStoredProfile(app: App, now: Date = new Date()): string | null {
+  app.profiles.save();
+  const raw = app.store.get(STORAGE_KEYS.profile);
+  if (raw === null) return null;
+  const key = writeProfileBackup(app.store, raw, now);
+  if (!key) throw new ProfileBackupError();
+  return key;
+}
+
+/**
+ * Začne s čistým profilem a výchozím nastavením: smaže profil, rozehranou hru a ostatní data hry. Profil předtím
+ * zazálohuje (`karban.profile.backup.<ms>`) a zálohy nechá na místě — jdou do exportu, nic se neztratí.
+ * Vrací klíč nové zálohy (null = nebylo co zálohovat). Když zálohu nejde zapsat, vyhodí `ProfileBackupError`
+ * a nesmaže nic.
+ */
+export function resetProfile(app: App, now: Date = new Date()): string | null {
+  const backupKey = backupStoredProfile(app, now);
+  for (const key of app.store.keys())
+    if (key.startsWith(STORAGE_PREFIX) && !key.startsWith(PROFILE_BACKUP_PREFIX)) app.store.remove(key);
   app.controller = null;
   app.profiles.reset({ ...DEFAULT_SETTINGS });
   app.updateSettings({ ...DEFAULT_SETTINGS });
+  app.tutorial?.refresh();
+  return backupKey;
+}
+
+/** Co je v importovaném souboru (věta do potvrzení importu). */
+export function importSummary(plan: ImportPlan): string {
+  const parts: string[] = [];
+  if (plan.profile) {
+    try {
+      const p = deserializeProfile(plan.profile);
+      const played =
+        p.stats.runs.played + Object.values(p.stats.challenges).reduce((n, c) => n + c.attempts, 0);
+      parts.push(
+        t('settings.import.summary.profile', {
+          runs: played,
+          achievements: Object.keys(p.achievements.unlocked).length,
+        }),
+      );
+    } catch {
+      parts.push(t('settings.import.summary.profileShort'));
+    }
+  }
+  if (plan.run) {
+    try {
+      const run = deserializeRun(plan.run);
+      parts.push(
+        t('settings.import.summary.run', {
+          deck: t(`decks.${run.deckId}.name`),
+          ante: run.ante,
+        }),
+      );
+    } catch {
+      parts.push(t('settings.import.summary.runShort'));
+    }
+  }
+  if (parts.length === 0) parts.push(t('settings.import.summary.settingsOnly'));
+  return t('settings.import.summary.text', { items: parts.join(' · ') });
 }
 
 function exportFilename(now: Date): string {
@@ -448,14 +528,20 @@ function settingsPanel(app: App, opts: PanelOptions): Panel {
     if (hasData) {
       const ok = await confirmModal({
         title: t('settings.import.confirmTitle'),
-        message: t('settings.import.confirmMessage'),
+        message: `${importSummary(plan)} ${t('settings.import.confirmMessage')}`,
         confirmLabel: t('settings.import.confirm'),
         danger: true,
         testId: 'import-confirm',
       });
       if (!ok) return;
     }
-    applyImport(app, plan);
+    try {
+      applyImport(app, plan);
+    } catch (e) {
+      if (!(e instanceof ProfileBackupError)) throw e;
+      toast(t('settings.import.errors.backupFailed'), { kind: 'error', testId: 'toast-import-error' });
+      return;
+    }
     toast(t('settings.import.done'), { kind: 'success', testId: 'toast-import-done' });
     opts.onImport();
   };
@@ -478,10 +564,29 @@ function settingsPanel(app: App, opts: PanelOptions): Panel {
       testId: 'reset-confirm-2',
     });
     if (!second) return;
-    resetProfile(app);
+    try {
+      resetProfile(app);
+    } catch (e) {
+      if (!(e instanceof ProfileBackupError)) throw e;
+      toast(t('settings.reset.backupFailed'), { kind: 'error', testId: 'toast-reset-failed' });
+      return;
+    }
     toast(t('settings.reset.done'), { kind: 'success', testId: 'toast-reset-done' });
     opts.onReset();
   };
+
+  // Rady Štamgasta: vypnout / zapnout (zapnutí vrátí i přeskočený tutoriál); restart začne od první rady.
+  const tutorialToggle = toggleControl({
+    id: 'settings-tutorial',
+    label: t('settings.tutorial'),
+    checked: s.tutorial,
+    hint: t('settings.tutorialHint'),
+    onChange: (on) => {
+      if (on) app.profile.tutorial.skipped = false;
+      app.updateSettings({ tutorial: on });
+      app.tutorial?.refresh();
+    },
+  });
 
   const left = h(
     'div',
@@ -529,13 +634,30 @@ function settingsPanel(app: App, opts: PanelOptions): Panel {
         hint: t('settings.screenShakeHint'),
         onChange: (on) => app.updateSettings({ screenShake: on }),
       }).el,
-      toggleControl({
-        id: 'settings-tutorial',
-        label: t('settings.tutorial'),
-        checked: s.tutorial,
-        hint: t('settings.tutorialHint'),
-        onChange: (on) => app.updateSettings({ tutorial: on }),
-      }).el,
+      tutorialToggle.el,
+      h(
+        'div',
+        { class: 'setting setting--action' },
+        button({
+          label: t('settings.tutorialRestart'),
+          variant: 'paper',
+          size: 'small',
+          testId: 'settings-tutorial-restart',
+          describedBy: 'settings-tutorial-restart-hint',
+          onClick: () => {
+            restartTutorial(app.profile);
+            app.profiles.save();
+            tutorialToggle.input.checked = true;
+            app.tutorial?.refresh();
+            toast(t('settings.tutorialRestarted'), { kind: 'success', testId: 'toast-tutorial-restart' });
+          },
+        }),
+        h(
+          'p',
+          { id: 'settings-tutorial-restart-hint', class: 'setting__hint' },
+          t('settings.tutorialRestartHint'),
+        ),
+      ),
     ),
     section(
       'settings-sec-display',

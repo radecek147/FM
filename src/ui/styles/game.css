@@ -1321,6 +1321,27 @@
   width: min(100%, 40rem);
 }
 
+/* Dlouhé novinky (první výhra odemkne celou várku výzev): tlačítka zůstanou u spodního okraje jeviště (na telefonu
+   okna) a obsah se posouvá pod nimi. Pruh má barvu papíru přes celou šířku panelu. */
+.game.is-ended .game-panel__actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding: 0.75rem 1.25rem;
+  margin: 0.25rem -1.25rem 0;
+  background: linear-gradient(to bottom, rgb(244 236 216 / 0%), var(--paper) 0.75rem);
+}
+
+/* Spodní odsazení panelu dává pruh s tlačítky (celkem stejně jako dřív). */
+.game.is-ended .game-panel.paper {
+  padding-bottom: 0.5rem;
+}
+
+.game.is-ended .victory__hint {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
 .game-panel__icon {
   display: block;
   margin: 0 auto 0.15rem;

@@ -2633,3 +2633,217 @@ beze změny chování mimo výzvy (bez spotřeby RNG navíc).
 
 **Proč:** CLAUDE.md kap. 3 (20 výzev se zvláštními pravidly a vlastním vtipným názvem), kap. 2 (engine
 deterministický, data + hooky, stav serializovatelný), kap. 8 (balanc simulací, žádné auto-win); DESIGN 11.1.
+
+## 2026-10-02 — Fáze 8 (M3): 78 achievementů a podmínky odemčení obsahu
+
+**Co:** obsah achievementů (`src/content/achievements.ts`, texty `src/i18n/cs/achievements.ts`), podmínky odemčení
+23 žolíků (`unlock` v `src/content/jokers/{rare,rare2,epic,epic2}.ts`), texty podmínek pro sbírku (`meta.unlock.*`
+přes `unlockText`), vlastní podmínka `distinctHands8`. Finální seznamy: DESIGN 11.2 a 11.3. Testy
+`tests/unit/achievements.test.ts` (každý achievement: těsně před splněním nic, po splnění udělen s oznámením — přes
+`startRun` / `applyRunEvent` / `finishRun` / `refreshMeta`) a `tests/unit/unlocks-content.test.ts`.
+
+- **Achievementy = `AchievementDef` + texty.** Přidal jsem `AchievementDef.params` (čísla do textů, stejné konstanty
+  čte `check` — jako `JokerDef.params`); texty `achievements.<id>.name|desc|flavor`, skryté navíc `hint` (CONTENT-GUIDE
+  kap. 10 počítal s `flavor`). UI: `t('achievements.<id>.desc', def.params)`. Ikony z `ICON_NAMES` (test).
+- **Tři druhy kontrol:** celoživotní (jen profil, vrací průběh pro sbírku a splní se i zpětně po importu),
+  okamžikové (událost + stav runu po akci) a jednoho runu (`run` / `current.counters`, mimo run průběh 0 → sbírka
+  ukáže uložené maximum). Výhry „na síle piva X“ = X nebo silnější (jako `winRun` se `stake`); „Zavíračka“ počítá i
+  dokončené výzvy (výzva je run; do statistik runů se nepočítá, do achievementů ano — M1).
+- **Změny podmínek proti návrhu DESIGN 11.2:** _Kopírka na úřadě_ → „měj najednou 2 kopírující žolíky“ (kopírující
+  žolíci se navzájem nekopírují, `copyable: false`); _Notářský zápis_ → „zahraj ruku, ve které skórují karty se všemi
+  druhy pečetí“ (původní „měj v balíčku všechny 4 pečetě“ by Notářský balíček splnil při startu); _Ještě jedno!_ =
+  libovolný šéf poražený v nekonečném režimu. Achievementy „všechno“ (Encyklopedista, Muzeum žolíků, Turné po
+  hospodách…) počítají s aktuálním registrem, text čísla neuvádí.
+- **Žolíci: 70 od začátku + 23 s podmínkou + 8 legendárních objevem** (DESIGN 11.3: všech 44 běžných, 19/32 vzácných,
+  7/17 epických). Zamčení jsou ti, ke kterým sedí tematická podmínka (Kořenářka ← 10 babských rad, Sklář ← 5 rozbitých
+  skleněných karet, Válečná kořist ← 10 šéfů, Defenestrace ← 150 zahozených karet, Kopírák ← 15 koupených žolíků…)
+  a nikdo z ikonických žolíků zadání (Pivní tácek, Švejk, Golem, Zpožděný rychlík zůstávají volní). Podmínky jsou
+  vestavěné typy `UnlockCondition`, jediná nová vlastní je `distinctHands8` (Pivní sommelier: 8 různých kombinací
+  napříč runy). Řetězy: Sekera (0 Kč na konci kola) → „Na sekeru“ / Dlužník (kolo v mínusu); Turistický balíček
+  (25 Postupek) → Turistický průvodce (výhra s ním).
+- **Sněhulák: 3 kola vyhraná první rukou** (DESIGN uváděl jedno). Jedno kolo první rukou přijde v prvním runu skoro
+  samo (Malá útrata patra 1), epický žolík by se odemkl bez zásluhy — a test M1 `meta-runs` s přesným seznamem
+  oznámení po prvním vyhraném kole tak zůstal platný.
+- **Texty podmínek:** `unlockText(registry, cond, subject?)` / `unlockTextFor(registry, category, id)` v
+  `src/engine/meta/unlockText.ts` vrací i18n klíče a parametry (engine texty nezná); `refs` = parametry, které jsou
+  samy textem (název balíčku, šéfa, kombinace, síly piva). Věta položky `meta.unlock.items.<kategorie>.<id>` má
+  přednost (skloňování: „s Turistickým balíčkem“, „10 Postupek“), jinak šablona `meta.unlock.cond.<typ>`. Čísla
+  vestavěných vlastních podmínek jsou v `CUSTOM_UNLOCK_PARAMS` (sdílí vyhodnocovač i text). UI je skládá v
+  `src/ui/metaText.ts` (`unlockSpecText`).
+- **Výkon:** 78 kontrol po každé události stojí ≈ 0,15 ms navíc na událost (celý run botem ≈ 15–35 ms meta místo
+  4–11 ms); modifikátory (sloty žolíků) se počítají líně jen u „Plného lokálu“ s aspoň 5 žolíky.
+
+**Proč:** CLAUDE.md kap. 3 (60+ achievementů s vtipnými názvy, odemykání, sbírka), kap. 5 (humor, příklady „Pět piv
+a jdu domů“, „Na sekeru“), kap. 6 (texty jen v i18n, čísla přes parametry), kap. 8 (každý achievement otestovaný);
+DESIGN 9, 11.2, 11.3.
+
+## 2026-10-02 — Fáze 8 (M4): profilová vrstva UI, nová hra podle odemčení, sbírka, statistiky
+
+Kód: `src/ui/profile.ts` (`ProfileController`), `src/ui/metaText.ts`, `src/ui/seed.ts`, `src/ui/components/tabs.ts`,
+`src/ui/screens/{newGame,collection,stats}.ts`, `src/ui/styles/meta.css`; testy `tests/unit/ui-meta-{profile,screens}.test.ts`.
+
+- **Jediná instance profilu v `App`** (`app.profiles` = `ProfileController`, `app.profile`, `app.settings` je getter
+  nad `profile.settings`). Nastavení se mění jen přes `app.updateSettings` → profil → uložení; `saveSettings` /
+  `loadSettings` (čtou úložiště) zůstávají pro testy a nástroje, aplikace je nepoužívá (jinak by dvě kopie profilu
+  přepisovaly jedna druhou).
+- **Profil se nikdy neztratí:** načtení přes `restoreStoredProfile` (settings.ts, z M1). Poškozená data → záloha
+  `karban.profile.backup.<ms>` (milisekundy, ne ISO jako v zadání úkolu — klíč už testuje `meta-settings.test.ts`
+  a je bez dvojteček), nový profil a toast; když zálohu nejde zapsat, profil jede jen v paměti a uložená data se
+  nepřepíšou (ani nastavením). Selhání zápisu se ohlásí jednou. **Export přibalí zálohy** (`profileBackups`), aby
+  šly vytáhnout i mimo prohlížeč; import je ignoruje.
+- **Napojení na run:** `GameController` dostal pozorovatele (`RunObserver.onEvents` hned po uložení runu — stav po
+  celé akci, jak chce `applyRunEvents`; `onSettled` po doběhnutí animací). Profil ukládá po každé akci, ale toasty
+  „Odemčeno: …“ / „Achievement: …“ ukáže až po animaci (nepřeruší skórování), nejvýš 3 naráz (třetí shrne zbytek
+  „…a další novinky“). Chyba meta vrstvy se jen zaloguje, hru nezastaví. `bus.onAny` jsem nepoužil: emituje během
+  `dispatch` s rozpracovaným stavem.
+- **Konec runu:** prohra jde do historie **hned při `gameOver`** (run se po prohře neukládá, pitva je jen obrazovka —
+  reload by jinak historii odložil do příštího startu); výhra po tlačítku „Konec“ (`profiles.finish`), nekonečný režim
+  pokračuje a uzavře se při prohře. Nový run přes rozehraný uzavře starý jako opuštěný (`startRun`).
+- **Runy zakládá profil** (`profiles.newRun({ deckId, stake, seed, seeded?, challengeId?, daily? })`): pool obsahu
+  podle druhu runu (`poolModeFor`: denní > seedovaný > výzva > hlavní hra) a `startRun`. Obrazovky výzev a denního
+  runu (další úkol) zavolají totéž. Pokračování přes `profiles.resume()`; herní obrazovka připojí i controller
+  založený mimo profil (`attach` → `resumeRun`, idempotentní; dohraný run se jen připojí).
+- **Nová hra:** zamčené balíčky jsou v radiogroup jako `aria-disabled` (název, silueta, zámek, „Jak odemknout“
+  s průběhem), šipky je přeskakují; síly piva podle zvoleného balíčku (při přepnutí balíčku se síla sníží na
+  nejvyšší odemčenou) s poznámkou, co odemkne další; „tácek“ s nejsilnější vyhranou silou (DESIGN 9). Seed:
+  `parseSeedInput` při psaní (chyba pod polem, `aria-invalid`, start ji nespustí). Prázdné pole = náhodný seed
+  z `crypto.getRandomValues` (záložně `Math.random`, jen UI). **Seed vylosovaný tlačítkem „Náhodný“ a nezměněný se
+  nepočítá jako zadaný** — jinak by hráč omylem přišel o započítání runu. Zadaný seed = seedovaný run (poznámka
+  pod polem), ručně zadaný `DEN-RRRRMMDD` = denní run mimo soutěž s balíčkem a silou ze seedu.
+- **Sbírka:** položky se staví líně jen pro otevřenou záložku; detail v dialogu. Balíčky, síly piva a výzvy ukazují
+  název i zamčené (jsou to režimy hry, podmínka je to zajímavé); žolíci a kupóny zamčení jen „Zamčeno“, neobjevené
+  „???“. Nezískaný achievement má vybledlou ikonu (ne černou siluetu — byla by nečitelná), skrytý otazník
+  a nápovědu `achievements.<id>.hint`. Štítek „Nové“ zmizí po otevření detailu a pro celou záložku při odchodu
+  z ní (hráč novinky viděl); počet novinek je na záložkách i na tlačítku Sbírka v menu. Filtr vzácnosti
+  a zaměření (`JokerTag`) jen u žolíků, řazení podle pořadí / vzácnosti (žolíci) / názvu (neobjevené na konec) /
+  četnosti. Texty podmínek skládá `unlockText` z M3 (`unlockSpecText` v `metaText.ts`) — žádné druhé šablony v UI.
+- **Statistiky** v záložkách Přehled · Balíčky · Síla piva · Šéfové · Historie · Denní runy; data jen z profilu,
+  seedované runy jen v historii (poznámka v přehledu). Datum bez `Intl` (`metaText.formatDateTime`, místní čas;
+  denní run podle klíče dne v UTC). Text ke sdílení denního runu podle DESIGN 11.7.
+- **Menu:** Sbírka a Statistiky aktivní; Výzvy a Denní run zůstávají „Už brzy“ do dalšího úkolu.
+- **E2E:** testy zadávaly seedy, které `parseSeedInput` odmítne (`KARBAN1`, `A11Y1`…) — přepsané na platné osmiznakové
+  (pro test přeskočení ověřený seed, jehož štítky neotevřou obálku); testy s Mariášovým balíčkem a Dvanáctkou si
+  vloží profil s odemčeným vším.
+
+**Proč:** CLAUDE.md kap. 2 (profil se nesmí ztratit, autosave po každé akci), 3 (odemykání, sbírka, statistiky,
+seed, historie), 4 (obrazovky, přístupnost); DESIGN 9–11, 13.4.
+
+## 2026-10-02 — Fáze 8 (M5): výzvy, denní run, oznámení, tutoriál Štamgast, zálohy profilu
+
+**Co:**
+
+- **Výzvy** (`src/ui/screens/challenges.ts`): seznam po várkách (1 / 3 / 6 / 10 výher, podmínka z `ChallengeDef.unlock`)
+  a detail vybrané výzvy. Zamčená výzva ukáže název (je to režim hry, M4) a podmínku s průběhem, pravidla až po
+  odemčení. Stav položky: zamčeno / nehráno / zkoušeno / dokončeno (odznak s pohárem) / rozehráno (Pokračovat).
+  Start = `profiles.newRun({ deckId, stake: def.stake ?? 1, seed: náhodný, challengeId })` přes společný
+  `src/ui/runStart.ts` (potvrzení přepsání rozehrané hry). Výběr výzvy sundá štítek „Nové“; počet nových výzev je
+  i na tlačítku v menu. Na úzké obrazovce je detail nad seznamem (doporučená výzva s tlačítkem Hrát hned na očích).
+- **Denní run** (`src/ui/screens/daily.ts`): dnešní `DEN-YYYYMMDD` (UTC), balíček a síla piva ze seedu, stav pokusu
+  (`dailyStatus`: čeká / rozehraný / ztracený / odehraný). Oficiální pokus i „Hrát znovu mimo soutěž“ zakládají run
+  stejně (`daily: true`, ne seedovaný) — jestli je oficiální, rozhoduje meta vrstva (první run dne). Text ke
+  sdílení (`dailyShareText`, kopírování do schránky) na obrazovce, v historii denních i na pitvě / výhře (u pokusu
+  mimo soutěž s poznámkou). Odpočet do dalšího dne je statický (bez tikání). Menu má u Denního runu cedulku „Dnes“,
+  dokud oficiální pokus čeká.
+- **Oznámení** (`src/ui/metaNotices.ts`): toast s ikonou na tácku (achievement `def.icon`, odemčená věc ikona z její
+  `art`), štítkem („Achievement“, „Odemčeno · žolík“), názvem a popisem; **fronta** — nejvýš 2 naráz, další přijde,
+  až předchozí odejde (`ToastOptions.onClose`), přebytek nad 8 shrne „…a další novinky“. Toasty dál nepřekrývají
+  ovládání (mimo ruku a tlačítka, kliknutí propadne). Dřívější limit „3 naráz, zbytek shrnout“ nahrazen frontou —
+  nic se neztratí, jen počká.
+- **Novinky runu na pitvě a výhře:** `ProfileController` si pamatuje oznámení rozehraného runu (`runNotices`, klíč =
+  seed + balíček + síla + výzva + denní) a doplní achievementy získané od začátku runu podle data (po načtení
+  stránky se oznámení nepamatují). Kompaktní žetony (ikona + název, štítek a popis v `title` a pro čtečku), ať
+  tlačítka Nová hra / Menu zůstanou na 1366 × 768 vidět. Nezapočítaný run (seed, denní mimo soutěž) má poznámku.
+- **Tutoriál Štamgast** (`src/ui/tutorial.ts`): nemodální bublina s postavičkou (vlastní SVG z ikon `mustache`
+  a `beer-stein`, `src/ui/art/stamgast.ts`) mimo `#app`, vrstva nad jevištěm a pod dialogy; nebere focus, kliknout
+  jde jen na ni. Krok vybírá čistá `pendingTutorialStep` ze stavu hry: v kole výběr → Zahrát → Zahodit → cíl a ruce
+  → pořadí žolíků (až v kole, kde bublina pod řadou žolíků nic nezakryje), šéf má přednost; konec kola → výplata;
+  Večerka → koupě žolíka; výběr útraty → šéf, přeskočení (až po první výplatě — nejdřív se hraje). Krok dokončí
+  „Rozumím“, nebo sama akce (`stepsDoneByEvents`: zahraná ruka, zahození, výhra kola, výplata, koupě žolíka,
+  přeskočení, poražený šéf; výběr karty). „Přeskočit tutoriál“ = `skipTutorial`. Dokončení posledního kroku →
+  `profiles.refresh()` → achievement „Štamgastův žák“. **Umístění:** kandidáti u cíle a u záložních míst (Zahrát →
+  nad ruku), vyhraje ten, který nejmíň zakrývá ovládací prvky (`placeBubble`, čistá funkce); cíl zvýrazní pulzující
+  rámeček. Stejná rada se po animaci tahu znovu neohlašuje. Tutoriál instaluje `src/main.ts`; **`?tutorial=off`**
+  ho vypne pro celé sezení — e2e testy ho tak mají všechny kromě `tests/e2e/meta.spec.ts` (jinak lze vypnout
+  profilem, `Settings.tutorial`). Hooky: `App.onScreenChange`, `GameController.onEvents`.
+- **Nastavení:** „Zapnout tutoriál znovu“ (`restartTutorial`, od první rady); přepínač Rad Štamgasta při zapnutí
+  vrátí i přeskočený tutoriál. **Reset profilu nejdřív zazálohuje profil** do `karban.profile.backup.<ms>` a zálohy
+  nemaže (dřív mazal všechno včetně záloh) — profil se nesmí ztratit, zálohy jdou do exportu. Totéž import:
+  přepisovaný profil jde do zálohy. Potvrzení importu řekne, co soubor obsahuje (`importSummary`: profil s počtem
+  runů a achievementů, rozehraná hra s balíčkem a patrem, nebo jen nastavení). Validace a migrace importu zůstávají
+  z M4 (`parseImport`).
+- **Menu:** žádné „Už brzy“ — Výzvy i Denní run vedou na své obrazovky (texty `menu.comingSoon*` zůstávají
+  v i18n pro komponentu tlačítka).
+
+**Proč:** CLAUDE.md kap. 2 (profil se nikdy neztratí, export/import), 3 (výzvy, denní run, achievementy), 4
+(obrazovky, tutoriál jde přeskočit a znovu zapnout, nastavení), 5 (humor v textech); DESIGN 11.1, 11.7, 13.4, 13.5.
+
+### 2026-10-02 — Fáze 8: vizuální kontrola meta obrazovek
+
+**Co:** Snímky všech meta obrazovek na 1366×768, 1024×768, 1920×1080, tabletu 820×1180 a telefonu 390×844
+(`KARBAN_VISUAL=1 npx playwright test visual-meta`, čerstvý i plný profil; metriky a snímky jako u U5, sdílená výbava
+`tests/e2e/visualKit.ts` hlídá navíc kontrast textu na jednobarevném pozadí). Opravy vzhledu bez změny chování:
+
+- **Výzvy:** na široké obrazovce je detail `position: sticky` (vyšší než okno se posouvá uvnitř) — po výběru výzvy
+  ze spodku seznamu byl detail mimo obraz. Zamčená výzva i silueta v detailu sbírky mají zámek / otazník (dřív šedý
+  obdélník). Nadpisy várek ve světlejší zlaté (`--money`; `--accent` na suknu má u drobného písma jen 3,8 : 1),
+  stejně podtitul menu na úzkých obrazovkách.
+- **Sbírka:** achievementy mají nadpisy kategorií (`meta.collection.achievementCategories`) — skupiny bez nadpisu
+  vypadaly jako díry v mřížce.
+- **Nová hra:** zámek zamčeného balíčku měl kvůli pořadí CSS (`.icon` = 1em) 16 px místo 45 px; zamčená síla piva
+  má vybledlý jen tácek, název zůstává čitelný.
+- **Pitva a výhra:** tlačítka jsou `sticky` u spodního okraje jeviště — první výhra odemkne celou várku výzev
+  a tlačítka Konec / Nekonečný režim byla pod okrajem.
+- **Oznámení:** herní obrazovka po vložení do stránky znovu umístí oblast oznámení nad stůl — oznámení z doby před
+  vložením (obnovení / založení runu) zůstávala v rohu přes ruku a tlačítko Zahodit.
+- **Statistiky:** šéfové ve dvou sloupcích (příčiny proher vedle tabulky), na telefonu užší tabulky se zalomeným
+  záhlavím a stínem u okraje, když se tabulka posouvá.
+- **Dotyk:** tlačítka bubliny tutoriálu a křížek oznámení aspoň 44 px (`pointer: coarse`).
+
+**Proč:** CLAUDE.md kap. 2 (tablet plně funkční, přístupnost), 4 (obrazovky), 8 (kontrast, Lighthouse
+přístupnost > 90).
+
+## 2026-10-02 — Revize a uzavření fáze 8 (meta)
+
+**Co:** Revize textů, robustnosti profilu, ochrany proti „farmení“ a počtů obsahu; nálezy opravené s testy
+(`tests/unit/phase8-review.test.ts`, test rodové neutrality v `tests/unit/i18n.test.ts`).
+
+- **Texty** (vypsané skriptem: výzvy s pravidly, 78 achievementů, podmínky odemčení všech položek, `meta.*`, menu,
+  Nová hra, Nastavení): oslovení hráče bylo místy v mužském rodě — „Říkal jsi…“, „Řekl jsi pět“, „Ani jsi nestihl…“,
+  „ty jsi u toho byl“, „odcházíš jako vítěz“, „jsi ještě nehrál“ (statistiky), „jsi ho jednou vyslechl“ (nastavení)
+  → neutrální tvary; nový test projde všechny texty a minulý čas ve 2. osobě odmítne. Achievement _Rozehřátý_ →
+  _Rozehřívačka_ (přídavné jméno o hráči). „Vyhraj celkem 1 run.“ → „Vyhraj svůj první run.“ (`winsTotalFirst`),
+  podmínka tier 2 kupónu „Pořiď kupón … ve 2 různých runech, nebo …“, legendy „Odemkne se prvním získáním“
+  (dřív „až ho poprvé získáš“ i u Kněžny Libuše), „Měj v balíčku najednou 5 karet s pečetí“ (bez „v jednom runu“),
+  nápověda neobjevené položky „Zatím se ti to neukázalo.“ (dřív v mužském rodě i u pranostik), „Finálový šéf“
+  jednotně (sbírka měla „Finální“), `+{chips}` čipů přes `plural`, výherní obrazovka říká patro výhry („Šéf 12.
+  patra…“ u Konce světa, dřív vždy „osmého“). Převzaté názvy z Balatra ani žijící osoby / značky: bez nálezu.
+- **Profil se nikdy neztratí:** reset i import profil přepsaly, i když se záloha nepodařila zapsat (plné úložiště
+  — přesně situace, kdy se ukládání kazí). Teď `backupStoredProfile` vyhodí `ProfileBackupError` a reset ani import
+  neproběhnou (hláška `settings.reset.backupFailed` / `settings.import.errors.backupFailed`). Export bez profilu
+  (`profile: null`) dřív profil smazal a export bez `settings` přebil nastavení výchozími — teď obojí nechá být. Záloha
+  poškozeného profilu při startu mohla přepsat zálohu se stejnou milisekundou — sdílený `writeProfileBackup`.
+  Poškozený JSON, cizí JSON, jiný druh uložení, novější verze i verze bez migrace → přesná data v záloze, nový profil;
+  platná obálka bez klíčů se doplní (testy).
+- **Farmení:** seedované runy se dál nepočítají nikam kromě historie a „Semínko zaseto“ (ověřeno). Nově:
+  1. _Denní run:_ pokračování denního runu, který profil nezná, bylo oficiální i bez záznamu dne (kód proti
+     komentáři) — teď jen s rozehraným záznamem dne se stejným seedem, jinak mimo soutěž.
+  2. _Import staršího profilu_ vracel dnešní oficiální pokus — `mergeDailyRecords` doplní do importovaného profilu
+     dny ze současného. (Reset profilu dny nepřenáší; lokální hru nejde ochránit úplně — zápis do úložiště
+     ručně, reset bez návratu zálohy. Cílem je, aby to nešlo běžným ovládáním.)
+  3. _Opakované zakládání runu:_ startovní výbava (Velký třesk = 2 legendy, Vetešnický = vzácný žolík, Babiččin =
+     rady) se zapsala do sbírky hned po založení, takže „Staré pověsti české“ (všechny legendy) šly získat ~11 starty
+     výzvy a „Vyjeli z hory“ jedním. Startovní žolíci a spotřebky (`uid < RunCounters.startUid`, nové pole, chybějící =
+     0 = bez omezení) se objeví až po první vyhrané útratě runu (`isStartingItem`); achievement „Vyjeli z hory“ také.
+     DESIGN 11.4 objev definuje obchodem, obálkou, šéfem a štítkem, takže start do něj nepatří.
+  4. Run z importu, který profil nezná, se dál počítá jako hlavní hra: import libovolného profilu je stejně možný,
+     takže omezovat import runu by nic nechránilo a rozbilo by obnovu po ztraceném zápisu.
+- **Sbírka:** obálky neměly záložku, ale objevené obálky dostávaly štítek „Nové“ → počet novinek na tlačítku Sbírka
+  v menu nešel nikdy vynulovat. Nová záložka **Obálky** (název, druh, cena); test hlídá, že každá kategorie „Nových“
+  má záložku. Počty: 20 výzev, 78 achievementů, 70 / 101 žolíků od začátku, 2 / 12 balíčků, 12 / 24 kupónů.
+- **Tajné kombinace přes runy** (otevřený bod z fáze 7): „Info o runu“ ukazovalo tajnou kombinaci jen po zahrání
+  v aktuálním runu; DESIGN 2.2.4 chce, aby objev v profilu platil ve všech dalších runech (na úrovni 1). Opraveno
+  (`profile.discovered.hands`); pranostiky tajných kombinací se dál nabízejí až po zahrání v aktuálním runu.
+- Komentáře se starými názvy obsahu (Kartářka, Fotonegativ, Úřední poukaz) opravené na nové.
+
+**Proč:** CLAUDE.md kap. 2 (profil se nikdy neztratí), 3 (výzvy, achievementy, denní run, seed), 5–6 (tykání,
+humor, plural), DESIGN 11, 13.4; CONTENT-GUIDE kap. 12 (rodová neutralita).

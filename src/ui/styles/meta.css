@@ -1,0 +1,1232 @@
+/*
+ * Meta obrazovky: záložky (components/tabs.ts), sbírka (screens/collection.ts), statistiky a historie
+ * (screens/stats.ts) a doplňky nové hry pro odemykání (zamčené balíčky a síly piva, tácek, stav seedu).
+ * Animuje se jen transform/opacity; silueta neobjevené položky je statický filtr.
+ */
+
+/* ─────────────────────────── Záložky ─────────────────────────── */
+
+.tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  max-width: 72rem;
+}
+
+.tabs__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tabs__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  min-height: 2.5rem;
+  padding: 0.35em 0.9em;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--on-felt);
+  background: rgb(0 0 0 / 22%);
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 2px rgb(244 236 216 / 18%);
+  transition: transform var(--t-fast) ease-out;
+}
+
+.tabs__tab:hover:not(.is-active) {
+  transform: translateY(-1px);
+}
+
+.tabs__tab.is-active {
+  color: var(--ink);
+  background: var(--accent);
+  box-shadow: 0 3px 0 var(--accent-dark);
+}
+
+.tabs__tab:focus-visible {
+  outline: 3px solid var(--paper);
+  outline-offset: 2px;
+}
+
+.tabs__badge {
+  min-width: 1.5em;
+  padding: 0.05em 0.45em;
+  font-size: 0.75rem;
+  text-align: center;
+  color: var(--paper);
+  background: var(--danger);
+  border-radius: 999px;
+}
+
+.tabs__panel:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: var(--radius-small);
+}
+
+/* ─────────────────────────── Sbírka ─────────────────────────── */
+
+.codex-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.codex-count {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.codex-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.codex-select {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.codex-select__label {
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  color: var(--on-felt-muted);
+}
+
+.codex-select__input {
+  min-height: 2.5rem;
+  padding: 0.3rem 0.6rem;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 0;
+  border-radius: var(--radius-small);
+  box-shadow: inset 0 -2px 0 var(--paper-shade);
+}
+
+.codex-select__input:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.codex-grids {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.codex-group__title {
+  margin-bottom: 0.6rem;
+  font-size: 1.15rem;
+  color: var(--on-felt-muted);
+}
+
+.codex-grid {
+  --card-w: 84px;
+
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.25rem, 1fr));
+  gap: 1rem 0.75rem;
+}
+
+.codex-grid__cell {
+  display: flex;
+  justify-content: center;
+}
+
+.codex-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.5rem 0.3rem 0.6rem;
+  color: var(--on-felt);
+  text-align: center;
+  background: rgb(0 0 0 / 14%);
+  border-radius: var(--radius);
+  transition: transform var(--t-fast) ease-out;
+}
+
+@media (hover: hover) {
+  .codex-item:hover {
+    transform: translateY(-3px);
+  }
+}
+
+.codex-item:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.codex-item__art {
+  display: grid;
+  place-items: center;
+  min-height: calc(var(--card-w) * 1.4);
+  pointer-events: none;
+}
+
+.codex-item__name {
+  font-size: 0.85rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.codex-item.is-locked .codex-item__name,
+.codex-item.is-unknown .codex-item__name {
+  color: var(--on-felt-muted);
+}
+
+.codex-item__new {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  z-index: 2;
+  padding: 0.1em 0.45em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--paper);
+  background: var(--danger);
+  border-radius: 999px;
+  box-shadow: 0 2px 0 rgb(0 0 0 / 30%);
+}
+
+/* Silueta: neodemčeno / neobjeveno — tvar ano, detaily ne. */
+.is-silhouette > :not(.codex-detail__mark) {
+  filter: brightness(0) saturate(0);
+  opacity: 0.42;
+}
+
+/* Nezískaný achievement: ikona je vidět, jen vybledlá (skrytý má místo ní otazník). */
+.codex-item[data-category='achievements'] .is-silhouette > *,
+.codex-detail[data-category='achievements'] .is-silhouette > * {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
+.codex-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--card-w);
+  height: var(--card-w);
+  font-size: calc(var(--card-w) * 0.55);
+  color: var(--accent);
+  background: radial-gradient(circle, var(--felt-light), var(--felt-dark));
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 3px var(--accent-dark),
+    0 4px 0 rgb(0 0 0 / 25%);
+}
+
+.codex-icon .icon {
+  width: 1em;
+  height: 1em;
+}
+
+.codex-icon__extra {
+  position: absolute;
+  right: -0.2rem;
+  bottom: -0.2rem;
+  min-width: 1.6rem;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--paper);
+  border-radius: 999px;
+  box-shadow: 0 2px 0 rgb(0 0 0 / 30%);
+}
+
+.codex-empty {
+  padding: 1.5rem;
+  color: var(--on-felt-muted);
+  text-align: center;
+}
+
+/* Detail (dialog) */
+.codex-detail {
+  --card-w: 120px;
+
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.25rem;
+}
+
+.codex-detail__art {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.codex-detail__art .codex-icon {
+  color: var(--accent);
+}
+
+.codex-detail__text {
+  display: flex;
+  flex: 1 1 16rem;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.codex-detail__kind {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.codex-detail__desc {
+  font-size: 1.05rem;
+  line-height: 1.4;
+}
+
+.codex-detail__lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding-left: 1.2rem;
+  font-size: 0.95rem;
+}
+
+.codex-detail__note {
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+.codex-detail__flavor {
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+.codex-detail__facts {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.codex-detail__fact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.6rem;
+}
+
+.codex-detail__fact dt {
+  font-weight: 700;
+}
+
+.codex-detail__heading {
+  margin-bottom: 0.25rem;
+  font-size: 0.95rem;
+  color: var(--wood);
+}
+
+.codex-detail__condition,
+.codex-detail__stats {
+  padding: 0.6rem 0.8rem;
+  background: var(--paper-shade);
+  border-radius: var(--radius-small);
+}
+
+.codex-detail__stats ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding-left: 1.1rem;
+}
+
+.codex-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+}
+
+.codex-progress__bar {
+  flex: 1;
+  height: 0.75rem;
+  accent-color: var(--accent-dark);
+}
+
+.codex-progress__text {
+  font-weight: 700;
+}
+
+/* ─────────────────────────── Nová hra: odemykání ─────────────────────────── */
+
+.deck-option.is-locked {
+  cursor: not-allowed;
+  background: var(--paper-shade);
+}
+
+.deck-option.is-locked:hover {
+  transform: none;
+}
+
+.deck-option.is-locked .art-svg {
+  filter: brightness(0) saturate(0);
+  opacity: 0.4;
+}
+
+.deck-option__art {
+  position: relative;
+}
+
+/* Dvě třídy: obecné `.icon` (1em, styles/cards.css) se načítá později a jinak by zámek zmenšilo. */
+.deck-option__art .deck-option__lock,
+.challenge-detail__art .challenge-detail__lock,
+.codex-detail__art .codex-detail__mark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2.5rem;
+  height: 2.5rem;
+  color: var(--paper);
+  filter: drop-shadow(0 2px 0 rgb(0 0 0 / 45%));
+  transform: translate(-50%, -50%);
+}
+
+.deck-option__coaster {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: radial-gradient(circle, var(--paper) 0 52%, var(--paper-shade) 53% 60%, var(--paper) 61%);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 2px #c9b98f,
+    0 3px 0 rgb(0 0 0 / 25%);
+}
+
+.deck-option__condition {
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.deck-option__locked {
+  display: inline-block;
+  margin-right: 0.2em;
+  padding: 0.05em 0.5em;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--paper);
+  background: var(--ink-soft);
+  border-radius: 999px;
+}
+
+/* Zamčená síla piva: vybledlý tácek, ale název čitelný (tlumená barva místo průhlednosti celé položky). */
+.stake-option.is-locked {
+  cursor: not-allowed;
+}
+
+.stake-option.is-locked .stake-option__coaster {
+  opacity: 0.45;
+}
+
+.stake-option.is-locked .stake-option__name {
+  color: var(--on-felt-muted);
+}
+
+.stake-option.is-locked:hover {
+  transform: none;
+}
+
+.stake-detail__lock {
+  margin-top: 0.7rem;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.seed-field__status {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.8rem;
+  max-width: 44rem;
+  font-size: 0.95rem;
+  border-radius: var(--radius-small);
+}
+
+.seed-field__status.is-note {
+  color: var(--ink);
+  background: var(--paper-shade);
+}
+
+.seed-field__status.is-error {
+  color: var(--paper);
+  background: var(--danger);
+}
+
+.seed-field__input[aria-invalid='true'] {
+  box-shadow:
+    inset 0 2px 4px rgb(0 0 0 / 25%),
+    0 0 0 3px var(--danger);
+}
+
+/* ─────────────────────────── Statistiky a historie ─────────────────────────── */
+
+.stats-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.stats-body--history,
+.stats-body--daily {
+  grid-template-columns: 1fr;
+}
+
+/* Šéfové: příčiny proher a tabulka šéfů vedle sebe, ať hodnoty nejsou na široké obrazovce daleko od názvů. */
+.stats-body--bosses {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+}
+
+.stats-section {
+  padding: 1rem 1.25rem;
+}
+
+.stats-section__title,
+.stats-heading {
+  margin-bottom: 0.6rem;
+  font-size: 1.25rem;
+  color: var(--wood);
+}
+
+.stats-heading {
+  color: var(--accent);
+}
+
+.stat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.stat-list--compact {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+  gap: 0.3rem 1.25rem;
+}
+
+.stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.15rem 0.75rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px dashed var(--paper-shade);
+}
+
+.stat-row__label {
+  color: var(--ink-soft);
+}
+
+.stat-row__value {
+  font-weight: 700;
+  text-align: right;
+}
+
+.stat-best {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem 0.5rem;
+}
+
+.stat-best__seed {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 400;
+}
+
+.stats-note {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.stats-empty {
+  padding: 0.75rem 0;
+  color: var(--ink-soft);
+}
+
+.stats-empty.paper {
+  padding: 1rem 1.25rem;
+}
+
+/* Tabulka širší než karta (telefon) se posouvá vodorovně; stín u okraje napoví, že pokračuje (stíny se při
+   posunu odkryjí — pozadí `local` jede s obsahem, `scroll` stojí). */
+.stats-table-wrap {
+  overflow-x: auto;
+  background:
+    linear-gradient(to right, var(--paper) 40%, rgb(244 236 216 / 0%)) left / 1.5rem 100% no-repeat local,
+    linear-gradient(to left, var(--paper) 40%, rgb(244 236 216 / 0%)) right / 1.5rem 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgb(0 0 0 / 22%), transparent) left / 0.6rem 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgb(0 0 0 / 22%), transparent) right / 0.6rem 100% no-repeat
+      scroll;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.stats-table th,
+.stats-table td {
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--paper-shade);
+}
+
+.stats-table thead th {
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.stats-table .is-name {
+  text-align: left;
+}
+
+.stats-table .is-num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.stats-table tbody th {
+  font-weight: 400;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.history-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.8rem 1rem;
+  border-left: 6px solid var(--ink-soft);
+}
+
+.history-item.is-won {
+  border-left-color: var(--accent);
+}
+
+.history-item.is-lost {
+  border-left-color: var(--danger);
+}
+
+.history-item__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+}
+
+.history-item__outcome {
+  font-size: 1.1rem;
+}
+
+.history-item__no,
+.history-item__date {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.history-item__meta {
+  font-weight: 700;
+}
+
+.history-item__tag {
+  display: inline-block;
+  margin-left: 0.5em;
+  padding: 0.05em 0.5em;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--paper);
+  background: var(--ink-soft);
+  border-radius: 999px;
+}
+
+.history-item__line {
+  font-size: 0.92rem;
+}
+
+.history-item__jokers {
+  color: var(--ink-soft);
+}
+
+.history-item__seed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+}
+
+.history-item__seed-label {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.history-item__seed-value {
+  padding: 0.1em 0.45em;
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  background: var(--paper-shade);
+  border-radius: var(--radius-small);
+  overflow-wrap: anywhere;
+}
+
+.stats-section .btn--ghost,
+.history-item .btn--ghost {
+  min-width: 0;
+  color: var(--ink);
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--ink-soft);
+}
+
+.stats-section .btn--ghost:focus-visible,
+.history-item .btn--ghost:focus-visible {
+  outline: 3px solid var(--wood);
+  outline-offset: 2px;
+}
+
+.stat-best__seed code,
+.history-item__seed-value {
+  font-family: var(--font-game);
+}
+
+/* Počítadla přes celou šířku (víc sloupců). */
+.stats-section--stats-totals {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 600px) {
+  /* Tabulky statistik na telefonu: užší okraje a zalomené záhlaví, ať se vejdou bez vodorovného posouvání. */
+  .stats-section {
+    padding: 0.85rem 0.9rem;
+  }
+
+  .stats-table {
+    font-size: 0.85rem;
+  }
+
+  .stats-table th,
+  .stats-table td {
+    padding: 0.3rem 0.25rem;
+  }
+
+  .stats-table thead th,
+  .stats-table thead .is-num {
+    font-size: 0.68rem;
+    letter-spacing: 0;
+    white-space: normal;
+    vertical-align: bottom;
+  }
+
+  .codex-grid {
+    --card-w: 62px;
+
+    grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+  }
+
+  .tabs__tab {
+    font-size: 0.85rem;
+  }
+}
+
+/* ─────────────────────────── Ikona novinky (toast, pitva, výhra) ─────────────────────────── */
+
+.meta-icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  padding: 0.55rem;
+  color: var(--paper);
+  background: var(--felt);
+  border: 3px solid var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 3px 0 rgb(0 0 0 / 25%);
+}
+
+.meta-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.meta-icon--achievement {
+  color: var(--ink);
+  background: var(--accent);
+  border-color: var(--accent-dark);
+}
+
+.meta-icon--stake {
+  background: var(--wood);
+}
+
+/* ─────────────────────────── Novinky runu (pitva, výhra) ─────────────────────────── */
+
+/* Kompaktně (žetony v řadě), ať tlačítka Nová hra / Menu zůstanou na 1366 × 768 vidět bez posouvání. */
+.run-news {
+  width: 100%;
+  margin-top: 0.6rem;
+  text-align: left;
+}
+
+.run-news__title {
+  margin-bottom: 0.35rem;
+  font-size: 1rem;
+  color: var(--wood);
+}
+
+.run-news__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.run-news__item {
+  display: inline-flex;
+  gap: 0.45rem;
+  align-items: center;
+  max-width: 100%;
+  padding: 0.2rem 0.75rem 0.2rem 0.2rem;
+  background: var(--paper-shade);
+  border-radius: 999px;
+}
+
+.run-news__item .meta-icon {
+  width: 2rem;
+  height: 2rem;
+  padding: 0.3rem;
+  border-width: 2px;
+  box-shadow: none;
+}
+
+.run-news__text {
+  min-width: 0;
+}
+
+.run-news__name {
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+/* Štítek a popis čte čtečka (a ukáže je `title`), na obrazovce stačí ikona a název. */
+.run-news__eyebrow,
+.run-news__desc {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.run-news__empty {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.run-news--daily .daily-share {
+  margin-top: 0;
+}
+
+.run-news--daily .daily-share__label {
+  display: none;
+}
+
+/* ─────────────────────────── Výsledek denního runu ke sdílení ─────────────────────────── */
+
+.daily-share {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.6rem;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
+.daily-share__label {
+  flex-basis: 100%;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.daily-share__text {
+  padding: 0.2em 0.5em;
+  font-family: var(--font-game);
+  background: var(--paper-shade);
+  border-radius: var(--radius-small);
+  overflow-wrap: anywhere;
+}
+
+/* ─────────────────────────── Výzvy ─────────────────────────── */
+
+.challenges__summary {
+  width: 100%;
+  max-width: 72rem;
+  padding: 0.8rem 1.25rem;
+}
+
+.challenges__next {
+  margin-top: 0.5rem;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+}
+
+.challenges__layout {
+  display: grid;
+  grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+  width: 100%;
+  max-width: 72rem;
+}
+
+.challenges__list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.challenges__group-title {
+  margin-bottom: 0.4rem;
+  font-size: 1rem;
+  /* Světlejší pivní zlatá: drobný nadpis na suknu má v `--accent` kontrast jen 3,8 : 1. */
+  color: var(--money);
+}
+
+.challenges__items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0;
+  list-style: none;
+}
+
+.challenge-item {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.4rem 0.7rem;
+  font: inherit;
+  color: var(--on-felt);
+  text-align: left;
+  background: rgb(0 0 0 / 22%);
+  border-radius: var(--radius-small);
+  box-shadow: inset 0 0 0 2px rgb(244 236 216 / 14%);
+  transition: transform var(--t-fast) ease-out;
+}
+
+.challenge-item:hover:not(.is-selected) {
+  transform: translateX(3px);
+}
+
+.challenge-item.is-selected {
+  color: var(--ink);
+  background: var(--paper);
+  box-shadow: 0 3px 0 var(--accent-dark);
+}
+
+.challenge-item:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.challenge-item.is-locked {
+  color: var(--on-felt-muted);
+}
+
+.challenge-item.is-selected.is-locked {
+  color: var(--ink-soft);
+}
+
+.challenge-item__no {
+  flex: 0 0 1.8rem;
+  font-weight: 700;
+  text-align: right;
+  opacity: 0.75;
+}
+
+.challenge-item__name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+}
+
+.challenge-item__new {
+  padding: 0.05em 0.45em;
+  font-size: 0.72rem;
+  color: var(--paper);
+  background: var(--danger);
+  border-radius: 999px;
+}
+
+.challenge-item__status {
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: center;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+.challenge-item__status .icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.challenge-item.is-completed .challenge-item__status {
+  color: var(--accent);
+  opacity: 1;
+}
+
+.challenge-item.is-selected.is-completed .challenge-item__status {
+  color: var(--accent-dark);
+}
+
+.challenge-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1.1rem 1.25rem 1.25rem;
+}
+
+.challenge-detail__head {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.challenge-detail__art {
+  --card-w: 92px;
+
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.challenge-detail__titles {
+  min-width: 0;
+}
+
+.challenge-detail__name {
+  font-size: 1.6rem;
+  color: var(--wood);
+}
+
+.challenge-detail__badge {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  margin-top: 0.25rem;
+  padding: 0.1em 0.6em;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.challenge-detail__badge .icon {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.challenge-detail__desc {
+  margin-top: 0.4rem;
+}
+
+.challenge-detail__flavor {
+  margin-top: 0.3rem;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+.challenge-detail__heading {
+  margin-top: 0.4rem;
+  font-size: 1.05rem;
+  color: var(--wood);
+}
+
+.challenge-detail__rules {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding-left: 1.2rem;
+}
+
+.challenge-detail__note,
+.challenge-detail__hint,
+.challenge-detail__progress {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.challenge-detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+
+/* ─────────────────────────── Denní run ─────────────────────────── */
+
+.daily__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+  gap: 1rem 1.25rem;
+  align-items: start;
+  width: 100%;
+  max-width: 72rem;
+}
+
+.daily__history {
+  grid-column: 1 / -1;
+}
+
+.daily-today {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+  padding: 1.1rem 1.25rem 1.25rem;
+}
+
+.daily-today__art {
+  flex: 0 0 8rem;
+  width: 8rem;
+  height: 10rem;
+  border-radius: var(--radius-small);
+}
+
+.daily-today__art .art-svg {
+  width: auto;
+  height: 86%;
+  transform: rotate(-5deg);
+}
+
+.daily-today__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.daily-today__seed {
+  font-family: var(--font-game);
+  letter-spacing: 0.05em;
+}
+
+.daily-today__status {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-weight: 700;
+  background: var(--paper-shade);
+  border-left: 5px solid var(--accent);
+  border-radius: var(--radius-small);
+}
+
+.daily-today.is-outcome-won .daily-today__status {
+  border-left-color: var(--felt-light);
+}
+
+.daily-today.is-lost .daily-today__status,
+.daily-today.is-outcome-lost .daily-today__status {
+  border-left-color: var(--danger);
+}
+
+.daily-today__desc {
+  margin-top: 0.5rem;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+}
+
+.daily-today__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+}
+
+.daily-today .setting__hint {
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+/* Široké rozvržení: detail jede se stránkou, ať je vidět i po výběru výzvy ze spodku seznamu. Vyšší detail než
+   okno se posouvá uvnitř (odsazení vyrovnané zápornými okraji nechá místo stínu karty). */
+@media (min-width: 861px) {
+  .challenges__detail {
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100dvh - 2rem);
+    padding: 0 1rem 2.5rem;
+    margin: 0 -1rem -2.5rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+}
+
+@media (max-width: 860px) {
+  .challenges__layout,
+  .daily__layout {
+    grid-template-columns: 1fr;
+  }
+
+  /* Na úzké obrazovce detail nahoře (doporučená výzva s tlačítkem Hrát hned na očích), seznam pod ním. */
+  .challenges__detail {
+    order: -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .daily-today {
+    flex-direction: column;
+  }
+
+  .daily-today__art {
+    width: 100%;
+    height: 7rem;
+  }
+
+  .challenge-detail__head {
+    flex-direction: column;
+  }
+}
+
+.no-anim .challenge-item {
+  transition: none;
+}

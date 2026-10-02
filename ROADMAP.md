@@ -5,7 +5,7 @@
 
 ## Aktuální stav
 
-_Aktualizováno: 2026-10-02_
+_Aktualizováno: 2026-10-02 (revize fáze 8)_
 
 **Fáze 0–2 jsou hotové** (commity `chore: …`, `feat(engine): complete phase 1 …`, `feat(engine): complete phase 2 …`).
 Z fáze 2 zůstal jen podúkol „První kalibrace křivky cílů“ — předběžná kalibrace proběhla ve fázi 5
@@ -55,9 +55,9 @@ v `docs/DECISIONS.md`, 2026-10-02 „Revize fáze 6“): 25 běžných + 5 finá
 `tests/e2e/bosses.spec.ts`), ladění simulací (DESIGN 8.2/8.3, DECISIONS „Fáze 6: ladění se šéfy“), testy
 `tests/unit/{bosses-a,bosses-b,bosses-final,tags,sim-bosses,ui-bosses,phase6-review}.test.ts`.
 
-**Fáze 7 (obsah naplno): všechny podúkoly hotové a ověřené, čeká na commit** `content: full content set` (orchestrátor;
-rozpracovaný stav je v `ae43ec8 wip: phase 7 close …`, dokončení v pracovním stromu). Odemykání vyšší síly piva
-výhrou na nižší je přesunuté do fáze 8 (potřebuje profil). Uzavření (DECISIONS 2026-10-02 „Balanc po fázi 7“):
+**Fáze 7 (obsah naplno) je hotová** a commitnutá (`b6a0e52 content: complete phase 7 jokers to 101, 12 decks`,
+`9ba4597 content: close phase 7 with renames and stake balance`). Odemykání vyšší síly piva výhrou na nižší se
+dodělalo ve fázi 8. Uzavření (DECISIONS 2026-10-02 „Balanc po fázi 7“):
 
 - **Převzaté názvy přejmenované:** kupóny Žlutá cenovka / Přelepená cenovka (dřív Věrnostní karta / Zlatá
   věrnostní), Sběratelská burza (Kartářka), štítky Rentgen od zubaře (Fotonegativ) a Leták ve schránce (Úřední
@@ -72,25 +72,42 @@ výhrou na nižší je přesunuté do fáze 8 (potřebuje profil). Uzavření (D
   srazil Desítku na 12 %, 100 000 na 3 % — křivky 1–2 zůstávají, plán na „statisíce“ (silnější boti, pak křivky po
   krocích) je v DECISIONS a ve fázi 10.
 
-Kontroly (2026-10-02, celý pracovní strom včetně rozpracované fáze 8): `typecheck` a `eslint src tests scripts`
-zelené, `vitest run` 3 466 / 3 467 (64 souborů) — padá jen `tests/unit/challenges.test.ts` („express: bot dohraje run
-bez neplatných akcí“, `cannotUse`), tedy test rozpracované fáze 8 (výzvy); soubory fáze 7 jsou zelené.
+**Fáze 8 (meta): všechny podúkoly hotové, revidované a ověřené, čeká na commit** `feat(meta): …` (orchestrátor;
+rozpracovaný stav je ve `wip: phase 8 …` commitech, dokončení v pracovním stromu). Shrnutí (DECISIONS 2026-10-02
+„Fáze 8 (M1)“ až „(M5)“, „Fáze 8: vizuální kontrola meta obrazovek“, „Revize a uzavření fáze 8“):
+
+- **Engine** `src/engine/meta/*` (bez DOM a hodin): profil `karban.profile` (verze 1, migrace, `normalizeProfile`
+  opraví poškozená pole, poškozená obálka → záloha `karban.profile.backup.<ms>`), odemykání podle `UnlockCondition`
+  (70 / 101 žolíků, 2 / 12 balíčků, 12 / 24 kupónů od začátku; síla piva per balíček výhrou na nižší), objevy
+  (startovní výbava až po první vyhrané útratě), statistiky, historie (50), denní run `DEN-YYYYMMDD` (UTC, jeden
+  oficiální pokus; import ho nevrátí), seedované runy jen do historie, 78 achievementů, tutoriál.
+- **Obsah:** 20 výzev (`src/content/challenges.ts`, 4 várky po 1 / 3 / 6 / 10 výhrách), 78 achievementů
+  (`src/content/achievements.ts`), texty `src/i18n/cs/{challenges,achievements,meta}.ts`.
+- **UI:** Nová hra (zámky s podmínkou a průběhem, tácky), Sbírka (14 záložek včetně Obálek), Statistiky (přehled,
+  balíčky, síla piva, šéfové, historie, denní runy), Výzvy, Denní run (sdílení), oznámení s frontou a štítkem
+  „Nové“, pitva / výhra s novinkami runu, tutoriál Štamgast (`src/ui/tutorial.ts`), Nastavení s exportem / importem
+  / resetem (záloha profilu, bez zálohy se nic nepřepíše).
+- **Testy:** unit `tests/unit/meta-*.test.ts`, `achievements`, `unlocks-content`, `challenges`, `challenge-rules`,
+  `ui-meta-*` a `phase8-review`; e2e `tests/e2e/meta.spec.ts` (8 scénářů), snímky `visual-meta.spec.ts`
+  (`KARBAN_VISUAL=1`).
+
+Kontroly (2026-10-02, celý pracovní strom): `typecheck`, `lint` (eslint + prettier), `npm test` (71 souborů,
+3 669 testů), `build` (jen staré varování o chunku nad 500 kB) a `test:e2e` (63 prošlo, 170 snímků vizuálních sad
+přeskočeno bez `KARBAN_VISUAL=1`) zelené.
 
 **Známé otevřené body (řešit v uvedené fázi):**
 
-- fáze 8: odemykání vyšší síly piva výhrou na nižší (per balíček, DESIGN 10); objev tajných kombinací přes runy;
-  komentáře se starými názvy v `src/engine/{types,content-types}.ts`, `src/engine/shop/prices.ts`,
-  `src/ui/screens/game/shop.ts` (Kartářka, Fotonegativ) opravit při nejbližší úpravě;
 - fáze 9: na 1366 × 768 se pod Večerku vejdou jen 1–2 hlášky — tři vyšší jdou pod záhlaví a na chvíli zakryjí obrázek
   zboží (ne tlačítka); pořadí hlášek po pranostice („… je teď na úrovni 2“ před „Použito: …“) podle pořadí událostí;
+  zvuky a hudba (hlasitosti už jsou v profilu, `settings.volumeHint` odkazuje na fázi 9 — po dokončení text upravit);
+  na telefonu se tabulka balíčků ve Statistikách posouvá vodorovně (jen stín u okraje);
 - fáze 10: patro 8 „řádově statisíce“ (plán v DECISIONS „Balanc po fázi 7“, bod 5); Speciál boty nebrzdí
   (zvětrávání 0 / 25 / 50 % → stejné výhry); Obrázkový, Notářský, Babiččin a Kalendářový nad ±7 p. b. od
-  Hospodského; Δ výher žolíků v `simulate` normalizovat na patro koupě; normovaná letalita šéfů (Pan starosta 18 %).
+  Hospodského; Δ výher žolíků v `simulate` normalizovat na patro koupě; normovaná letalita šéfů (Pan starosta 18 %);
+  jazyková korektura zbytku textů (texty fáze 8 revidované, test rodové neutrality hlídá všechny).
 
-**Další krok:** commit fáze 7 (`content: full content set`) — soubory fáze 7 v pracovním stromu: `src/content/{decks,
-stakes}.ts`, `src/i18n/cs/{decks,stakes}.ts`, `src/engine/run/targets.ts`, `src/engine/sim/runner.ts`,
-`tests/unit/{stakes,targets,endless,game,decks,review-correctness}.test.ts`, `docs/{DESIGN,DECISIONS}.md`,
-`ROADMAP.md`; pak dokončit fázi 8.
+**Další krok:** commit fáze 8 (`feat(meta): …`, celý pracovní strom), pak **Fáze 9 — Šťáva a zvuk** (první podúkol:
+částice na `<canvas>` overlay, screen shake, tilt a hover karet, počítadlo skóre).
 
 ## Jak pokračovat v nové session
 
@@ -262,7 +279,7 @@ přeskočení útraty dá štítek s funkčním bonusem; kontroly zelené; commi
 - [x] Žolíci na **100+**, z toho **6+ legendárních**; rozložení vzácností a cen dle `docs/DESIGN.md`; každý s testem a rozpoznatelným artem
 - [x] **12 startovních balíčků** (`src/content/decks.ts`), každý mění pravidla (např. Mariášový s 32 kartami, jen figury, náhodné pečetě, Dlužník se záporným zůstatkem a 2× úrokem)
 - [x] **8 obtížností „Síla piva“** (Desítka, Jedenáctka, Dvanáctka, Speciál, Ležák, Bock, Doppelbock, Imperial) — kumulativní ztížení, nálepky žolíků (přibitý, zvětrávající, zapůjčený)
-- [ ] Odemykání vyšší obtížnosti výhrou na nižší — _přesunuto do fáze 8: pravidlo je v DESIGN 10 a výběr síly piva v „Nová hra“ hotový, ale výhry si pamatuje až profil (`engine/meta`)_
+- [x] Odemykání vyšší obtížnosti výhrou na nižší — _přesunuto do fáze 8 a tam hotové (`unlockNextStake` v `src/engine/meta/runs.ts`, per balíček)_
 - [x] Tajné kombinace v UI skryté do prvního zahrání (pranostiky pro ně jen po objevu) — v rámci runu (Info o runu „???“, `secret-hands.test.ts`); objev přes runy v profilu a ve Sbírce patří fázi 8
 - [x] Nekonečný režim: exponenciální cíle, finálový šéf každé 8. patro, statistika nejvyššího patra — patro runu v pitvě; nejvyšší patro v profilových statistikách patří fázi 8
 - [x] Výběr balíčku a obtížnosti v „Nová hra“ (+ zadání seedu)
@@ -274,19 +291,20 @@ všech balíčcích; kontroly zelené; commit `content: full content set`; fáze
 
 ## Fáze 8 — Meta
 
-- [ ] `engine/meta`: profil hráče (verzovaný formát, migrace, záloha poškozených dat `karban.profile.backup.<timestamp>`)
-- [ ] Odemykání podle `UnlockCondition` (žolíci, balíčky, kupóny, kombinace) + oznámení v UI
-- [ ] Odemykání vyšší síly piva výhrou na nižší (pro každý balíček zvlášť, DESIGN 10) — _přesunuto z fáze 7_
-- [ ] **Sbírka** (codex): žolíci, spotřebky, kupóny, balíčky, šéfové, štítky, kombinace, úpravy — s podmínkami odemčení, neobjevené jako siluety
-- [ ] **60+ achievementů** s vtipnými názvy (`src/content/achievements.ts`), toast při získání
-- [ ] **Statistiky**: nejlepší ruka, nejvyšší skóre, nejčastější žolík, výhry/prohry podle balíčku a obtížnosti
-- [ ] **20 výzev** (`src/content/challenges.ts`) s vlastními pravidly a obrazovkou výzev
-- [ ] **Denní run** (seed `DEN-YYYYMMDD` v UTC, stejný pro všechny) a **seedované runy** (zadání/kopírování seedu)
-- [ ] **Historie runů** (posledních N runů se seedem, balíčkem, výsledkem)
-- [ ] Export/import JSON (profil i rozehraný run), reset profilu s potvrzením
-- [ ] **Tutoriál** se „Štamgastem“ (bubliny, přeskočit, znovu zapnout v nastavení)
-- [ ] Testy: migrace profilu, odemykání, achievementy, denní seed, export/import roundtrip
-- [ ] e2e: uložit/načíst, otevřít sbírku
+- [x] `engine/meta`: profil hráče (verzovaný formát, migrace, záloha poškozených dat `karban.profile.backup.<timestamp>`)
+- [x] Odemykání podle `UnlockCondition` (žolíci, balíčky, kupóny, kombinace) + oznámení v UI
+- [x] Odemykání vyšší síly piva výhrou na nižší (pro každý balíček zvlášť, DESIGN 10) — _přesunuto z fáze 7_
+- [x] **Sbírka** (codex): žolíci, spotřebky, kupóny, obálky, balíčky, šéfové, štítky, síly piva, kombinace, úpravy, výzvy, achievementy — s podmínkami odemčení, neobjevené jako siluety
+- [x] **60+ achievementů** (78) s vtipnými názvy (`src/content/achievements.ts`), toast při získání
+- [x] **Statistiky**: nejlepší ruka, nejvyšší skóre, nejčastější žolík, výhry/prohry podle balíčku a obtížnosti
+- [x] **20 výzev** (`src/content/challenges.ts`) s vlastními pravidly a obrazovkou výzev
+- [x] **Denní run** (seed `DEN-YYYYMMDD` v UTC, stejný pro všechny) a **seedované runy** (zadání/kopírování seedu)
+- [x] **Historie runů** (posledních N runů se seedem, balíčkem, výsledkem)
+- [x] Export/import JSON (profil i rozehraný run), reset profilu s potvrzením
+- [x] **Tutoriál** se „Štamgastem“ (bubliny, přeskočit, znovu zapnout v nastavení)
+- [x] Testy: migrace profilu, odemykání, achievementy, denní seed, export/import roundtrip
+- [x] e2e: uložit/načíst, otevřít sbírku (`tests/e2e/meta.spec.ts`, 8 scénářů; snímky `visual-meta.spec.ts` s `KARBAN_VISUAL=1`)
+- [x] Revize fáze 8: texty, profil se nikdy neztratí, ochrana proti farmení, počty (DECISIONS „Revize a uzavření fáze 8“)
 
 **Hotovo, když:** profil přežije reload i export/import, odemykání a achievementy fungují, denní run
 dává stejný seed; kontroly zelené; commit `feat(meta): …`; fáze odškrtnutá.

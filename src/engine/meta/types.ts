@@ -254,6 +254,12 @@ export interface RunCounters {
   /** Kola vyhraná první rukou; z toho šéfové. */
   firstHandRoundWins: number;
   bossesFirstHand: number;
+  /**
+   * `RunState.nextUid` při zaevidování runu: žolíci a spotřebky s nižším uid jsou startovní výbava (balíček,
+   * výzva) a do sbírky se zapíšou až po první vyhrané útratě — opakované zakládání runu sbírku „nefarmí“.
+   * 0 = bez omezení (starší profil).
+   */
+  startUid: number;
 }
 
 /** Meta údaje rozehraného runu (v profilu, aby přežily reload a šlo zapsat i opuštěný run). */

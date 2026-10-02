@@ -322,7 +322,8 @@ flavor a že texty dodržují typografii.
   = kladné celé číslo), odmítne novější verzi a po migracích zkontroluje tvar stavu (fáze, RNG streamy, pole);
   vstupní objekt nemění. Chyby: `SaveError.code` = `invalidJson` / `invalidFormat` / `wrongKind` / `tooNew` /
   `migrationFailed` (`tests/unit/save.test.ts`). Profil se nikdy nesmí ztratit: při chybě načtení se poškozená data
-  zálohují do `karban.profile.backup.<timestamp>`.
+  zálohují do `karban.profile.backup.<timestamp>` (`writeProfileBackup`: klíč z jedné ms se nepřepíše); bez zapsané
+  zálohy se poškozená data nepřepíšou (profil jen v paměti) a reset ani import neproběhnou (`ProfileBackupError`).
 - Export/import JSON z nastavení.
 
 ### 5.1 Profil a meta vrstva (`src/engine/meta`)

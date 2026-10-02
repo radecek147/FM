@@ -53,6 +53,7 @@ export class GameController {
   private animating = false;
   private presenter: Presenter;
   private observer: RunObserver | null;
+  private eventListeners = new Set<(events: readonly GameEvent[]) => void>();
 
   private constructor(
     private game: Game,
@@ -122,6 +123,15 @@ export class GameController {
     return () => this.listeners.delete(fn);
   }
 
+  /**
+   * Události každé úspěšné akce (po uložení a po profilu, před animacemi) — např. tutoriál pozná zahranou ruku.
+   * Chyba posluchače hru nezastaví. Vrací odhlášení.
+   */
+  onEvents(fn: (events: readonly GameEvent[]) => void): () => void {
+    this.eventListeners.add(fn);
+    return () => this.eventListeners.delete(fn);
+  }
+
   notify(): void {
     for (const l of [...this.listeners]) l();
   }
@@ -169,6 +179,7 @@ export class GameController {
     }
     this.save();
     this.observe(() => this.observer?.onEvents(res.events, this));
+    for (const fn of [...this.eventListeners]) this.observe(() => fn(res.events));
     const hand = this.handIds();
     this.selected = this.selected.filter((id) => hand.includes(id));
     this.animating = true;

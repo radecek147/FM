@@ -145,6 +145,7 @@ export function emptyRunCounters(): RunCounters {
     vouchersBought: [],
     firstHandRoundWins: 0,
     bossesFirstHand: 0,
+    startUid: 0,
   };
 }
 
@@ -390,6 +391,7 @@ function normCounters(x: unknown): RunCounters {
     vouchersBought: strList(c.vouchersBought),
     firstHandRoundWins: count(c.firstHandRoundWins),
     bossesFirstHand: count(c.bossesFirstHand),
+    startUid: count(c.startUid),
   };
 }
 

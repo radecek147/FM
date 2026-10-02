@@ -20,6 +20,19 @@ export { DEFAULT_SETTINGS, sanitizeSettings } from '../engine/meta';
 /** Předpona klíčů záloh poškozeného profilu (`karban.profile.backup.<timestamp>`). */
 export const PROFILE_BACKUP_PREFIX = `${STORAGE_KEYS.profile}.backup.`;
 
+/**
+ * Zapíše zálohu profilu `raw` do `karban.profile.backup.<ms>` a vrátí její klíč, nebo null, když ji úložiště
+ * odmítlo. Dvě zálohy v jedné milisekundě se nepřepíšou (klíč se posune o 1 ms); stejný obsah pod stejným klíčem
+ * se nezdvojuje.
+ */
+export function writeProfileBackup(store: KeyValueStore, raw: string, now: Date): string | null {
+  let ms = now.getTime();
+  let key = `${PROFILE_BACKUP_PREFIX}${ms}`;
+  for (let existing = store.get(key); existing !== null && existing !== raw; existing = store.get(key))
+    key = `${PROFILE_BACKUP_PREFIX}${++ms}`;
+  return store.set(key, raw) ? key : null;
+}
+
 /** Uloží profil (obálka `karban-save`, kind `profile`). Vrací false, když úložiště zápis odmítlo. */
 export function saveStoredProfile(store: KeyValueStore, profile: Profile, now: Date = new Date()): boolean {
   return store.set(STORAGE_KEYS.profile, serializeProfile(profile, now.toISOString()));
@@ -64,9 +77,8 @@ export function restoreStoredProfile(store: KeyValueStore, now: Date = new Date(
   }
   let backupKey: string | null = null;
   if (res.status === 'corrupt') {
-    const key = `${PROFILE_BACKUP_PREFIX}${now.getTime()}`;
-    const backedUp = res.backup !== undefined && store.set(key, res.backup);
-    if (!backedUp) return out(false);
+    const key = res.backup === undefined ? null : writeProfileBackup(store, res.backup, now);
+    if (!key) return out(false);
     backupKey = key;
   }
   if (saveStoredProfile(store, res.profile, now) && legacy !== null) store.remove(STORAGE_KEYS.settings);

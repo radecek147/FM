@@ -28,6 +28,7 @@ import { createJokerCard, previewJoker } from '../components/jokerCard';
 import { isModalOpen, openModal } from '../components/modal';
 import { createTabs } from '../components/tabs';
 import {
+  boosterTexts,
   bossTexts,
   challengeTexts,
   consumableTexts,
@@ -52,6 +53,7 @@ export const COLLECTION_TABS = [
   'rady',
   'razitka',
   'vouchers',
+  'boosters',
   'tags',
   'bosses',
   'decks',
@@ -225,7 +227,8 @@ export function collectionEntries(
           isNew: isNew('jokers', def.id),
           art: () => createJokerCard(previewJoker(def.id, registry), { tooltip: false, registry }),
           detail: () => {
-            if (!known) return hiddenDetail({ state, name }, kind, unlockInfo(profile, registry, 'jokers', def.id));
+            if (!known)
+              return hiddenDetail({ state, name }, kind, unlockInfo(profile, registry, 'jokers', def.id));
             const tx = jokerTexts(def.id, undefined, { registry });
             return textsDetail(tx, `${kind} · ${tx.rarity}`, {
               facts: [{ label: t('meta.collection.detail.price'), value: formatMoney(def.cost) }],
@@ -299,6 +302,30 @@ export function collectionEntries(
         };
       });
 
+    case 'boosters':
+      return Object.values(registry.boosters).map((def, order): CollectionEntry => {
+        const state = collectionState(profile, registry, 'boosters', def.id);
+        const known = state === 'discovered';
+        const tx = boosterTexts(def.id, { registry });
+        const name = known ? tx.name : hiddenName(state);
+        return {
+          id: def.id,
+          category: 'boosters',
+          state,
+          name,
+          order,
+          usage: null,
+          isNew: isNew('boosters', def.id),
+          art: () => createContentCard('booster', def.id, { tooltip: false, registry }),
+          detail: () =>
+            known
+              ? textsDetail(tx, t('art.kind.booster'), {
+                  facts: [{ label: t('meta.collection.detail.price'), value: formatMoney(def.cost) }],
+                })
+              : hiddenDetail({ state, name }, t('art.kind.booster'), null),
+        };
+      });
+
     case 'tags':
       return Object.values(registry.tags).map((def, order): CollectionEntry => {
         const state = collectionState(profile, registry, 'tags', def.id);
@@ -315,7 +342,9 @@ export function collectionEntries(
           isNew: isNew('tags', def.id),
           art: () => createContentCard('tag', def.id, { tooltip: false, registry }),
           detail: () =>
-            known ? textsDetail(tx, t('art.kind.tag')) : hiddenDetail({ state, name }, t('art.kind.tag'), null),
+            known
+              ? textsDetail(tx, t('art.kind.tag'))
+              : hiddenDetail({ state, name }, t('art.kind.tag'), null),
         };
       });
 
@@ -408,22 +437,28 @@ export function collectionEntries(
             isNew: isNew('stakes', def.id),
             art: () => createContentCard('stake', def.id, { tooltip: false, registry }),
             detail: () =>
-              textsDetail(tx, `${t('art.kind.stake')} · ${t('meta.collection.detail.stakeLevel', { level: def.level })}`, {
-                condition:
-                  state === 'locked'
-                    ? {
-                        text: t('meta.collection.stakeCondition', { stake: stakeName(registry, def.level - 1) }),
-                        progress: 0,
-                        target: 1,
-                        met: false,
-                        progressText: null,
-                      }
-                    : null,
-                stats:
-                  state === 'locked'
-                    ? null
-                    : [t('meta.collection.usage.stakePlayed', { n: ws?.played ?? 0, won: ws?.won ?? 0 })],
-              }),
+              textsDetail(
+                tx,
+                `${t('art.kind.stake')} · ${t('meta.collection.detail.stakeLevel', { level: def.level })}`,
+                {
+                  condition:
+                    state === 'locked'
+                      ? {
+                          text: t('meta.collection.stakeCondition', {
+                            stake: stakeName(registry, def.level - 1),
+                          }),
+                          progress: 0,
+                          target: 1,
+                          met: false,
+                          progressText: null,
+                        }
+                      : null,
+                  stats:
+                    state === 'locked'
+                      ? null
+                      : [t('meta.collection.usage.stakePlayed', { n: ws?.played ?? 0, won: ws?.won ?? 0 })],
+                },
+              ),
           };
         });
 
@@ -679,11 +714,16 @@ function sortModes(tab: CollectionTab): SortMode[] {
 
 function stateLabel(entry: CollectionEntry): string {
   if (entry.category === 'achievements')
-    return t(entry.state === 'discovered' ? 'meta.collection.states.earned' : 'meta.collection.states.notEarned');
+    return t(
+      entry.state === 'discovered' ? 'meta.collection.states.earned' : 'meta.collection.states.notEarned',
+    );
   return t(`meta.collection.states.${entry.state}`);
 }
 
-function tile(entry: CollectionEntry, onOpen: (entry: CollectionEntry, el: HTMLElement) => void): HTMLElement {
+function tile(
+  entry: CollectionEntry,
+  onOpen: (entry: CollectionEntry, el: HTMLElement) => void,
+): HTMLElement {
   const silhouette = entry.state !== 'discovered';
   const el = h(
     'button',
@@ -718,20 +758,36 @@ function detailBody(entry: CollectionEntry): HTMLElement {
   const condition = d.condition;
   return h(
     'div',
-    { class: ['codex-detail', `is-${entry.state}`], 'data-testid': 'codex-detail-body' },
+    {
+      class: ['codex-detail', `is-${entry.state}`],
+      'data-testid': 'codex-detail-body',
+      'data-category': entry.category,
+    },
     h(
       'div',
       { class: ['codex-detail__art', silhouette ? 'is-silhouette' : ''], 'aria-hidden': 'true' },
       entry.art(),
+      // Silueta v dialogu na papíře je jen šedý obdélník — zámek (neodemčeno) nebo otazník (neobjeveno) přes ni.
+      silhouette && entry.category !== 'achievements'
+        ? iconElement(entry.state === 'locked' ? 'padlock' : 'help', { className: 'codex-detail__mark' })
+        : null,
     ),
     h(
       'div',
       { class: 'codex-detail__text' },
       h('p', { class: 'codex-detail__kind' }, d.kind),
       d.desc ? h('p', { class: 'codex-detail__desc', 'data-testid': 'codex-detail-desc' }, d.desc) : null,
-      d.lines && d.lines.length > 0 ? h('ul', { class: 'codex-detail__lines' }, d.lines.map((l) => h('li', null, l))) : null,
+      d.lines && d.lines.length > 0
+        ? h(
+            'ul',
+            { class: 'codex-detail__lines' },
+            d.lines.map((l) => h('li', null, l)),
+          )
+        : null,
       d.note ? h('p', { class: 'codex-detail__note', 'data-testid': 'codex-detail-note' }, d.note) : null,
-      d.flavor ? h('p', { class: 'codex-detail__flavor' }, t('meta.collection.detail.flavor', { text: d.flavor })) : null,
+      d.flavor
+        ? h('p', { class: 'codex-detail__flavor' }, t('meta.collection.detail.flavor', { text: d.flavor }))
+        : null,
       d.facts.length > 0
         ? h(
             'dl',
@@ -768,7 +824,11 @@ function detailBody(entry: CollectionEntry): HTMLElement {
             { class: 'codex-detail__stats' },
             h('h3', { class: 'codex-detail__heading' }, t('meta.collection.detail.stats')),
             d.stats.length > 0
-              ? h('ul', null, d.stats.map((l) => h('li', null, l)))
+              ? h(
+                  'ul',
+                  null,
+                  d.stats.map((l) => h('li', null, l)),
+                )
               : h('p', null, t('meta.collection.usage.none')),
           )
         : null,
@@ -830,7 +890,12 @@ function selectControl(
     },
     options.map((o) => h('option', { value: o.value, selected: o.value === value }, o.label)),
   );
-  return h('div', { class: 'codex-select' }, h('label', { for: id, class: 'codex-select__label' }, label), select);
+  return h(
+    'div',
+    { class: 'codex-select' },
+    h('label', { for: id, class: 'codex-select__label' }, label),
+    select,
+  );
 }
 
 interface TabView {
@@ -895,7 +960,14 @@ export const collectionScreen: ScreenFactory = (app: App, params) => {
       className: 'modal--codex',
       testId: 'codex-detail',
       body: () => detailBody(entry),
-      actions: [{ label: t('meta.collection.detail.close'), variant: 'paper', autofocus: true, testId: 'codex-detail-close' }],
+      actions: [
+        {
+          label: t('meta.collection.detail.close'),
+          variant: 'paper',
+          autofocus: true,
+          testId: 'codex-detail-close',
+        },
+      ],
     });
   };
 
@@ -903,11 +975,15 @@ export const collectionScreen: ScreenFactory = (app: App, params) => {
     const v = view(tab);
     const arranged = arrangeEntries(entries, v);
     if (entries.length === 0) {
-      host.replaceChildren(h('p', { class: 'codex-empty', 'data-testid': 'codex-empty' }, t('meta.collection.empty')));
+      host.replaceChildren(
+        h('p', { class: 'codex-empty', 'data-testid': 'codex-empty' }, t('meta.collection.empty')),
+      );
       return;
     }
     if (arranged.length === 0) {
-      host.replaceChildren(h('p', { class: 'codex-empty', 'data-testid': 'codex-empty' }, t('meta.collection.emptyFilter')));
+      host.replaceChildren(
+        h('p', { class: 'codex-empty', 'data-testid': 'codex-empty' }, t('meta.collection.emptyFilter')),
+      );
       return;
     }
     const groups = new Map<string, CollectionEntry[]>();
@@ -917,13 +993,20 @@ export const collectionScreen: ScreenFactory = (app: App, params) => {
       list.push(e);
       groups.set(g, list);
     }
-    const grouped = tab === 'mods' || tab === 'bosses';
+    // Nadpis skupiny: vylepšení / pečetě / edice, běžní / finální šéfové a kategorie achievementů (bez nadpisu
+    // by mezery mezi skupinami achievementů vypadaly jako chyba rozvržení).
+    const groupTitle = (g: string): string | undefined => {
+      if (!g) return undefined;
+      if (tab === 'mods' || tab === 'bosses') return t(`meta.collection.groups.${g}`);
+      if (tab === 'achievements') return t(`meta.collection.achievementCategories.${g}`);
+      return undefined;
+    };
     host.replaceChildren(
       ...[...groups].map(([g, list]) =>
         h(
           'section',
-          { class: 'codex-group', 'aria-label': grouped && g ? t(`meta.collection.groups.${g}`) : undefined },
-          grouped && g ? h('h2', { class: 'codex-group__title' }, t(`meta.collection.groups.${g}`)) : null,
+          { class: 'codex-group', 'aria-label': groupTitle(g) },
+          groupTitle(g) ? h('h2', { class: 'codex-group__title' }, groupTitle(g)) : null,
           h(
             'div',
             { class: ['codex-grid', `codex-grid--${tab}`], role: 'list' },
@@ -998,10 +1081,18 @@ export const collectionScreen: ScreenFactory = (app: App, params) => {
             'data-testid': 'codex-count',
             'aria-label': t('meta.collection.countLabel', { n: discovered, total: entries.length }),
           },
-          h('span', { 'aria-hidden': 'true' }, t('meta.collection.count', { n: discovered, total: entries.length })),
+          h(
+            'span',
+            { 'aria-hidden': 'true' },
+            t('meta.collection.count', { n: discovered, total: entries.length }),
+          ),
         ),
         controls.length > 0
-          ? h('div', { class: 'codex-controls', role: 'group', 'aria-label': t('meta.collection.filters.label') }, controls)
+          ? h(
+              'div',
+              { class: 'codex-controls', role: 'group', 'aria-label': t('meta.collection.filters.label') },
+              controls,
+            )
           : null,
       ),
       gridHost,

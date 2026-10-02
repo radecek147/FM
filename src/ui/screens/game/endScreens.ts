@@ -1,8 +1,10 @@
 /**
  * Konec runu: **pitva** (příčina — útrata nebo šéf + hláška `bosses.<id>.death`, statistiky, seed ke
- * zkopírování, Nová hra / Menu) a **výhra** (titulky se statistikou runu → Konec / Nekonečný režim).
- * Uložený run maže controller při `game_over` sám; Konec po výhře ho smaže taky (run je dohraný).
+ * zkopírování, Nová hra / Menu) a **výhra** (titulky se statistikou runu → Konec / Nekonečný režim). Obojí navíc
+ * ukáže novinky z runu (odemčené věci a achievementy, `ProfileController.runNotices`) a u denního runu výsledek ke
+ * sdílení. Uložený run maže controller při `game_over` sám; Konec po výhře ho smaže taky (run je dohraný).
  */
+import '../../styles/meta.css';
 import type { RunState } from '../../../engine';
 import { hasKey, t } from '../../../i18n/cs';
 import { formatMoney, formatNumber } from '../../../i18n/format';
@@ -12,6 +14,9 @@ import { button } from '../../components/button';
 import { GameController } from '../../controller';
 import { blindName, bossTexts } from '../../describe';
 import { h } from '../../dom';
+import { runNoveltiesBlock } from '../../metaNotices';
+import { shareBlock } from '../daily';
+import { dailyShareText } from '../stats';
 import type { GameCtx } from './shared';
 import { copySeed, statRow } from './shared';
 
@@ -110,6 +115,29 @@ function deathBlock(ctx: GameCtx, cause: string): HTMLElement {
   );
 }
 
+/** Novinky z runu (odemčení, achievementy) — co profil v runu oznámil. */
+function novelties(ctx: GameCtx): HTMLElement {
+  const s = ctx.controller.state;
+  const profiles = ctx.app.profiles;
+  const counted = profiles.runRecord(s)?.counted ?? true;
+  return runNoveltiesBlock(profiles.runNotices(s), ctx.registry, counted);
+}
+
+/** Denní run: výsledek ke sdílení („Karban DEN-20261001 · patro 7 · nejlepší ruka 1 234 560“). */
+function dailyBlock(ctx: GameCtx): HTMLElement | null {
+  const s = ctx.controller.state;
+  if (!s.daily) return null;
+  const rec = ctx.app.profiles.runRecord(s);
+  const official = rec?.entry ? rec.entry.official : ctx.app.profile.current?.official === true;
+  return h(
+    'section',
+    { class: 'run-news run-news--daily', 'aria-labelledby': 'run-daily-title', 'data-testid': 'run-daily' },
+    h('h3', { class: 'run-news__title', id: 'run-daily-title' }, t('meta.runEnd.dailyTitle')),
+    shareBlock(dailyShareText(s.seed, s.ante, s.stats.bestHandScore), 'run-daily-share'),
+    official ? null : h('p', { class: 'run-news__empty' }, t('meta.runEnd.dailyUnofficial')),
+  );
+}
+
 export function renderGameOver(ctx: GameCtx): HTMLElement {
   const s = ctx.controller.state;
   const info = s.gameOver;
@@ -140,6 +168,8 @@ export function renderGameOver(ctx: GameCtx): HTMLElement {
     runStats(s),
     runMeta(ctx),
     seedBlock(s.seed),
+    dailyBlock(ctx),
+    novelties(ctx),
     h(
       'div',
       { class: 'game-panel__actions' },
@@ -182,7 +212,8 @@ export function renderVictory(ctx: GameCtx): HTMLElement {
       { class: 'game-panel__header' },
       iconElement('trophy', { className: 'game-panel__icon' }),
       h('h2', { class: 'game-panel__title victory__title', id: 'victory-title' }, t('game.victory.title')),
-      h('p', { class: 'game-panel__subtitle' }, t('game.victory.subtitle')),
+      // Patro výhry čte stav (výchozí 8, Konec světa 12).
+      h('p', { class: 'game-panel__subtitle' }, t('game.victory.subtitle', { ante: s.ante })),
     ),
     h(
       'div',
@@ -191,6 +222,8 @@ export function renderVictory(ctx: GameCtx): HTMLElement {
       h('div', { class: 'victory__stats', style: { '--i': lines.length } }, runStats(s)),
     ),
     seedBlock(s.seed),
+    dailyBlock(ctx),
+    novelties(ctx),
     h(
       'div',
       { class: 'game-panel__actions' },

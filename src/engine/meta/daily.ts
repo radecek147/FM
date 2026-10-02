@@ -104,6 +104,21 @@ export function isDailyAvailable(profile: Readonly<Profile>, nowIso: string): bo
   return profile.daily[dailyDateKey(nowIso)] === undefined;
 }
 
+/**
+ * Doplní do profilu `target` záznamy denních runů z `source`, které v něm chybí (import staršího profilu):
+ * oficiální pokus dne zůstane spotřebovaný — import ho nevrátí (DESIGN 11.7, jeden oficiální pokus denně).
+ * Záznamy, které `target` má, nemění. Vrací počet doplněných dní. Mutuje `target`.
+ */
+export function mergeDailyRecords(target: Profile, source: Readonly<Profile>): number {
+  let added = 0;
+  for (const [key, rec] of Object.entries(source.daily)) {
+    if (target.daily[key] !== undefined) continue;
+    target.daily[key] = { ...rec };
+    added++;
+  }
+  return added;
+}
+
 /** Následující den klíče `YYYYMMDD`. */
 function nextDayKey(key: string): string {
   const t = Date.UTC(Number(key.slice(0, 4)), Number(key.slice(4, 6)) - 1, Number(key.slice(6, 8)) + 1);

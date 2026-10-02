@@ -139,11 +139,11 @@ export interface EngineApi {
   }): boolean;
   /**
    * Dá prvnímu neprodanému žolíkovi bez edice v otevřené Večerce edici `edition`, s `noSurcharge` bez příplatku
-   * (Vyleštěné příbory, Fotonegativ). Vrací false, když takový žolík v nabídce není (nebo Večerka není otevřená).
+   * (Vyleštěné příbory, Rentgen od zubaře). Vrací false, když takový žolík v nabídce není (nebo Večerka není otevřená).
    */
   setShopJokerEdition(edition: EditionId, opts?: { noSurcharge?: boolean }): boolean;
   /**
-   * Přidá do otevřené Večerky kupón navíc jen pro tuto Večerku (Úřední poukaz) — z kupónů, které jde teď koupit
+   * Přidá do otevřené Večerky kupón navíc jen pro tuto Večerku (Leták ve schránce) — z kupónů, které jde teď koupit
    * a v nabídce nejsou. Vrací id kupónu, nebo null (žádný není, Večerka zavřená).
    */
   addShopVoucher(): string | null;

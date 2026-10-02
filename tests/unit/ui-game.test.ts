@@ -383,6 +383,13 @@ describe('herní obrazovka – ovládání', () => {
     const table = document.querySelector('[data-testid="run-info-hands"]');
     expect(table?.querySelectorAll('tbody tr')).toHaveLength(13);
     expect(table?.querySelectorAll('tr.is-secret')).toHaveLength(3);
+    // Tajná kombinace objevená v profilu (v dřívějším runu) je vidět i v dalších runech (DESIGN 2.2.4).
+    closeAllModals();
+    app.profile.discovered.hands.push('five');
+    root.querySelector<HTMLButtonElement>('[data-testid="run-info"]')!.click();
+    const again = document.querySelector('[data-testid="run-info-hands"]');
+    expect(again?.querySelectorAll('tr.is-secret')).toHaveLength(2);
+    expect(again?.querySelector('tr[data-hand="five"]')?.textContent).toContain(t('hands.five.name'));
     expect(document.querySelector('[data-testid="run-info-seed"]')?.textContent).toContain(SEED);
     expectNoMissingTexts();
     closeAllModals();

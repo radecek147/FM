@@ -78,7 +78,7 @@ async function seedSavedRun(page: Page, state: RunState): Promise<void> {
 
 /** Menu → Pokračovat → herní obrazovka. */
 async function continueRun(page: Page): Promise<void> {
-  await page.goto('/');
+  await page.goto('/?tutorial=off');
   await expect(page.getByTestId('menu-continue')).toBeEnabled();
   await page.getByTestId('menu-continue').click();
   await expect(page.locator('#app')).toHaveAttribute('data-screen', 'game');

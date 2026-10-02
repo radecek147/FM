@@ -1,5 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { registry } from '../../src/content';
+import { createProfile, serializeProfile } from '../../src/engine';
 
 /**
  * Kostra aplikace a vedlejší obrazovky: hlavní menu, nová hra, nastavení (barvoslepý režim, export/import,
@@ -29,7 +31,23 @@ function expectCleanConsole(log: ConsoleLog): void {
 
 const screen = (page: Page) => page.locator('#app');
 
-/** Projde obrazovkou Nová hra a založí run (Mariášový balíček, Dvanáctka, daný seed). */
+/** Profil se všemi balíčky a silami piva odemčenými (testy výběru balíčku a síly piva). */
+function unlockedProfile(): string {
+  const reg = registry();
+  const p = createProfile('2026-10-02T00:00:00.000Z');
+  p.unlocks.decks = Object.keys(reg.decks);
+  for (const id of Object.keys(reg.decks)) p.unlocks.stakes[id] = 8;
+  return serializeProfile(p, '2026-10-02T00:00:00.000Z');
+}
+
+/** Vloží odemčený profil (jen když v kontextu ještě žádný není). */
+async function presetUnlockedProfile(page: Page): Promise<void> {
+  await page.addInitScript((value) => {
+    if (!localStorage.getItem('karban.profile')) localStorage.setItem('karban.profile', value);
+  }, unlockedProfile());
+}
+
+/** Projde obrazovkou Nová hra a založí run (Mariášový balíček, Dvanáctka, daný seed) — s odemčeným profilem. */
 async function startRun(page: Page, seed: string): Promise<void> {
   await page.getByTestId('menu-new-game').click();
   await expect(screen(page)).toHaveAttribute('data-screen', 'newGame');
@@ -46,11 +64,11 @@ async function storedRun(
   return page.evaluate(() => JSON.parse(localStorage.getItem('karban.run') ?? 'null'));
 }
 
-test('menu se načte bez chyb, Pokračovat je bez uložení neaktivní a „Už brzy“ položky mají tooltip', async ({
+test('menu se načte bez chyb, Pokračovat je bez uložení neaktivní, všechny ostatní položky fungují', async ({
   page,
 }) => {
   const log = watchConsole(page);
-  await page.goto('/');
+  await page.goto('/?tutorial=off');
   await expect(screen(page)).toHaveAttribute('data-screen', 'menu');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Karban');
   await expect(page.getByTestId('menu-new-game')).toBeEnabled();
@@ -58,10 +76,12 @@ test('menu se načte bez chyb, Pokračovat je bez uložení neaktivní a „Už 
   await expect(page.getByTestId('menu-settings')).toBeEnabled();
   await expect(page.getByTestId('menu-credits')).toBeEnabled();
   for (const id of ['challenges', 'daily', 'collection', 'stats']) {
-    const item = page.getByTestId(`menu-${id}`);
-    await expect(item).toHaveAttribute('aria-disabled', 'true');
-    await expect(item).toHaveAttribute('title', /Už brzy/);
+    await expect(page.getByTestId(`menu-${id}`)).toBeEnabled();
+    await expect(page.getByTestId(`menu-${id}`)).not.toHaveAttribute('aria-disabled', 'true');
   }
+  await expect(page.locator('.btn--soon')).toHaveCount(0);
+  // Denní run: cedulka „Dnes“, dokud čeká oficiální pokus.
+  await expect(page.getByTestId('menu-daily')).toHaveAttribute('aria-label', 'Denní run (dnešní pokus čeká)');
 
   // Klávesnice: focus začíná na Nové hře, šipka dolů přeskočí neaktivní Pokračovat.
   await expect(page.getByTestId('menu-new-game')).toBeFocused();
@@ -70,11 +90,16 @@ test('menu se načte bez chyb, Pokračovat je bez uložení neaktivní a „Už 
   await page.keyboard.press('ArrowUp');
   await expect(page.getByTestId('menu-new-game')).toBeFocused();
 
-  // „Už brzy“ položka (aria-disabled, ale fokusovatelná) nikam nevede, jen oznámí.
-  await page.getByTestId('menu-stats').focus();
+  // Výzvy a Denní run vedou na své obrazovky (Esc zpět).
+  await page.getByTestId('menu-challenges').focus();
   await page.keyboard.press('Enter');
+  await expect(screen(page)).toHaveAttribute('data-screen', 'challenges');
+  await page.keyboard.press('Escape');
   await expect(screen(page)).toHaveAttribute('data-screen', 'menu');
-  await expect(page.getByTestId('toast-info')).toContainText('Už brzy');
+  await page.getByTestId('menu-daily').click();
+  await expect(screen(page)).toHaveAttribute('data-screen', 'daily');
+  await page.getByTestId('back').click();
+  await expect(screen(page)).toHaveAttribute('data-screen', 'menu');
 
   // Rada Štamgasta jde přepnout.
   await expect(page.getByTestId('loading-tip')).not.toBeEmpty();
@@ -87,7 +112,8 @@ test('menu se načte bez chyb, Pokračovat je bez uložení neaktivní a „Už 
 
 test('nová hra: výběr balíčku, síly piva a seedu → herní obrazovka, pak Pokračovat', async ({ page }) => {
   const log = watchConsole(page);
-  await page.goto('/');
+  await presetUnlockedProfile(page);
+  await page.goto('/?tutorial=off');
   await page.getByTestId('menu-new-game').click();
   await expect(screen(page)).toHaveAttribute('data-screen', 'newGame');
 
@@ -118,12 +144,18 @@ test('nová hra: výběr balíčku, síly piva a seedu → herní obrazovka, pak
   // Seed: Náhodný vyplní pole, vlastní seed se převede na velká písmena; Enter v poli spustí hru.
   await page.getByTestId('seed-random').click();
   await expect(page.getByTestId('seed-input')).toHaveValue(/^[A-Z2-9]{8}$/);
-  await page.getByTestId('seed-input').fill('pivo123');
+  // Neplatný seed (I, O, 0, 1 a krátký) hra odmítne s hláškou a nespustí.
+  await page.getByTestId('seed-input').fill('pivo1');
+  await expect(page.getByTestId('seed-status')).toHaveAttribute('data-state', 'error');
+  await page.getByTestId('seed-input').press('Enter');
+  await expect(screen(page)).toHaveAttribute('data-screen', 'newGame');
+  await page.getByTestId('seed-input').fill('zelvy234');
+  await expect(page.getByTestId('seed-status')).toHaveAttribute('data-state', 'seeded');
   await page.getByTestId('seed-input').press('Enter');
   await expect(screen(page)).toHaveAttribute('data-screen', 'game');
 
   const run = await storedRun(page);
-  expect(run?.data.seed).toBe('PIVO123');
+  expect(run?.data.seed).toBe('ZELVY234');
   expect(run?.data.deckId).toBe('marias');
   expect(run?.data.stake).toBe(3);
 
@@ -139,11 +171,12 @@ test('nová hra: výběr balíčku, síly piva a seedu → herní obrazovka, pak
 
 test('nová hra přes rozehraný run se ptá; Esc dialog zavře a focus se vrátí', async ({ page }) => {
   const log = watchConsole(page);
-  await page.goto('/');
-  await startRun(page, 'PRVNI');
-  await page.goto('/');
+  await presetUnlockedProfile(page);
+  await page.goto('/?tutorial=off');
+  await startRun(page, 'PRVNHRA2');
+  await page.goto('/?tutorial=off');
   await page.getByTestId('menu-new-game').click();
-  await page.getByTestId('seed-input').fill('DRUHY');
+  await page.getByTestId('seed-input').fill('DRUHY222');
   await page.getByTestId('newgame-start').click();
 
   const dialog = page.getByRole('dialog');
@@ -159,18 +192,18 @@ test('nová hra přes rozehraný run se ptá; Esc dialog zavře a focus se vrát
   await expect(dialog).toHaveCount(0);
   await expect(screen(page)).toHaveAttribute('data-screen', 'newGame');
   await expect(page.getByTestId('newgame-start')).toBeFocused();
-  expect((await storedRun(page))?.data.seed).toBe('PRVNI');
+  expect((await storedRun(page))?.data.seed).toBe('PRVNHRA2');
 
   await page.getByTestId('newgame-start').click();
   await page.getByTestId('confirm-ok').click();
   await expect(screen(page)).toHaveAttribute('data-screen', 'game');
-  expect((await storedRun(page))?.data.seed).toBe('DRUHY');
+  expect((await storedRun(page))?.data.seed).toBe('DRUHY222');
   expectCleanConsole(log);
 });
 
 test('nastavení: barvoslepý režim přidá třídu na <html> a přežije reload', async ({ page }) => {
   const log = watchConsole(page);
-  await page.goto('/');
+  await page.goto('/?tutorial=off');
   await page.getByTestId('menu-settings').click();
   await expect(screen(page)).toHaveAttribute('data-screen', 'settings');
   await expect(page.locator('html')).not.toHaveClass(/colorblind/);
@@ -201,7 +234,7 @@ test('nastavení: barvoslepý režim přidá třídu na <html> a přežije reloa
 
 test('titulky obsahují „Balatro“, písmo a atribuci game-icons s autory', async ({ page }) => {
   const log = watchConsole(page);
-  await page.goto('/');
+  await page.goto('/?tutorial=off');
   await page.getByTestId('menu-credits').click();
   await expect(screen(page)).toHaveAttribute('data-screen', 'credits');
   const roll = page.getByTestId('credits-roll');
@@ -226,9 +259,10 @@ test('export uložení stáhne JSON s profilem, nastavením a rozehranou hrou; i
   page,
 }) => {
   const log = watchConsole(page);
-  await page.goto('/');
-  await startRun(page, 'EXPORT1');
-  await page.goto('/');
+  await presetUnlockedProfile(page);
+  await page.goto('/?tutorial=off');
+  await startRun(page, 'EXPRT222');
+  await page.goto('/?tutorial=off');
   await page.getByTestId('menu-settings').click();
 
   const downloadPromise = page.waitForEvent('download');
@@ -240,7 +274,7 @@ test('export uložení stáhne JSON s profilem, nastavením a rozehranou hrou; i
   expect(exported.version).toBe(1);
   expect(exported.settings.colorblind).toBe(false);
   expect(exported.run.format).toBe('karban-save');
-  expect(exported.run.data.seed).toBe('EXPORT1');
+  expect(exported.run.data.seed).toBe('EXPRT222');
   await expect(page.getByTestId('toast-success')).toBeVisible();
 
   // Neplatný soubor → chybové oznámení, nic se nezmění.
@@ -250,7 +284,7 @@ test('export uložení stáhne JSON s profilem, nastavením a rozehranou hrou; i
     buffer: Buffer.from('rohlíky, máslo, pivo'),
   });
   await expect(page.getByTestId('toast-import-error')).toContainText('JSON');
-  expect((await storedRun(page))?.data.seed).toBe('EXPORT1');
+  expect((await storedRun(page))?.data.seed).toBe('EXPRT222');
 
   // Platný export (s barvoslepým režimem) → potvrzení → nahráno.
   exported.settings.colorblind = true;
@@ -262,15 +296,16 @@ test('export uložení stáhne JSON s profilem, nastavením a rozehranou hrou; i
   await page.getByTestId('confirm-ok').click();
   await expect(page.getByTestId('toast-import-done')).toBeVisible();
   await expect(page.locator('html')).toHaveClass(/colorblind/);
-  expect((await storedRun(page))?.data.seed).toBe('EXPORT1');
+  expect((await storedRun(page))?.data.seed).toBe('EXPRT222');
   expectCleanConsole(log);
 });
 
 test('reset profilu vyžaduje dvojí potvrzení', async ({ page }) => {
   const log = watchConsole(page);
-  await page.goto('/');
-  await startRun(page, 'RESET1');
-  await page.goto('/');
+  await presetUnlockedProfile(page);
+  await page.goto('/?tutorial=off');
+  await startRun(page, 'RESET222');
+  await page.goto('/?tutorial=off');
   await page.getByTestId('menu-settings').click();
 
   // První potvrzení zrušené → nic se nestane, focus zpět na tlačítku.

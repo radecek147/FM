@@ -145,6 +145,21 @@ describe('obsah cs', () => {
     walk(cs, '');
   });
 
+  it('hráče oslovují rodově neutrálně: žádný minulý čas ve 2. osobě („jsi zahrál“, „říkal jsi“)', () => {
+    // Revize fáze 8: „Říkal jsi…“, „jsi ještě nehrál“, „jsi ho vyslechl“ (docs/CONTENT-GUIDE.md kap. 12).
+    const pastTense =
+      /(?<!\p{L})(?:\p{L}+l[aoiy]?\s+(?:jsi|bys|ses|sis)|(?:jsi|bys|ses|sis)(?:\s+\p{L}+){0,2}?\s+\p{L}+l[aoiy]?)(?!\p{L})/iu;
+    expect('Říkal jsi, že jdeš domů.').toMatch(pastTense);
+    expect('i když už jsi ho jednou vyslechl').toMatch(pastTense);
+    const walk = (node: unknown, path: string): void => {
+      if (typeof node === 'string') expect(node, path).not.toMatch(pastTense);
+      else if (Array.isArray(node)) node.forEach((n, i) => walk(n, `${path}[${i}]`));
+      else if (node && typeof node === 'object')
+        for (const [k, v] of Object.entries(node)) walk(v, path ? `${path}.${k}` : k);
+    };
+    walk(cs, '');
+  });
+
   it('index.html nemá texty natvrdo a všechny jeho klíče {{t:…}} existují', () => {
     const html = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
     const keys = [...html.matchAll(/\{\{t:([\w.]+)\}\}/g)].map((m) => m[1] ?? '');

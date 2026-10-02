@@ -1311,115 +1311,174 @@ Výzvy se zapisují do historie odděleně, mají vlastní statistiku a achievem
 
 Kategorie: postup, skóre, kombinace, ekonomika, žolíci, spotřebky a karty, balíčky, obtížnosti, výzvy, sbírka
 a meta, kuriozity. **Skryté** (S) se ve sbírce ukazují jako „???“, dokud je hráč nezíská. V seedovaných runech
-se achievementy nezískávají (kromě „Semínko zaseto“), v denním runu ano.
+se achievementy nezískávají (kromě „Semínko zaseto“), v oficiálním denním runu ano (pokus „mimo soutěž“ se počítá
+jako seedovaný). Výzvy se do achievementů počítají.
 
-|   # | Název                | Podmínka                                                                 | Kat.       |  S  |
-| --: | -------------------- | ------------------------------------------------------------------------ | ---------- | :-: |
-|   1 | Rundu platím já      | Vyhraj první kolo.                                                       | postup     |     |
-|   2 | Šéf nešéf            | Poraz prvního šéfa.                                                      | postup     |     |
-|   3 | Poločas v hospodě    | Dosáhni patra 5.                                                         | postup     |     |
-|   4 | Zavíračka            | Vyhraj run (poraz šéfa patra 8).                                         | postup     |     |
-|   5 | Ještě jedno!         | V nekonečném režimu poraz šéfa patra 9.                                  | postup     |     |
-|   6 | Ponocný              | Dosáhni patra 12.                                                        | postup     |     |
-|   7 | Kohout už kokrhá     | Dosáhni patra 16.                                                        | postup     |     |
-|   8 | Tepelná smrt vesmíru | Skóre ruky přeteče do nekonečna.                                         | postup     |  S  |
-|   9 | Tisícovka na stole   | Získej 1 000 bodů jednou rukou.                                          | skóre      |     |
-|  10 | Desetitisícovka      | Získej 10 000 bodů jednou rukou.                                         | skóre      |     |
-|  11 | Výplata              | Získej 100 000 bodů jednou rukou.                                        | skóre      |     |
-|  12 | Milionář z paneláku  | Získej 1 000 000 bodů jednou rukou.                                      | skóre      |     |
-|  13 | Státní rozpočet      | Získej 1 000 000 000 bodů jednou rukou.                                  | skóre      |     |
-|  14 | Vědecký zápis        | Získej jednou rukou víc než 1e15 bodů.                                   | skóre      |     |
-|  15 | S rezervou           | Dosáhni v jednom kole aspoň 10× cíle.                                    | skóre      |     |
-|  16 | Za pět dvanáct       | Vyhraj kolo poslední rukou s přesahem menším než 5 % cíle.               | skóre      |     |
-|  17 | Od Adama             | Zahraj Postupku A-2-3-4-5.                                               | kombinace  |     |
-|  18 | Korunovace           | Zahraj Královskou postupku.                                              | kombinace  |     |
-|  19 | Pětičlenná komise    | Objev Pětici.                                                            | kombinace  |  S  |
-|  20 | Barevná televize     | Objev Barevný full house.                                                | kombinace  |  S  |
-|  21 | Jako vejce vejci     | Objev Barevnou pětici.                                                   | kombinace  |  S  |
-|  22 | Kariérní postup      | Zvyš libovolnou kombinaci na úroveň 10.                                  | kombinace  |     |
-|  23 | Celý jídelníček      | V jednom runu zahraj všech 10 základních kombinací.                      | kombinace  |     |
-|  24 | Vysoké nároky        | Vyhraj kolo jen Vysokými kartami (aspoň 2 ruce).                         | kombinace  |     |
-|  25 | Encyklopedista       | Zahraj všech 13 kombinací (napříč runy).                                 | kombinace  |     |
-|  26 | Na sekeru            | Dokonči kolo se záporným zůstatkem.                                      | ekonomika  |     |
-|  27 | Nadité prasátko      | Měj najednou 50 Kč.                                                      | ekonomika  |     |
-|  28 | Na důchod            | Měj najednou 100 Kč.                                                     | ekonomika  |     |
-|  29 | Úroky z úroků        | Získej maximální úrok v 5 kolech po sobě.                                | ekonomika  |     |
-|  30 | Na dřeň              | Odejdi z Večerky s 0 Kč a vyhraj další kolo.                             | ekonomika  |     |
-|  31 | Nákupní horečka      | Utrať 40 Kč v jedné Večerce.                                             | ekonomika  |     |
-|  32 | Ještě se podívám     | Přehoď nabídku 10× v jedné Večerce.                                      | ekonomika  |     |
-|  33 | Bleší trh            | Prodej 6 žolíků v jednom runu.                                           | ekonomika  |     |
-|  34 | Plný lokál           | Měj zaplněné všechny sloty žolíků (aspoň 5).                             | žolíci     |     |
-|  35 | Celá vitrína         | Měj najednou žolíky s lesklou, holografickou, duhovou i negativní edicí. | žolíci     |     |
-|  36 | Vyjeli z hory        | Získej legendárního žolíka.                                              | žolíci     |     |
-|  37 | Staré pověsti české  | Objev všech 8 legendárních žolíků.                                       | žolíci     |     |
-|  38 | Abstinent            | Dosáhni patra 4 bez jediného žolíka v runu.                              | žolíci     |     |
-|  39 | Kopírka na úřadě     | Nech kopírujícího žolíka kopírovat jiného kopírujícího žolíka.           | žolíci     |  S  |
-|  40 | Jak z vody           | Nech škálujícího žolíka dorůst na ×5 nebo +50 mult.                      | žolíci     |     |
-|  41 | Sněhulák v červenci  | Poraz finálového šéfa se Sněhulákem ve slotu.                            | žolíci     |  S  |
-|  42 | Rosnička na žebříku  | Použij celkem 50 pranostik.                                              | spotřebky  |     |
-|  43 | Babička má radost    | Použij celkem 50 babských rad.                                           | spotřebky  |     |
-|  44 | Razítko na razítku   | Použij celkem 25 úředních razítek.                                       | spotřebky  |     |
-|  45 | Sedlák rozumí počasí | Objev všech 13 pranostik.                                                | spotřebky  |     |
-|  46 | Notářský zápis       | Měj v balíčku najednou karty se všemi 4 pečetěmi.                        | spotřebky  |     |
-|  47 | Střepy pro štěstí    | Rozbij celkem 10 skleněných karet.                                       | spotřebky  |     |
-|  48 | Železná opona        | Skóruj ruku se 4 a více ocelovými kartami v ruce.                        | spotřebky  |     |
-|  49 | Kamenná zídka        | Zahraj ruku z 5 kamenných karet.                                         | spotřebky  |     |
-|  50 | Turné po hospodách   | Vyhraj s každým z 12 balíčků.                                            | balíčky    |     |
-|  51 | Flek, re, tutti      | Vyhraj s Mariášovým balíčkem.                                            | balíčky    |     |
-|  52 | Splátkový kalendář   | Vyhraj s Dlužníkem.                                                      | balíčky    |     |
-|  53 | Pohádkový dvůr       | Vyhraj s Obrázkovým balíčkem.                                            | balíčky    |     |
-|  54 | Rozehřátý            | Vyhraj na Jedenáctce.                                                    | obtížnosti |     |
-|  55 | Dvanáctka na stojáka | Vyhraj na Dvanáctce.                                                     | obtížnosti |     |
-|  56 | Speciální péče       | Vyhraj na Speciálu.                                                      | obtížnosti |     |
-|  57 | Pět piv a jdu domů   | Vyhraj run na Ležáku.                                                    | obtížnosti |     |
-|  58 | Bock na bok          | Vyhraj na Bocku.                                                         | obtížnosti |     |
-|  59 | Dvojitý zásah        | Vyhraj na Doppelbocku.                                                   | obtížnosti |     |
-|  60 | Imperátor výčepu     | Vyhraj na Imperialu.                                                     | obtížnosti |     |
-|  61 | Legenda okresu       | Vyhraj na Imperialu se 4 různými balíčky.                                | obtížnosti |     |
-|  62 | Vyzývatel            | Dokonči 1 výzvu.                                                         | výzvy      |     |
-|  63 | Desetiboj            | Dokonči 10 výzev.                                                        | výzvy      |     |
-|  64 | Mistr republiky      | Dokonči všech 20 výzev.                                                  | výzvy      |     |
-|  65 | Sběratel tácků       | Objev 50 žolíků.                                                         | sbírka     |     |
-|  66 | Muzeum žolíků        | Objev všechny žolíky.                                                    | sbírka     |     |
-|  67 | Poukázkový maniak    | Vlastni v jednom runu 8 kupónů.                                          | sbírka     |     |
-|  68 | Ranní rozcvička      | Dojdi v denním runu aspoň do patra 3.                                    | meta       |     |
-|  69 | Týden v kuse         | Odehraj denní run 7 dní po sobě.                                         | meta       |     |
-|  70 | Semínko zaseto       | Rozehraj run s vlastním seedem.                                          | meta       |     |
-|  71 | Inventář podniku     | Odehraj 100 runů.                                                        | meta       |     |
-|  72 | Štamgastův žák       | Dokonči tutoriál.                                                        | meta       |     |
-|  73 | Rychlé pivo          | Prohraj hned na první Malé útratě.                                       | kuriozity  |  S  |
-|  74 | O chlup              | Prohraj kolo, ve kterém ti chybělo méně než 1 % cíle.                    | kuriozity  |  S  |
-|  75 | Jednou ranou         | Poraz šéfa první rukou.                                                  | kuriozity  |     |
-|  76 | Nic se nevyhazuje    | Vyhraj run bez jediného zahození.                                        | kuriozity  |     |
-|  77 | Doklady v pořádku    | Poraz Kontrolu z finančáku s aspoň 20 Kč v kapse.                        | kuriozity  |     |
-|  78 | Zkratkou přes pole   | Přeskoč v jednom runu 8 útrat.                                           | kuriozity  |     |
+Finální seznam (fáze 8, `src/content/achievements.ts`, texty `src/i18n/cs/achievements.ts`, test
+`tests/unit/achievements.test.ts`; podmínka = text `desc` s čísly z `params`):
+
+|   # | Název (`id`)                              | Podmínka                                                                 | Kat.       |  S  |
+| --: | ----------------------------------------- | ------------------------------------------------------------------------ | ---------- | :-: |
+|   1 | Rundu platím já (`first_round`)           | Vyhraj první kolo.                                                       | postup     |     |
+|   2 | Šéf nešéf (`first_boss`)                  | Poraz prvního šéfa.                                                      | postup     |     |
+|   3 | Poločas v hospodě (`halftime`)            | Dosáhni patra 5.                                                         | postup     |     |
+|   4 | Zavíračka (`closing_time`)                | Vyhraj run – poraz šéfa posledního patra.                                | postup     |     |
+|   5 | Ještě jedno! (`one_more`)                 | Pokračuj po výhře v nekonečném režimu a poraz tam šéfa.                  | postup     |     |
+|   6 | Ponocný (`night_watchman`)                | Dosáhni patra 12.                                                        | postup     |     |
+|   7 | Kohout už kokrhá (`rooster_crows`)        | Dosáhni patra 16.                                                        | postup     |     |
+|   8 | Tepelná smrt vesmíru (`heat_death`)       | Získej jednou rukou tolik bodů, že skóre přeteče do nekonečna.           | postup     |  S  |
+|   9 | Tisícovka na stole (`score_1k`)           | Získej jednou rukou aspoň 1 000 bodů.                                    | skóre      |     |
+|  10 | Desetitisícovka (`score_10k`)             | Získej jednou rukou aspoň 10 000 bodů.                                   | skóre      |     |
+|  11 | Výplata (`score_100k`)                    | Získej jednou rukou aspoň 100 000 bodů.                                  | skóre      |     |
+|  12 | Milionář z paneláku (`score_1m`)          | Získej jednou rukou aspoň 1 000 000 bodů.                                | skóre      |     |
+|  13 | Státní rozpočet (`score_1g`)              | Získej jednou rukou aspoň 1 000 000 000 bodů.                            | skóre      |     |
+|  14 | Vědecký zápis (`scientific_notation`)     | Získej jednou rukou víc než 1e15 bodů.                                   | skóre      |     |
+|  15 | S rezervou (`safety_margin`)              | Dosáhni v jednom kole aspoň 10násobku cíle.                              | skóre      |     |
+|  16 | Za pět dvanáct (`five_to_twelve`)         | Vyhraj kolo poslední rukou a přesáhni cíl o méně než 5 %.                | skóre      |     |
+|  17 | Od Adama (`from_adam`)                    | Zahraj Postupku A-2-3-4-5.                                               | kombinace  |     |
+|  18 | Korunovace (`coronation`)                 | Zahraj Královskou postupku.                                              | kombinace  |     |
+|  19 | Pětičlenná komise (`five_committee`)      | Zahraj Pětici.                                                           | kombinace  |  S  |
+|  20 | Barevná televize (`color_tv`)             | Zahraj Barevný full house.                                               | kombinace  |  S  |
+|  21 | Jako vejce vejci (`like_two_eggs`)        | Zahraj Barevnou pětici.                                                  | kombinace  |  S  |
+|  22 | Kariérní postup (`career_ladder`)         | Zvyš libovolnou kombinaci na úroveň 10.                                  | kombinace  |     |
+|  23 | Celý jídelníček (`full_menu`)             | V jednom runu zahraj všech 10 základních kombinací.                      | kombinace  |     |
+|  24 | Vysoké nároky (`high_standards`)          | Vyhraj kolo, ve kterém zahraješ jen Vysoké karty (aspoň 2 ruce).         | kombinace  |     |
+|  25 | Encyklopedista (`encyclopedist`)          | Zahraj všech 13 kombinací včetně tajných (napříč runy).                  | kombinace  |     |
+|  26 | Na sekeru (`on_the_tab`)                  | Dokonči kolo se záporným zůstatkem.                                      | ekonomika  |     |
+|  27 | Nadité prasátko (`stuffed_piggy`)         | Měj najednou aspoň 50 Kč.                                                | ekonomika  |     |
+|  28 | Na důchod (`retirement`)                  | Měj najednou aspoň 100 Kč.                                               | ekonomika  |     |
+|  29 | Úroky z úroků (`compound_interest`)       | Získej maximální úrok v 5 kolech po sobě.                                | ekonomika  |     |
+|  30 | Na dřeň (`to_the_bone`)                   | Odejdi z Večerky s prázdnou kapsou a vyhraj další kolo.                  | ekonomika  |     |
+|  31 | Nákupní horečka (`shopping_spree`)        | Utrať v jedné Večerce aspoň 40 Kč.                                       | ekonomika  |     |
+|  32 | Ještě se podívám (`just_looking`)         | Přehoď nabídku v jedné Večerce aspoň 10×.                                | ekonomika  |     |
+|  33 | Bleší trh (`flea_market`)                 | Prodej v jednom runu 6 žolíků.                                           | ekonomika  |     |
+|  34 | Plný lokál (`packed_pub`)                 | Zaplň všechny sloty žolíků (aspoň 5 slotů).                              | žolíci     |     |
+|  35 | Celá vitrína (`showcase`)                 | Měj najednou žolíky s lesklou, holografickou, duhovou i negativní edicí. | žolíci     |     |
+|  36 | Vyjeli z hory (`out_of_the_mountain`)     | Získej legendárního žolíka.                                              | žolíci     |     |
+|  37 | Staré pověsti české (`old_czech_legends`) | Objev všechny legendární žolíky.                                         | žolíci     |     |
+|  38 | Abstinent (`abstainer`)                   | Dosáhni patra 4 bez jediného žolíka v celém runu.                        | žolíci     |     |
+|  39 | Kopírka na úřadě (`office_copier`)        | Měj najednou 2 kopírující žolíky.                                        | žolíci     |  S  |
+|  40 | Jak z vody (`like_water`)                 | Nech rostoucího žolíka dorůst aspoň na ×5 mult nebo +50 mult.            | žolíci     |     |
+|  41 | Sněhulák v červenci (`july_snowman`)      | Poraz finálového šéfa se Sněhulákem ve slotu.                            | žolíci     |  S  |
+|  42 | Rosnička na žebříku (`tree_frog`)         | Použij celkem 50 pranostik.                                              | spotřebky  |     |
+|  43 | Babička má radost (`happy_grandma`)       | Použij celkem 50 babských rad.                                           | spotřebky  |     |
+|  44 | Razítko na razítku (`stamp_on_stamp`)     | Použij celkem 25 úředních razítek.                                       | spotřebky  |     |
+|  45 | Sedlák rozumí počasí (`weather_wise`)     | Objev všechny pranostiky.                                                | spotřebky  |     |
+|  46 | Notářský zápis (`notarized`)              | Zahraj ruku, ve které skórují karty se všemi druhy pečetí.               | spotřebky  |     |
+|  47 | Střepy pro štěstí (`lucky_shards`)        | Rozbij celkem 10 skleněných karet.                                       | spotřebky  |     |
+|  48 | Železná opona (`iron_curtain`)            | Skóruj, zatímco v ruce držíš aspoň 4 ocelové karty.                      | spotřebky  |     |
+|  49 | Kamenná zídka (`stone_wall`)              | Zahraj ruku z 5 kamenných karet.                                         | spotřebky  |     |
+|  50 | Turné po hospodách (`pub_crawl`)          | Vyhraj run s každým startovním balíčkem.                                 | balíčky    |     |
+|  51 | Flek, re, tutti (`flek_re_tutti`)         | Vyhraj run s Mariášovým balíčkem.                                        | balíčky    |     |
+|  52 | Splátkový kalendář (`installment_plan`)   | Vyhraj run s Dlužníkem.                                                  | balíčky    |     |
+|  53 | Pohádkový dvůr (`fairy_court`)            | Vyhraj run s Obrázkovým balíčkem.                                        | balíčky    |     |
+|  54 | Rozehřívačka (`warmed_up`)                | Vyhraj run na Jedenáctce (nebo silnějším pivu).                          | obtížnosti |     |
+|  55 | Dvanáctka na stojáka (`twelve_standing`)  | Vyhraj run na Dvanáctce (nebo silnějším pivu).                           | obtížnosti |     |
+|  56 | Speciální péče (`special_care`)           | Vyhraj run na Speciálu (nebo silnějším pivu).                            | obtížnosti |     |
+|  57 | Pět piv a jdu domů (`five_beers`)         | Vyhraj run na Ležáku (nebo silnějším pivu).                              | obtížnosti |     |
+|  58 | Bock na bok (`bock_on_side`)              | Vyhraj run na Bocku (nebo silnějším pivu).                               | obtížnosti |     |
+|  59 | Dvojitý zásah (`double_hit`)              | Vyhraj run na Doppelbocku (nebo silnějším pivu).                         | obtížnosti |     |
+|  60 | Imperátor výčepu (`tap_emperor`)          | Vyhraj run na Imperialu.                                                 | obtížnosti |     |
+|  61 | Legenda okresu (`district_legend`)        | Vyhraj run na Imperialu s různými balíčky – potřebuješ jich 4.           | obtížnosti |     |
+|  62 | Vyzývatel (`challenger`)                  | Dokonči libovolnou výzvu.                                                | výzvy      |     |
+|  63 | Desetiboj (`decathlon`)                   | Dokonči 10 různých výzev.                                                | výzvy      |     |
+|  64 | Mistr republiky (`national_champion`)     | Dokonči všechny výzvy.                                                   | výzvy      |     |
+|  65 | Sběratel tácků (`coaster_collector`)      | Objev 50 žolíků.                                                         | sbírka     |     |
+|  66 | Muzeum žolíků (`joker_museum`)            | Objev všechny žolíky.                                                    | sbírka     |     |
+|  67 | Poukázkový maniak (`voucher_maniac`)      | Měj v jednom runu 8 kupónů.                                              | sbírka     |     |
+|  68 | Ranní rozcvička (`morning_exercise`)      | Dojdi v oficiálním denním runu aspoň do patra 3.                         | meta       |     |
+|  69 | Týden v kuse (`week_straight`)            | Odehraj oficiální denní run 7 dní po sobě.                               | meta       |     |
+|  70 | Semínko zaseto (`seed_sown`)              | Rozehraj run s vlastním seedem.                                          | meta       |     |
+|  71 | Inventář podniku (`pub_inventory`)        | Odehraj celkem 100 runů.                                                 | meta       |     |
+|  72 | Štamgastův žák (`regulars_apprentice`)    | Dokonči tutoriál.                                                        | meta       |     |
+|  73 | Rychlé pivo (`quick_beer`)                | Prohraj hned na první Malé útratě.                                       | kuriozity  |  S  |
+|  74 | O chlup (`by_a_hair`)                     | Prohraj kolo, ve kterém ti do cíle chybělo méně než 1 %.                 | kuriozity  |  S  |
+|  75 | Jednou ranou (`one_blow`)                 | Poraz šéfa hned první rukou.                                             | kuriozity  |     |
+|  76 | Nic se nevyhazuje (`nothing_wasted`)      | Vyhraj run bez jediného zahození.                                        | kuriozity  |     |
+|  77 | Doklady v pořádku (`papers_in_order`)     | Poraz Kontrolu z finančáku a měj přitom aspoň 20 Kč v kapse.             | kuriozity  |     |
+|  78 | Zkratkou přes pole (`shortcut`)           | Přeskoč v jednom runu 8 útrat.                                           | kuriozity  |     |
+
+Upřesnění (docs/DECISIONS.md „Fáze 8 (M3)“):
+
+- **Texty:** `achievements.<id>.name|desc|flavor`, skryté navíc `hint` (nápověda ve sbírce místo podmínky). Čísla
+  jen přes `AchievementDef.params` — tytéž konstanty čte `check` (UI: `t('achievements.<id>.desc', def.params)`).
+- **Kdy se kontroluje:** celoživotní podmínky (počítadla, rekordy, výhry, objevy) čtou jen profil a dávají průběh
+  `{ progress, target }` do sbírky — splní se i zpětně po importu profilu. Okamžikové (S rezervou, Za pět dvanáct,
+  Od Adama, Notářský zápis, Železná opona, Kamenná zídka, O chlup, Rychlé pivo, Doklady v pořádku, Ještě jedno!,
+  Sněhulák v červenci, Nic se nevyhazuje) čtou událost a stav runu po akci (kolo po výhře ještě existuje, peníze
+  jsou před výplatou). Podmínky jednoho runu (Celý jídelníček, Bleší trh, Zkratkou přes pole, Úroky z úroků…) mimo
+  run ukazují uložené maximum.
+- **Změny proti původnímu návrhu:** _Kopírka na úřadě_ — „kopírující žolík kopíruje kopírujícího“ nejde (kopírující
+  žolíci jsou `copyable: false`, 4.4), proto „měj najednou 2 kopírující žolíky“. _Notářský zápis_ — „měj v balíčku
+  karty se všemi 4 pečetěmi“ by Notářský balíček (25 % karet s pečetí) splnil hned při startu, proto „zahraj ruku,
+  ve které skórují karty se všemi druhy pečetí“. _Ještě jedno!_ — každý šéf poražený v nekonečném režimu (první je
+  v patře 9, u Konce světa v patře 13). Výhry na síle piva platí „na N nebo silnější“ (stejně jako `winRun` se
+  `stake`). _Encyklopedista_, _Turné po hospodách_, _Mistr republiky_, _Muzeum žolíků_, _Staré pověsti české_
+  a _Sedlák rozumí počasí_ počítají s aktuálním obsahem registru (patch s novým žolíkem cíl posune).
 
 ### 11.3 Odemykání
 
-| Co                | Na začátku                                           | Jak se odemyká                                                                                                                                                                                 |
-| ----------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Startovní balíčky | Hospodský, Štamgastův                                | podmínky v kap. 9                                                                                                                                                                              |
-| Síla piva         | Desítka pro každý balíček                            | výhra na úrovni N s balíčkem → N + 1 pro ten balíček                                                                                                                                           |
-| Žolíci (101)      | ≈ 70 (všichni běžní, ~60 % vzácných, ~40 % epických) | ≈ 23 podmínkami `UnlockCondition` (např. Sekera: měj 0 Kč na konci kola; Sněhulák: vyhraj kolo první rukou; Napodobitel: měj 5 žolíků najednou); legendární se odemykají objevením (z razítka) |
-| Kupóny            | všech 12 tier 1                                      | tier 2 po koupi jeho tier 1 ve 2 různých runech, nebo všechny najednou po 3 výhrách                                                                                                            |
-| Spotřebky         | všechny                                              | — (sbírka sleduje objevení)                                                                                                                                                                    |
-| Tajné kombinace   | skryté                                               | prvním zahráním (kap. 2.2.4)                                                                                                                                                                   |
-| Výzvy             | žádná                                                | kap. 11.1                                                                                                                                                                                      |
-| Denní run         | od začátku                                           | — (používá celý obsah bez ohledu na odemčení)                                                                                                                                                  |
+| Co                | Na začátku                                                | Jak se odemyká                                                                                                                                |
+| ----------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Startovní balíčky | Hospodský, Štamgastův                                     | podmínky v kap. 9                                                                                                                             |
+| Síla piva         | Desítka pro každý balíček                                 | výhra na úrovni N s balíčkem → N + 1 pro ten balíček                                                                                          |
+| Žolíci (101)      | 70 (všech 44 běžných, 19 z 32 vzácných, 7 ze 17 epických) | 23 podmínkami `UnlockCondition` (13 vzácných, 10 epických — tabulka níže); 8 legendárních se odemyká objevením (z razítka, v poolu jsou vždy) |
+| Kupóny            | všech 12 tier 1                                           | tier 2 po koupi jeho tier 1 ve 2 různých runech, nebo všechny najednou po 3 výhrách                                                           |
+| Spotřebky         | všechny                                                   | — (sbírka sleduje objevení)                                                                                                                   |
+| Tajné kombinace   | skryté                                                    | prvním zahráním (kap. 2.2.4)                                                                                                                  |
+| Výzvy             | žádná                                                     | kap. 11.1                                                                                                                                     |
+| Denní run         | od začátku                                                | — (používá celý obsah bez ohledu na odemčení)                                                                                                 |
 
 - Odemčení se vyhodnocuje po každé akci (profil), ne až na konci runu; nově odemčené se ukáže toastem
   „Odemčeno: …“ a ve sbírce má štítek „Nové“.
 - `RunState.unlockedPool` se nastaví při startu runu ze stavu profilu; během runu se nemění.
+- Texty podmínek pro sbírku a novou hru: `unlockTextFor` / `unlockText` (src/engine/meta/unlockText.ts) vrací
+  i18n klíče `meta.unlock.*` a parametry (věta konkrétní položky `meta.unlock.items.<kategorie>.<id>` má přednost
+  před obecnou šablonou `meta.unlock.cond.<typ>`); čísla vlastních podmínek jsou v `CUSTOM_UNLOCK_PARAMS`.
+
+**Žolíci s podmínkou (23)** — `src/content/jokers/*.ts` (pole `unlock`), test `tests/unit/unlocks-content.test.ts`.
+Podmínka je tematicky spřízněná s mechanikou (Kořenářka ← babské rady, Sklář ← rozbité sklo, Válečná kořist ←
+poražení šéfové) a počítá se napříč runy (počítadla a rekordy profilu, i výzvy a oficiální denní runy, ne seedované):
+
+| Žolík (`id`)                                   | Vzácnost | Podmínka                                                       | `UnlockCondition`                                    |
+| ---------------------------------------------- | -------- | -------------------------------------------------------------- | ---------------------------------------------------- |
+| Kořenářka (`herbalist`)                        | vzácný   | Použij celkem 10 babských rad.                                 | `{type: useConsumable, kind: rada, count: 10}`       |
+| Kolotoč na pouti (`carousel`)                  | vzácný   | Zahraj celkem 10 Postupek.                                     | `{type: playHand, hand: straight, count: 10}`        |
+| Šťastná sedmička (`lucky_seven`)               | vzácný   | Zahraj celkem 77 rukou.                                        | `{type: stat, stat: handsPlayed, atLeast: 77}`       |
+| Sekera (`tab`)                                 | vzácný   | Dokonči kolo s prázdnou kapsou – s 0 Kč nebo v mínusu.         | `{type: roundEndMoney, atMost: 0}`                   |
+| Známý na úřadě (`office_connection`)           | vzácný   | Poraz šéfa „Kontrola z finančáku“.                             | `{type: beatBoss, boss: tax_audit}`                  |
+| Sklář (`glassblower`)                          | vzácný   | Rozbij celkem 5 skleněných karet.                              | `{type: stat, stat: glassBroken, atLeast: 5}`        |
+| Notář (`notary_public`)                        | vzácný   | Měj v balíčku najednou 3 karty s pečetí.                       | `{type: stat, stat: maxSealedCards, atLeast: 3}`     |
+| Čarodějnice (`witch`)                          | vzácný   | Použij celkem 5 úředních razítek.                              | `{type: useConsumable, kind: razitko, count: 5}`     |
+| Vědma (`seer`)                                 | vzácný   | Použij celkem 10 pranostik.                                    | `{type: useConsumable, kind: pranostika, count: 10}` |
+| Vyšlapaná pěšina (`trodden_path`)              | vzácný   | Přeskoč celkem 10 útrat.                                       | `{type: stat, stat: blindsSkipped, atLeast: 10}`     |
+| Válečná kořist (`war_loot`)                    | vzácný   | Poraz celkem 10 šéfů.                                          | `{type: beatBoss, count: 10}`                        |
+| Kopírák (`carbon_paper`)                       | vzácný   | Kup celkem 15 žolíků.                                          | `{type: stat, stat: jokersBought, atLeast: 15}`      |
+| Defenestrace (`defenestration`)                | vzácný   | Zahoď celkem 150 karet.                                        | `{type: stat, stat: cardsDiscarded, atLeast: 150}`   |
+| Sněhulák (`snowman`)                           | epický   | Vyhraj hned první rukou celkem 3 kola.                         | `{type: stat, stat: firstHandRoundWins, atLeast: 3}` |
+| Sběrač hub (`mushroom_picker`)                 | epický   | Znič celkem 20 hracích karet.                                  | `{type: stat, stat: cardsDestroyed, atLeast: 20}`    |
+| Napodobitel (`impersonator`)                   | epický   | Měj najednou 5 žolíků.                                         | `{type: stat, stat: maxJokers, atLeast: 5}`          |
+| Pivní sommelier (`beer_sommelier`)             | epický   | Zahraj 8 různých kombinací (napříč runy, každou aspoň jednou). | `{type: custom, id: distinctHands8}`                 |
+| Archivář (`archivist`)                         | epický   | Objev 30 žolíků.                                               | `{type: discover, category: jokers, count: 30}`      |
+| Turistický průvodce (`tour_guide`)             | epický   | Vyhraj run s Turistickým balíčkem.                             | `{type: winRun, deck: tourist}`                      |
+| Spartakiáda (`spartakiada`)                    | epický   | Zahraj celkem 500 karet.                                       | `{type: stat, stat: cardsPlayed, atLeast: 500}`      |
+| Kupónová privatizace (`voucher_privatization`) | epický   | Kup celkem 10 kupónů.                                          | `{type: stat, stat: vouchersBought, atLeast: 10}`    |
+| Směnárna (`exchange_office`)                   | epický   | Vydělej celkem 500 Kč.                                         | `{type: stat, stat: moneyEarned, atLeast: 500}`      |
+| Silvestr (`new_years_eve`)                     | epický   | Vyhraj run. Pak se slaví.                                      | `{type: winRun}`                                     |
 
 ### 11.4 Sbírka (codex)
 
-Záložky: Žolíci · Pranostiky · Babské rady · Razítka · Kupóny · Štítky · Šéfové · Balíčky · Síla piva ·
-Vylepšení, pečetě a edice · Kombinace · Výzvy · Achievementy.
+Záložky: Žolíci · Pranostiky · Babské rady · Razítka · Kupóny · Obálky · Štítky · Šéfové · Balíčky · Síla piva ·
+Vylepšení, pečetě a edice · Kombinace · Výzvy · Achievementy. Každá kategorie, která dává štítek „Nové“, má svou
+záložku (jinak by počet novinek v menu nešel vynulovat — obálky ji do revize fáze 8 neměly).
 
 Stavy položky: **neodemčeno** (silueta + podmínka odemčení) → **odemčeno, neobjeveno** (silueta + název „???“,
-nápověda „Zatím se ti neukázal“) → **objeveno** (plná karta: název, mechanika, flavor, vzácnost, cena, statistika
-použití). Objevení = položka se hráči ukázala v obchodě, obálce, jako šéf nebo štítek. Filtr podle kategorie
-a štítků (`JokerTag`), řazení podle vzácnosti/názvu/četnosti použití.
+nápověda „Zatím se ti to neukázalo.“) → **objeveno** (plná karta: název, mechanika, flavor, vzácnost, cena, statistika
+použití). Objevení = položka se hráči ukázala v obchodě, obálce, jako šéf nebo štítek. **Startovní výbava** runu
+(žolíci a spotřebky z balíčku nebo výzvy — Velký třesk, Vetešnický, Babiččin) se objeví až po první vyhrané útratě
+runu (`isStartingItem`, `RunCounters.startUid`); totéž platí pro achievement „Vyjeli z hory“. Jinak by šla sbírka
+i achievementy za objevy „vyfarmit“ opakovaným zakládáním runu. Filtr podle kategorie a štítků (`JokerTag`), řazení
+podle vzácnosti/názvu/četnosti použití.
 
 ### 11.5 Statistiky
 
@@ -1449,6 +1508,9 @@ a štítků (`JokerTag`), řazení podle vzácnosti/názvu/četnosti použití.
 - Balíček a síla piva se určí ze seedu (stream `misc`): balíček z celé dvanáctky, síla piva 1–5. Obsah se nebere
   z profilu (`unlockedPool` = vše), aby měli všichni stejné podmínky.
 - Jeden **oficiální** pokus denně (zapíše se do statistik denních runů); další pokusy jsou „mimo soutěž“.
+  Pokračování denního runu, který profil nezná (import, ztracený zápis), je oficiální jen tehdy, když je dnešní pokus
+  v profilu rozehraný se stejným seedem. Import staršího profilu odehrané dny nevrátí (`mergeDailyRecords` doplní
+  záznamy dnů ze současného profilu).
 - Na konci se ukáže text ke sdílení: „Karban DEN-20261001 · patro 7 · nejlepší ruka 1 234 560“.
 
 ## 12. Balanc a simulace
@@ -1547,19 +1609,21 @@ Rozvržení a chování UI podle `CLAUDE.md` kap. 4 a 7. Všechny texty jsou v `
 
 ### 13.1 Obrazovky
 
-| Obrazovka          | Obsah                                                                                                              |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| Hlavní menu        | Nová hra (balíček + síla piva + seed) · Pokračovat · Výzvy · Denní run · Sbírka · Statistiky · Nastavení · Titulky |
-| Výběr útraty       | 3 karty (Malá / Velká / Šéf): cíl, odměna, u Malé a Velké tlačítko Přeskočit se štítkem; u šéfa jeho pravidlo      |
-| Herní obrazovka    | viz 13.2                                                                                                           |
-| Konec kola         | rozpis odměn (kap. 2.4.2) s animací po řádcích → **Vyplatit**                                                      |
-| Večerka            | kartové sloty, obálky, kupón, Přehodit (s cenou), Pokračovat; prodej z řady žolíků/spotřebek; prázdný stav (2.5.1) |
-| Výběr z obálky     | N karet v jedné řadě (i 6 u mega obálky), „Vyber {n}“, Přeskočit; u rad a razítek dole dobraná ruka pro cíle       |
-| Pitva              | příčina (útrata / šéf + hláška `death`), statistiky runu, seed ke zkopírování, Nová hra / Menu                     |
-| Výhra              | titulky se statistikou runu → Konec / Nekonečný režim                                                              |
-| Info o runu        | úrovně kombinací (tajné „???“), složení balíčku, aktivní štítky, kupóny, ztížení síly piva, seed                   |
-| Sbírka, Statistiky | kap. 11.4 a 11.5                                                                                                   |
-| Titulky            | autoři, nástroje, atribuce z `ASSETS.md` (písmo OFL, ikony CC BY 3.0 s autory), „inspirováno hrou Balatro“         |
+| Obrazovka          | Obsah                                                                                                                   |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| Hlavní menu        | Nová hra (balíček + síla piva + seed) · Pokračovat · Výzvy · Denní run · Sbírka · Statistiky · Nastavení · Titulky      |
+| Výběr útraty       | 3 karty (Malá / Velká / Šéf): cíl, odměna, u Malé a Velké tlačítko Přeskočit se štítkem; u šéfa jeho pravidlo           |
+| Herní obrazovka    | viz 13.2                                                                                                                |
+| Konec kola         | rozpis odměn (kap. 2.4.2) s animací po řádcích → **Vyplatit**                                                           |
+| Večerka            | kartové sloty, obálky, kupón, Přehodit (s cenou), Pokračovat; prodej z řady žolíků/spotřebek; prázdný stav (2.5.1)      |
+| Výběr z obálky     | N karet v jedné řadě (i 6 u mega obálky), „Vyber {n}“, Přeskočit; u rad a razítek dole dobraná ruka pro cíle            |
+| Pitva              | příčina (útrata / šéf + hláška `death`), statistiky runu, seed, novinky z runu, u denního runu sdílení, Nová hra / Menu |
+| Výhra              | titulky se statistikou runu, novinky z runu (u denního sdílení) → Konec / Nekonečný režim                               |
+| Info o runu        | úrovně kombinací (tajné „???“), složení balíčku, aktivní štítky, kupóny, ztížení síly piva, seed                        |
+| Sbírka, Statistiky | kap. 11.4 a 11.5                                                                                                        |
+| Výzvy              | seznam 20 výzev po várkách (zamčené s podmínkou a průběhem) + detail: pravidla, balíček, síla, cíl, statistika, Hrát    |
+| Denní run          | dnešní seed, balíček a síla ze seedu, stav oficiálního pokusu, výsledek ke sdílení, série a historie denních runů       |
+| Titulky            | autoři, nástroje, atribuce z `ASSETS.md` (písmo OFL, ikony CC BY 3.0 s autory), „inspirováno hrou Balatro“              |
 
 ### 13.2 Herní obrazovka
 
@@ -1606,8 +1670,16 @@ Každý ovládací prvek je dosažitelný klávesnicí (Tab) a má viditelný fo
 ### 13.4 Nastavení (výchozí hodnoty)
 
 Hlasitost SFX 70 % · hudba 50 % · rychlost hry 1× (1×–4×) · animace zap · screen shake zap · celá obrazovka vyp ·
-barvoslepý režim vyp · velikost UI 100 % (80–140 %) · přehled klávesových zkratek · export/import uložení · reset
-profilu (dvojí potvrzení). Nastavení je součást profilu (`karban.profile`).
+barvoslepý režim vyp · velikost UI 100 % (80–140 %) · rady Štamgasta zap (+ „Zapnout tutoriál znovu“) · přehled
+klávesových zkratek · export/import uložení · reset profilu (dvojí potvrzení). Nastavení je součást profilu
+(`karban.profile`).
+
+- **Export / import:** jeden soubor JSON s profilem, nastavením, rozehranou hrou a zálohami profilu; import přijme
+  i samotné uložení runu nebo profilu, ověří obálku a verzi, zmigruje a odmítne neznámý obsah (hláška podle chyby).
+  Potvrzení řekne, co soubor obsahuje.
+- **Profil se nikdy neztratí:** reset i import nejdřív uloží dosavadní profil do `karban.profile.backup.<ms>`; zálohy
+  se nemažou a jsou součástí exportu. Když zálohu nejde zapsat (plné úložiště), reset ani import neproběhnou
+  (hláška). Export bez profilu stávající profil nesmaže; dvě zálohy z jedné milisekundy se nepřepíšou.
 
 - **Barvoslepý režim** = 4barevný balíček: ♠ černá, ♥ červená, ♦ modrá, ♣ zelená (+ symbol barvy vždy u indexu).
 - `prefers-reduced-motion` vypne screen shake a zkrátí animace i bez zásahu do nastavení.
@@ -1628,6 +1700,15 @@ Při prvním runu provází hráče **Štamgast** bublinami (jde přeskočit a v
 
 Dokončení = achievement „Štamgastův žák“.
 
+- Bublina s postavičkou Štamgasta je **nemodální**: nebere focus, neblokuje hru, během animací a mimo herní obrazovku
+  zmizí; míří na skutečný prvek (zvýrazněný rámečkem) a staví se tak, aby co nejmíň zakryla karty a tlačítka.
+- Kroky se ukazují podle stavu hry, ne podle pořadí: v kole výběr → Zahrát → Zahodit → cíl (pořadí žolíků, až je
+  hráč má), šéf přednostně; konec kola, Večerka, výběr útraty (šéf, přeskočení až po první výplatě).
+- Krok dokončí „Rozumím“ nebo příslušná akce (výběr karty, zahraná ruka, zahození, výhra kola, výplata, koupě žolíka,
+  přeskočení, poražený šéf). „Přeskočit tutoriál“ vypne rady celé; v Nastavení jdou rady zapnout a tutoriál spustit
+  znovu od začátku.
+- Parametr `?tutorial=off` tutoriál pro sezení vypne (automatické testy).
+
 ### 13.6 Zvuk a „šťáva“
 
 - **SFX** (syntetizované ve Web Audio): klik, výběr karty, zamíchání, „tik“ za každý `ScoreStep` (výška tónu roste
@@ -1635,6 +1716,12 @@ Dokončení = achievement „Štamgastův žák“.
 - **Hudba:** procedurální chiptune smyčka; v menu klidnější, ve hře rytmičtější, u šéfa tempo +15 %.
 - **Efekty:** částice na jediném `<canvas>` (mince, střepy skla, jiskry u ×mult), screen shake u velkého skóre,
   tilt a hover karet, počítadlo skóre; animuje se jen `transform`/`opacity`, rychlost podle `--speed`.
+
+### 13.7 Oznámení odemčení a achievementů
+
+Toast s ikonou, štítkem („Achievement“, „Odemčeno · žolík“…), názvem a popisem; až doběhne animace akce. Fronta:
+nejvýš 2 naráz, další čekají; víc než 8 čekajících shrne „…a další novinky“. Ve sbírce má novinka štítek „Nové“, dokud
+ji hráč neuvidí; počet novinek je na tlačítkách Sbírka a Výzvy v menu.
 
 ---
 
