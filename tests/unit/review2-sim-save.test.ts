@@ -19,7 +19,7 @@ import { Game } from '../../src/engine/run/game';
 import { deserializeRun, serializeRun } from '../../src/engine/save/save';
 import { BOT_NAMES, createBot, simulateRun, type Bot, type BotName } from '../../src/engine/sim/index';
 import type { Action, GameEvent } from '../../src/engine/types';
-import { ART, makeGame, makeRegistry } from './fixtures/registry';
+import { ART, makeGame, makeRegistry, tag } from './fixtures/registry';
 
 const contentReg = buildRegistry();
 /** Testovací obsah (žolíci, šéfové, štítky, obálky, spotřebky) s nižšími cíli, aby runy došly do pozdějších pater. */
@@ -143,29 +143,40 @@ describe('boti: rozhodnutí je čistá funkce stavu hry', () => {
     }
   }, 60_000);
 
-  it('přeskočení útraty: rozhodne síla buildu ze stavu (žolíci), ne paměť bota', () => {
-    // Plné cíle (balíček `test`): přeskočit chce průměrná nejlepší ruka × 4 ruce ≥ 3× cíl Velké útraty (3 × 380).
-    const registry = makeRegistry();
+  it('přeskočení útraty: rozhodne hodnota štítku a síla buildu ze stavu (žolíci), ne paměť bota', () => {
+    // Plné cíle (balíček `test`): přeskočit chce štítek, který má víc než ztráta (odměna, úrok, Večerka), a průměrná
+    // nejlepší ruka × 4 ruce ≥ 2,5× cíl následující útraty (po Malé Velká: 2,5 × 380).
+    const jackpot = tag('jackpot_tag', {
+      onAdded: (ctx) => {
+        ctx.api.addMoney(40, 'tag');
+        return true;
+      },
+    });
+    const registry = makeRegistry({ tags: [jackpot] });
     const strong = makeGame({ registry, jokers: ['times_mult', 'times_mult', 'times_mult'] });
     const weak = makeGame({ registry });
     for (const game of [strong, weak]) {
       const s = game._core.state;
-      s.blinds[0]!.skipTagId = 'cash_tag';
+      s.blinds[0]!.skipTagId = 'jackpot_tag';
       s.stats.handsPlayed = 10;
       s.stats.bestHandScore = 2000;
     }
     const before = JSON.stringify(strong.state);
     expect(createBot('max').decide(strong)).toEqual({ type: 'skipBlind' });
     expect(createBot('max').decide(weak)).toEqual({ type: 'selectBlind' });
-    // Odhad síly hraje na kopii hry — skutečný stav se nezmění.
+    // Hodnota štítku i síla buildu se zkouší na kopii hry — skutečný stav se nezmění.
     expect(JSON.stringify(strong.state)).toBe(before);
     // Šetřílek nepřeskakuje nikdy; na začátku runu (méně než 4 zahrané ruce) nepřeskočí nikdo.
     expect(createBot('econ').decide(strong)).toEqual({ type: 'selectBlind' });
     strong._core.state.stats.handsPlayed = 3;
     expect(createBot('max').decide(strong)).toEqual({ type: 'selectBlind' });
-    // Ani nejlepší ruka runu na 3× cíl nestačí ⇒ silný build se neodhaduje a bot hraje.
+    // Ani nejlepší ruka runu na 2,5× cíl nestačí ⇒ silný build se neodhaduje a bot hraje.
     strong._core.state.stats.handsPlayed = 10;
     strong._core.state.stats.bestHandScore = 100;
+    expect(createBot('max').decide(strong)).toEqual({ type: 'selectBlind' });
+    // Štítek za pár korun (+5 Kč) nestojí za odměnu, úrok a Večerku ani se silným buildem.
+    strong._core.state.stats.bestHandScore = 2000;
+    strong._core.state.blinds[0]!.skipTagId = 'cash_tag';
     expect(createBot('max').decide(strong)).toEqual({ type: 'selectBlind' });
   });
 });

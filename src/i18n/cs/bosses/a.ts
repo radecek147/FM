@@ -1,15 +1,15 @@
 /**
  * Texty šéfů (běžní šéfové 1–13): `bosses.<id>.name|rule|intro|defeat|death` + vlastní hlášky
- * (`bosses.<id>.<klíč>`). Čísla v `rule` odpovídají `params` v src/content/bosses/a.ts — UI (`bossTexts`)
- * zatím parametry šéfů nedosazuje, proto jsou v textu napsaná rovnou a test hlídá shodu s `params`.
- * `intro` se ukáže při příchodu (bez parametrů), `death` v pitvě, když na šéfovi run skončí.
+ * (`bosses.<id>.<klíč>`). Čísla v `rule` jsou jen přes `{param}` z `params` v src/content/bosses/a.ts (dosadí je
+ * `bossTexts` v UI i textový režim `npm run simulate -- --play`), u čísla se slovem s `|plural:`.
+ * `intro` se ukáže při příchodu, `death` v pitvě, když na šéfovi run skončí.
  */
 import type { TextTree } from '../../cs';
 
 export const bossesA = {
   tax_audit: {
     name: 'Kontrola z finančáku',
-    rule: 'Každá zahraná ruka stojí 1 Kč.',
+    rule: 'Každá zahraná ruka stojí {fee|money}.',
     intro: 'Dobrý den, finanční úřad. Účtenky máte?',
     defeat: 'Tentokrát bez pokuty. Tentokrát.',
     death: 'Doklady k tomu nemáte, že?',
@@ -38,7 +38,7 @@ export const bossesA = {
   },
   lunch_break: {
     name: 'Polední pauza',
-    rule: 'Máš jen 1 ruku.',
+    rule: 'Máš jen {hands|plural:ruku,ruce,rukou}.',
     intro: 'Je polední pauza. Máte na to jeden pokus.',
     defeat: 'Hotovo? Tak to se divím.',
     death: 'Přijďte po obědě. Zítra.',
@@ -59,35 +59,37 @@ export const bossesA = {
   },
   black_cat: {
     name: 'Černá kočka',
-    rule: 'Po každé zahrané ruce vyřadí z provozu 2 náhodné karty v ruce, a to do konce kola.',
+    rule:
+      'Po každé zahrané ruce vyřadí z provozu ' +
+      '{cards|plural:náhodnou kartu,náhodné karty,náhodných karet} v ruce, a to do konce kola.',
     intro: 'Přeběhla ti přes cestu. Zleva doprava.',
     defeat: 'Kočka odešla. Smůla zůstala u ní.',
     death: 'Sedm let smůly a tohle byl teprve první den.',
   },
   elbe_fog: {
     name: 'Mlha nad Labem',
-    rule: 'Karty s hodnotou 2–5 se lížou lícem dolů.',
+    rule: 'Karty s hodnotou {min}–{max} se lížou lícem dolů.',
     intro: 'Viditelnost pod sto metrů, malé karty v mlze.',
     defeat: 'Mlha se zvedla. Byly to dvojky.',
     death: 'V mlze se ztratily karty i naděje.',
   },
   parking_fee: {
     name: 'Parkovné',
-    rule: 'Každé zahození stojí 1 Kč.',
+    rule: 'Každé zahození stojí {fee|money}.',
     intro: 'Modrá zóna. Zahazovat jen s parkovací kartou.',
     defeat: 'Za stěračem tentokrát nic.',
     death: 'Odtaženo na náklady provozovatele.',
   },
   studio_flat: {
     name: 'Garsonka 1+kk',
-    rule: '−1 karta v ruce a vybrat jde nejvýš 4 karty.',
+    rule: '−{handSize|plural:karta,karty,karet} v ruce a vybrat jde nejvýš {select|plural:kartu,karty,karet}.',
     intro: 'Vítej v bytě, kde se kuchyni říká roh.',
     defeat: 'Stěhuješ se? Nech tu klíče.',
     death: 'Výpověď z nájmu. Na vyklizení máš do pondělí.',
   },
   village_drought: {
     name: 'Sucho v obci',
-    rule: '0 zahození, ale +1 ruka.',
+    rule: '{discards} zahození, ale +{hands|plural:ruka,ruce,rukou}.',
     intro: 'Zákaz zalévání i zahazování.',
     defeat: 'Prší! Tedy aspoň kape.',
     death: 'Uschlo všechno, i naděje na postup.',

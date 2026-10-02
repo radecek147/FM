@@ -13,7 +13,7 @@ export function roundEndKey(ctx: GameCtx): string {
   return `${s.ante}|${s.blindIndex}|${s.stats.roundsWon}|${JSON.stringify(s.rewards)}`;
 }
 
-/** Název položky „bonusy a poplatky“ podle zdroje (`held`, `joker:<id>`, `deck:<id>`, `rental:<id>`…). */
+/** Název položky „bonusy a poplatky“ podle zdroje (`held`, `joker:<id>`, `deck:<id>`, `tag:<id>`, `rental:<id>`…). */
 export function rewardSourceLabel(source: string): string {
   const [kind = '', id = ''] = source.split(':');
   const jokerName = (): string => (hasKey(`jokers.${id}.name`) ? t(`jokers.${id}.name`) : id);
@@ -28,6 +28,10 @@ export function rewardSourceLabel(source: string): string {
       return t('game.roundEnd.rental', { name: jokerName() });
     case 'rentalReturned':
       return t('game.roundEnd.rentalReturned', { name: jokerName() });
+    case 'tag':
+      return hasKey(`tags.${id}.name`)
+        ? t('game.roundEnd.tag', { name: t(`tags.${id}.name`) })
+        : t('game.roundEnd.other');
     default:
       return t('game.roundEnd.other');
   }

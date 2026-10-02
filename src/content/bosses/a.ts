@@ -7,11 +7,18 @@ import { SUITS } from '../../engine/types';
 
 /** Kontrola z finančáku: cena každé zahrané ruky v Kč. */
 const TAX_AUDIT_FEE = 1;
+/** Kontrola z finančáku: mírné pravidlo, proto vyšší cíl (2× měl ~3% letalitu — balanc simulací). */
+const TAX_AUDIT_TARGET = 2.25;
 /** Výluka na trati: lícem dolů přijde každá N-tá líznutá karta kola (text: „každá druhá“). */
 const TRACK_CLOSURE_EVERY = 2;
-/** Polední pauza: počet rukou a nižší cíl. */
+/**
+ * Výluka na trati: nižší cíl (balanc simulací — s polovinou ruky zakrytou byla 2× ~26% letalita proti ~8 % u běžného
+ * šéfa; docs/DECISIONS.md „Fáze 6: ladění se šéfy“).
+ */
+const TRACK_CLOSURE_TARGET = 1;
+/** Polední pauza: počet rukou a nižší cíl (1 ruka; 1,25× měla ~27% letalitu — balanc simulací). */
 const LUNCH_BREAK_HANDS = 1;
-const LUNCH_BREAK_TARGET = 1.25;
+const LUNCH_BREAK_TARGET = 0.65;
 /** Černá kočka: kolik karet v ruce po každé zahrané ruce vyřadí z provozu. */
 const BLACK_CAT_CARDS = 2;
 /** Mlha nad Labem: hodnoty, které se lížou lícem dolů. */
@@ -19,9 +26,16 @@ const ELBE_FOG_MIN = 2;
 const ELBE_FOG_MAX = 5;
 /** Parkovné: cena každého zahození v Kč. */
 const PARKING_FEE = 1;
+/** Parkovné a Kapsář v tramvaji: mírné pravidlo, proto vyšší cíl (2× měl ~2% letalitu — balanc simulací). */
+const PARKING_TARGET = 2.25;
+const PICKPOCKET_TARGET = 2.25;
+/** Exekutor: nižší cíl (bez nejcennějšího žolíka byla 2× ~1,5× smrtelnější než průměrný šéf). */
+const BAILIFF_TARGET = 1.75;
 /** Garsonka 1+kk: menší ruka a strop vybraných karet. */
 const STUDIO_HAND_SIZE = 1;
 const STUDIO_MAX_SELECT = 4;
+/** Garsonka 1+kk: nižší cíl (bez Postupek a Barev byla 2× ~20% letalita — balanc simulací). */
+const STUDIO_TARGET = 1.35;
 /** Sucho v obci: zahození na nulu, ruka navíc. */
 const DROUGHT_DISCARDS = 0;
 const DROUGHT_HANDS = 1;
@@ -118,6 +132,7 @@ export const BOSSES_A: BossDef[] = [
     // 1 — Kontrola z finančáku: každá zahraná ruka stojí 1 Kč (srážka do dluhového limitu).
     id: 'tax_audit',
     minAnte: 1,
+    targetMult: TAX_AUDIT_TARGET,
     color: '#2f4a6d',
     params: { fee: TAX_AUDIT_FEE },
     hooks: {
@@ -136,6 +151,7 @@ export const BOSSES_A: BossDef[] = [
     // 2 — Výluka na trati: každá druhá karta líznutá v tomto kole (počítáno přes všechna dobrání) lícem dolů.
     id: 'track_closure',
     minAnte: 2,
+    targetMult: TRACK_CLOSURE_TARGET,
     color: '#b5651d',
     hooks: {
       onDraw: (ctx) => {
@@ -286,6 +302,7 @@ export const BOSSES_A: BossDef[] = [
     // 9 — Parkovné: každé zahození stojí 1 Kč (srážka do dluhového limitu).
     id: 'parking_fee',
     minAnte: 1,
+    targetMult: PARKING_TARGET,
     color: '#1d5fa8',
     params: { fee: PARKING_FEE },
     hooks: {
@@ -304,6 +321,7 @@ export const BOSSES_A: BossDef[] = [
     // 10 — Garsonka 1+kk: −1 karta v ruce a nejvýš 4 vybrané karty (strop přes `passive`).
     id: 'studio_flat',
     minAnte: 2,
+    targetMult: STUDIO_TARGET,
     color: '#9c6b4e',
     params: { handSize: STUDIO_HAND_SIZE, select: STUDIO_MAX_SELECT },
     hooks: {
@@ -342,6 +360,7 @@ export const BOSSES_A: BossDef[] = [
     // 12 — Kapsář v tramvaji: po každé zahrané ruce zahodí z ruky kartu s nejvyšší hodnotou (bez zahození, bez hooků).
     id: 'pickpocket',
     minAnte: 2,
+    targetMult: PICKPOCKET_TARGET,
     color: '#a33b3b',
     hooks: {
       afterHandPlayed: (ctx) => {
@@ -362,6 +381,7 @@ export const BOSSES_A: BossDef[] = [
     // 13 — Exekutor: na začátku kola vyřadí z provozu fungujícího žolíka s nejvyšší prodejní cenou (do konce kola).
     id: 'bailiff',
     minAnte: 2,
+    targetMult: BAILIFF_TARGET,
     color: '#4a4a4a',
     hooks: {
       onRoundStart: (ctx) => {

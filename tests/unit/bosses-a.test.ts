@@ -88,20 +88,20 @@ function discard(game: Game, cards: readonly Card[]) {
 
 describe('šéfové 1–13 – definice podle DESIGN 8.2', () => {
   const TABLE: [string, number, number][] = [
-    // [id, od patra, násobek cíle]
-    ['tax_audit', 1, 2],
-    ['track_closure', 2, 2],
+    // [id, od patra, násobek cíle] — cíle laděné simulací (DESIGN 8.2, DECISIONS „Fáze 6: ladění se šéfy“)
+    ['tax_audit', 1, 2.25],
+    ['track_closure', 2, 1],
     ['inventory', 1, 2],
     ['drilling_neighbor', 1, 2],
-    ['lunch_break', 2, 1.25],
+    ['lunch_break', 2, 0.65],
     ['superstitious_granny', 1, 2],
     ['black_cat', 2, 2],
     ['elbe_fog', 2, 2],
-    ['parking_fee', 1, 2],
-    ['studio_flat', 2, 2],
+    ['parking_fee', 1, 2.25],
+    ['studio_flat', 2, 1.35],
     ['village_drought', 2, 2],
-    ['pickpocket', 2, 2],
-    ['bailiff', 2, 2],
+    ['pickpocket', 2, 2.25],
+    ['bailiff', 2, 1.75],
   ];
 
   it('13 šéfů v pořadí tabulky, od patra a cíle podle tabulky, odměna výchozí, nikdo finálový', () => {
@@ -136,12 +136,21 @@ describe('šéfové 1–13 – definice podle DESIGN 8.2', () => {
         expect(hasKey(`bosses.${b.id}.${key}`), `${b.id}.${key}`).toBe(true);
       const name = t(`bosses.${b.id}.name`);
       expect(name.split(/\s+/).length, b.id).toBeLessThanOrEqual(3);
-      const rule = t(`bosses.${b.id}.rule`);
-      expect(rule, b.id).not.toMatch(/\{/);
-      for (const v of Object.values(b.params ?? {}))
-        if (typeof v === 'number') expect(rule, `${b.id}: ${v}`).toContain(formatNumber(v));
+      // Čísla jen přes `{param}`: po dosazení nic nezbyde, každé číslo z params v textu je a změna params text změní.
+      const rule = t(`bosses.${b.id}.rule`, b.params);
+      expect(rule, b.id).not.toMatch(/[{}]/);
+      for (const [k, v] of Object.entries(b.params ?? {})) {
+        if (typeof v !== 'number') continue;
+        expect(rule, `${b.id}: ${v}`).toContain(formatNumber(v));
+        expect(t(`bosses.${b.id}.rule`, { ...b.params, [k]: 37 }), `${b.id}.${k}`).toContain('37');
+      }
     }
     expect(t('bosses.track_closure.rule')).toContain('druhá');
+    expect(t('bosses.tax_audit.rule', { fee: 1 })).toContain(`1${NBSP}Kč`);
+    expect(t('bosses.studio_flat.rule', { handSize: 1, select: 4 })).toBe(
+      `−1${NBSP}karta v${NBSP}ruce a${NBSP}vybrat jde nejvýš 4${NBSP}karty.`,
+    );
+    expect(t('bosses.black_cat.rule', { cards: 5 })).toContain(`5${NBSP}náhodných karet`);
     expect(t('bosses.tax_audit.death').replaceAll(NBSP, ' ')).toBe('Doklady k tomu nemáte, že?');
     expect(hasKey('bosses.drilling_neighbor.blocked')).toBe(true);
     for (const suit of SUITS) expect(hasKey(`bosses.superstitious_granny.omen.${suit}`), suit).toBe(true);
@@ -305,13 +314,13 @@ describe('Soused s vrtačkou (drilling_neighbor)', () => {
 // ─────────────────────────── 5 Polední pauza ───────────────────────────
 
 describe('Polední pauza (lunch_break)', () => {
-  it('jen 1 ruka a cíl 1,25× základ patra', () => {
+  it('jen 1 ruka a cíl 0,65× základ patra', () => {
     const { game } = bossGame('lunch_break');
     const r = game.state.round!;
     expect(r.handsLeft).toBe(1);
     expect(game.modifiers().hands).toBe(1);
-    expect(game.blindTarget('boss', 'lunch_break')).toBe(niceRound(anteBase(1, 1) * 1.25));
-    expect(game.blindTarget('boss', 'lunch_break')).toBe(310);
+    expect(game.blindTarget('boss', 'lunch_break')).toBe(niceRound(anteBase(1, 1) * 0.65));
+    expect(game.blindTarget('boss', 'lunch_break')).toBe(165);
   });
 
   it('strop platí i se žolíkem +1 ruka (pořád 1 ruka); zahození zůstávají', () => {

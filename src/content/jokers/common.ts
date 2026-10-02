@@ -30,8 +30,8 @@ const CRUSADER_MULT = 12;
 const CRUSADER_CLUBS = 2;
 /** Ranní ptáče: první ruka kola. */
 const EARLY_BIRD_MULT = 8;
-/** Noční směna: poslední ruka kola. */
-const NIGHT_SHIFT_MULT = 20;
+/** Noční směna: každá ruka v kole se šéfem (den = Malá a Velká útrata, noc = šéf). */
+const NIGHT_SHIFT_MULT = 14;
 /** Meteorolog: +mult za každou úroveň zahrané kombinace nad první (první placená úroveň je 2). */
 const METEOROLOGIST_MULT = 2;
 const METEOROLOGIST_FROM_LEVEL = 2;
@@ -215,14 +215,15 @@ export const COMMON_JOKERS: JokerDef[] = [
     art: { icon: 'rooster', prop: 'sun', bg: '#f4a259', fg: '#3d2c1e', accent: '#fff3b0', pattern: 'rays' },
   },
   {
-    // 7
+    // 7 — „kolo šéfa“ = kolo s šéfem (`round.bossId`), tedy i Velká útrata se šéfem na Imperialu; vypnutý šéf
+    // (Odvolání) na tom nic nemění.
     id: 'night_shift',
     rarity: 'common',
     cost: 4,
     tags: ['mult'],
     params: { mult: NIGHT_SHIFT_MULT },
     hooks: {
-      onHandPlayed: (ctx) => (ctx.lastHand ? { mult: NIGHT_SHIFT_MULT } : null),
+      onHandPlayed: (ctx) => (ctx.round.bossId !== null ? { mult: NIGHT_SHIFT_MULT } : null),
     },
     art: {
       icon: 'moon',

@@ -154,9 +154,19 @@ export function parseCli(argv: readonly string[], reg: ContentRegistry = content
 // ─────────────────────────── Pomocné texty ───────────────────────────
 
 /** Text obsahu podle klíče, nebo id (testovací obsah texty nemá). */
-function nameOf(prefix: string, id: string, field = 'name'): string {
+function nameOf(
+  prefix: string,
+  id: string,
+  field = 'name',
+  params?: Record<string, number | string>,
+): string {
   const key = `${prefix}.${id}.${field}`;
-  return hasKey(key) ? t(key) : id;
+  return hasKey(key) ? t(key, params) : id;
+}
+
+/** Pravidlo šéfa s dosazenými čísly z `BossDef.params` (texty je mají jen přes `{param}`). */
+function bossRuleText(bossId: string): string {
+  return nameOf('bosses', bossId, 'rule', contentRegistry().bosses[bossId]?.params);
 }
 
 function stakeName(reg: ContentRegistry, level: number): string {
@@ -357,7 +367,7 @@ function blindName(kind: BlindKind): string {
 }
 
 function bossRule(bossId: string): string {
-  return t('cli.play.round.boss', { boss: nameOf('bosses', bossId), rule: nameOf('bosses', bossId, 'rule') });
+  return t('cli.play.round.boss', { boss: nameOf('bosses', bossId), rule: bossRuleText(bossId) });
 }
 
 function itemName(item: ShopItem | BoosterOption): string {
@@ -429,7 +439,7 @@ export function renderState(game: Game): string[] {
         );
         if (b.bossId)
           lines.push(
-            `    ${t('cli.play.blindSelect.boss', { boss: nameOf('bosses', b.bossId), rule: nameOf('bosses', b.bossId, 'rule') })}`,
+            `    ${t('cli.play.blindSelect.boss', { boss: nameOf('bosses', b.bossId), rule: bossRuleText(b.bossId) })}`,
           );
       }
       owned();

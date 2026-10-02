@@ -44,13 +44,14 @@ export const jokersRare = {
     flavor: 'Haló! …haló …aló …ló …ó.',
   },
   lucky_seven: {
+    // „ze 7“: předložka před „sedmi“ se vokalizuje — při změně `odds` zkontrolovat (z 6, ze 7, z 8).
     name: 'Šťastná sedmička',
-    desc: 'Každá skórující {rank} skóruje ještě {retriggers}×.',
-    flavor: 'Do třetice všeho dobrého.',
+    desc: 'Každá skórující karta: {chance} ze {odds}, že skóruje ještě {retriggers}×.',
+    flavor: 'Automat v nádražce sype jednou za čas. Zato pořádně.',
   },
   tab: {
     name: 'Sekera',
-    desc: 'Můžeš jít do mínusu až −{debt|money}; dokud máš záporný zůstatek, dává +{mult} mult.',
-    flavor: 'Zapište mi to.',
+    desc: 'Můžeš jít do mínusu až −{debt|money}; +{mult} mult za každou korunu, která ti chybí do {cap|money}.',
+    flavor: 'Zapište mi to. Čím míň v kapse, tím víc na tácku.',
   },
 } satisfies TextTree;

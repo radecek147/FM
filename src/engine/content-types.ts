@@ -227,6 +227,10 @@ export interface EngineApi {
   jokerRarity(defId: string): JokerRarity | null;
   /** Druh spotřebky podle definice (null = registr ji nezná) — Babiččin recept opakuje jen rady a pranostiky. */
   consumableKind(defId: string): ConsumableKind | null;
+  /** Kombinace, kterou spotřebka zvyšuje (`ConsumableDef.hand`, pranostiky); jinak null — Krakonoš. */
+  consumableHand(defId: string): HandType | null;
+  /** Jde žolíka kopírovat (`JokerDef.copyable !== false`; registr ho nezná → false)? — Napodobitel. */
+  jokerCopyable(defId: string): boolean;
   /**
    * Id žolíků, ze kterých by teď losoval `createJoker` se stejnou `rarity` (odemčené, nezakázané, nevlastněné;
    * legendární i `noShop`). Prázdné pole = `createJoker` by sáhl po náhradním žolíkovi (Výjimka z vyhlášky,
@@ -649,6 +653,11 @@ export interface DeckDef {
   /** Po porážce šéfa (po žolících `onBossDefeated`; Kalendářový: vytvoří pranostiku). */
   onBossDefeated?(ctx: BaseCtx & { readonly bossId: string }): void;
   startingMoney?: number;
+  /**
+   * Kupóny uplatněné zdarma na startu runu (Úřednický) — stejně jako `ChallengeDef.startingVouchers`: před
+   * `onRunStart` balíčku, bez kontroly `VoucherDef.available`; kupón už uplatněný se přeskočí.
+   */
+  startingVouchers?: string[];
   params?: Record<string, number | string>;
   art: ArtSpec;
   unlock?: UnlockCondition;

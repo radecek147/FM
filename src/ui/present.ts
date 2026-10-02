@@ -11,12 +11,15 @@
  * Časování jde přes `app.anim` (AnimQueue): rychlost 1×–4×, vypnuté animace i mezerník (přeskočit) — každé
  * čekání pak skončí hned a DOM se jen dorovná. Animuje se výhradně transform/opacity (Web Animations API).
  */
-import type { GameEvent, HandType, ScoreResult, ScoreStep } from '../engine';
+import type { BlindKind, GameEvent, HandType, ScoreResult, ScoreStep } from '../engine';
 import { hasKey, t } from '../i18n/cs';
 import { formatNumber } from '../i18n/format';
 import type { AnimQueue } from './anim/queue';
+import { blindArt } from './art/art';
 import { updateCardView } from './components/card';
+import { createContentCard } from './components/consumableCard';
 import { toast, type ToastKind } from './components/toast';
+import { bossTexts, tagTexts } from './describe';
 import type { GameController, Presenter } from './controller';
 import { h } from './dom';
 import type { Particles } from './fx/particles';
@@ -53,6 +56,10 @@ export interface PresentView {
   shake(): void;
   /** Hlášení pro čtečky obrazovky (živá oblast). */
   announce(text: string): void;
+  /** Příchod šéfa: plakát se jménem, pravidlem a hláškou nad stolem (nepovinné — testy bez DOM). */
+  showBossIntro?(bossId: string, kind: BlindKind): void;
+  /** Schová plakát šéfa (hráč zahrál nebo zahodil). */
+  hideBossIntro?(): void;
 }
 
 // ─────────────────────────── Pomocné animace ───────────────────────────
@@ -234,6 +241,7 @@ async function presentHand(
   const anim = view.anim;
   const c = view.controller;
   const table = view.tableEl();
+  view.hideBossIntro?.();
   const els = result.playedIds
     .map((id) => [id, view.cardEl(id)] as const)
     .filter((p): p is readonly [number, HTMLElement] => p[1] !== null);
@@ -320,6 +328,7 @@ async function presentHand(
 
 /** Zahozené karty odletí z ruky. */
 async function presentDiscard(view: PresentView, ids: readonly number[]): Promise<void> {
+  view.hideBossIntro?.();
   const els = ids.map((id) => view.cardEl(id)).filter((el): el is HTMLElement => el !== null);
   await Promise.all(
     els.map((el, i) =>
@@ -384,25 +393,77 @@ export function createPresenter(view: PresentView): Presenter {
       const money = {
         value: events.reduce((m, e) => (e.type === 'moneyChanged' ? m - e.delta : m), s.money),
       };
-      for (const e of events) await presentEvent(view, e, money);
+      // Štítky použité hned v téže dávce (Drobné v kabátě, obálky) — ohlásí je jejich vlastní hláška.
+      const batch: Batch = {
+        money,
+        tagsTriggered: new Set(events.flatMap((e) => (e.type === 'tagTriggered' ? [e.defId] : []))),
+        announced: new Set(),
+      };
+      for (const e of events) await presentEvent(view, e, batch);
     });
 }
 
-async function presentEvent(view: PresentView, e: GameEvent, money: { value: number }): Promise<void> {
+/** Kontext jedné dávky událostí (jedna akce hráče). */
+interface Batch {
+  /** Peníze, jak je ukazuje levý panel během přehrávání. */
+  money: { value: number };
+  /** Štítky, které se v dávce spotřebovaly (`tagTriggered`). */
+  tagsTriggered: ReadonlySet<string>;
+  /** Štítky už ohlášené při přeskočení — jejich `tagTriggered` se v dávce neopakuje. */
+  announced: Set<string>;
+}
+
+async function presentEvent(view: PresentView, e: GameEvent, batch: Batch): Promise<void> {
   const anim = view.anim;
+  const money = batch.money;
   switch (e.type) {
     case 'blindSelected': {
-      const intro = e.bossId ? messageText(`bosses.${e.bossId}.intro`) : null;
-      if (intro) say(intro, 'warning');
+      // Příchod šéfa (u Velké útraty na Imperialu jeho pravidlo navíc): plakát nad stolem + hlášení čtečce.
+      const reg = view.controller.registry;
+      if (!e.bossId || !reg.bosses[e.bossId]) return;
+      const tx = bossTexts(e.bossId, { registry: reg });
+      view.showBossIntro?.(e.bossId, e.blind);
+      view.announce(
+        t('game.events.bossArrived', { name: tx.name, rule: tx.rule, intro: tx.intro ?? '' }).trim(),
+      );
+      await anim.wait(900);
       return;
     }
-    case 'blindSkipped':
-      say(
-        e.tagId && hasKey(`tags.${e.tagId}.name`)
-          ? t('game.events.skippedTag', { tag: t(`tags.${e.tagId}.name`) })
-          : t('game.events.skipped'),
-      );
+    case 'blindSkipped': {
+      // Hláška se žetonem štítku. Štítek použitý hned (peníze, obálka) se ohlásí tady i s tím, co udělal — jeho
+      // `tagTriggered` v téže dávce se pak už neopakuje; jinak štítek čeká v levém panelu.
+      const reg = view.controller.registry;
+      if (!e.tagId || !reg.tags[e.tagId]) {
+        say(t('game.events.skipped'));
+        return;
+      }
+      const tx = tagTexts(e.tagId, { registry: reg });
+      const now = batch.tagsTriggered.has(e.tagId);
+      if (now) batch.announced.add(e.tagId);
+      toast(now ? tx.desc : t('game.events.skippedTag', { tag: tx.name }), {
+        kind: now ? 'success' : 'info',
+        title: now ? t('game.events.skippedTag', { tag: tx.name }) : undefined,
+        media: createContentCard('tag', e.tagId, { registry: reg, tooltip: false }),
+        className: 'toast--tag',
+        testId: 'toast-game-info',
+      });
       return;
+    }
+    case 'jokerDebuffChanged': {
+      // Šéf žolíka vypnul (Exekutor, Krajský úřad, Jednooký hejtman…) nebo ho zase pustil (Výpadek proudu po první
+      // ruce). Na konci kola se vypnutí ruší všem naráz — to už se neohlašuje.
+      if (!e.debuffed && view.controller.state.phase !== 'round') return;
+      const el = view.jokerEl(e.uid);
+      void pop(anim, el);
+      bubble(
+        view,
+        el,
+        t(e.debuffed ? 'game.bubble.jokerOff' : 'game.bubble.jokerOn'),
+        e.debuffed ? 'bad' : 'message',
+      );
+      await anim.wait(220);
+      return;
+    }
     case 'cardsDrawn':
       return presentDraw(view, e.cardIds);
     case 'handPlayed':
@@ -470,8 +531,30 @@ async function presentEvent(view: PresentView, e: GameEvent, money: { value: num
       say(t('game.events.ante', { ante: e.ante }));
       return;
     case 'bossDefeated': {
-      const text = messageText(`bosses.${e.bossId}.defeat`);
-      if (text) say(text, 'success');
+      const reg = view.controller.registry;
+      if (!reg.bosses[e.bossId]) return;
+      const tx = bossTexts(e.bossId, { registry: reg });
+      toast(tx.defeat ? t('art.tooltip.flavor', { text: tx.defeat }) : t('game.events.bossDefeated'), {
+        kind: 'success',
+        title: t('game.events.bossDefeatedTitle', { name: tx.name }),
+        media: blindArt('boss', e.bossId, { registry: reg }),
+        className: 'toast--boss',
+        testId: 'toast-boss-defeat',
+      });
+      return;
+    }
+    case 'tagTriggered': {
+      // Štítek se právě použil (spotřeboval) — co udělal. Hned po přeskočení ho už ohlásilo `blindSkipped`.
+      const reg = view.controller.registry;
+      if (!reg.tags[e.defId] || batch.announced.delete(e.defId)) return;
+      const tx = tagTexts(e.defId, { registry: reg });
+      toast(tx.desc, {
+        kind: 'success',
+        title: t('game.events.tagTriggered', { name: tx.name }),
+        media: createContentCard('tag', e.defId, { registry: reg, tooltip: false }),
+        className: 'toast--tag',
+        testId: 'toast-tag',
+      });
       return;
     }
     case 'endlessStarted':

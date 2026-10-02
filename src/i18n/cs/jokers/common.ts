@@ -39,8 +39,8 @@ export const jokersCommon = {
   },
   night_shift: {
     name: 'Noční směna',
-    desc: 'Poslední ruka kola dá +{mult} mult.',
-    flavor: 'Po půlnoci platí noční tarif.',
+    desc: 'V kole se šéfem dá každá ruka +{mult} mult.',
+    flavor: 'Po půlnoci platí noční tarif. A šéf chodí na kontrolu.',
   },
   meteorologist: {
     name: 'Meteorolog',

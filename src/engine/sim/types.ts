@@ -71,6 +71,19 @@ export interface RunResult {
   /** Kolik kol byl který žolík ve slotu (`RunStats.jokerRoundCounts`). */
   jokerRounds: Record<string, number>;
   shopMoney: ShopMoneySample[];
+  /** Šéfové, se kterými se run utkal v útratě Šéf (id v pořadí pater; Velká útrata na Imperialu se nepočítá). */
+  bosses: string[];
+  /** Štítky získané přeskočením útrat (id v pořadí). */
+  skipTags: string[];
+}
+
+/** Letalita šéfa (DESIGN 12.1): kolik runů se s ním utkalo v útratě Šéf a kolik na něm skončilo. */
+export interface BossStat {
+  id: string;
+  encounters: number;
+  deaths: number;
+  /** % proher při setkání (0–100). */
+  lethality: number;
 }
 
 /** Síla žolíka v simulaci: % výher runů, kde byl ve slotu, proti runům bez něj (DESIGN 4.3, pravidlo 4). */
@@ -111,5 +124,10 @@ export interface SimSummary {
   /** Průměrné peníze při vstupu do Večerky podle patra (klíč = patro). */
   avgShopMoney: Record<number, number>;
   jokers: JokerStat[];
+  /** Letalita šéfů seřazená od nejsmrtelnějšího (při shodě podle počtu setkání a id). */
+  bosses: BossStat[];
+  /** Kolik útrat bot přeskočil (průměr na run) a které štítky bral (id → počet). */
+  avgSkips: number;
+  skipTags: Record<string, number>;
   invalidActions: number;
 }

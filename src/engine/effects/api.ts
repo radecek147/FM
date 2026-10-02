@@ -536,6 +536,11 @@ export function createApi(core: GameCore): EngineApi {
     availableJokers: (opts) => availableJokerIds(core, opts),
     jokerRarity: (defId) => core.registry.jokers[defId]?.rarity ?? null,
     consumableKind: (defId) => core.registry.consumables[defId]?.kind ?? null,
+    consumableHand: (defId) => core.registry.consumables[defId]?.hand ?? null,
+    jokerCopyable: (defId) => {
+      const def = core.registry.jokers[defId];
+      return def !== undefined && def.copyable !== false;
+    },
     sellValue: (joker) => jokerSellValue(core, joker),
   };
   return api;

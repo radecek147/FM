@@ -1,10 +1,6 @@
 /** Žolíci — vzácnost/skupina: epic. Texty v src/i18n/cs/jokers/epic.ts. Návod: docs/CONTENT-GUIDE.md. */
-import type { EffectResult, JokerDef } from '../../engine/content-types';
+import type { EffectResult, JokerDef, JokerRarity } from '../../engine/content-types';
 import type { JokerInstance } from '../../engine/types';
-import { COMMON_JOKERS } from './common';
-import { LEGENDARY_JOKERS } from './legendary';
-import { RARE_JOKERS } from './rare';
-import { SPECIAL_JOKERS } from './special';
 
 /** Číselný stav žolíka (`self.state[key]`), jinak výchozí hodnota (čerstvá instance, cizí save). */
 function stateNum(self: JokerInstance, key: string, fallback = 0): number {
@@ -97,22 +93,10 @@ const mushroomPicker: JokerDef = {
 
 // ─────────────────────────── #28 Napodobitel ───────────────────────────
 
-let nonCopyable: ReadonlySet<string> | null = null;
-
-/**
- * Id žolíků obsahu hry s `copyable: false` — Napodobitel si je nevybírá (engine by kopii stejně zahodil a kolo
- * by „propadlo“). Hook k registru přístup nemá, proto statický seznam obsahu (počítá se líně při prvním výběru,
- * kdy už jsou všechny skupiny načtené); žolík mimo obsah hry (testovací registr) se bere jako kopírovatelný
- * a nekopírovatelnost pak pohlídá engine.
- */
-function nonCopyableIds(): ReadonlySet<string> {
-  nonCopyable ??= new Set(
-    [...COMMON_JOKERS, ...RARE_JOKERS, ...EPIC_JOKERS, ...LEGENDARY_JOKERS, ...SPECIAL_JOKERS]
-      .filter((d) => d.copyable === false)
-      .map((d) => d.id),
-  );
-  return nonCopyable;
-}
+/** Kostým: edice, kterou Napodobitel dostane při získání, pokud žádnou nemá (duhová = ×1,5 mult). */
+const IMPERSONATOR_EDITION = 'poly';
+/** Koho smí kopírovat — na hvězdy (epické a legendární žolíky) nemá. */
+const IMPERSONATOR_RARITIES: readonly JokerRarity[] = ['common', 'rare'];
 
 /**
  * Napodobitel si cíl vybírá v `copyTarget`, ne ve vlastním `onRoundStart`: engine u kopírujícího žolíka volá
@@ -120,7 +104,11 @@ function nonCopyableIds(): ReadonlySet<string> {
  * `copyTarget` se ale volá u každého průchodu žolíků — i v `onBlindSelect`/`onRoundStart` při výběru útraty — takže
  * první volání v novém kole (fáze `blind_select` s už založeným kolem) je přesně začátek kola. Kolo pozná podle
  * `stats.roundsWon` (během výběru útraty je pro každé kolo jiné). Stav: `target` = uid cíle, `round` = kolo výběru.
- * Mimo kolo (Večerka, výběr útraty) nekopíruje nic. Když cíl zmizí, do konce kola nekopíruje nic.
+ *
+ * Cíl = běžný nebo vzácný žolík s nejvyšší prodejní cenou (`api.sellValue`: cena, edice, prodejní bonus; zapůjčený
+ * 1 Kč), při shodě ten nejvíc vlevo. Vynechá nekopírovatelné (`api.jokerCopyable` — i jiné Napodobitele) a žolíky
+ * mimo provoz (debuffnuté na začátku kola). Mimo kolo (Večerka, výběr útraty) nekopíruje nic; když cíl zmizí, do konce
+ * kola nekopíruje nic. Duhová edice z `onAcquire` platí v kroku 4 vždy, i bez cíle (edice patří vlastníkovi slotu).
  */
 const impersonator: JokerDef = {
   id: 'impersonator',
@@ -131,16 +119,27 @@ const impersonator: JokerDef = {
   copyable: false,
   initState: () => ({ target: null, round: -1 }),
   hooks: {
+    // Vlastní hook kopírujícího žolíka (`onAcquire` se volá jen jemu, ne přes kopii).
+    onAcquire: (ctx) => {
+      if (ctx.self.edition === null) ctx.api.setJokerEdition(ctx.self.uid, IMPERSONATOR_EDITION);
+    },
     copyTarget: (ctx) => {
       const s = ctx.state;
       if (!s.round) return null;
       if (!ctx.isCopy && s.phase === 'blind_select' && ctx.self.state.round !== s.stats.roundsWon) {
-        // Jiný žolík než on sám a jiní Napodobitelé; nekopírovatelné a zvětralé (trvale debuffnuté) by nic nedali.
-        const skip = nonCopyableIds();
-        const pool = s.jokers.filter(
-          (j) => j.uid !== ctx.self.uid && j.defId !== ctx.def.id && !j.debuffed && !skip.has(j.defId),
-        );
-        ctx.self.state.target = pool.length > 0 ? ctx.rng.pick(pool).uid : null;
+        let best: JokerInstance | null = null;
+        let bestValue = -Infinity;
+        for (const j of s.jokers) {
+          if (j.uid === ctx.self.uid || j.debuffed || !ctx.api.jokerCopyable(j.defId)) continue;
+          const rarity = ctx.api.jokerRarity(j.defId);
+          if (!rarity || !IMPERSONATOR_RARITIES.includes(rarity)) continue;
+          const value = ctx.api.sellValue(j);
+          if (value > bestValue) {
+            best = j;
+            bestValue = value;
+          }
+        }
+        ctx.self.state.target = best?.uid ?? null;
         ctx.self.state.round = s.stats.roundsWon;
       }
       const uid = ctx.self.state.target;

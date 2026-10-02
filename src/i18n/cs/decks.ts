@@ -13,6 +13,12 @@ export const decks = {
     desc: '+{slots|plural:slot,sloty,slotů} pro žolíky, ale start jen s {money|money}.',
     flavor: 'Má tu vlastní věšák. Na žolíky.',
   },
+  clerk: {
+    name: 'Úřednický',
+    // Názvy kupónů musí odpovídat `vouchers.loyalty_card|tear_calendar.name` (hlídá tests/unit/decks.test.ts).
+    desc: 'Start s kupóny Věrnostní karta a Trhací kalendář.',
+    flavor: 'Všechno vyřízeno předem. Na razítko.',
+  },
   tourist: {
     name: 'Turistický',
     desc: 'Postupka i Barva stačí ze {cards} karet. Cíle všech útrat jsou ale {target|x}.',
@@ -43,5 +49,22 @@ export const decks = {
     name: 'Dlužník',
     desc: 'Start s {money|money}, dluh smí jít až {debt|money} pod nulu. Úrok {interest|x}, ale jen z kladného zůstatku.',
     flavor: 'Půjčka? Já? Jen na chvilku.',
+  },
+  grandmas: {
+    name: 'Babiččin',
+    desc: 'Spotřebky mají o {slots|plural:slot,sloty,slotů} víc. Na startu dostaneš {rady|plural:náhodnou babskou radu,různé náhodné babské rady,různých náhodných babských rad}.',
+    flavor: 'Babička ví všechno. A ráda to řekne.',
+  },
+  junk_shop: {
+    name: 'Vetešnický',
+    desc: 'Start s jedním náhodným vzácným žolíkem. Večerka má o {slots|plural:kartový slot,kartové sloty,kartových slotů} méně.',
+    flavor: 'Všechno z druhé ruky, něco i ze třetí.',
+  },
+  almanac: {
+    name: 'Kalendářový',
+    desc: 'Po porážce každého šéfa vznikne pranostika tvé nejčastěji hrané kombinace (když není volný slot, dostaneš {money|money}). Zato o {discards|plural:zahození,zahození,zahození} méně v každém kole.',
+    flavor: 'Pranostika na každý den, i na ty, kdy se nehraje.',
+    made: 'Kalendář vytrhl list: máš novou pranostiku.',
+    full: 'Na pranostiku není místo, kalendář ji vyplatil: {money|money}.',
   },
 };

@@ -138,13 +138,19 @@ export function previewHand(core: GameCore, cardIds: readonly number[]): HandPre
   let { chips, mult } = handValueAtLevel(def, level);
   const boss = core.activeBoss();
   const modifyBase = boss?.hooks.modifyBase;
-  if (modifyBase && core.state.round) {
+  const validateHand = boss?.hooks.validateHand;
+  let blockedReason: string | null = null;
+  if ((modifyBase || validateHand) && core.state.round) {
     const layer = core.ctxLayer(makeInfo(core, hand, cards, { chips, mult }));
     const base = { chips, mult };
     // Náhled je dotaz UI: šéf v něm nesmí posunout RNG (jinak by run závisel na tom, kolikrát se UI zeptá).
-    ({ chips, mult } = core.readOnly(() => bossBase(modifyBase(bossScoringCtx(core, layer), base), base)));
+    if (validateHand) blockedReason = core.readOnly(() => validateHand(bossScoringCtx(core, layer))) ?? null;
+    if (modifyBase)
+      ({ chips, mult } = core.readOnly(() => bossBase(modifyBase(bossScoringCtx(core, layer), base), base)));
   }
-  return { hand, chips, mult, level, hidden: false };
+  return blockedReason
+    ? { hand, chips, mult, level, hidden: false, blockedReason }
+    : { hand, chips, mult, level, hidden: false };
 }
 
 function makeInfo(

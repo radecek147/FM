@@ -1,7 +1,8 @@
 /**
  * Výběr útraty (DESIGN 13.1): tři karty Malá / Velká / Šéf s cílem a odměnou (stejná čísla jako kolo —
  * `engine.blindTarget` / `engine.blindReward`), u Malé a Velké štítek za přeskočení s popisem a Přeskočit,
- * u šéfa jeho pravidlo. Šéfové a štítky v registru zatím nemusí být — prázdné id se ošetří.
+ * u šéfa jeho pravidlo (žeton s tooltipem včetně hlášky příchodu), na Imperialu i u Velké útraty. Šéfové a štítky
+ * v registru nemusí být — prázdné id se ošetří.
  */
 import type { BlindSlot } from '../../../engine';
 import { t } from '../../../i18n/cs';
@@ -9,6 +10,7 @@ import { formatNumber } from '../../../i18n/format';
 import { blindArt } from '../../art/art';
 import { button } from '../../components/button';
 import { createContentCard } from '../../components/consumableCard';
+import { attachTooltip, contentTooltip } from '../../components/tooltip';
 import { blindName, bossTexts, tagTexts } from '../../describe';
 import { h } from '../../dom';
 import type { GameCtx } from './shared';
@@ -65,6 +67,19 @@ export function renderBlindSelect(ctx: GameCtx): HTMLElement {
     const rule = bossRule(ctx, slot);
     const titleId = `blind-card-${slot.kind}`;
     const rewardText = reward > 0 ? t('game.blinds.rewardValue', { n: reward }) : t('game.blinds.noReward');
+    // Cíl šéfa upravený štítkem (Šéf má chřipku: −25 %) — ať je jasné, proč je cíl nižší.
+    const bossMult =
+      slot.kind === 'boss' && slot.status !== 'defeated' ? c.engine.modifiers().bossTargetMult : 1;
+    const targetNote =
+      bossMult !== 1
+        ? h(
+            'p',
+            { class: 'blind-card__note', 'data-testid': 'blind-boss-target-note' },
+            t(bossMult < 1 ? 'game.blinds.bossWeakened' : 'game.blinds.bossStrengthened', {
+              pct: Math.round(Math.abs(1 - bossMult) * 100),
+            }),
+          )
+        : null;
     const actions: HTMLElement[] = [];
     if (current) {
       actions.push(
@@ -103,6 +118,13 @@ export function renderBlindSelect(ctx: GameCtx): HTMLElement {
       );
     }
     for (const b of actions) b.dataset.focusKey = `blind-${b.dataset.testid ?? ''}`;
+    const token = h(
+      'div',
+      { class: 'blind-card__token', 'aria-hidden': 'true' },
+      blindArt(slot.kind, known, { registry: ctx.registry }),
+    );
+    // Žeton šéfa: tooltip s pravidlem a hláškou příchodu (hover, dlouhý stisk) — text je i na kartě.
+    if (known) attachTooltip(token, () => contentTooltip('boss', known, { registry: ctx.registry }));
     return h(
       'article',
       {
@@ -112,11 +134,7 @@ export function renderBlindSelect(ctx: GameCtx): HTMLElement {
         'data-status': slot.status,
       },
       h('p', { class: 'blind-card__status' }, t(`game.blinds.status.${slot.status}`)),
-      h(
-        'div',
-        { class: 'blind-card__token', 'aria-hidden': 'true' },
-        blindArt(slot.kind, known, { registry: ctx.registry }),
-      ),
+      token,
       h('h3', { class: 'blind-card__name', id: titleId }, name),
       rule ? h('p', { class: 'blind-card__rule' }, rule) : null,
       h(
@@ -135,6 +153,7 @@ export function renderBlindSelect(ctx: GameCtx): HTMLElement {
           h('dd', { class: 'blind-card__reward' }, rewardText),
         ),
       ),
+      targetNote,
       tagBlock(ctx, slot),
       actions.length > 0 ? h('div', { class: 'blind-card__actions' }, actions) : null,
     );

@@ -12,7 +12,7 @@
  * S / B třídění, Esc pauza (Pokračovat / Nastavení / Hlavní menu), mezerník přeskočí animaci (řeší App).
  */
 import '../../styles/game.css';
-import type { HandType, RunPhase } from '../../../engine';
+import type { BlindKind, HandType, RunPhase } from '../../../engine';
 import { t } from '../../../i18n/cs';
 import type { App, Screen, ScreenFactory } from '../../app';
 import { tableEmblem } from '../../art/table';
@@ -24,6 +24,7 @@ import { h } from '../../dom';
 import { particles, type Particles } from '../../fx/particles';
 import { animate, createPresenter, type PresentView } from '../../present';
 import { blindSelectKey, renderBlindSelect } from './blindSelect';
+import { createBossBanner, type BossBanner } from './bossBanner';
 import { boosterKey, renderBooster } from './booster';
 import { renderGameOver, renderVictory } from './endScreens';
 import { createHandArea, type HandArea } from './handArea';
@@ -77,6 +78,7 @@ class GameView implements PresentView {
   private readonly panelHost: HTMLElement;
   private readonly fx: HTMLElement;
   private readonly live: HTMLElement;
+  private readonly bossBanner: BossBanner;
   private panelKey = '';
   private readonly unsubscribe: () => void;
 
@@ -109,7 +111,16 @@ class GameView implements PresentView {
     this.panelHost = h('div', { class: 'game-panel-host' });
     // Potisk na suknu (prošívaný ovál + znak) — jen ozdoba, pod vším ostatním na jevišti.
     const decor = h('div', { class: 'game-stage__decor', 'aria-hidden': 'true' }, tableEmblem());
-    const stage = h('section', { class: 'game-stage' }, decor, this.tableHint, this.table, this.panelHost);
+    this.bossBanner = createBossBanner(controller.registry);
+    const stage = h(
+      'section',
+      { class: 'game-stage' },
+      decor,
+      this.tableHint,
+      this.table,
+      this.panelHost,
+      this.bossBanner.el,
+    );
     this.main = h('div', { class: 'game-main' }, this.topRow.el, stage, this.handArea.el);
     this.fx = h('div', { class: 'game-fx', 'aria-hidden': 'true' });
     this.live = h('p', { class: 'visually-hidden', 'aria-live': 'polite', 'data-testid': 'game-live' });
@@ -159,6 +170,7 @@ class GameView implements PresentView {
     this.main.classList.toggle('is-handless', this.handArea.el.classList.contains('is-empty'));
 
     const inRound = s.phase === 'round';
+    if (!inRound) this.bossBanner.hide();
     this.table.hidden = !inRound;
     if (!inRound && !c.busy && this.table.childElementCount > 0) this.table.replaceChildren();
     this.tableHint.hidden = !inRound || this.table.childElementCount > 0 || c.selected.length > 0;
@@ -261,6 +273,14 @@ class GameView implements PresentView {
     this.live.textContent = text;
   }
 
+  showBossIntro(bossId: string, kind: BlindKind): void {
+    this.bossBanner.show(bossId, kind, this.controller.state.ante);
+  }
+
+  hideBossIntro(): void {
+    this.bossBanner.hide();
+  }
+
   // ─────────────────────────── Klávesy ───────────────────────────
 
   onKey(e: KeyboardEvent): boolean {
@@ -312,6 +332,7 @@ class GameView implements PresentView {
   }
 
   dispose(): void {
+    this.bossBanner.hide();
     this.unsubscribe();
     this.controller.setPresenter(async () => undefined);
     this.particles.clear();

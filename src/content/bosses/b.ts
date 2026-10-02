@@ -2,8 +2,7 @@
  * Šéfové — běžní šéfové 14–25 (docs/DESIGN.md kap. 8.2). Texty v src/i18n/cs/bosses/b.ts, testy
  * v tests/unit/bosses-b.test.ts. Návod: docs/CONTENT-GUIDE.md kap. 4.
  *
- * Čísla pravidel jsou jen v konstantách níže — čte je hook i `params`. Texty (`rule`) je zatím mají napsané rovnou,
- * protože UI `bossTexts` `params` šéfů nedosazuje; shodu hlídá test.
+ * Čísla pravidel jsou jen v konstantách níže — čte je hook i `params` a text (`rule`) je dosazuje přes `{param}`.
  * Per-kolo stav šéfa žije v `round.flags` (klíče s předponou id šéfa, ARCHITECTURE 2.7), aby přežil uložení
  * a načtení.
  */
@@ -17,14 +16,24 @@ import { HAND_TYPES } from '../../engine/types';
 const NORMAL_TARGET_MULT = 2;
 /** Nová vyhláška: úroveň, na které se počítají všechny kombinace. */
 const DECREE_LEVEL = 1;
+/** Nová vyhláška: nižší cíl (bez úrovní kombinací byla 2× ~22% letalita — balanc simulací, DECISIONS). */
+const DECREE_TARGET_MULT = 1.1;
 /** Šanon na šanonu: násobek základního cíle patra. */
 const BINDER_TARGET_MULT = 3;
 /** Zabijačka: kolik náhodných skórujících karet se po ruce zničí. */
 const SLAUGHTER_CARDS = 1;
+/** Zabijačka: pravidlo bolí až v dalších kolech, proto vyšší cíl (2× měl ~4% letalitu — balanc simulací). */
+const SLAUGHTER_TARGET_MULT = 2.5;
+/** Krajské derby: nižší cíl (poloviční základ smíšených rukou měl s 2× ~1,8× průměrnou letalitu — balanc). */
+const DERBY_TARGET_MULT = 1.75;
 /** Normalizace: čipy každé skórující karty. */
 const NORMALIZATION_CHIPS = 5;
+/** Jednooký hejtman: nižší cíl (s polovinou žolíků byla 2× ~26% letalita — balanc simulací, DECISIONS). */
+const HETMAN_TARGET_MULT = 1.4;
 /** Tchyně na návštěvě: kolik náhodných karet z ruky zahodí každé zahození navíc. */
 const MOTHER_IN_LAW_CARDS = 1;
+/** Tchyně na návštěvě: mírné pravidlo, proto vyšší cíl (2× měl ~3% letalitu — balanc simulací). */
+const MOTHER_IN_LAW_TARGET_MULT = 2.25;
 /** Kocovina: ruce méně. */
 const HANGOVER_HANDS = 1;
 /** Sudé dny: liché hodnoty (eso je 14, ale počítá se jako 1 = liché). */
@@ -87,6 +96,7 @@ export const BOSSES_B: BossDef[] = [
     // 14 — Všechny kombinace se v tomto kole počítají na úrovni 1.
     id: 'new_decree',
     minAnte: 3,
+    targetMult: DECREE_TARGET_MULT,
     params: { level: DECREE_LEVEL },
     color: '#5b6b8c',
     hooks: {
@@ -108,6 +118,7 @@ export const BOSSES_B: BossDef[] = [
     // 16 — Ruka s červenými i černými kartami má poloviční základní čipy i mult.
     id: 'regional_derby',
     minAnte: 2,
+    targetMult: DERBY_TARGET_MULT,
     color: '#b03a48',
     hooks: {
       modifyBase: (ctx, base) => (isMixedHand(ctx) ? halfBase(base) : base),
@@ -125,6 +136,7 @@ export const BOSSES_B: BossDef[] = [
     // 17 — Po každé zahrané ruce se zničí 1 náhodná skórující karta.
     id: 'pig_slaughter',
     minAnte: 3,
+    targetMult: SLAUGHTER_TARGET_MULT,
     params: { cards: SLAUGHTER_CARDS },
     color: '#a33b3b',
     hooks: {
@@ -165,6 +177,7 @@ export const BOSSES_B: BossDef[] = [
     // 20 — Žolíci v pravé polovině řady nefungují (při lichém počtu prostřední funguje); platí i po přeřazení.
     id: 'one_eyed_hetman',
     minAnte: 3,
+    targetMult: HETMAN_TARGET_MULT,
     color: '#8b6f2e',
     hooks: {
       isJokerDebuffed: (ctx, _joker, index) => index >= Math.ceil(ctx.state.jokers.length / 2),
@@ -175,6 +188,7 @@ export const BOSSES_B: BossDef[] = [
     // 21 — Každé zahození ti navíc zahodí 1 náhodnou kartu z ruky (dobírá se normálně).
     id: 'mother_in_law',
     minAnte: 1,
+    targetMult: MOTHER_IN_LAW_TARGET_MULT,
     params: { cards: MOTHER_IN_LAW_CARDS },
     color: '#9c5b8a',
     hooks: {

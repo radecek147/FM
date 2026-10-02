@@ -6,7 +6,15 @@ import type { ContentRegistry } from '../content-types';
 import { FINAL_ANTE } from '../constants';
 import { Game } from '../run/game';
 import type { Action } from '../types';
-import type { Bot, JokerStat, RunResult, ShopMoneySample, SimSummary, SimulateRunOptions } from './types';
+import type {
+  BossStat,
+  Bot,
+  JokerStat,
+  RunResult,
+  ShopMoneySample,
+  SimSummary,
+  SimulateRunOptions,
+} from './types';
 
 /** Pojistka proti zacyklení bota: výhra trvá zhruba 400 akcí (24 kol). */
 export const DEFAULT_MAX_ACTIONS = 5000;
@@ -15,7 +23,8 @@ export const MAX_CONSECUTIVE_INVALID = 3;
 
 /**
  * Cílové pásmo % výher rozumné strategie podle síly piva (DESIGN 10 a 12.1) — [min, max] v procentech, pro hotovou
- * hru se šéfy. Předběžná kalibrace křivek ve fázi 5 (bez šéfů) míří na Desítce výš (~35–45 %); ladění ve fázi 10.
+ * hru se šéfy. Kalibrace fáze 6 (šéfové a štítky): Desítka i Imperial v pásmu; střední síly piva pod pásmem kvůli
+ * ekonomice (Jedenáctka, Ležák) — ladění ve fázi 10 (docs/DECISIONS.md „Fáze 6: ladění se šéfy“).
  */
 export const WIN_RATE_TARGETS: Readonly<Record<number, readonly [number, number]>> = Object.freeze({
   1: [25, 35],
@@ -60,6 +69,8 @@ export function simulateRun(registry: ContentRegistry, opts: SimulateRunOptions)
   );
   const maxActions = opts.maxActions ?? DEFAULT_MAX_ACTIONS;
   const shopMoney: ShopMoneySample[] = [];
+  const bosses: string[] = [];
+  const skipTags: string[] = [];
   const invalidByCode: Record<string, number> = {};
   let actions = 0;
   let invalid = 0;
@@ -79,9 +90,11 @@ export function simulateRun(registry: ContentRegistry, opts: SimulateRunOptions)
     streak = 0;
     for (const e of res.events) {
       if (e.type === 'shopEntered') shopMoney.push({ ante: game.state.ante, money: game.state.money });
+      else if (e.type === 'blindSelected' && e.blind === 'boss' && e.bossId) bosses.push(e.bossId);
+      else if (e.type === 'blindSkipped' && e.tagId) skipTags.push(e.tagId);
     }
   }
-  return buildResult(game, opts, { actions, invalid, invalidByCode, shopMoney });
+  return buildResult(game, opts, { actions, invalid, invalidByCode, shopMoney, bosses, skipTags });
 }
 
 function buildResult(
@@ -92,6 +105,8 @@ function buildResult(
     invalid: number;
     invalidByCode: Record<string, number>;
     shopMoney: ShopMoneySample[];
+    bosses: string[];
+    skipTags: string[];
   },
 ): RunResult {
   const s = game.state;
@@ -133,6 +148,8 @@ function buildResult(
       .sort(),
     jokerRounds,
     shopMoney: run.shopMoney,
+    bosses: run.bosses,
+    skipTags: run.skipTags,
   };
 }
 
@@ -232,6 +249,25 @@ export function summarizeRuns(results: readonly RunResult[], minJokerRuns = 1): 
     .filter((j) => j.runs >= minJokerRuns)
     .sort((a, b) => b.delta - a.delta || b.runs - a.runs || (a.id < b.id ? -1 : 1));
 
+  // Letalita šéfů: setkání v útratě Šéf a prohry na něm (prohra ve Velké útratě s pravidlem šéfa se nepočítá).
+  const bossCounts = new Map<string, { encounters: number; deaths: number }>();
+  for (const r of results) {
+    for (const id of r.bosses ?? []) {
+      const b = bossCounts.get(id) ?? { encounters: 0, deaths: 0 };
+      b.encounters++;
+      bossCounts.set(id, b);
+    }
+    if (!r.won && r.blind === 'boss' && r.cause) {
+      const b = bossCounts.get(r.cause);
+      if (b) b.deaths++;
+    }
+  }
+  const bosses: BossStat[] = [...bossCounts.entries()]
+    .map(([id, b]) => ({ id, ...b, lethality: pct(b.deaths, b.encounters) }))
+    .sort((a, b) => b.lethality - a.lethality || b.encounters - a.encounters || (a.id < b.id ? -1 : 1));
+  const skipTags: Record<string, number> = {};
+  for (const r of results) for (const id of r.skipTags ?? []) skipTags[id] = (skipTags[id] ?? 0) + 1;
+
   return {
     bot: results[0]?.bot ?? '',
     runs,
@@ -253,6 +289,9 @@ export function summarizeRuns(results: readonly RunResult[], minJokerRuns = 1): 
     avgMoneySpent: avg(results.map((r) => r.moneySpent)),
     avgShopMoney,
     jokers,
+    bosses,
+    avgSkips: avg(results.map((r) => r.blindsSkipped)),
+    skipTags,
     invalidActions: results.reduce((a, r) => a + r.invalidActions, 0),
   };
 }

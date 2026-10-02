@@ -18,6 +18,11 @@ export interface ToastOptions {
   /** Doba zobrazení v ms (výchozí 4 s, chyba 6 s). 0 = do zavření. */
   duration?: number;
   testId?: string;
+  /** Tučný nadpis nad textem (jméno šéfa, název štítku). */
+  title?: string;
+  /** Obrázek místo ikony druhu (žeton šéfa, štítek) — dekorativní, text musí stačit sám. */
+  media?: Node;
+  className?: string;
 }
 
 export interface ToastHandle {
@@ -64,12 +69,21 @@ export function toast(message: string, opts: ToastOptions = {}): ToastHandle {
   const el = h(
     'div',
     {
-      class: ['toast', `toast--${kind}`],
+      class: ['toast', `toast--${kind}`, opts.media ? 'toast--media' : '', opts.className],
       role: kind === 'error' ? 'alert' : 'status',
       'data-testid': opts.testId ?? `toast-${kind}`,
     },
-    h('span', { class: 'toast__icon', 'aria-hidden': 'true' }, ICONS[kind]),
-    h('p', { class: 'toast__text' }, message),
+    opts.media
+      ? h('span', { class: 'toast__media', 'aria-hidden': 'true' }, opts.media)
+      : h('span', { class: 'toast__icon', 'aria-hidden': 'true' }, ICONS[kind]),
+    opts.title
+      ? h(
+          'div',
+          { class: 'toast__body' },
+          h('p', { class: 'toast__title' }, opts.title),
+          h('p', { class: 'toast__text' }, message),
+        )
+      : h('p', { class: 'toast__text' }, message),
     h(
       'button',
       { type: 'button', class: 'toast__close', 'aria-label': t('common.dismiss'), onClick: dismiss },

@@ -40,9 +40,11 @@ import { HAND_TYPES, SUITS } from '../types';
 import {
   analyzeCards,
   bestUtility,
+  blockedTypes,
   cardValue,
   cloneGame,
   exactPlayScore,
+  exactScale,
   makeEnv,
   planCandidates,
   type CardValue,
@@ -58,7 +60,10 @@ import {
   levelWorth,
   makeView,
   planTargets,
+  probe,
+  probeSeed,
   sampledDelta,
+  stateDelta,
   type Delta,
   type TargetPlan,
   type ValueView,
@@ -271,10 +276,34 @@ const KEEP_KC = 0.4;
 const KEEP_FACTOR = 0.8;
 /** Z obálky vybrat, jen když nejlepší možnost má aspoň tolik Kč. */
 const PICK_MIN = 0.3;
+/** Vzorků přesného skóre kandidáta, když skórování závisí na náhodě (průměr; v poslední ruce kola minimum). */
+const CHANCE_SAMPLES = 2;
+const CHANCE_SAMPLES_LAST = 3;
+/**
+ * Hodnota karty lícem dolů pro držení: bot ji nezná (pravidlo šéfa), počítá s průměrnou kartou — viditelné slabé
+ * karty mimo kombinace jdou pryč dřív, silnější a rozehrané zůstanou.
+ */
+const FACE_DOWN_KEEP = 7;
 /** Přeskakovat útraty až po tolika zahraných rukách runu (`RunStats.handsPlayed`). */
 const SKIP_MIN_HANDS = 4;
 /** Vzorků ruky pro odhad síly buildu před přeskočením útraty. */
 const STRENGTH_SAMPLES = 4;
+/**
+ * Přeskočení útraty za štítek (src/engine/sim/bots.ts `blindChoice`): co bot ztratí — odměnu za útratu, peníze
+ * za nevyužité ruce (odhad `SKIP_UNUSED_HANDS` rukou), úrok a návštěvu Večerky (`SHOP_VISIT_KC`).
+ */
+const SKIP_UNUSED_HANDS = 1.5;
+const SHOP_VISIT_KC = 3;
+/** Štítek musí mít aspoň tolikanásobek ztráty. */
+const SKIP_VALUE_RATIO = 1.1;
+/** Síla buildu (průměrná nejlepší ruka × ruce) musí být aspoň tolikrát nad cílem následující útraty. */
+const SKIP_SAFETY = 2.5;
+/** Sond na hodnotu štítku (štítky s náhodou — Bazar u silnice). */
+const SKIP_PROBES = 2;
+/** Štítek, který čeká na později (příští Večerka, příští kolo) a jehož účinek sonda hned nevidí. */
+const DEFERRED_TAG_KC = 4;
+/** Nižší cíl šéfa (Šéf má chřipku): Kč za celý cíl (× poměrné snížení). */
+const BOSS_TARGET_KC = 40;
 
 /**
  * Otisk stavu pro RNG rozhodnutí: hodnoty, které se mění s postupem runu (peníze, uid, ruka, statistiky, Večerka,
@@ -456,12 +485,11 @@ class StrategyBot implements Bot {
 
   private maintenance(game: Game): Action | null {
     const s = game.state;
-    // Pořadí: +čipy/+mult vlevo, ×mult vpravo (stabilně podle dosavadního pořadí).
+    // Pořadí: +čipy/+mult vlevo, ×mult vpravo; pod pravidlem šéfa, které vypíná pozice (Jednooký hejtman),
+    // nejlepší žolíci na fungující pozice.
     if (s.jokers.length > 1) {
-      const order = s.jokers
-        .map((j, i) => ({ uid: j.uid, i, key: slotOrderKey(game, j) }))
-        .sort((a, b) => a.key - b.key || a.i - b.i);
-      if (order.some((o, i) => o.i !== i)) return { type: 'reorderJokers', uids: order.map((o) => o.uid) };
+      const uids = this.jokerOrder(game);
+      if (uids.some((uid, i) => s.jokers[i]?.uid !== uid)) return { type: 'reorderJokers', uids };
     }
     if (s.consumables.length === 0) return null;
     const view = this.view(game);
@@ -471,6 +499,35 @@ class StrategyBot implements Bot {
       if (action) return action;
     }
     return null;
+  }
+
+  /**
+   * Cílové pořadí žolíků (uid): +čipy/+mult vlevo, ×mult vpravo (stabilně podle dosavadního pořadí). Když pravidlo
+   * šéfa vypíná žolíky podle pozice (`positionalDebuffs`), dostanou fungující pozice nejlépe hodnocené žolíky
+   * (v rámci fungujících i vypnutých pozic zase podle klíče pořadí). Výsledek nezávisí na současném pořadí víc,
+   * než je nutné (stabilní řazení), takže po přeřazení bot znovu nepřeřazuje.
+   */
+  private jokerOrder(game: Game): number[] {
+    const s = game.state;
+    const keyed = s.jokers.map((j, i) => ({ j, i, key: slotOrderKey(game, j) }));
+    const byKey = (a: (typeof keyed)[number], b: (typeof keyed)[number]) => a.key - b.key || a.i - b.i;
+    const base = [...keyed].sort(byKey);
+    const off = positionalDebuffs(
+      game,
+      base.map((x) => x.j.uid),
+    );
+    if (off.size === 0 || off.size >= s.jokers.length) return base.map((x) => x.j.uid);
+    const safeCount = s.jokers.length - off.size;
+    // Žolík vypnutý jinak než pozicí (Exekutor) nefunguje nikde — fungující pozici nepotřebuje.
+    const ruled = new Set(s.round?.ruleJokerDebuffs ?? []);
+    const rating = (j: JokerInstance): number =>
+      j.debuffed && !ruled.has(j.uid) ? 0 : this.jokerRating(game, j);
+    const ranked = [...keyed].sort((a, b) => rating(b.j) - rating(a.j) || a.i - b.i);
+    const good = ranked.slice(0, safeCount).sort(byKey);
+    const rest = ranked.slice(safeCount).sort(byKey);
+    const out: number[] = [];
+    for (let i = 0; i < s.jokers.length; i++) out.push((off.has(i) ? rest : good).shift()!.j.uid);
+    return out;
   }
 
   /** Ocenění stavu pro toto rozhodnutí (src/engine/sim/value.ts). */
@@ -546,24 +603,68 @@ class StrategyBot implements Bot {
 
   // ── výběr útraty ──
 
+  /**
+   * Přeskočit útratu? Jen za štítek, který má víc než to, o co bot přijde (`skipCost`: odměna, nevyužité ruce,
+   * úrok, Večerka), a jen se silným buildem: průměrná nejlepší ruka × ruce ≥ `SKIP_SAFETY` × cíl následující
+   * útraty (po Malé Velká, po Velké šéf). Odhad síly (kopie hry) až nakonec a jen tehdy, když na to stačí aspoň
+   * nejlepší ruka runu (průměr ji skoro nikdy nepřekoná).
+   */
   private blindChoice(game: Game, rng: Rng): Action {
     const s = game.state;
     const blind = s.blinds[s.blindIndex];
+    const select: Action = { type: 'selectBlind' };
     if (
-      blind &&
-      blind.kind !== 'boss' &&
-      blind.skipTagId &&
-      this.style.skipBlinds &&
-      s.stats.handsPlayed >= SKIP_MIN_HANDS
-    ) {
-      // Přeskočit jen s výrazně silným buildem: průměrná nejlepší ruka × ruce ≥ 3× cíl Velké útraty. Odhad síly
-      // (kopie hry) jen tehdy, když na to stačí aspoň nejlepší ruka runu (průměr ji skoro nikdy nepřekoná).
-      const need = 3 * game.blindTarget('big');
-      const hands = game.modifiers().hands;
-      if (s.stats.bestHandScore * hands >= need && this.buildStrength(game, rng) * hands >= need)
-        return { type: 'skipBlind' };
+      !blind ||
+      blind.kind === 'boss' ||
+      !blind.skipTagId ||
+      !this.style.skipBlinds ||
+      s.stats.handsPlayed < SKIP_MIN_HANDS
+    )
+      return select;
+    const next = blind.kind === 'small' ? s.blinds[1] : s.blinds[2];
+    if (!next) return select;
+    const need = SKIP_SAFETY * game.blindTarget(next.kind, next.bossId);
+    const hands = game.modifiers().hands;
+    if (s.stats.bestHandScore * hands < need) return select;
+    if (this.tagWorth(game) < SKIP_VALUE_RATIO * this.skipCost(game, blind.kind)) return select;
+    return this.buildStrength(game, rng) * hands >= need ? { type: 'skipBlind' } : select;
+  }
+
+  /** O co bot přeskočením útraty přijde (Kč): odměna, nevyužité ruce, úrok a návštěva Večerky. */
+  private skipCost(game: Game, kind: 'small' | 'big'): number {
+    const m = game.modifiers();
+    const interest =
+      m.interestStep > 0
+        ? Math.min(m.interestCap, Math.floor(Math.max(0, game.state.money) / m.interestStep)) * m.interestMult
+        : 0;
+    return game.blindReward(kind) + SKIP_UNUSED_HANDS * m.moneyPerUnusedHand + interest + SHOP_VISIT_KC;
+  }
+
+  /**
+   * Hodnota štítku útraty (Kč) sondou — bot štítky nepoznává podle id: přeskočení zkusí na kopii hry a ocení změnu
+   * stavu (peníze, úrovně, žolíci, spotřebky); obálku zdarma odhadem její hodnoty; štítek, který zůstal čekat,
+   * podle nižšího cíle šéfa, jinak paušálem `DEFERRED_TAG_KC`.
+   */
+  private tagWorth(game: Game): number {
+    const s = game.state;
+    const view = this.view(game);
+    const snapshot = JSON.stringify(s);
+    const boss = s.blinds[2];
+    let total = 0;
+    for (let k = 0; k < SKIP_PROBES; k++) {
+      const clone = probe(game, { type: 'skipBlind' }, probeSeed(game, `skip:${k}`), snapshot);
+      if (!clone) return 0;
+      let v = stateDelta(view, clone).total;
+      const opened = clone.state.phase === 'booster' ? clone.state.booster : null;
+      if (opened) v += this.boosterWorth(clone, view, game.registry.boosters[opened.boosterId]);
+      if (clone.state.tags.length > s.tags.length) {
+        const before = boss ? game.blindTarget('boss', boss.bossId) : 0;
+        const after = boss ? clone.blindTarget('boss', boss.bossId) : 0;
+        v += before > 0 && after < before ? BOSS_TARGET_KC * (1 - after / before) : DEFERRED_TAG_KC;
+      }
+      total += v;
     }
-    return { type: 'selectBlind' };
+    return total / SKIP_PROBES;
   }
 
   /**
@@ -587,6 +688,7 @@ class StrategyBot implements Bot {
 
   /** Hodnota karty pro držení (vyšší = nechat si): cena + příslušnost k rozehrané kombinaci podle stylu. */
   private keepScore(c: CardValue, info: DrawInfo): number {
+    if (c.faceDown) return FACE_DOWN_KEEP;
     if (c.debuffed) return -100 + c.worth;
     return c.worth + this.drawBonus(c, info);
   }
@@ -603,26 +705,29 @@ class StrategyBot implements Bot {
     return bonus;
   }
 
-  /** Karty, kterých se bot chce zbavit (doplní jimi tah, aby se protočil balíček), od nejméně cenné. */
+  /**
+   * Karty, kterých se bot chce zbavit (doplní jimi tah, aby se protočil balíček), od nejméně cenné. Karty lícem
+   * dolů sem patří taky: s neznámou kartou nejde plánovat a zahraná skóruje normálně.
+   */
   private filler(hand: readonly CardValue[], info: DrawInfo): CardValue[] {
     return hand
-      .filter((c) => !c.faceDown && (c.debuffed || this.drawBonus(c, info) === 0))
+      .filter((c) => c.faceDown || c.debuffed || this.drawBonus(c, info) === 0)
       .sort((a, b) => this.keepScore(a, info) - this.keepScore(b, info) || a.id - b.id);
   }
 
   private needsExact(game: Game): boolean {
-    const s = game.state;
-    if (s.jokers.length > 0) return true;
-    const round = s.round;
-    if (!round?.bossId || round.bossDisabled) return false;
-    const hooks = game.registry.bosses[round.bossId]?.hooks;
-    return Boolean(hooks?.validateHand || hooks?.adjustHandScore);
+    return game.state.jokers.length > 0 || bossJudgesHand(game);
+  }
+
+  /** Prostředí hodnocení kola: preference, zákaz doplňování kartami lícem dolů pod šéfem, který soudí celou ruku. */
+  private roundEnv(game: Game): EvalEnv {
+    return { ...makeEnv(game, this.handPref(game)), hiddenPad: !bossJudgesHand(game) };
   }
 
   private roundAction(game: Game, rng: Rng): Action {
     const s = game.state;
     const round = s.round as RoundState;
-    const env = makeEnv(game, this.handPref(game));
+    const env = this.roundEnv(game);
     const hand = cardsOf(game, round.hand).map((c) => cardValue(c, env));
     const info = drawInfo(hand, suitFavor(game));
     const need = Math.max(0, round.target - round.score);
@@ -633,8 +738,13 @@ class StrategyBot implements Bot {
       return { type: 'play', cardIds: ids };
     }
     const best = cands[0]!;
-    if (best.raw < need && round.discardsLeft > 0) {
-      const discard = this.chooseDiscard(game, rng, env, hand, info, need, () =>
+    if (best.raw < need && round.discardsLeft > 0 && !jokersReturnAfterHand(game, rng, best.ids)) {
+      // Kombinace, které pravidlo šéfa zakázalo (Soused s vrtačkou), mají i v odhadu po zahození skóre 0.
+      const blocked = blockedTypes(cands);
+      const discardEnv = blocked.size > 0 ? { ...env, blocked } : env;
+      // Monte Carlo počítá bez žolíků: zbývající cíl se přepočte poměrem přesného skóre k odhadu.
+      const cap = need / exactScale(cands);
+      const discard = this.chooseDiscard(game, rng, discardEnv, hand, info, cap, () =>
         this.discardPenalty(game, rng, best.ids),
       );
       if (discard) return { type: 'discard', cardIds: discard };
@@ -673,11 +783,32 @@ class StrategyBot implements Bot {
     limit = 6,
   ): PlayCandidate[] {
     const snapshot = JSON.stringify(game.state);
-    const list = cands.map((c) => ({ ...c, exact: false }));
+    const list = cands.map((c) => ({ ...c, exact: false, estRaw: c.raw }));
     const order = (a: (typeof list)[number], b: (typeof list)[number]) =>
       b.value - a.value || b.ids.length - a.ids.length;
+    // Náhoda ve skórování (žolíci a karty se šancí): první přepočet se udělá víckrát; když se vzorky liší, bere se
+    // tolik vzorků u každého kandidáta — jeden šťastný hod by jinak sliboval skóre, které nepřijde. Průměr,
+    // v poslední ruce kola nejhorší ze `CHANCE_SAMPLES_LAST` vzorků (rozhoduje, jestli ruka cíl dosáhne spolehlivě,
+    // ne jednou za čas).
+    let samples = 0;
+    const lastHand = (game.state.round?.handsLeft ?? 0) <= 1;
+    const chanceSamples = lastHand ? CHANCE_SAMPLES_LAST : CHANCE_SAMPLES;
     const verify = (c: (typeof list)[number]): void => {
-      c.raw = Math.max(0, exactPlayScore(game, c.ids, rng, snapshot));
+      // Karty lícem dolů se do přesného přepočtu nepočítají — bot jejich hodnotu nezná.
+      const visible = c.ids.filter((id) => !game.card(id)?.faceDown);
+      if (visible.length === 0) {
+        c.raw = 0;
+      } else {
+        const score = (): number => Math.max(0, exactPlayScore(game, visible, rng, snapshot));
+        const got = [score()];
+        if (samples === 0) {
+          while (got.length < chanceSamples) got.push(score());
+          samples = got.every((x) => x === got[0]) ? 1 : chanceSamples;
+        }
+        while (got.length < samples) got.push(score());
+        got.sort((a, b) => a - b);
+        c.raw = lastHand ? got[0]! : got.reduce((a, b) => a + b, 0) / got.length;
+      }
       c.value = c.raw * (c.type ? (env.pref[c.type] ?? 1) : 1);
       c.exact = true;
     };
@@ -768,16 +899,25 @@ class StrategyBot implements Bot {
     const pool = cardsOf(game, round.drawPile).map((c) => cardValue({ ...c, faceDown: false }, env));
     if (pool.length === 0) return null;
     const handSize = game.modifiers().handSize;
-    const now = bestUtility(hand, env, need);
+    const lastHand = round.handsLeft <= 1;
+    const now = bestUtility(hand, env, need, lastHand);
+    // Co se při zahození stane navíc (pravidlo šéfa): ztracené držené karty, otočené karty, dobrání lícem dolů.
+    const fx = discardEffects(
+      game,
+      rng,
+      options[0]!.map((c) => c.id),
+    );
     const plans = options
       .map((opt) => {
         const kept = hand.filter((c) => !opt.includes(c));
-        return { opt, kept, draw: Math.min(Math.max(0, handSize - kept.length), pool.length), sum: 0 };
+        const draw = Math.min(Math.max(0, handSize - kept.length + fx.lost), pool.length);
+        return { opt, kept, draw, sum: 0 };
       })
       .filter((p) => p.draw > 0);
     if (plans.length === 0) return null;
     const maxDraw = Math.max(...plans.map((p) => p.draw));
     const scratch = [...pool];
+    const hiddenAt: boolean[] = new Array<boolean>(maxDraw).fill(false);
     // Společné náhodné vzorky pro všechny možnosti (common random numbers): rozdíl mezi možnostmi pak neruší
     // šum jednotlivých vzorků a stačí jich málo.
     for (let k = 0; k < this.style.samples; k++) {
@@ -787,8 +927,19 @@ class StrategyBot implements Bot {
         const tmp = scratch[i]!;
         scratch[i] = scratch[j]!;
         scratch[j] = tmp;
+        hiddenAt[i] = fx.hidden > 0 && rng.next() < fx.hidden;
       }
-      for (const p of plans) p.sum += bestUtility([...p.kept, ...scratch.slice(0, p.draw)], env, need);
+      const lostRoll = fx.lost > 0 ? rng.next() : 0;
+      for (const p of plans) {
+        // Otočené držené karty bot nevidí; ztracené vybere los (stejný pro všechny možnosti).
+        let kept = fx.flip ? [] : p.kept;
+        if (fx.lost > 0 && kept.length > 0) {
+          const at = Math.floor(lostRoll * kept.length);
+          kept = [...kept.slice(0, at), ...kept.slice(at + fx.lost)];
+        }
+        const drawn = scratch.slice(0, p.draw).filter((_, i) => !hiddenAt[i]);
+        p.sum += bestUtility([...kept, ...drawn], env, need, lastHand);
+      }
     }
     let best: { ids: number[]; ev: number } | null = null;
     for (const p of plans) {
@@ -1139,6 +1290,103 @@ function feedsOnConsumables(game: Game): boolean {
     const tags = game.registry.jokers[j.defId]?.tags ?? [];
     return !j.debuffed && tags.includes('consumable') && tags.includes('scaling');
   });
+}
+
+/**
+ * Jsou žolíci vypnutí pravidlem šéfa jen do první zahrané ruky (Výpadek proudu)? Sonda: zahraje `ids` na kopii hry
+ * a porovná počet žolíků vypnutých pravidlem. Pak bot nezahazuje — zahození by spotřeboval v kole bez žolíků
+ * a zbylé ruce se žolíky by už neměly čím vylepšovat.
+ */
+export function jokersReturnAfterHand(game: Game, rng: Rng, ids: readonly number[]): boolean {
+  const round = game.state.round;
+  const off = round?.ruleJokerDebuffs?.length ?? 0;
+  if (!round || off === 0 || round.handsLeft <= 1) return false;
+  const clone = cloneGame(game, rng);
+  if (!clone.dispatch({ type: 'play', cardIds: [...ids] }).ok) return false;
+  const after = clone.state.round;
+  return clone.state.phase === 'round' && !!after && (after.ruleJokerDebuffs?.length ?? 0) < off;
+}
+
+/** Co zahození udělá navíc (sonda `discardEffects`). */
+export interface DiscardEffects {
+  /** Kolik držených karet zahození navíc vezme z ruky (Tchyně na návštěvě). */
+  lost: number;
+  /** Držené karty se otočí lícem dolů (Bílá paní) — po zahození je bot neuvidí. */
+  flip: boolean;
+  /** Podíl dobraných karet, které přijdou lícem dolů (Výluka na trati, Mlha nad Labem). */
+  hidden: number;
+}
+
+const NO_DISCARD_EFFECTS: DiscardEffects = { lost: 0, flip: false, hidden: 0 };
+
+/**
+ * Sonda zahození na kopii hry (bot pravidla nezná podle id): kolik držených karet z ruky zmizelo navíc, jestli se
+ * držené karty otočily lícem dolů a jaký podíl dobraných karet přišel lícem dolů. Jen v kole se šéfem, jehož
+ * pravidlo na zahození nebo dobírání reaguje (`onDiscard`, `onDraw`, `isDrawnFaceDown`) — jinak nic.
+ */
+export function discardEffects(game: Game, rng: Rng, ids: readonly number[]): DiscardEffects {
+  const round = game.state.round;
+  if (!round?.bossId || round.bossDisabled || ids.length === 0) return NO_DISCARD_EFFECTS;
+  const hooks = game.registry.bosses[round.bossId]?.hooks;
+  if (!hooks?.onDiscard && !hooks?.onDraw && !hooks?.isDrawnFaceDown) return NO_DISCARD_EFFECTS;
+  const clone = cloneGame(game, rng);
+  if (!clone.dispatch({ type: 'discard', cardIds: [...ids] }).ok) return NO_DISCARD_EFFECTS;
+  const before = new Set(round.hand);
+  const after = clone.state.round?.hand ?? [];
+  const afterSet = new Set(after);
+  const kept = round.hand.filter((id) => !ids.includes(id));
+  const keptVisible = kept.filter((id) => !game.card(id)?.faceDown);
+  const flipped = keptVisible.filter((id) => afterSet.has(id) && clone.card(id)?.faceDown).length;
+  const drawn = after.filter((id) => !before.has(id));
+  return {
+    lost: kept.filter((id) => !afterSet.has(id)).length,
+    flip: keptVisible.length > 0 && 2 * flipped >= keptVisible.length,
+    hidden: drawn.length > 0 ? drawn.filter((id) => clone.card(id)?.faceDown).length / drawn.length : 0,
+  };
+}
+
+/**
+ * Soudí pravidlo aktivního šéfa celou ruku (`validateHand` — Soused s vrtačkou, `adjustHandScore` — Pan starosta)?
+ * Pak bot tahy přepočítává přesně a nedoplňuje je kartami lícem dolů.
+ */
+function bossJudgesHand(game: Game): boolean {
+  const round = game.state.round;
+  if (!round?.bossId || round.bossDisabled) return false;
+  const hooks = game.registry.bosses[round.bossId]?.hooks;
+  return Boolean(hooks?.validateHand || hooks?.adjustHandScore);
+}
+
+/** RNG pro sondy, u kterých na náhodě nezáleží (přeřazení žolíků je deterministické). */
+const FIXED_PROBE_SEED: readonly [number, number, number, number] = [0x9e3779b9, 0x243f6a88, 0xb7e15162, 1];
+
+/**
+ * Pozice v řadě žolíků, které pravidlo aktivního šéfa vypíná bez ohledu na to, který žolík na nich stojí (Jednooký
+ * hejtman: pravá polovina). Bot pravidlo nezná podle id: na kopii hry zkusí pořadí `uids` a pořadí obrácené
+ * a vezme pozice, kde je v obou případech žolík vypnutý pravidlem (`round.ruleJokerDebuffs`). Pravidlo, které
+ * vypíná všechny (Výpadek proudu), vrátí všechny pozice — pak na pořadí nezáleží.
+ */
+export function positionalDebuffs(game: Game, uids: readonly number[]): Set<number> {
+  const s = game.state;
+  const round = s.round;
+  const out = new Set<number>();
+  if (s.phase !== 'round' || !round?.bossId || round.bossDisabled) return out;
+  if (!game.registry.bosses[round.bossId]?.hooks.isJokerDebuffed) return out;
+  const snapshot = JSON.stringify(s);
+  const offAt = (order: readonly number[]): Set<number> | null => {
+    const clone = cloneGame(game, rngFromState([...FIXED_PROBE_SEED]), snapshot);
+    if (!clone.dispatch({ type: 'reorderJokers', uids: [...order] }).ok) return null;
+    const ruled = new Set(clone.state.round?.ruleJokerDebuffs ?? []);
+    const set = new Set<number>();
+    clone.state.jokers.forEach((j, i) => {
+      if (ruled.has(j.uid)) set.add(i);
+    });
+    return set;
+  };
+  const a = offAt(uids);
+  const b = offAt([...uids].reverse());
+  if (!a || !b) return out;
+  for (const i of a) if (b.has(i)) out.add(i);
+  return out;
 }
 
 /** Ruka, na kterou teď míří spotřebky (ruka kola nebo obálky), nebo null. */

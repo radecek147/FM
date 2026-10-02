@@ -4,9 +4,9 @@ import type { BlindKind } from '../types';
 
 /** Základ patra 1–8 pro křivky 1–3 (index křivky je 1-based). */
 export const TARGET_CURVES: readonly (readonly number[])[] = [
-  [250, 550, 1100, 2200, 4200, 7500, 13000, 22000],
-  [250, 600, 1200, 2500, 4900, 9000, 16000, 27000],
-  [250, 650, 1300, 2800, 5800, 11000, 20000, 35000],
+  [250, 550, 1100, 2200, 4300, 7800, 13500, 21000],
+  [250, 550, 1100, 2300, 4500, 8000, 14000, 23000],
+  [250, 550, 1150, 2400, 4700, 8600, 15500, 26000],
 ];
 
 /** Re-export pro starší importy — násobky útrat žijí v engine/constants.ts. */

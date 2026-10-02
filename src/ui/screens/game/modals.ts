@@ -7,6 +7,7 @@ import type { Card, HandType, JokerInstance, Suit } from '../../../engine';
 import { HAND_TYPES, RANKS, SUITS, handValueAtLevel } from '../../../engine';
 import { t } from '../../../i18n/cs';
 import { formatNumber } from '../../../i18n/format';
+import { blindArt } from '../../art/art';
 import { button } from '../../components/button';
 import { createCardView } from '../../components/card';
 import { createConsumableCard } from '../../components/consumableCard';
@@ -14,6 +15,7 @@ import { createJokerCard } from '../../components/jokerCard';
 import { openModal } from '../../components/modal';
 import { hideTooltip, richText } from '../../components/tooltip';
 import {
+  bossTexts,
   consumableTexts,
   copiedByText,
   copyStatusText,
@@ -41,6 +43,51 @@ function textList(items: string[]): HTMLElement {
     'ul',
     { class: 'run-info__list', role: 'list' },
     items.map((text) => h('li', null, richText(text))),
+  );
+}
+
+/**
+ * Šéf patra (DESIGN 13.1, Info o runu): žeton, jméno, pravidlo a cíl; v kole šéfa i to, jestli pravidlo platí
+ * (Odvolání). Na Imperialu navíc pravidlo Velké útraty.
+ */
+function bossSummary(ctx: GameCtx): HTMLElement {
+  const c = ctx.controller;
+  const s = c.state;
+  const slot = s.blinds.find((b) => b.kind === 'boss');
+  const id = slot?.bossId && ctx.registry.bosses[slot.bossId] ? slot.bossId : null;
+  if (!slot || !id) return h('p', { class: 'run-info__none' }, t('game.runInfo.bossNone'));
+  const tx = bossTexts(id, { registry: ctx.registry });
+  const disabled = s.round?.blind === 'boss' && s.round.bossDisabled;
+  const status =
+    slot.status === 'defeated'
+      ? t('game.runInfo.bossDefeated')
+      : disabled
+        ? t('game.sidebar.bossDisabled')
+        : t('game.runInfo.bossTarget', { target: c.engine.blindTarget('boss', id) });
+  const big = s.blinds.find((b) => b.kind === 'big');
+  const extra = big?.bossId && ctx.registry.bosses[big.bossId] ? big.bossId : null;
+  return h(
+    'div',
+    { class: 'run-info__boss', 'data-testid': 'run-info-boss' },
+    h(
+      'div',
+      { class: 'run-info__boss-token', 'aria-hidden': 'true' },
+      blindArt('boss', id, { registry: ctx.registry }),
+    ),
+    h(
+      'div',
+      null,
+      h('p', { class: 'run-info__boss-name' }, tx.name),
+      h('p', null, tx.rule),
+      h('p', { class: 'run-info__muted' }, status),
+      extra
+        ? h(
+            'p',
+            { class: 'run-info__muted' },
+            t('game.runInfo.bigRule', { rule: bossTexts(extra, { registry: ctx.registry }).rule }),
+          )
+        : null,
+    ),
   );
 }
 
@@ -221,6 +268,7 @@ export function openRunInfo(ctx: GameCtx): void {
         { class: 'run-info__columns' },
         infoSection(t('game.runInfo.sections.deck'), deckSummary(ctx)),
         infoSection(t('game.runInfo.sections.jokers'), jokerList(ctx)),
+        infoSection(t('game.runInfo.sections.boss', { ante: s.ante }), bossSummary(ctx)),
         infoSection(
           t('game.runInfo.sections.tags'),
           textList(

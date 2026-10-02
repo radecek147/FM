@@ -36,6 +36,8 @@ export interface CardViewOptions {
   back?: ArtSpec;
   /** Modifikátory runu (pevné čipy, pravděpodobnosti v tooltipu). */
   mods?: Partial<Pick<Modifiers, 'probabilityMult' | 'fixedCardChips'>>;
+  /** Proč je karta mimo provoz / lícem dolů (pravidlo šéfa) — řádek v tooltipu, jen u takové karty. */
+  reason?: string | null;
   registry?: ContentRegistry;
   className?: string;
 }
@@ -158,7 +160,13 @@ export function createCardView(card: Readonly<Card>, opts: CardViewOptions = {})
   if (opts.tooltip !== false) {
     el.__detach = attachTooltip(el, () => {
       const current = el.__card;
-      return current ? cardTooltip(current, { registry: el.__opts?.registry, mods: el.__opts?.mods }) : null;
+      return current
+        ? cardTooltip(current, {
+            registry: el.__opts?.registry,
+            mods: el.__opts?.mods,
+            reason: current.debuffed || current.faceDown ? el.__opts?.reason : null,
+          })
+        : null;
     });
   }
   return el;
@@ -177,8 +185,22 @@ export function updateCardView(
   const merged: CardViewOptions = { ...(cel.__opts ?? {}), ...opts };
   cel.__card = card;
   cel.__opts = merged;
-  if (cel.dataset.visual !== visualKey(card)) renderArt(cel, card, merged);
+  const before = cel.dataset.visual;
+  if (before !== visualKey(card)) {
+    renderArt(cel, card, merged);
+    // Karta se otočila (Bílá paní, odkrytí zahrané karty lícem dolů) — krátké „překlopení“ (jen transform).
+    if (before !== undefined && before.endsWith('|down') !== card.faceDown) flipCard(cel);
+  }
   applyState(cel, card, merged);
+}
+
+/** Překlopení karty: CSS animace `pcard-flip` na vnitřku (styles/cards.css; vypnuté animace ji ruší). */
+function flipCard(el: HTMLElement): void {
+  el.classList.remove('is-flipping');
+  // Vynucený reflow jen u otočené karty (pár za tah), aby se animace spustila znovu.
+  void el.offsetWidth;
+  el.classList.add('is-flipping');
+  el.addEventListener('animationend', () => el.classList.remove('is-flipping'), { once: true });
 }
 
 /** Odpojí posluchače tooltipu (při ručním odstranění karty; překreslení obrazovky to nepotřebuje). */

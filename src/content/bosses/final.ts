@@ -2,8 +2,7 @@
  * Šéfové — fináloví šéfové F1–F5 (docs/DESIGN.md kap. 8.3): jen v patře 8 a v každém 8. patře nekonečného režimu.
  * Texty v src/i18n/cs/bosses/final.ts, testy v tests/unit/bosses-final.test.ts. Návod: docs/CONTENT-GUIDE.md kap. 4.
  *
- * Čísla pravidel jsou jen v konstantách níže — čte je hook i `params`. Texty (`rule`) je zatím mají napsané rovnou,
- * protože UI `bossTexts` `params` šéfů nedosazuje; shodu hlídá test.
+ * Čísla pravidel jsou jen v konstantách níže — čte je hook i `params` a text (`rule`) je dosazuje přes `{param}`.
  * Per-kolo stav šéfa žije v `round.flags` (klíče s předponou id šéfa, ARCHITECTURE 2.7), aby přežil uložení a načtení
  * a skončil s kolem.
  */
@@ -13,6 +12,14 @@ import type { BossCtx, BossDef } from '../../engine/content-types';
 
 /** Protihluková stěna: násobek základního cíle patra. */
 const NOISE_BARRIER_TARGET_MULT = 4.5;
+/**
+ * Cíle finálových šéfů laděné simulací na letalitu 20–40 % (docs/DESIGN.md 12.1, DECISIONS „Fáze 6: ladění se
+ * šéfy“): Pan starosta, Krajský úřad a Velká voda měli s 2× ~16–19 %, Bílá paní ~35–48 %.
+ */
+const MAYOR_TARGET_MULT = 2.5;
+const OFFICE_TARGET_MULT = 2.25;
+const FLOOD_TARGET_MULT = 2.5;
+const WHITE_LADY_TARGET_MULT = 1.5;
 /** Velká voda: o kolik karet se po každé zahrané ruce zmenší ruka (do konce kola). */
 const FLOOD_HAND_SIZE = 1;
 /** Krajský úřad: kolik fungujících žolíků se po každé ruce vypne. */
@@ -41,6 +48,7 @@ export const BOSSES_FINAL: BossDef[] = [
     // F1 — Ruka se započítá, jen když má vyšší skóre než předchozí ruka v tomto kole (první vždy).
     id: 'mayor',
     final: true,
+    targetMult: MAYOR_TARGET_MULT,
     color: '#b8860b',
     hooks: {
       // Porovnává se se skutečným skóre předchozí ruky (i když se nezapočítalo) — „lepší než minule“.
@@ -64,6 +72,7 @@ export const BOSSES_FINAL: BossDef[] = [
     // F2 — Po každé zahrané ruce se náhodný fungující žolík vypne do konce kola.
     id: 'regional_office',
     final: true,
+    targetMult: OFFICE_TARGET_MULT,
     color: '#3e5a8a',
     hooks: {
       afterHandPlayed: (ctx) => {
@@ -92,6 +101,7 @@ export const BOSSES_FINAL: BossDef[] = [
     // zmenšením a dočasná velikost ruky z jiných efektů zůstane. Ruka nejmíň 1 karta (`clampModifiers`).
     id: 'great_flood',
     final: true,
+    targetMult: FLOOD_TARGET_MULT,
     params: { cards: FLOOD_HAND_SIZE },
     color: '#2a6f9e',
     hooks: {
@@ -107,6 +117,7 @@ export const BOSSES_FINAL: BossDef[] = [
     // Platí pro karty, které v ruce zůstaly; nově dobrané přijdou lícem nahoru (hráč si musí pamatovat, co držel).
     id: 'white_lady',
     final: true,
+    targetMult: WHITE_LADY_TARGET_MULT,
     color: '#cfd8ea',
     hooks: {
       afterHandPlayed: hauntHand,

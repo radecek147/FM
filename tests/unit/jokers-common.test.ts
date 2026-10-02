@@ -20,6 +20,7 @@ import {
   makeGame,
   makeRegistry,
   play,
+  selectBoss,
   setupRound,
   winNextHand,
   type JokerSpec,
@@ -138,7 +139,7 @@ describe('běžní žolíci – definice podle DESIGN 4.7', () => {
       jeweler: { chips: 5, suit: 'D' },
       crusader: { mult: 12, count: 2, suit: 'C' },
       early_bird: { mult: 8 },
-      night_shift: { mult: 20 },
+      night_shift: { mult: 14 },
       meteorologist: { mult: 2, level: 2 },
       pe_teacher: { chips: 8 },
       party_for_two: { chips: 15, mult: 3, hand: 'pair' },
@@ -365,18 +366,37 @@ describe('Ranní ptáče (early_bird) a Noční směna (night_shift)', () => {
     expect([second.chips, second.mult]).toEqual([16, 1]);
   });
 
-  it('Noční směna: jen poslední ruka kola dá +20 mult', () => {
-    const game = roundGame(['night_shift']);
-    game._core.state.round!.handsLeft = 2;
-    expect(playHand(game, 'KS').mult).toBe(1);
-    const last = playHand(game, 'KS');
-    expect([last.chips, last.mult, last.score]).toEqual([16, 21, 336]);
+  it('Noční směna: v kole se šéfem dá každá ruka +14 mult, v Malé a Velké útratě nic', () => {
+    const small = roundGame(['night_shift']);
+    expect(small.state.round!.blind).toBe('small');
+    const day = playHand(small, 'KS');
+    expect(day.mult).toBe(1);
+    expect(jokerDelta(day, 'night_shift').mult).toBe(0);
+
+    const night = makeGame({ registry: reg, jokers: ['night_shift'] });
+    selectBoss(night, 'wall');
+    night._core.state.round!.target = 1e9;
+    const first = playHand(night, 'KS');
+    expect([first.chips, first.mult, first.score]).toEqual([16, 15, 240]);
+    expect(playHand(night, 'KS').mult).toBe(15);
   });
 
-  it('jediná ruka kola je první i poslední', () => {
-    const game = roundGame(['early_bird', 'night_shift']);
-    game._core.state.round!.handsLeft = 1;
-    expect(playHand(game, 'KS').mult).toBe(1 + 8 + 20);
+  it('Noční směna: platí i ve Velké útratě se šéfem (Imperial) a u vypnutého šéfa', () => {
+    const game = roundGame(['night_shift']);
+    game._core.state.round!.bossId = 'wall';
+    expect(playHand(game, 'KS').mult).toBe(15);
+    const night = makeGame({ registry: reg, jokers: ['night_shift'] });
+    selectBoss(night, 'halver');
+    night._core.state.round!.target = 1e9;
+    night._core.api.disableBoss();
+    expect(playHand(night, 'KS').mult).toBe(15);
+  });
+
+  it('Ranní ptáče a Noční směna se sčítají v první ruce kola šéfa', () => {
+    const game = makeGame({ registry: reg, jokers: ['early_bird', 'night_shift'] });
+    selectBoss(game, 'wall');
+    game._core.state.round!.target = 1e9;
+    expect(playHand(game, 'KS').mult).toBe(1 + 8 + 14);
   });
 });
 

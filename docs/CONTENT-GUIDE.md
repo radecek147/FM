@@ -213,6 +213,7 @@ export const mandatoryKit: BossDef = {
   id: 'mandatory_kit',
   minAnte: 2,
   color: '#7a2e3a',
+  params: { cards: MANDATORY_KIT_CARDS },
   hooks: {
     // ruka s méně než 4 kartami neskóruje
     validateHand: (ctx) => (ctx.played.length < MANDATORY_KIT_CARDS ? 'bosses.mandatory_kit.reject' : null),
@@ -226,11 +227,13 @@ export const mandatoryKit: BossDef = {
 - `minAnte`, `targetMult` (default 2), `reward` (default 5) a `color` volitelně.
 - Texty: `name`, `rule`, `intro` (hláška při příchodu), `defeat` (při porážce), `death` (hláška do
   „pitvy“, když na něm run skončí). Plus klíče vlastních zpráv (`bosses.mandatory_kit.reject`).
+- Čísla v `rule` jen přes `{param}` z `params` (dosadí je `bossTexts` v UI i textový režim simulace) — číslo pravidla
+  i textu je pak jedna konstanta, včetně násobku cíle u šéfů typu „jen vyšší cíl“.
 
 ```ts
 mandatory_kit: {
   name: 'Povinná výbava',
-  rule: 'Ruka s méně než 4 kartami neskóruje.',
+  rule: 'Ruka s méně než {cards|plural:kartou,kartami,kartami} neskóruje.',
   intro: 'Silniční kontrola. Lékárničku, vestu a čtyři karty, prosím.',
   defeat: 'Výbava kompletní. Šťastnou cestu.',
   death: 'Bez povinné výbavy dál nepojedete.',

@@ -6,10 +6,11 @@
 import type { RunState } from '../../../engine';
 import { hasKey, t } from '../../../i18n/cs';
 import { formatMoney, formatNumber } from '../../../i18n/format';
+import { blindArt } from '../../art/art';
 import { iconElement } from '../../art/icons';
 import { button } from '../../components/button';
 import { GameController } from '../../controller';
-import { blindName } from '../../describe';
+import { blindName, bossTexts } from '../../describe';
 import { h } from '../../dom';
 import type { GameCtx } from './shared';
 import { copySeed, statRow } from './shared';
@@ -80,6 +81,35 @@ function runMeta(ctx: GameCtx): HTMLElement {
   );
 }
 
+/**
+ * Hláška pitvy; když run skončil na šéfovi, s jeho žetonem a pravidlem („Kontrola z finančáku: Každá zahraná
+ * ruka stojí 1 Kč.“), ať je jasné, kdo za to může.
+ */
+function deathBlock(ctx: GameCtx, cause: string): HTMLElement {
+  const quote = h(
+    'blockquote',
+    { class: 'game-over__quote', 'data-testid': 'death-quote' },
+    deathQuote(cause),
+  );
+  if (!ctx.registry.bosses[cause]) return quote;
+  const tx = bossTexts(cause, { registry: ctx.registry });
+  return h(
+    'div',
+    { class: 'game-over__culprit', 'data-testid': 'death-boss', 'data-boss-id': cause },
+    h(
+      'div',
+      { class: 'game-over__token', 'aria-hidden': 'true' },
+      blindArt('boss', cause, { registry: ctx.registry }),
+    ),
+    h(
+      'div',
+      { class: 'game-over__culprit-text' },
+      quote,
+      h('p', { class: 'game-over__rule' }, t('game.gameOver.bossRule', { name: tx.name, rule: tx.rule })),
+    ),
+  );
+}
+
 export function renderGameOver(ctx: GameCtx): HTMLElement {
   const s = ctx.controller.state;
   const info = s.gameOver;
@@ -98,9 +128,7 @@ export function renderGameOver(ctx: GameCtx): HTMLElement {
         ? h('p', { class: 'game-panel__subtitle' }, t('game.gameOver.subtitle', { ante: info.ante, blind }))
         : null,
     ),
-    info
-      ? h('blockquote', { class: 'game-over__quote', 'data-testid': 'death-quote' }, deathQuote(info.cause))
-      : null,
+    info ? deathBlock(ctx, info.cause) : null,
     info
       ? h(
           'p',

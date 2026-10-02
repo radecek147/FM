@@ -61,7 +61,8 @@ if (!res.ok) ui.toast(t(`errors.${res.error}`));
   takže obsah vidí v ruce jen zbylé karty a událost `cardsDiscarded` hráčova zahození přijde před reakcemi.
 - Dotazy pro UI bez změny stavu: `blindTarget(kind, bossId)` a `blindReward(kind, bossId)` (výběr útrat ukazuje
   stejná čísla, jaká pak použije kolo a rozpis odměn), `preview(cardIds)`, `sellValue(uid)`,
-  `canUseConsumable(uid, targets)`, `modifiers()`.
+  `canUseConsumable(uid, targets)`, `modifiers()`. `preview` vrací i `blockedReason` (i18n klíč), když by šéf ruku
+  zakázal (`validateHand`, Soused s vrtačkou) — čistý hook se volá v `readOnly`, takže dotaz neposune RNG.
 
 ### 2.3 RNG
 
@@ -212,9 +213,10 @@ efektem (Krajský úřad, Exekutor) si pravidlo nepřivlastní a jeho debuff nez
 Odvolání) eviduje prázdné pole; mimo fázi `round` se nepřepočítává. Ruce a zahození z pasivních efektů žolíků platí
 podle stavu na začátku kola (jako u Exekutora) — přeřazením se nedají „nasbírat“.
 
-`BossDef.params` nese čísla do textů šéfa. Dokud UI `bossTexts` (`src/ui/describe.ts`) `params` šéfů nedosazuje, mají
-`rule` čísla napsaná rovnou a testy šéfů hlídají shodu s `params`. `EngineApi.cardRank(card)` vrací hodnotu karty pro
-pravidla (kamenná při platných vylepšeních `null` — Sudé dny, Kapsář, Mlha nad Labem).
+`BossDef.params` nese čísla do textů šéfa: `rule` je má jen přes `{param}` (dosazuje `bossTexts` v `src/ui/describe.ts`
+i textový režim `npm run simulate -- --play`) a testy šéfů hlídají, že změna `params` změní text.
+`EngineApi.cardRank(card)` vrací hodnotu karty pro pravidla (kamenná při platných vylepšeních `null` — Sudé dny, Kapsář,
+Mlha nad Labem).
 
 Kontexty hooků jsou levné objekty: společný prototyp jádra nese živé `state`, `mods` a `api`; `ScoringInfo` zahrané
 ruky je **sdílená vrstva** (`GameCore.ctxLayer`), kterou kontexty všech hooků ruky dědí přes prototyp (gettery
@@ -278,6 +280,14 @@ flavor a že texty dodržují typografii.
 - Zvuk: `src/ui/audio/` — syntetizované SFX (jsfxr-like) a procedurální chiptune.
 - Témata a barvoslepý režim přes CSS proměnné na `:root`.
 - Obrázky: `src/ui/art/` skládá SVG žolíků z `ArtSpec` (ikona + paleta + vzor), karty jsou SVG.
+- Šéfové a štítky v UI (fáze 6): texty přes `describe.ts` (`bossTexts` dosazuje `BossDef.params`, `bossReasonText`
+  = „Šéf X: pravidlo“ jen když pravidlo v kole platí). Příchod šéfa = plakát nad stolem (`screens/game/bossBanner.ts`,
+  `PresentView.showBossIntro`, neblokuje a zmizí sám), porážka a použitý štítek = oznámení se žetonem (`toast` s
+  `title`/`media`), vypnutí žolíka šéfem = bublina (`jokerDebuffChanged`). Tooltip karty mimo provoz / lícem dolů a
+  žolíka v `round.jokerDebuffs` vysvětlí pravidlo šéfa. Levý panel: šéf + pravidlo (Imperial „Pravidlo navíc“),
+  aktivní štítky (žetony s tooltipem), varování „Neskóruje“ z `preview.blockedReason`; ruka ukazuje velikost
+  (`Modifiers.handSize`) se změnou proti začátku kola (Velká voda). Pitva ukáže žeton a pravidlo šéfa vedle hlášky
+  `death`, Info o runu šéfa patra; zboží ze štítků ve Večerce má nálepku (`extra`, `priceMult`, `noEditionSurcharge`).
 
 ## 5. Ukládání
 

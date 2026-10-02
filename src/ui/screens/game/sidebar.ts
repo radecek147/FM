@@ -8,10 +8,12 @@
  */
 import type { BlindKind, HandType } from '../../../engine';
 import { FINAL_ANTE } from '../../../engine';
-import { t } from '../../../i18n/cs';
+import { hasKey, t } from '../../../i18n/cs';
 import { formatMoney, formatNumber } from '../../../i18n/format';
 import { blindArt } from '../../art/art';
 import { button } from '../../components/button';
+import { createContentCard } from '../../components/consumableCard';
+import { attachTooltip, contentTooltip } from '../../components/tooltip';
 import { blindName, bossTexts } from '../../describe';
 import { h } from '../../dom';
 import { openSettingsModal } from '../settings';
@@ -42,7 +44,7 @@ function setText(el: HTMLElement, text: string): void {
 export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
   const c = ctx.controller;
 
-  const token = h('div', { class: 'gs-blind__token', 'aria-hidden': 'true' });
+  const token = h('div', { class: 'gs-blind__token' });
   const blindNameEl = h('h2', { class: 'gs-blind__name', 'data-testid': 'blind-name' });
   const blindRule = h('p', { class: 'gs-blind__rule', 'data-testid': 'blind-rule' });
   const blindBox = h(
@@ -50,6 +52,15 @@ export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
     { class: 'gs-blind', 'aria-live': 'polite' },
     token,
     h('div', { class: 'gs-blind__text' }, blindNameEl, blindRule),
+  );
+
+  // Aktivní štítky (DESIGN 7: hromadí se a ukazují v levém panelu) — žetony s tooltipem (hover, focus, dlouhý stisk).
+  const tagList = h('ul', { class: 'gs-tags__list', role: 'list' });
+  const tagsBox = h(
+    'section',
+    { class: 'gs-tags', 'aria-labelledby': 'gs-tags-title', 'data-testid': 'active-tags', hidden: true },
+    h('h2', { class: 'gs-label gs-tags__title', id: 'gs-tags-title' }, t('game.sidebar.tags')),
+    tagList,
   );
 
   const targetValue = h('p', { class: 'gs-target__value', 'data-testid': 'round-target' });
@@ -74,10 +85,13 @@ export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
   const handLevel = h('span', { class: 'gs-hand__level', 'data-testid': 'hand-level' });
   const chipsEl = h('span', { class: 'gs-hand__chips', 'data-testid': 'hand-chips' }, '0');
   const multEl = h('span', { class: 'gs-hand__mult', 'data-testid': 'hand-mult' }, '0');
+  // Šéf by ruku zakázal (Soused s vrtačkou) — hráč to vidí ještě před zahráním.
+  const handWarn = h('p', { class: 'gs-hand__warn', 'data-testid': 'hand-blocked', hidden: true });
   const handInfoEl = h(
     'section',
     { class: 'gs-box gs-hand', 'aria-label': t('game.sidebar.hand') },
     h('p', { class: 'gs-hand__head' }, handName, handLevel),
+    handWarn,
     h(
       'p',
       { class: 'gs-hand__calc' },
@@ -146,6 +160,7 @@ export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
     'aside',
     { class: 'game-sidebar', 'aria-label': t('game.sidebar.label') },
     blindBox,
+    tagsBox,
     targetBox,
     scoreBox,
     handInfoEl,
@@ -155,6 +170,35 @@ export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
 
   let scoring: { hand: HandType; level: number; chips: number; mult: number } | null = null;
   let tokenKey = '';
+  let tagsKey = '';
+  let detachToken: (() => void) | null = null;
+
+  const setWarn = (text: string): void => {
+    setText(handWarn, text);
+    handWarn.hidden = text === '';
+    handInfoEl.classList.toggle('is-blocked', text !== '');
+  };
+
+  const updateTags = (): void => {
+    const tags = c.state.tags;
+    const key = tags.map((x) => `${x.uid}:${x.defId}`).join(',');
+    if (key === tagsKey) return;
+    tagsKey = key;
+    tagsBox.hidden = tags.length === 0;
+    tagList.replaceChildren(
+      ...tags.map((x) =>
+        h(
+          'li',
+          { class: 'gs-tags__item' },
+          createContentCard('tag', x.defId, {
+            registry: ctx.registry,
+            interactive: true,
+            className: 'gs-tag',
+          }),
+        ),
+      ),
+    );
+  };
 
   const writeHand = (name: string, level: string, chips: string, mult: string): void => {
     setText(handName, name);
@@ -172,6 +216,7 @@ export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
         formatNumber(scoring.mult),
       );
       handInfoEl.classList.add('is-scoring');
+      setWarn('');
       return;
     }
     handInfoEl.classList.remove('is-scoring');
@@ -179,9 +224,13 @@ export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
     const selecting = (s.phase === 'round' || s.phase === 'booster') && c.selected.length > 0;
     if (!selecting) {
       writeHand(t('game.sidebar.handNone'), '', '0', '0');
+      setWarn('');
       return;
     }
     const p = c.preview();
+    const reason =
+      s.phase === 'round' && p.blockedReason && hasKey(p.blockedReason) ? t(p.blockedReason) : '';
+    setWarn(reason ? t('game.sidebar.handBlocked', { reason }) : '');
     if (p.hidden) {
       writeHand(t('game.sidebar.handHidden'), '', t('game.sidebar.unknown'), t('game.sidebar.unknown'));
     } else if (!p.hand) {
@@ -209,9 +258,13 @@ export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
       bossId = round.bossId;
       name = blindName(kind, bossId && ctx.registry.bosses[bossId] ? bossId : null);
       if (bossId && ctx.registry.bosses[bossId]) {
+        const bossRule = bossTexts(bossId, { registry: ctx.registry }).rule;
+        // Velká útrata na Imperialu má pravidlo šéfa navíc (DESIGN kap. 10).
         rule = round.bossDisabled
           ? t('game.sidebar.bossDisabled')
-          : bossTexts(bossId, { registry: ctx.registry }).rule;
+          : kind === 'boss'
+            ? bossRule
+            : t('game.blinds.extraRule', { rule: bossRule });
       } else if (kind === 'boss') {
         rule = t('game.sidebar.noRule');
       }
@@ -228,9 +281,18 @@ export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
     const key = `${kind}|${bossId ?? ''}`;
     if (key !== tokenKey) {
       tokenKey = key;
-      token.replaceChildren(
-        blindArt(kind, bossId && ctx.registry.bosses[bossId] ? bossId : null, { registry: ctx.registry }),
-      );
+      const known = bossId && ctx.registry.bosses[bossId] ? bossId : null;
+      token.replaceChildren(blindArt(kind, known, { registry: ctx.registry }));
+      // Žeton šéfa: tooltip s pravidlem a hláškou (hover, dlouhý stisk); jinak jen ozdoba.
+      detachToken?.();
+      detachToken = known
+        ? attachTooltip(token, () => contentTooltip('boss', known, { registry: ctx.registry }))
+        : null;
+      if (known) token.removeAttribute('aria-hidden');
+      else token.setAttribute('aria-hidden', 'true');
+      token.setAttribute('role', known ? 'img' : 'presentation');
+      if (known) token.setAttribute('aria-label', blindName('boss', known));
+      else token.removeAttribute('aria-label');
     }
   };
 
@@ -241,6 +303,7 @@ export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
     // Mimo kolo jsou kombinace a skóre kola jen informační — CSS je ztlumí.
     el.dataset.phase = s.phase;
     updateBlind();
+    updateTags();
 
     const slot = s.blinds[s.blindIndex] ?? null;
     let target: number | null = null;

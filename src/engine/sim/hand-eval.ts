@@ -48,6 +48,16 @@ export interface EvalEnv {
   /** Násobek hodnoty kombinace podle stylu bota (Barva u `flush`…); jen pro výběr, ne pro odhad skóre. */
   readonly pref: Readonly<Partial<Record<HandType, number>>>;
   readonly maxCards: number;
+  /**
+   * Kombinace, které by teď pravidlo šéfa zakázalo (`HandPreview.blockedReason` — Soused s vrtačkou): v odhadu mají
+   * skóre 0. Bot je zjistí z náhledů kandidátů v ruce (`blockedTypes`).
+   */
+  readonly blocked?: ReadonlySet<HandType>;
+  /**
+   * Smí se tah doplnit kartami lícem dolů (protočí se a skórují, jen je bot nevidí)? Ne, když pravidlo šéfa
+   * posuzuje celou ruku (`validateHand`, `adjustHandScore`) — neznámá karta by mohla změnit kombinaci.
+   */
+  readonly hiddenPad?: boolean;
 }
 
 const NO_ENHANCEMENTS: ContentRegistry['enhancements'] = Object.freeze({});
@@ -241,7 +251,7 @@ export function analyzeCards(cards: readonly CardValue[], env: EvalEnv): HandCan
       core.length < env.maxCards ? [...core, ...stones.slice(0, env.maxCards - core.length)] : [...core];
     let held = 1;
     for (const c of visible) if (c.heldXmult !== 1 && !set.includes(c)) held *= c.heldXmult;
-    const raw = playValue(env.base[type], set, held);
+    const raw = env.blocked?.has(type) ? 0 : playValue(env.base[type], set, held);
     out.push({ type, cards: set, raw, value: raw * (env.pref[type] ?? 1) });
   };
   if (ranked.length === 0) {
@@ -313,12 +323,21 @@ export function analyzeCards(cards: readonly CardValue[], env: EvalEnv): HandCan
 
 /**
  * Užitek nejlepší kombinace v hromádce karet: odhad skóre oříznutý na `cap` (body nad zbývající cíl kola nic
- * nepřinesou — u poslední ruky tak rozhoduje šance na výhru, ne průměr) × preference bota. 0 pro prázdnou.
+ * nepřinesou) × preference bota. 0 pro prázdnou. `lastHand` = poslední ruka kola: rozhoduje šance na výhru, ne
+ * průměr — ruka, která cíl dosáhne, má užitek navíc ve výši celého cíle (a preference stylu se nepočítají).
  */
-export function bestUtility(cards: readonly CardValue[], env: EvalEnv, cap = Infinity): number {
+export function bestUtility(
+  cards: readonly CardValue[],
+  env: EvalEnv,
+  cap = Infinity,
+  lastHand = false,
+): number {
   let best = 0;
   for (const c of analyzeCards(cards, env)) {
-    const u = Math.min(c.raw, cap) * (env.pref[c.type] ?? 1);
+    const u =
+      lastHand && Number.isFinite(cap)
+        ? Math.min(c.raw, cap) + (c.raw >= cap ? cap : 0)
+        : Math.min(c.raw, cap) * (env.pref[c.type] ?? 1);
     if (u > best) best = u;
   }
   return best;
@@ -334,6 +353,25 @@ export interface PlayCandidate {
   raw: number;
   /** Odhad × preference bota (podle toho se vybírá). */
   value: number;
+  /** Pravidlo šéfa by kombinaci zakázalo (skóre 0) — `HandPreview.blockedReason`. */
+  blocked?: boolean;
+  /** Přepočteno přesně na kopii hry (žolíci, šéf); `estRaw` = původní odhad bez žolíků. */
+  exact?: boolean;
+  estRaw?: number;
+}
+
+/**
+ * Kolikrát přesné skóre (se žolíky) převyšuje odhad bez žolíků — medián přes přesně přepočtené kandidáty, jinak 1.
+ * Monte Carlo zahazování počítá v jednotkách odhadu, takže zbývající cíl kola se tímto poměrem přepočte.
+ */
+export function exactScale(cands: readonly PlayCandidate[]): number {
+  const ratios = cands
+    .filter((c) => c.exact && (c.estRaw ?? 0) > 0 && c.raw > 0)
+    .map((c) => c.raw / c.estRaw!)
+    .sort((a, b) => a - b);
+  if (ratios.length === 0) return 1;
+  const mid = Math.floor(ratios.length / 2);
+  return ratios.length % 2 ? ratios[mid]! : (ratios[mid - 1]! + ratios[mid]!) / 2;
 }
 
 /**
@@ -353,15 +391,25 @@ export function estimatePlay(
     const c = hand.get(id);
     if (c) scoring.push(c);
   }
+  if (p.blockedReason) return { ids: [...ids], type: p.hand.type, raw: 0, value: 0, blocked: true };
   let held = 1;
   for (const c of hand.values()) if (c.heldXmult !== 1 && !ids.includes(c.id)) held *= c.heldXmult;
   const raw = playValue({ chips: p.chips, mult: p.mult }, scoring, held);
   return { ids: [...ids], type: p.hand.type, raw, value: raw * (env.pref[p.hand.type] ?? 1) };
 }
 
+/** Kombinace, které pravidlo šéfa u kandidátů zakázalo (pro `EvalEnv.blocked`). */
+export function blockedTypes(cands: readonly PlayCandidate[]): Set<HandType> {
+  const out = new Set<HandType>();
+  for (const c of cands) if (c.blocked && c.type) out.add(c.type);
+  return out;
+}
+
 /**
  * Kandidátní tahy z ruky: nejlepší sady karet z `analyzeCards` (každá i „doplněná“ o karty z `filler` — karty,
- * kterých se bot chce zbavit; zahráním se protočí balíček), ověřené náhledem. Seřazeno od nejlepšího.
+ * kterých se bot chce zbavit; zahráním se protočí balíček), ověřené náhledem. Karty lícem dolů z `filler` (jen
+ * s `env.hiddenPad`) jdou do tahu navíc: náhled i odhad se počítají jen z viditelných karet (bot neznámé karty
+ * neodhaduje), skóre tahu tím neklesne. Seřazeno od nejlepšího.
  */
 export function planCandidates(
   game: Game,
@@ -373,12 +421,12 @@ export function planCandidates(
   const byId = new Map(hand.map((c) => [c.id, c]));
   const seen = new Set<string>();
   const out: PlayCandidate[] = [];
-  const consider = (ids: number[]): void => {
-    const key = [...ids].sort((a, b) => a - b).join(',');
+  const consider = (ids: number[], hidden: readonly number[] = []): void => {
+    const key = [...ids, ...hidden].sort((a, b) => a - b).join(',');
     if (seen.has(key)) return;
     seen.add(key);
     const est = estimatePlay(game, ids, byId, env);
-    if (est) out.push(est);
+    if (est) out.push(hidden.length > 0 ? { ...est, ids: [...est.ids, ...hidden] } : est);
   };
   const cands = analyzeCards(hand, env)
     .sort((a, b) => b.value - a.value)
@@ -389,8 +437,10 @@ export function planCandidates(
     consider(ids);
     const room = env.maxCards - ids.length;
     if (room > 0) {
-      const pad = filler.filter((c) => !ids.includes(c.id)).slice(0, room);
-      if (pad.length > 0) consider([...ids, ...pad.map((c) => c.id)]);
+      const pad = filler.filter((c) => !ids.includes(c.id) && (env.hiddenPad || !c.faceDown)).slice(0, room);
+      const visible = pad.filter((c) => !c.faceDown).map((c) => c.id);
+      const hidden = pad.filter((c) => c.faceDown).map((c) => c.id);
+      if (pad.length > 0) consider([...ids, ...visible], hidden);
     }
   }
   // Při shodě delší tah: doplněné karty jsou „na vyhození“ a zahráním se protočí balíček.

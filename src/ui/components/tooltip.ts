@@ -14,6 +14,7 @@ import { registry as defaultRegistry } from '../../content';
 import { t } from '../../i18n/cs';
 import { CURRENCY } from '../../i18n/format';
 import {
+  bossReasonText,
   bossTexts,
   capitalize,
   cardName,
@@ -332,24 +333,32 @@ function priceFooter(opts?: TooltipOptions): string[] {
 
 const labeled = (name: string, desc: string): string => t('art.tooltip.edition', { name, desc });
 
-/** Tooltip hrací karty: název, čipy, vylepšení, edice, pečeť, stav. */
+/**
+ * Tooltip hrací karty: název, čipy, vylepšení, edice, pečeť, stav. `reason` vysvětlí, proč je karta mimo provoz
+ * nebo lícem dolů (pravidlo šéfa — `bossReasonText`).
+ */
 export function cardTooltip(
   card: Readonly<Card>,
-  opts?: TooltipOptions & { registry?: ContentRegistry },
+  opts?: TooltipOptions & { registry?: ContentRegistry; reason?: string | null },
 ): TooltipContent {
   const r = opts?.registry ?? defaultRegistry();
   const title = capitalize(cardName(card, r));
+  const reason: TooltipLine[] = opts?.reason ? [{ text: opts.reason, muted: true }] : [];
   if (card.faceDown) {
     return {
       title,
       subtitle: t('art.kind.card'),
-      lines: [{ text: t('art.card.faceDownHint'), muted: true }],
+      lines: [{ text: t('art.card.faceDownHint'), muted: true }, ...reason],
     };
   }
   const fixed = opts?.mods?.fixedCardChips ?? 0;
   const chips = cardChips(card, r.enhancements, { fixedCardChips: fixed });
   const lines: (string | TooltipLine)[] = [];
-  if (chips > 0) lines.push(t('art.card.chips', { chips }));
+  // Mimo provoz čipy nedává — číslo zůstane vidět, ale ztlumené.
+  if (chips > 0)
+    lines.push(
+      card.debuffed ? { text: t('art.card.chips', { chips }), muted: true } : t('art.card.chips', { chips }),
+    );
   if (card.enhancement) {
     const e = enhancementTexts(card.enhancement, opts);
     lines.push(labeled(e.name, e.desc));
@@ -364,7 +373,7 @@ export function cardTooltip(
   }
   if (isRanklessCard(card, r) && !card.enhancement)
     lines.push({ text: t('art.card.stoneHint'), muted: true });
-  if (card.debuffed) lines.push({ text: t('art.card.debuffedHint'), muted: true });
+  if (card.debuffed) lines.push({ text: t('art.card.debuffedHint'), muted: true }, ...reason);
   return { title, subtitle: t('art.kind.card'), lines, footer: priceFooter(opts) };
 }
 
@@ -393,7 +402,12 @@ export function jokerTooltip(joker: Readonly<JokerInstance>, opts?: JokerTooltip
   }
   if (tx.edition) lines.push(labeled(tx.edition.name, tx.edition.desc));
   for (const s of tx.stickers) lines.push({ text: s, muted: true });
-  if (joker.debuffed || opts?.debuffed) lines.push({ text: t('art.tooltip.jokerDebuffed'), muted: true });
+  if (joker.debuffed || opts?.debuffed) {
+    lines.push({ text: t('art.tooltip.jokerDebuffed'), muted: true });
+    // Vypnutý pravidlem šéfa (Exekutor, Jednooký hejtman, Krajský úřad, Výpadek proudu) — proč.
+    const why = run?.round?.jokerDebuffs.includes(joker.uid) ? bossReasonText(run, r) : null;
+    if (why) lines.push({ text: why, muted: true });
+  }
   const by = run ? copiedByText(run, joker, r) : null;
   if (by) lines.push({ text: by, muted: true });
   if (!tx.copyable) lines.push({ text: t('art.copy.notCopyable'), muted: true });

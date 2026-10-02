@@ -132,8 +132,10 @@ describe('vzácní žolíci — definice a texty', () => {
       'Postupka smí jít kolem dokola (např. Q-K-A-2-3) a každá Postupka dá +14 mult.',
     );
     expect(descOf('echo')).toBe('Poslední skórující karta skóruje ještě 4×.');
-    expect(descOf('lucky_seven')).toBe('Každá skórující 7 skóruje ještě 2×.');
-    expect(descOf('tab')).toBe('Můžeš jít do mínusu až −15 Kč; dokud máš záporný zůstatek, dává +8 mult.');
+    expect(descOf('lucky_seven')).toBe('Každá skórující karta: 1 ze 7, že skóruje ještě 7×.');
+    expect(descOf('tab')).toBe(
+      'Můžeš jít do mínusu až −15 Kč; +1 mult za každou korunu, která ti chybí do 15 Kč.',
+    );
     expect(hasKey('jokers.late_train.delay')).toBe(true);
   });
 
@@ -392,29 +394,68 @@ describe('Ozvěna z propasti (echo)', () => {
 // ─────────────────────────── #24 Šťastná sedmička ───────────────────────────
 
 describe('Šťastná sedmička (lucky_seven)', () => {
-  it('každá skórující 7 skóruje ještě 2×: (12 + 3 × 7 + 3 × 7) × 2 = 108', () => {
-    const r = hand(game(['lucky_seven']), '7S 7H');
-    expect(r.score).toBe(108);
-    expect(r.steps.filter((s) => s.message === MSG.again)).toHaveLength(4);
+  it('výhra = karta skóruje ještě 7× (probabilityMult 7 → 7 ze 7): Dvojice K = (12 + 8 × 10 + 8 × 10) × 2', () => {
+    const g = game(['lucky_seven']);
+    g._core.api.addPermanentModifier({ probabilityMult: 7 });
+    const r = hand(g, 'KS KH');
+    expect(r.score).toBe((12 + 8 * 10 + 8 * 10) * 2);
+    expect(r.steps.filter((s) => s.message === MSG.again)).toHaveLength(14);
   });
 
-  it('vylepšení se opakuje taky: Pálivá 7 → 3 × +5 mult', () => {
-    // čipy 12 + 21 + 21 = 54, mult 2 + 15 = 17
-    expect(hand(game(['lucky_seven']), '7S:mult 7H').score).toBe(54 * 17);
+  it('vylepšení se opakuje taky: Pálivá 7 → 8 × +5 mult; kamenná karta se losuje jako každá jiná', () => {
+    const g = game(['lucky_seven']);
+    g._core.api.addPermanentModifier({ probabilityMult: 7 });
+    // čipy 12 + 8 × 7 + 8 × 7 = 124, mult 2 + 8 × 5 = 42
+    expect(hand(g, '7S:mult 7H').score).toBe(124 * 42);
+    // Dvojice dvojek + kamenná karta (8 × 50 čipů): 12 + 8 × 2 + 8 × 2 + 8 × 50 = 444 × 2
+    expect(hand(g, '2S 2H 7S:stone').score).toBe(444 * 2);
   });
 
-  it('jiné hodnoty a kamenná karta (nemá hodnotu) se neopakují', () => {
-    expect(hand(game(['lucky_seven']), 'KS KH').score).toBe(64);
-    // Dvojice dvojek + kamenná „sedmička“: 12 + 2 + 2 + 50 = 66 × 2 = 132
-    const r = hand(game(['lucky_seven']), '2S 2H 7S:stone');
-    expect(r.score).toBe(132);
+  it('bez štěstí (probabilityMult 0) nic', () => {
+    const g = game(['lucky_seven']);
+    g._core.api.addPermanentModifier({ probabilityMult: 0 });
+    const r = hand(g, '7S 7H');
+    expect(r.score).toBe((12 + 7 + 7) * 2);
     expect(r.steps.filter((s) => s.message === MSG.again)).toEqual([]);
+  });
+
+  it('jeden hod přes ctx.chance a RNG žolíků za každou skórující kartu (předpověď ze streamu)', () => {
+    const g = game(['lucky_seven'], 'SEDMICKA1');
+    ok(g.dispatch({ type: 'selectBlind' }));
+    let lucky = 0;
+    for (let i = 0; i < 40; i++) {
+      const st = g.state.rng.joker;
+      const rng = rngFromState([st[0], st[1], st[2], st[3]]);
+      const wins = [rng.next() < 1 / 7, rng.next() < 1 / 7];
+      const r = hand(g, 'KS KH');
+      const chips = 12 + wins.reduce((a, w) => a + (w ? 8 : 1) * 10, 0);
+      expect(r.score, `ruka ${i}`).toBe(chips * 2);
+      lucky += wins.filter(Boolean).length;
+    }
+    // Na 80 kartách se seedem SEDMICKA1 padne výhra, ale zdaleka ne pokaždé.
+    expect(lucky).toBeGreaterThan(0);
+    expect(lucky).toBeLessThan(40);
+  });
+
+  it('stejný seed = stejné výhry, i po uložení a načtení', () => {
+    const run = (reloadAt: number | null) => {
+      let g = game(['lucky_seven'], 'SEDMICKA2');
+      const scores: number[] = [];
+      for (let i = 0; i < 12; i++) {
+        if (i === reloadAt) g = reload(g);
+        scores.push(hand(g, '5S 5H 9C 9D').score);
+      }
+      return scores;
+    };
+    expect(run(null)).toEqual(run(5));
   });
 
   it('nejvýš MAX_ACTIVATIONS_PER_CARD aktivací i s více žolíky', () => {
     const jokers = Array.from({ length: 6 }, () => 'lucky_seven');
-    // 1 + 6 × 2 = 13 → oříznuto na 10 aktivací: Vysoká karta 6 + 10 × 7 = 76
-    expect(hand(game(jokers), '7S').score).toBe(76);
+    const g = game(jokers);
+    g._core.api.addPermanentModifier({ probabilityMult: 7 });
+    // 1 + 6 × 7 = 43 → oříznuto na 10 aktivací: Vysoká karta 6 + 10 × 7 = 76
+    expect(hand(g, '7S').score).toBe(76);
   });
 });
 
@@ -431,14 +472,20 @@ describe('Sekera (tab)', () => {
     expect(g.state.money).toBe(-15);
   });
 
-  it('+8 mult jen při záporném zůstatku', () => {
-    const g = game(['tab']);
-    g._core.state.money = 0;
-    const r0 = hand(g, 'KS KH');
-    expect(r0.score).toBe(64);
-    expect(jokerSteps(r0, 'tab')).toEqual([]);
-    g._core.state.money = -1;
-    expect(hand(g, 'KS KH').score).toBe(32 * 10);
+  it('+1 mult za každou korunu, která chybí do 15 Kč (i v dluhu)', () => {
+    const at = (money: number): ScoreResult => {
+      const g = game(['tab']);
+      g._core.state.money = money;
+      return hand(g, 'KS KH');
+    };
+    const full = at(15);
+    expect(full.score).toBe(64);
+    expect(jokerSteps(full, 'tab')).toEqual([]);
+    expect(at(40).score).toBe(64);
+    expect(at(14).score).toBe(32 * 3);
+    expect(jokerSteps(at(0), 'tab')).toMatchObject([{ mult: 15 }]);
+    expect(at(0).score).toBe(32 * 17);
+    expect(at(-15).score).toBe(32 * 32);
   });
 
   it('nákup ve Večerce do mínusu až do −15 Kč', () => {
@@ -453,11 +500,12 @@ describe('Sekera (tab)', () => {
     expect(g.state.money).toBe(-price);
   });
 
-  it('kopie Sekery dá +8 mult navíc (pasivní limit se nekopíruje)', () => {
+  it('kopie Sekery dá mult navíc (pasivní limit se nekopíruje)', () => {
     const g = game(['copier', 'tab']);
     expect(g.modifiers().debtLimit).toBe(15);
     g._core.state.money = -5;
-    expect(hand(g, 'KS KH').score).toBe(32 * 18);
+    // chybí 20 Kč: +20 (kopie) +20 → 32 × 42
+    expect(hand(g, 'KS KH').score).toBe(32 * 42);
   });
 });
 

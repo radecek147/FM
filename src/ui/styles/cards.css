@@ -165,6 +165,29 @@ button.kcard[aria-disabled='true'] {
   display: none;
 }
 
+/* Otočení karty (Bílá paní, odkrytí zahrané karty lícem dolů): překlopení přes scaleX. */
+.pcard.is-flipping .pcard__inner {
+  animation: pcard-flip calc(var(--t-med) * 1.4) ease-in-out;
+}
+
+@keyframes pcard-flip {
+  0% {
+    transform: scaleX(1);
+  }
+
+  50% {
+    transform: scaleX(0.04);
+  }
+
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+.no-anim .pcard.is-flipping .pcard__inner {
+  animation: none;
+}
+
 /* Mimo provoz: zašedlá + přeškrtnutá. */
 .is-debuffed .pcard__inner > svg,
 .is-debuffed .kcard__inner > svg {

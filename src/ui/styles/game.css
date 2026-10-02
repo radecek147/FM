@@ -121,6 +121,34 @@
   color: var(--on-felt-muted);
 }
 
+/* Aktivní štítky: řada malých žetonů s tooltipem. */
+.gs-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.5rem;
+  align-items: center;
+  padding: 0.3rem 0.5rem;
+  background: rgb(0 0 0 / 22%);
+  border-radius: var(--radius);
+}
+
+.gs-tags[hidden] {
+  display: none;
+}
+
+.gs-tags__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.gs-tags .gs-tag {
+  --card-w: 2.5rem;
+}
+
 .gs-box {
   padding: 0.45rem 0.6rem;
   background: rgb(0 0 0 / 30%);
@@ -213,6 +241,23 @@
 .game-sidebar:not([data-phase='round'], [data-phase='booster']) .gs-hand,
 .game-sidebar:not([data-phase='round'], [data-phase='round_end'], [data-phase='game_over']) .gs-score {
   opacity: 0.6;
+}
+
+/* Šéf by ruku zakázal (Soused s vrtačkou): varování přímo v náhledu kombinace. */
+.gs-hand__warn {
+  margin-top: 0.25rem;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  color: #fff;
+  background: var(--danger);
+  border-radius: var(--radius-small);
+}
+
+.gs-hand.is-blocked .gs-hand__chips,
+.gs-hand.is-blocked .gs-hand__mult {
+  text-decoration: line-through;
+  filter: saturate(0.4) brightness(0.8);
 }
 
 .gs-hand.is-scoring {
@@ -493,6 +538,82 @@
   box-shadow: inset 0 0 0 1px rgb(244 236 216 / 10%);
 }
 
+/* Příchod šéfa: plakát nad stolem (neblokuje kliknutí, zmizí sám). */
+.boss-banner {
+  --boss-color: var(--danger);
+
+  z-index: 4;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: center;
+  align-self: start;
+  justify-self: center;
+  width: min(34rem, calc(100% - 1rem));
+  margin-top: 0.6rem;
+  padding: 0.75rem 1rem 0.8rem 0.8rem;
+  color: var(--chalk);
+  pointer-events: none;
+  background: var(--chalkboard);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 0 0 3px var(--boss-color),
+    inset 0 0 0 6px rgb(0 0 0 / 35%),
+    0 14px 34px rgb(0 0 0 / 50%);
+  opacity: 0;
+  transform: translateY(-14px) scale(0.96);
+  transition:
+    opacity var(--t-med) ease-out,
+    transform var(--t-med) ease-out;
+}
+
+.boss-banner[hidden] {
+  display: none;
+}
+
+.boss-banner.is-shown {
+  opacity: 1;
+  transform: none;
+}
+
+.boss-banner__token {
+  width: 4.6rem;
+  height: 4.6rem;
+}
+
+.boss-banner__token .art-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.boss-banner__label {
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--on-felt-muted);
+}
+
+.boss-banner__name {
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--paper);
+}
+
+.boss-banner__rule {
+  margin-top: 0.2rem;
+  font-size: 0.92rem;
+  line-height: 1.3;
+}
+
+.boss-banner__intro {
+  margin-top: 0.35rem;
+  font-size: 0.88rem;
+  font-style: italic;
+  line-height: 1.3;
+  color: var(--accent);
+}
+
 .game-panel-host {
   align-self: start;
   min-width: 0;
@@ -632,6 +753,13 @@
   color: var(--danger-dark);
 }
 
+.blind-card__note {
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--felt-light);
+  text-align: center;
+}
+
 .blind-card__facts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -704,6 +832,32 @@
 
 .blind-card__select {
   min-width: 8rem;
+}
+
+/* Nízké okno (1366×768): karty útrat sevřenější, ať se vejde i Velká útrata s pravidlem šéfa (Imperial)
+   a štítkem včetně Vybrat / Přeskočit bez posouvání. */
+@media (min-width: 901px) and (max-height: 800px) {
+  .blind-select .game-panel__header {
+    margin-bottom: 0.45rem;
+  }
+
+  .blind-card {
+    gap: 0.35rem;
+    padding: 0.6rem 0.7rem 0.7rem;
+  }
+
+  .blind-card__token {
+    width: 3.6rem;
+    height: 3.6rem;
+  }
+
+  .blind-card__name {
+    font-size: 1.15rem;
+  }
+
+  .blind-card__tag {
+    padding: 0.3rem 0.45rem;
+  }
 }
 
 .blind-card .btn--ghost {
@@ -926,6 +1080,34 @@
   position: relative;
 }
 
+/* Zboží ze štítku (navíc, sleva, edice bez příplatku): nálepka v horním okraji police, nad cenovkou — celá řada
+   polic se kvůli ní posune níž, ať karty zůstanou v jedné linii. */
+.shop-slot.has-badge {
+  position: relative;
+}
+
+.shop-section__slots:has(.has-badge) > .shop-slot {
+  padding-top: 2.5rem;
+}
+
+.shop-slot__badge {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  max-width: calc(100% + 1rem);
+  padding: 0.05rem 0.45rem;
+  overflow: hidden;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--accent);
+  border-radius: 999px;
+  box-shadow: 0 2px 0 var(--accent-dark);
+  transform: translateX(-50%);
+}
+
 .shop-slot__playing {
   position: relative;
 }
@@ -1141,6 +1323,38 @@
   line-height: 1.3;
   color: var(--wood);
   text-align: center;
+}
+
+/* Šéf, na kterém run skončil: žeton + hláška + pravidlo. */
+.game-over__culprit {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: center;
+  margin: 0.25rem auto 0.75rem;
+  max-width: 34rem;
+}
+
+.game-over__culprit .game-over__quote {
+  margin: 0;
+  text-align: left;
+}
+
+.game-over__token {
+  width: 4.4rem;
+  height: 4.4rem;
+}
+
+.game-over__token .art-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.game-over__rule {
+  margin-top: 0.3rem;
+  font-size: 0.85rem;
+  line-height: 1.3;
+  color: var(--ink-soft);
 }
 
 .game-over__score {
@@ -1377,6 +1591,37 @@
   color: var(--on-felt-muted);
 }
 
+.gb-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.6rem;
+  align-items: baseline;
+  justify-content: center;
+}
+
+/* Velikost ruky; zmenšená (Velká voda, Garsonka) červeně, zvětšená zeleně. */
+.gb-handsize {
+  font-size: 0.8rem;
+  color: var(--on-felt-muted);
+  white-space: nowrap;
+}
+
+.gb-handsize.is-reduced {
+  padding: 0 0.4rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--danger);
+  border-radius: 999px;
+}
+
+.gb-handsize.is-raised {
+  padding: 0 0.4rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--felt-light);
+  border-radius: 999px;
+}
+
 .gb-deck {
   --card-w: calc(var(--game-card-w) * 0.8);
 
@@ -1570,6 +1815,30 @@
 .run-info__columns > .run-info__section {
   margin-bottom: 0.9rem;
   break-inside: avoid;
+}
+
+.run-info__boss {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.6rem;
+  align-items: start;
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+
+.run-info__boss-token {
+  width: 3.2rem;
+  height: 3.2rem;
+}
+
+.run-info__boss-token .art-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.run-info__boss-name {
+  font-weight: 700;
+  color: var(--wood);
 }
 
 .run-info__title {
@@ -1815,6 +2084,7 @@
 }
 
 .no-anim .blind-card,
+.no-anim .boss-banner,
 .no-anim .game-stage__decor,
 .no-anim .game-table .pcard,
 .no-anim .gt-item.is-shifting,

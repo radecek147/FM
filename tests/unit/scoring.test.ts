@@ -982,6 +982,25 @@ describe('previewHand', () => {
     expect(game.preview([a!.id, b!.id])).toMatchObject({ chips: 6, mult: 1, level: 1 });
   });
 
+  it('se šéfem: zákaz ruky (validateHand) je v náhledu jako blockedReason, bez posunu RNG', () => {
+    const game = makeGame();
+    selectBoss(game, 'neighbour');
+    const [a, b, c, d] = setupRound(game, '9S 9H 5C 5D KS');
+    expect(game.preview([a!.id, b!.id])).not.toHaveProperty('blockedReason');
+    play(game, [a!, b!]);
+    const rng = rngOf(game.state);
+    const p = game.preview([c!.id, d!.id]);
+    expect(p.hand!.type).toBe('pair');
+    expect(p.blockedReason).toBe(NEIGHBOUR_BLOCKED);
+    expect(p).toMatchObject({ level: 1, hidden: false });
+    expect(p.chips).toBeGreaterThan(0);
+    expect(rngOf(game.state)).toBe(rng);
+    // Jiná kombinace projde; vypnutý šéf (Odvolání) nezakazuje nic.
+    expect(game.preview([c!.id])).not.toHaveProperty('blockedReason');
+    game._core.state.round!.bossDisabled = true;
+    expect(game.preview([c!.id, d!.id])).not.toHaveProperty('blockedReason');
+  });
+
   it('karta lícem dolů náhled skryje; mimo kolo jde náhled spočítat', () => {
     const game = inRound();
     const [a, b] = setupRound(game, '9S^ 9H');

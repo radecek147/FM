@@ -317,18 +317,47 @@ export function boosterTexts(defOrId: BoosterDef | string, opts?: DescribeOption
 
 // ─────────────────────────── Šéfové a útraty ───────────────────────────
 
+/** Texty šéfa; `{param}` v pravidle i hláškách dosadí `BossDef.params` (Nová vyhláška `{level}`…). */
 export function bossTexts(defOrId: BossDef | string, opts?: DescribeOptions): BossTexts {
-  const { id } = resolve(reg(opts).bosses, defOrId);
-  const rule = t(`bosses.${id}.rule`);
+  const { id, def } = resolve(reg(opts).bosses, defOrId);
+  const params = describeParams(def?.params, undefined, opts?.mods);
+  const rule = t(`bosses.${id}.rule`, params);
   return {
     name: t(`bosses.${id}.name`),
     desc: rule,
     rule,
-    flavor: optionalText(`bosses.${id}.flavor`) ?? optionalText(`bosses.${id}.intro`),
-    intro: optionalText(`bosses.${id}.intro`),
-    defeat: optionalText(`bosses.${id}.defeat`),
-    death: optionalText(`bosses.${id}.death`),
+    flavor: optionalText(`bosses.${id}.flavor`, params) ?? optionalText(`bosses.${id}.intro`, params),
+    intro: optionalText(`bosses.${id}.intro`, params),
+    defeat: optionalText(`bosses.${id}.defeat`, params),
+    death: optionalText(`bosses.${id}.death`, params),
   };
+}
+
+/**
+ * Šéf, jehož pravidlo právě platí (kolo běží, šéf je v registru a Odvolání ho nevypnulo) — u Velké útraty na
+ * Imperialu i „pravidlo navíc“. Jinak null.
+ */
+export function activeBossId(
+  state: Readonly<Pick<RunState, 'round'>>,
+  r: ContentRegistry = defaultRegistry(),
+): string | null {
+  const round = state.round;
+  if (!round || round.bossDisabled || !round.bossId || !r.bosses[round.bossId]) return null;
+  return round.bossId;
+}
+
+/**
+ * Vysvětlení do tooltipu, proč je karta nebo žolík mimo provoz / lícem dolů: „Šéf Inventura: Figury (J, Q, K) jsou
+ * mimo provoz.“ — jen když pravidlo šéfa právě platí, jinak null.
+ */
+export function bossReasonText(
+  state: Readonly<Pick<RunState, 'round'>>,
+  r: ContentRegistry = defaultRegistry(),
+): string | null {
+  const id = activeBossId(state, r);
+  if (!id) return null;
+  const tx = bossTexts(id, { registry: r });
+  return t('art.tooltip.bossReason', { name: tx.name, rule: tx.rule });
 }
 
 /** Název útraty: Malá / Velká útrata, u šéfa jeho jméno. */

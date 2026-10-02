@@ -9,6 +9,8 @@ import { t } from '../../../i18n/cs';
 import { formatNumber } from '../../../i18n/format';
 import { button } from '../../components/button';
 import { createCardBack, createCardView, updateCardView } from '../../components/card';
+import { toast } from '../../components/toast';
+import { activeBossId, blindName, bossReasonText } from '../../describe';
 import { h } from '../../dom';
 import { animate } from '../../present';
 import type { GameCtx } from './shared';
@@ -34,6 +36,8 @@ export function createHandArea(ctx: GameCtx, actions: HandAreaActions): HandArea
 
   const handRow = h('div', { class: 'gb-hand', role: 'group', 'data-testid': 'hand' });
   const selectedEl = h('p', { class: 'gb-selected', 'aria-live': 'polite', 'data-testid': 'selected-count' });
+  // Velikost ruky v kole (Garsonka, Rozložené noviny, Velká voda ji mění) — se změnou proti začátku kola.
+  const handSizeEl = h('p', { class: 'gb-handsize', 'data-testid': 'hand-size' });
   const hint = h('p', { class: 'gb-hint' });
 
   const playBtn = button({
@@ -84,7 +88,7 @@ export function createHandArea(ctx: GameCtx, actions: HandAreaActions): HandArea
     'div',
     { class: 'gb-controls' },
     playBtn,
-    h('div', { class: 'gb-mid' }, sortGroup, selectedEl),
+    h('div', { class: 'gb-mid' }, sortGroup, h('div', { class: 'gb-counts' }, selectedEl, handSizeEl)),
     discardBtn,
   );
 
@@ -106,11 +110,58 @@ export function createHandArea(ctx: GameCtx, actions: HandAreaActions): HandArea
 
   const cards = new Map<number, HTMLElement>();
   let lastOrder = '';
+  /** Velikost ruky: identita kola, velikost na jeho začátku a naposledy ukázaná. */
+  const size = { round: '', start: 0, last: 0 };
+
+  /**
+   * Velikost ruky v kole. Během animace se nemění (engine už má stav po akci) — změna se ukáže až po ní,
+   * s povyskočením a hláškou (u šéfa s jeho jménem: „Velká voda: ruka se zmenšila na 7 karet.“).
+   */
+  const updateHandSize = (): void => {
+    const s = c.state;
+    const round = s.round;
+    if (s.phase !== 'round' || !round) {
+      handSizeEl.hidden = true;
+      size.round = '';
+      return;
+    }
+    handSizeEl.hidden = false;
+    if (c.busy && size.round !== '') return;
+    const n = c.engine.modifiers().handSize;
+    const key = `${s.ante}|${s.blindIndex}|${round.blind}|${s.stats.roundsWon}`;
+    if (key !== size.round) {
+      size.round = key;
+      size.start = n;
+      size.last = n;
+    } else if (n !== size.last) {
+      const boss = activeBossId(s, ctx.registry);
+      const key = `game.hand.${n < size.last ? 'handSizeDown' : 'handSizeUp'}${boss ? 'Boss' : ''}`;
+      toast(t(key, { n, name: boss ? blindName('boss', boss) : '' }), {
+        kind: n < size.last ? 'warning' : 'info',
+        testId: 'toast-hand-size',
+      });
+      void animate(
+        ctx.app.anim,
+        handSizeEl,
+        [{ transform: 'scale(1)' }, { transform: 'scale(1.25)', offset: 0.4 }, { transform: 'scale(1)' }],
+        420,
+      );
+      size.last = n;
+    }
+    const delta = n - size.start;
+    handSizeEl.textContent =
+      delta === 0 ? t('game.hand.handSize', { n }) : t('game.hand.handSizeDelta', { n, delta });
+    handSizeEl.title = t('game.hand.handSizeLabel', { n });
+    handSizeEl.classList.toggle('is-reduced', delta < 0);
+    handSizeEl.classList.toggle('is-raised', delta > 0);
+  };
 
   const updateHand = (): void => {
     const ids = c.handIds();
     const selected = new Set(c.selected);
     const mods = c.engine.modifiers();
+    // Proč je karta mimo provoz / lícem dolů (pravidlo šéfa) — do tooltipu.
+    const reason = bossReasonText(c.state, ctx.registry);
     const seen = new Set<number>();
     const order: HTMLElement[] = [];
     const created = new Set<HTMLElement>();
@@ -125,13 +176,14 @@ export function createHandArea(ctx: GameCtx, actions: HandAreaActions): HandArea
           selected: selected.has(id),
           keyHint,
           mods,
+          reason,
           registry: ctx.registry,
           onClick: (cd) => c.toggleSelect(cd.id),
         });
         cards.set(id, elCard);
         created.add(elCard);
       } else {
-        updateCardView(elCard, card, { selected: selected.has(id), keyHint, mods });
+        updateCardView(elCard, card, { selected: selected.has(id), keyHint, mods, reason });
       }
       order.push(elCard);
     });
@@ -189,6 +241,7 @@ export function createHandArea(ctx: GameCtx, actions: HandAreaActions): HandArea
     hint.hidden = !inBooster;
     hint.textContent = inBooster ? t('game.hand.boosterHint') : '';
     selectedEl.textContent = t('game.hand.selected', { n: nSel, max: m.maxSelect });
+    updateHandSize();
     playBtn.disabled = !inRound || nSel === 0 || (round?.handsLeft ?? 0) <= 0;
     discardBtn.disabled = !inRound || nSel === 0 || (round?.discardsLeft ?? 0) <= 0;
     sortRank.disabled = !showHand;

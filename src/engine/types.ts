@@ -538,6 +538,11 @@ export interface HandPreview {
   level: number;
   /** Výběr obsahuje kartu lícem dolů — náhled se nepočítá a UI ukáže „?“ (DESIGN 2.1). */
   hidden: boolean;
+  /**
+   * I18n klíč důvodu, proč by šéf ruku zakázal (`BossHooks.validateHand`, Soused s vrtačkou) — UI ho ukáže už
+   * při výběru karet. Chybí, když ruka projde (nebo je náhled skrytý).
+   */
+  blockedReason?: string;
 }
 
 // ─────────────────────────── Události ───────────────────────────

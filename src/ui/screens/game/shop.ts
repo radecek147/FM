@@ -81,6 +81,20 @@ function itemVisual(ctx: GameCtx, item: ShopItem, sellValue: number | undefined)
   );
 }
 
+/**
+ * Nálepka zboží ze štítku: žolík navíc (Doporučení od známého, Protekce), sleva (`priceMult`) a edice bez příplatku
+ * (Vyleštěné příbory, Fotonegativ). Jinak null.
+ */
+export function itemBadge(item: ShopItem): string | null {
+  const parts: string[] = [];
+  if (item.extra) parts.push(t('game.shop.badgeExtra'));
+  if (item.priceMult !== undefined && item.priceMult < 1)
+    parts.push(t('game.shop.badgeDiscount', { pct: Math.round((1 - item.priceMult) * 100) }));
+  if (item.kind === 'joker' && item.noEditionSurcharge && item.joker.edition)
+    parts.push(t('game.shop.badgeEdition'));
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
 function soldSlot(testId: string): HTMLElement {
   return h(
     'li',
@@ -155,9 +169,21 @@ export function renderShop(ctx: GameCtx): HTMLElement {
         }),
       );
     }
+    const badge = itemBadge(item);
     return h(
       'li',
-      { class: ['shop-slot', `shop-slot--${item.kind}`], 'data-testid': testId },
+      { class: ['shop-slot', `shop-slot--${item.kind}`, badge ? 'has-badge' : ''], 'data-testid': testId },
+      badge
+        ? h(
+            'p',
+            {
+              class: 'shop-slot__badge',
+              title: t('game.shop.badgeTitle', { text: badge }),
+              'data-testid': `${testId}-badge`,
+            },
+            badge,
+          )
+        : null,
       h('div', { class: 'shop-slot__card' }, itemVisual(ctx, item, sellValues.get(slot))),
       h('p', { class: 'shop-slot__name', id: `${testId}-name` }, itemName(ctx, item)),
       h('div', { class: 'shop-slot__actions' }, actions),
@@ -198,7 +224,19 @@ export function renderShop(ctx: GameCtx): HTMLElement {
     const name = voucherTexts(v.voucherId, { registry: ctx.registry }).name;
     return h(
       'li',
-      { class: 'shop-slot shop-slot--voucher', 'data-testid': testId },
+      { class: ['shop-slot', 'shop-slot--voucher', v.extra ? 'has-badge' : ''], 'data-testid': testId },
+      // Kupón navíc z Úředního poukazu platí jen v této Večerce.
+      v.extra
+        ? h(
+            'p',
+            {
+              class: 'shop-slot__badge',
+              title: t('game.shop.badgeTitle', { text: t('game.shop.badgeExtra') }),
+              'data-testid': `${testId}-badge`,
+            },
+            t('game.shop.badgeExtra'),
+          )
+        : null,
       h(
         'div',
         { class: 'shop-slot__card' },

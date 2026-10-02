@@ -1,8 +1,8 @@
 /**
  * Texty šéfů (fináloví šéfové F1–F5, docs/DESIGN.md kap. 8.3): `bosses.<id>.name|rule|intro|defeat|death`.
- * `rule` = pravidlo (čísla zatím napsaná rovnou — UI `bossTexts` `params` šéfů nedosazuje; musí sedět s `params`
- * v src/content/bosses/final.ts, hlídá test), `intro` = hláška při příchodu,
- * `defeat` = při porážce, `death` = hláška pitvy (DESIGN příloha C). Hlášky bez uvozovek.
+ * `rule` = pravidlo (čísla jen přes `{param}` z `params` v src/content/bosses/final.ts, u čísla se slovem
+ * s `|plural:`), `intro` = hláška při příchodu, `defeat` = při porážce, `death` = hláška pitvy (DESIGN příloha C).
+ * Hlášky bez uvozovek.
  */
 import type { TextTree } from '../../cs';
 
@@ -23,14 +23,14 @@ export const bossesFinal = {
   },
   noise_barrier: {
     name: 'Protihluková stěna',
-    rule: 'Žádné zvláštní pravidlo, jen vyšší cíl: 4,5× základ patra.',
+    rule: 'Žádné zvláštní pravidlo, jen vyšší cíl: {target}× základ patra.',
     intro: 'Čtyři metry betonu. A ani jeden strom.',
     defeat: 'Zeď padla. Sousedi děkují.',
     death: 'Hlavou zeď neprorazíš.',
   },
   great_flood: {
     name: 'Velká voda',
-    rule: 'Každá zahraná ruka zmenší velikost ruky o 1 kartu (do konce kola).',
+    rule: 'Každá zahraná ruka zmenší velikost ruky o {cards|plural:kartu,karty,karet} (do konce kola).',
     intro: 'Voda stoupá! Karty do vyšších pater!',
     defeat: 'Voda opadla. Bláto zůstalo.',
     death: 'Topíš se v kartách.',

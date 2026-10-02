@@ -79,14 +79,14 @@ const debuffedUids = (g: Game) => g.state.jokers.filter((j) => j.debuffed).map((
 describe('běžní šéfové 14–25 – data (DESIGN 8.2)', () => {
   it('id, od patra a cíl odpovídají tabulce', () => {
     const table: Record<string, [number, number]> = {
-      new_decree: [3, 2],
+      new_decree: [3, 1.1],
       binder_tower: [2, 3],
-      regional_derby: [2, 2],
-      pig_slaughter: [3, 2],
+      regional_derby: [2, 1.75],
+      pig_slaughter: [3, 2.5],
       white_mountain: [3, 2],
       normalization: [2, 2],
-      one_eyed_hetman: [3, 2],
-      mother_in_law: [1, 2],
+      one_eyed_hetman: [3, 1.4],
+      mother_in_law: [1, 2.25],
       influencer: [2, 2],
       hangover: [1, 2],
       blackout: [1, 2],
@@ -120,16 +120,22 @@ describe('běžní šéfové 14–25 – data (DESIGN 8.2)', () => {
         expect(hasKey(`bosses.${b.id}.${field}`), `bosses.${b.id}.${field}`).toBe(true);
       }
       expect(t(`bosses.${b.id}.name`).split(/\s+/).length, b.id).toBeLessThanOrEqual(3);
-      // Čísla jsou v pravidle napsaná rovnou (UI `bossTexts` zatím `params` nedosazuje) — musí sedět s `params`.
-      const rule = t(`bosses.${b.id}.rule`);
+      // Čísla jen přes `{param}`: po dosazení nic nezbyde, každé číslo z params v textu je a změna params text změní.
+      const rule = t(`bosses.${b.id}.rule`, b.params);
       expect(rule, b.id).not.toMatch(/[{}]/);
-      for (const [k, v] of Object.entries(b.params ?? {}))
-        if (typeof v === 'number') expect(rule, `${b.id}.${k}`).toContain(formatNumber(v));
+      for (const [k, v] of Object.entries(b.params ?? {})) {
+        if (typeof v !== 'number') continue;
+        expect(rule, `${b.id}.${k}`).toContain(formatNumber(v));
+        expect(t(`bosses.${b.id}.rule`, { ...b.params, [k]: 37 }), `${b.id}.${k}`).toContain('37');
+      }
     }
-    expect(t('bosses.normalization.rule')).toContain('5\u00a0čipů');
-    expect(t('bosses.binder_tower.rule')).toContain('3×');
-    expect(t('bosses.hangover.rule')).toContain('o\u00a01\u00a0ruku méně');
-    expect(t('bosses.mother_in_law.rule')).toContain('1\u00a0náhodnou kartu');
+    const rule = (id: string): string => t(`bosses.${id}.rule`, BOSSES_B.find((b) => b.id === id)?.params);
+    expect(rule('normalization')).toContain('5\u00a0čipů');
+    expect(rule('binder_tower')).toContain('3× základ patra místo 2×');
+    expect(rule('hangover')).toContain('o\u00a01\u00a0ruku méně');
+    expect(rule('mother_in_law')).toContain('1\u00a0náhodnou kartu');
+    expect(rule('pig_slaughter')).toContain('1\u00a0náhodná skórující karta');
+    expect(t('bosses.pig_slaughter.rule', { cards: 2 })).toContain('2\u00a0náhodné skórující karty');
   });
 });
 

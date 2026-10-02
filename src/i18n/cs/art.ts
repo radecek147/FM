@@ -167,6 +167,8 @@ export const art = {
     edition: '{name}: {desc}',
     level: 'úroveň {level}',
     jokerDebuffed: 'Mimo provoz – v tomto kole nefunguje.',
+    /** Proč je karta / žolík mimo provoz nebo lícem dolů (pravidlo šéfa, který právě platí). */
+    bossReason: 'Šéf {name}: {rule}',
     noSell: 'Prodat nejde',
   },
 

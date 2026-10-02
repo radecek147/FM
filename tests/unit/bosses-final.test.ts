@@ -57,10 +57,10 @@ function reload(g: Game): Game {
 describe('fináloví šéfové – data (DESIGN 8.3)', () => {
   it('id, finálový příznak a cíl odpovídají tabulce', () => {
     const table: Record<string, number> = {
-      mayor: 2,
-      regional_office: 2,
-      great_flood: 2,
-      white_lady: 2,
+      mayor: 2.5,
+      regional_office: 2.25,
+      great_flood: 2.5,
+      white_lady: 1.5,
       noise_barrier: 4.5,
     };
     expect(BOSSES_FINAL.map((b) => b.id).sort()).toEqual(Object.keys(table).sort());
@@ -90,14 +90,20 @@ describe('fináloví šéfové – data (DESIGN 8.3)', () => {
         expect(hasKey(`bosses.${b.id}.${field}`), `bosses.${b.id}.${field}`).toBe(true);
       }
       expect(t(`bosses.${b.id}.name`).split(/\s+/).length, b.id).toBeLessThanOrEqual(3);
-      // Čísla jsou v pravidle napsaná rovnou (UI `bossTexts` zatím `params` nedosazuje) — musí sedět s `params`.
-      const rule = t(`bosses.${b.id}.rule`);
+      // Čísla jen přes `{param}`: po dosazení nic nezbyde, každé číslo z params v textu je a změna params text změní.
+      const rule = t(`bosses.${b.id}.rule`, b.params);
       expect(rule, b.id).not.toMatch(/[{}]/);
-      for (const [k, v] of Object.entries(b.params ?? {}))
-        if (typeof v === 'number') expect(rule, `${b.id}.${k}`).toContain(formatNumber(v));
+      for (const [k, v] of Object.entries(b.params ?? {})) {
+        if (typeof v !== 'number') continue;
+        expect(rule, `${b.id}.${k}`).toContain(formatNumber(v));
+        expect(t(`bosses.${b.id}.rule`, { ...b.params, [k]: 37 }), `${b.id}.${k}`).toContain('37');
+      }
     }
-    expect(t('bosses.noise_barrier.rule')).toContain('4,5×');
-    expect(t('bosses.great_flood.rule')).toContain('o\u00a01\u00a0kartu');
+    const rule = (id: string): string =>
+      t(`bosses.${id}.rule`, BOSSES_FINAL.find((b) => b.id === id)?.params);
+    expect(rule('noise_barrier')).toContain('4,5×');
+    expect(rule('great_flood')).toContain('o\u00a01\u00a0kartu');
+    expect(t('bosses.great_flood.rule', { cards: 2 })).toContain('o\u00a02\u00a0karty');
     // Pitva podle DESIGN příloha C.
     expect(t('bosses.mayor.death')).toBe('Sliby chyby.');
     expect(t('bosses.noise_barrier.death')).toBe('Hlavou zeď neprorazíš.');
@@ -191,7 +197,8 @@ describe('Protihluková stěna (noise_barrier)', () => {
     expect(g.state.round!.target).toBe(1150);
     g._core.state.ante = 8;
     expect(g.blindTarget('boss', 'noise_barrier')).toBe(niceRound(anteBase(8, 1) * 4.5));
-    expect(g.blindTarget('boss', 'noise_barrier')).toBeGreaterThan(2 * g.blindTarget('boss', 'mayor'));
+    // Víc než dvojnásobek běžného šéfa (2× základ patra).
+    expect(g.blindTarget('boss', 'noise_barrier')).toBeGreaterThan(2 * niceRound(anteBase(8, 1) * 2));
   });
 });
 

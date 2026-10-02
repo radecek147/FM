@@ -104,7 +104,9 @@ export class Game {
     for (const st of Object.values(reg.stakes).sort((a, b) => a.level - b.level)) {
       if (st.level <= s.stake) st.onRunStart?.(ctx);
     }
-    reg.decks[s.deckId]?.onRunStart?.(ctx);
+    const deck = reg.decks[s.deckId];
+    for (const v of deck?.startingVouchers ?? []) this.redeemVoucher(v);
+    deck?.onRunStart?.(ctx);
     const ch = opts.challengeId ? reg.challenges[opts.challengeId] : undefined;
     if (ch) {
       // Startovní žolíci výzvy nejsou „získaní“ — `onAcquire` se nevolá (např. Golem v Kamenolomu).
@@ -658,12 +660,19 @@ export class Game {
     target.splice(0, target.length, ...cardIds);
   }
 
+  /**
+   * Třídění ruky podle hodnoty / barvy. Karty lícem dolů se podle skryté hodnoty netřídí — pořadí by prozradilo, co je
+   * pod rubem (Výluka na trati, Mlha nad Labem, Bílá paní): zůstanou za odkrytými kartami v dosavadním pořadí.
+   */
   private sortHand(by: 'rank' | 'suit'): void {
     const core = this.core;
     const target = this.sortableHand();
     if (by !== 'rank' && by !== 'suit') fail('invalidSelection');
     const enh = core.enhancements();
-    target.sort((a, b) => compareCards(core.mustCard(a), core.mustCard(b), by, enh));
+    const faceUp = target.filter((id) => !core.mustCard(id).faceDown);
+    const faceDown = target.filter((id) => core.mustCard(id).faceDown);
+    faceUp.sort((a, b) => compareCards(core.mustCard(a), core.mustCard(b), by, enh));
+    target.splice(0, target.length, ...faceUp, ...faceDown);
   }
 
   // ── konec kola ──

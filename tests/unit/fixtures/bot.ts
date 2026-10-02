@@ -72,9 +72,16 @@ export function botCandidates(game: Game): Action[] {
     }
     case 'round': {
       const r = s.round!;
-      // Ruku seřadí podle hodnoty, když seřazená není (stejné řazení jako engine — jinak by třídil pořád dokola).
+      // Ruku seřadí podle hodnoty, když seřazená není (stejné řazení jako engine — jinak by třídil pořád dokola):
+      // odkryté karty podle hodnoty, karty lícem dolů za nimi v dosavadním pořadí.
       const enh = game._core.enhancements();
-      const sorted = [...r.hand].sort((x, y) => compareCards(game.card(x)!, game.card(y)!, 'rank', enh));
+      const faceDown = r.hand.filter((id) => game.card(id)!.faceDown);
+      const sorted = [
+        ...r.hand
+          .filter((id) => !game.card(id)!.faceDown)
+          .sort((x, y) => compareCards(game.card(x)!, game.card(y)!, 'rank', enh)),
+        ...faceDown,
+      ];
       if (sorted.some((id, i) => id !== r.hand[i])) out.push({ type: 'sortHand', by: 'rank' });
       for (const c of s.consumables) {
         const def = game.registry.consumables[c.defId];

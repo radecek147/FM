@@ -17,12 +17,7 @@ v `docs/DECISIONS.md`, 2026-10-02 „Revize a uzavření fáze 3“). Run jde v 
 `npx tsx scripts/ui-walkthrough.ts --seed S --bot flush [--anim]` (proti `vite preview` na portu 4173).
 
 **Fáze 4 (Žolíci v1 + Večerka) je hotová** — všechny podúkoly odškrtnuté, audit a finální ověření proběhly
-(`docs/DECISIONS.md`, 2026-10-02 „Uzavření fáze 4“). **Čeká jen na commit** `feat: jokers v1 and shop` — pracovní
-strom sdílí rozpracované změny fází 5–6 z paralelních workflow, do commitu patří jen soubory fáze 4:
-`src/ui/{describe.ts,components/tooltip.ts,components/jokerCard.ts,art/icons.ts}`,
-`src/ui/screens/game/{topRow,modals,shop}.ts`, `src/ui/styles/{cards,game}.css`,
-`src/i18n/cs/{art,game,modifiers}.ts` (u `art.ts`/`game.ts` pozor na případné hunky šéfů), `tests/unit/ui-jokers.test.ts`,
-`tests/e2e/jokers.spec.ts`, `ROADMAP.md` a záznam v `docs/DECISIONS.md`.
+(`docs/DECISIONS.md`, 2026-10-02 „Uzavření fáze 4“). Commitnutá (`e85c464 feat: complete phase 4 jokers v1 and shop`).
 
 - Engine: hooky žolíků a `EngineApi` (`src/engine/effects/*`), edice (lesklá/holo před efektem, duhová po něm,
   negativní +1 slot), kopírování (`copyTarget`, `isCopy`), retriggery, debuff; registr s validací (`src/content/index.ts`);
@@ -40,25 +35,41 @@ strom sdílí rozpracované změny fází 5–6 z paralelních workflow, do comm
   (46 souborů, 1 999 testů), `build` (hlavní chunk 357 kB / 118 kB gzip, ikony 344 kB / 155 kB gzip), `test:e2e`
   (29 testů: `smoke`, `menu`, `game`, `a11y`, `jokers`; 60 snímků `visual.spec.ts` jen s `KARBAN_VISUAL=1`).
 
-**Fáze 5 (obsah) je rozpracovaná v paralelním workflow:** pranostiky (13), babské rady (22), razítka (16), obálky (15)
-a kupóny (24) včetně revize obsahu — `src/content/{pranostiky,rady,razitka,boosters,vouchers}.ts`, `src/engine/**`,
-`src/engine/sim/**`, texty `src/i18n/cs/{pranostiky,rady,razitka,boosters,vouchers}.ts`, testy
-`tests/unit/{pranostiky,rady,razitka,boosters,vouchers,phase5-review}*.test.ts`. UI pro spotřebky, obálky a kupóny už
-existuje (Použít s cíli vybranými v ruce / Prodat, výběr z obálky s dobranou rukou). **Fáze 6 (šéfové)** se taky
-rozpracovává paralelně (`src/content/bosses/*`, `src/i18n/cs/bosses/*`, `tests/unit/bosses-*.test.ts`).
+**Fáze 5 (spotřebky, obálky, kupóny, úpravy karet):** obsah i engine hotové a odškrtnuté — pranostiky (13), babské
+rady (22), razítka (16), obálky (15 = 5 druhů × 3 velikosti), kupóny (24), 9 vylepšení, 4 pečetě, 4 edice
+(`src/content/{modifiers,pranostiky,rady,razitka,boosters,vouchers}.ts`, testy
+`tests/unit/{pranostiky,rady,razitka,boosters,vouchers,modifiers,phase5-review}*.test.ts`). UI ověřené při revizi
+fáze 6 dočasným Playwright skriptem (koupě a použití pranostiky ze slotu, kupón, obálka rad s dobranou rukou a cílem,
+obálka „nechat si“, prodej, babská rada na vybranou kartu v kole; vylepšení, pečetě a edice vidět na kartách;
+konzole čistá). **Chybí:** přesun karet v ruce tažením a e2e test „otevřít obálku, vybrat kartu, použít spotřebku“
+v `tests/e2e/` (UI workflow), pak commit `feat: consumables, boosters, vouchers, card modifiers`.
+
+**Fáze 6 (šéfové a štítky) je hotová** a zrevidovaná (`docs/DECISIONS.md`, 2026-10-02 „Revize fáze 6“), čeká na
+commit `feat: bosses and tags`: 25 běžných + 5 finálových šéfů (`src/content/bosses/{a,b,final}.ts`, texty
+`src/i18n/cs/bosses/*.ts` s čísly jen přes `{param}`), 20 štítků (`src/content/tags.ts`, `src/i18n/cs/tags.ts`), engine
+(`BossHooks.isJokerDebuffed`, `adjustHandScore`, `TagHooks.roundEndMoney`/`onRoundLost`/`passive`, Odvolání, třídění
+ruky bez prozrazení karet lícem dolů), UI (`src/ui/screens/game/bossBanner.ts`, výběr útraty, levý panel, pitva,
+`tests/e2e/bosses.spec.ts`), ladění simulací (DESIGN 8.2/8.3, DECISIONS „Fáze 6: ladění se šéfy“), testy
+`tests/unit/{bosses-a,bosses-b,bosses-final,tags,sim-bosses,ui-bosses,phase6-review}.test.ts`.
+
+Kontroly (2026-10-02, celý pracovní strom včetně rozpracované fáze 7): `typecheck` zelený, `eslint` zelený
+(`prettier --check` hlásí jen dočasný `scripts/.review-jokers.ts` paralelního workflow fáze 7), `build` zelený
+(hlavní chunk 420 kB / 136 kB gzip), `test:e2e` 38 testů zelených (60 snímků `visual.spec.ts` jen s
+`KARBAN_VISUAL=1`), `npm test` 3 056 / 3 070 — padá jen 14 testů rozpracovaných žolíků fáze 7
+(`jokers-common2.test.ts`, `jokers-rare2.test.ts`; paralelní workflow).
 
 **Známé otevřené body (řešit v uvedené fázi):**
 
 - fáze 5: ruku jde přeskládat jen tříděním (S / B) — přidat přesun karet v ruce tažením (myš i dotyk) a klávesovou
-  alternativu (engine `reorderHand` existuje; babské rady „karta nejvíc vlevo“);
-- fáze 6: `TagHooks` nemá obdobu `roundEndMoney` (peníze ze štítků v rozpisu odměn, DESIGN 2.4.2 krok 5); poziční
-  pravidlo typu Jednooký hejtman nejde přes `setJokerDebuffed` spolehlivě vyjádřit po přeřazení žolíků;
-- fáze 6–7: konečná kalibrace křivek cílů (patro 8 má podle CLAUDE.md kap. 3 vyžadovat statisíce až miliony);
-- fáze 7: balíčky Úřednický, Babiččin, Vetešnický a Kalendářový (potřebují kupóny, spotřebky a žolíky).
+  alternativu (engine `reorderHand` existuje; babské rady „karta nejvíc vlevo“); e2e test spotřebek a obálek;
+- fáze 6/9 (UI): náhled balíčku pod Výlukou / Bílou paní prozradí zakryté karty v ruce (ztlumené karty mimo dobírací
+  balíček); toasty se při více hláškách vrší přes pravou část ruky;
+- fáze 6–7: konečná kalibrace křivek cílů (patro 8 má podle CLAUDE.md kap. 3 vyžadovat statisíce až miliony) a
+  přeměření letality šéfů po uzavření obsahu fáze 7 (DECISIONS „Fáze 6: ladění se šéfy“, „Mimo pásmo / otevřené“);
+- fáze 10: střední síly piva mimo pásmo (ekonomika Jedenáctky a Ležáku), Imperial — cíl pravidla šéfa ve Velké útratě.
 
-**Další krok:** commit fáze 4 (`feat: jokers v1 and shop`, jen soubory vyjmenované výše), pak **Fáze 5** — až
-paralelní workflow obsahu doběhne: odškrtnout podúkoly proti hotovému kódu, doplnit přesun karet v ruce (otevřený bod
-výše) a uzavřít fázi zelenými kontrolami a commitem.
+**Další krok:** commit fáze 6 (`feat: bosses and tags`) — až paralelní workflow fáze 7 dotáhne své testy, aby byl
+`npm test` zelený; pak dokončit fázi 5 (přesun karet v ruce, e2e spotřebek) a commit, potom fáze 7.
 
 ## Jak pokračovat v nové session
 
@@ -191,34 +202,34 @@ podle pořadí; každý žolík má test; kontroly zelené; commit `feat: jokers
 
 ## Fáze 5 — Spotřebky, boostery, kupóny, úpravy karet
 
-- [ ] `src/content/modifiers.ts`: **min. 8 vylepšení** (bonusová, multiplikační, skleněná s rizikem prasknutí, ocelová v ruce, kamenná, zlatá, šťastná, divoká) — čísla dle `docs/DESIGN.md`
-- [ ] **4 pečetě** (zlatá: peníze při zahrání, červená: skóruje 2×, modrá: vytvoří pranostiku, fialová: vytvoří babskou radu)
-- [ ] **Edice** pro karty a žolíky: lesklá, holografická, duhová (+ negativní jen pro žolíky)
-- [ ] Engine spotřebek: sloty (2, upravitelné), použití s výběrem cílů, `canUse`, prodej
-- [ ] **13 pranostik** (jedna na každou kombinaci, vč. tajných) — `src/content/pranostiky.ts` (`consumables.ts` spojí všechny tři typy)
-- [ ] **22 babských rad** — `src/content/rady.ts`
-- [ ] **16 úředních razítek** — `src/content/razitka.ts`
-- [ ] Rozhodnout o případném 4. typu spotřebky (zapsat do DECISIONS)
-- [ ] **5 druhů boosterů** (pranostiky, babské rady, razítka, žolíci, hrací karty) ve velikostech normal/jumbo/mega + obrazovka výběru z boosteru
-- [ ] **24 kupónů** (12 párů základ → vylepšení), slot ve Večerce, tier 2 vyžaduje tier 1
-- [ ] UI: vylepšení, pečetě a edice viditelné na kartách (SVG vrstvy), lišta spotřebek x/2, použití s výběrem cílů
-- [ ] Testy: každá spotřebka, vylepšení, pečeť, edice a kupón; pořadí v pipeline; prasknutí skla (RNG); retrigger červené pečeti
-- [ ] e2e: otevřít booster, vybrat kartu, použít spotřebku
+- [x] `src/content/modifiers.ts`: **min. 8 vylepšení** (bonusová, multiplikační, skleněná s rizikem prasknutí, ocelová v ruce, kamenná, zlatá, šťastná, divoká) — čísla dle `docs/DESIGN.md`
+- [x] **4 pečetě** (zlatá: peníze při zahrání, červená: skóruje 2×, modrá: vytvoří pranostiku, fialová: vytvoří babskou radu)
+- [x] **Edice** pro karty a žolíky: lesklá, holografická, duhová (+ negativní jen pro žolíky)
+- [x] Engine spotřebek: sloty (2, upravitelné), použití s výběrem cílů, `canUse`, prodej
+- [x] **13 pranostik** (jedna na každou kombinaci, vč. tajných) — `src/content/pranostiky.ts` (`consumables.ts` spojí všechny tři typy)
+- [x] **22 babských rad** — `src/content/rady.ts`
+- [x] **16 úředních razítek** — `src/content/razitka.ts`
+- [x] Rozhodnout o případném 4. typu spotřebky (zapsat do DECISIONS) — ne v 1.0 (DECISIONS 2026-10-01)
+- [x] **5 druhů boosterů** (pranostiky, babské rady, razítka, žolíci, hrací karty) ve velikostech normal/jumbo/mega + obrazovka výběru z boosteru
+- [x] **24 kupónů** (12 párů základ → vylepšení), slot ve Večerce, tier 2 vyžaduje tier 1
+- [x] UI: vylepšení, pečetě a edice viditelné na kartách (SVG vrstvy), lišta spotřebek x/2, použití s výběrem cílů (ověřeno Playwright skriptem při revizi fáze 6; chybí přesun karet v ruce tažením — viz „Známé otevřené body“)
+- [x] Testy: každá spotřebka, vylepšení, pečeť, edice a kupón; pořadí v pipeline; prasknutí skla (RNG); retrigger červené pečeti
+- [ ] e2e: otevřít booster, vybrat kartu, použít spotřebku — _tok funguje (ověřeno dočasným skriptem při revizi fáze 6), test v `tests/e2e/` zatím chybí (UI workflow)_
 
 **Hotovo, když:** všechny tři typy spotřebek, boostery a kupóny jdou v UI koupit/použít a správně
 mění skóre i balíček; kontroly zelené; commit `feat: consumables, boosters, vouchers, card modifiers`; fáze odškrtnutá.
 
 ## Fáze 6 — Šéfové a štítky
 
-- [ ] Engine šéfů: všechny `BossHooks` (debuff, lícem dolů, `validateHand`, `modifyBase`, `afterHandPlayed`, `onDiscard`, `onDraw`, `passive`), losování (stream `boss`, `minAnte`, bez opakování), `disableBoss`
-- [ ] **25 šéfů** s jedním jasným pravidlem — `src/content/bosses.ts`
-- [ ] **5 finálových šéfů** jen pro patro 8 (a každé 8. patro nekonečného režimu)
-- [ ] Texty šéfů: `bosses.<id>.name|rule|intro|defeat|death` (hláška při příchodu, porážce a v pitvě)
-- [ ] Přeskakování útrat napojené na **20 štítků** (`src/content/tags.ts`, `TagHooks`, `minAnte`), fronta štítků v UI
-- [ ] UI: karta šéfa ve výběru útraty, pravidlo v levém panelu, vizuál debuffu a zakrytých karet, bublina s hláškou
-- [ ] Pitva podle šéfa, na kterém run skončil
-- [ ] Testy: každý šéf a štítek aspoň 1 test
-- [ ] Simulace: žádný šéf není téměř neporazitelný ani bezzubý; úpravy zapsat do DESIGN
+- [x] Engine šéfů: všechny `BossHooks` (debuff, lícem dolů, `validateHand`, `modifyBase`, `afterHandPlayed`, `onDiscard`, `onDraw`, `passive`), losování (stream `boss`, `minAnte`, bez opakování), `disableBoss`
+- [x] **25 šéfů** s jedním jasným pravidlem — `src/content/bosses/{a,b}.ts`
+- [x] **5 finálových šéfů** jen pro patro 8 (a každé 8. patro nekonečného režimu)
+- [x] Texty šéfů: `bosses.<id>.name|rule|intro|defeat|death` (hláška při příchodu, porážce a v pitvě)
+- [x] Přeskakování útrat napojené na **20 štítků** (`src/content/tags.ts`, `TagHooks`, `minAnte`), fronta štítků v UI
+- [x] UI: karta šéfa ve výběru útraty, pravidlo v levém panelu, vizuál debuffu a zakrytých karet, bublina s hláškou (plakát příchodu, tooltipy „proč“, štítky v levém panelu, velikost ruky; `tests/e2e/bosses.spec.ts`)
+- [x] Pitva podle šéfa, na kterém run skončil
+- [x] Testy: každý šéf a štítek aspoň 1 test (+ revize `tests/unit/phase6-review.test.ts`: uložení/načtení, Odvolání, kopírování, patro 16, fuzz)
+- [x] Simulace: žádný šéf není téměř neporazitelný ani bezzubý; úpravy zapsat do DESIGN (DESIGN 8.2/8.3, DECISIONS „Fáze 6: ladění se šéfy“)
 
 **Hotovo, když:** v každém patře se objeví šéf s funkčním pravidlem, ve finále jen finálový šéf,
 přeskočení útraty dá štítek s funkčním bonusem; kontroly zelené; commit `feat: bosses and tags`; fáze odškrtnutá.

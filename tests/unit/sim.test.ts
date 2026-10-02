@@ -462,6 +462,8 @@ function fakeResult(over: Partial<RunResult>): RunResult {
     jokerIds: [],
     jokerRounds: {},
     shopMoney: [],
+    bosses: [],
+    skipTags: [],
     ...over,
   };
 }

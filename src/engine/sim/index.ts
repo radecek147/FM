@@ -4,8 +4,10 @@ export { parsePlayCommand, shopOffers, type PlayCommand, type ShopOffer } from '
 export {
   analyzeCards,
   bestUtility,
+  blockedTypes,
   cardValue,
   estimatePlay,
+  exactScale,
   exactPlayScore,
   makeEnv,
   planCandidates,
@@ -27,6 +29,7 @@ export {
   type SimulateManyOptions,
 } from './runner';
 export type {
+  BossStat,
   Bot,
   BotName,
   JokerStat,

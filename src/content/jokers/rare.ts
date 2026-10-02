@@ -241,21 +241,21 @@ const echo: JokerDef = {
 
 // ─────────────────────────── #24 Šťastná sedmička ───────────────────────────
 
-const LUCKY_SEVEN_RANK = 7;
-const LUCKY_SEVEN_RETRIGGERS = 2;
+/** „1 ze 7“ pro každou skórující kartu (čitatel násobí `probabilityMult`), že skóruje ještě 7×. */
+const LUCKY_SEVEN_CHANCE = 1;
+const LUCKY_SEVEN_ODDS = 7;
+const LUCKY_SEVEN_RETRIGGERS = 7;
 
 const luckySeven: JokerDef = {
   id: 'lucky_seven',
   rarity: 'rare',
   cost: 6,
-  tags: ['retrigger', 'rank'],
-  params: { rank: LUCKY_SEVEN_RANK, retriggers: LUCKY_SEVEN_RETRIGGERS },
+  tags: ['retrigger'],
+  params: { chance: LUCKY_SEVEN_CHANCE, odds: LUCKY_SEVEN_ODDS, retriggers: LUCKY_SEVEN_RETRIGGERS },
   hooks: {
-    // Kamenná karta nemá hodnotu ani barvu: `hasSuit` s vlastní barvou karty je false jen u ní.
-    retriggerScored: (ctx) =>
-      ctx.card.rank === LUCKY_SEVEN_RANK && ctx.api.hasSuit(ctx.card, ctx.card.suit)
-        ? LUCKY_SEVEN_RETRIGGERS
-        : 0,
+    // Hod jednou za skórující kartu a ruku (engine volá `retriggerScored` jednou před aktivacemi karty; debuffnutá
+    // karta se přeskočí bez hodu). Stream `joker` → stejný seed = stejné výhry, i po uložení a načtení.
+    retriggerScored: (ctx) => (ctx.chance(LUCKY_SEVEN_CHANCE, LUCKY_SEVEN_ODDS) ? LUCKY_SEVEN_RETRIGGERS : 0),
   },
   art: {
     icon: 'rolling-dices',
@@ -270,18 +270,24 @@ const luckySeven: JokerDef = {
 // ─────────────────────────── #25 Sekera ───────────────────────────
 
 const TAB_DEBT = 15;
-const TAB_MULT = 8;
+/** +mult za každou korunu, která chybí do hranice (při 0 Kč +15 mult, v dluhu −15 Kč +30 mult). */
+const TAB_MULT = 1;
+const TAB_CAP = 15;
 
 const tab: JokerDef = {
   id: 'tab',
   rarity: 'rare',
   cost: 6,
   tags: ['economy', 'mult'],
-  params: { debt: TAB_DEBT, mult: TAB_MULT },
+  params: { debt: TAB_DEBT, mult: TAB_MULT, cap: TAB_CAP },
   hooks: {
     // Dluhový limit se sčítá s ostatními zdroji (dva žolíci = až −30 Kč).
     passive: () => ({ debtLimit: TAB_DEBT }),
-    onHandPlayed: (ctx) => (ctx.state.money < 0 ? { mult: TAB_MULT } : null),
+    // Peníze v okamžiku kroku 4 (peníze z karet téže ruky už se připsaly).
+    onHandPlayed: (ctx) => {
+      const missing = TAB_CAP - ctx.state.money;
+      return missing > 0 ? { mult: missing * TAB_MULT } : null;
+    },
   },
   art: {
     icon: 'battle-axe',

@@ -7,7 +7,6 @@ import { JOKERS } from '../../src/content/jokers';
 import { EPIC_JOKERS } from '../../src/content/jokers/epic';
 import type { ContentRegistry, JokerDef } from '../../src/engine/content-types';
 import { newJokerInstance } from '../../src/engine/effects/api';
-import { rngFromState } from '../../src/engine/rng/rng';
 import { Game } from '../../src/engine/run/game';
 import type { GameEvent, JokerInstance, ScoreResult } from '../../src/engine/types';
 import { hasKey, t } from '../../src/i18n/cs';
@@ -121,7 +120,7 @@ describe('epičtí žolíci — definice a texty', () => {
       '×1 mult a navíc +×0,25 za každou hrací kartu zničenou od jeho koupě (teď ×1).',
     );
     expect(descOf('impersonator')).toBe(
-      'Na začátku každého kola si náhodně vybere jiného tvého žolíka a do konce kola kopíruje jeho schopnost.',
+      'Při získání bez edice dostane duhovou; v každém kole kopíruje tvého nejdražšího běžného nebo vzácného žolíka.',
     );
     expect(descOf('innkeeper')).toBe('×2,5 mult, dokud se v tomto kole nezahazovalo.');
     expect(descOf('grandmas_chest')).toBe('×1,3 mult za každou spotřebku, kterou držíš ve slotech.');
@@ -261,28 +260,60 @@ describe('Napodobitel (impersonator)', () => {
     expect(g2.state.jokers.map((j) => j.state.target)).toEqual([null, null]);
   });
 
-  it('výběr je náhodný přes RNG žolíků, každé kolo znovu, deterministicky podle seedu', () => {
-    const g = game(['impersonator', 'plus_mult', 'times_mult', 'coaster'], 'NAPODOB1');
-    const pool = g.state.jokers.slice(1);
-    // Skóre Dvojice K podle cíle (kopie běží na pozici Napodobitele, tedy první).
-    const scoreFor: Record<string, number> = { plus_mult: 924, times_mult: 756, coaster: 936 };
-    const seen = new Set<string>();
-    for (let round = 0; round < 8; round++) {
-      if (round > 0) toBlindSelect(g);
-      const st = g.state.rng.joker;
-      const predicted = rngFromState([st[0], st[1], st[2], st[3]]).pick(pool);
-      ok(g.dispatch({ type: 'selectBlind' }));
-      const imp = g.state.jokers[0]!;
-      expect(imp.state.target, `kolo ${round + 1}`).toBe(predicted.uid);
-      expect(imp.state.round).toBe(g.state.stats.roundsWon);
-      seen.add(predicted.defId);
-      // Během kola se cíl nemění.
-      expect(hand(g, 'KS KH').score).toBe(scoreFor[predicted.defId]);
-      expect(hand(g, 'KS KH').score).toBe(scoreFor[predicted.defId]);
-      expect(imp.state.target).toBe(predicted.uid);
-      winRound(g);
-    }
-    expect(seen.size).toBeGreaterThan(1);
+  it('vybere nejdražšího (podle prodejní ceny), při shodě toho nejvíc vlevo; během kola cíl nemění', () => {
+    // Samé běžné (prodej 2 Kč) → nejlevější.
+    const g = game(['impersonator', 'plus_mult', 'times_mult', 'coaster']);
+    ok(g.dispatch({ type: 'selectBlind' }));
+    expect(g.state.jokers[0]!.state.target).toBe(uidOf(g, 'plus_mult'));
+    expect(g.state.jokers[0]!.state.round).toBe(g.state.stats.roundsWon);
+    // Edice zvedá prodejní cenu: holografický ×2 (prodej (4 + 2) / 2 = 3 Kč) má přednost.
+    const g2 = game(['impersonator', 'plus_mult', { id: 'times_mult', edition: 'holo' }]);
+    ok(g2.dispatch({ type: 'selectBlind' }));
+    expect(g2.state.jokers[0]!.state.target).toBe(uidOf(g2, 'times_mult'));
+    // Kopie ×2 (pozice Napodobitele) → +4 → holografický +10 a ×2: 32 × ((2 × 2 + 4 + 10) × 2) = 1152
+    expect(hand(g2, 'KS KH').score).toBe(1152);
+    expect(hand(g2, 'KS KH').score).toBe(1152);
+    expect(g2.state.jokers[0]!.state.target).toBe(uidOf(g2, 'times_mult'));
+    // Vzácný (prodej 3 Kč) před běžnými.
+    const g3 = game(['impersonator', 'plus_mult', 'rare_one', 'coaster']);
+    ok(g3.dispatch({ type: 'selectBlind' }));
+    expect(g3.state.jokers[0]!.state.target).toBe(uidOf(g3, 'rare_one'));
+  });
+
+  it('na hvězdy nemá: epické a legendární žolíky nekopíruje', () => {
+    const g = game(['impersonator', 'epic_one', 'legend', 'plus_mult']);
+    ok(g.dispatch({ type: 'selectBlind' }));
+    expect(g.state.jokers[0]!.state.target).toBe(uidOf(g, 'plus_mult'));
+    const g2 = game(['impersonator', 'snowman']);
+    ok(g2.dispatch({ type: 'selectBlind' }));
+    expect(g2.state.jokers[0]!.state.target).toBeNull();
+    // jen originál ×2,5: 32 × 2 × 2,5 = 160
+    expect(hand(g2, 'KS KH').score).toBe(160);
+  });
+
+  it('cíl se volí v každém kole znovu (po koupi dražšího žolíka kopíruje jeho)', () => {
+    const g = game(['impersonator', 'plus_mult']);
+    ok(g.dispatch({ type: 'selectBlind' }));
+    expect(g.state.jokers[0]!.state.target).toBe(uidOf(g, 'plus_mult'));
+    addJokers(g, ['rare_one']);
+    // V tomto kole beze změny…
+    expect(g._core.resolveCopy(g.state.jokers[0]!, 0)?.target.defId).toBe('plus_mult');
+    winRound(g);
+    nextRound(g);
+    // …od dalšího kola vzácný.
+    expect(g.state.jokers[0]!.state.target).toBe(uidOf(g, 'rare_one'));
+  });
+
+  it('při získání bez edice dostane duhovou (×1,5 platí i bez cíle); jinou edici si nechá', () => {
+    const g = game();
+    const j = g._core.api.createJoker({ defId: 'impersonator' })!;
+    expect(j.edition).toBe('poly');
+    ok(g.dispatch({ type: 'selectBlind' }));
+    expect(j.state.target).toBeNull();
+    // Dvojice K × 1,5 (duhová edice vlastníka slotu): 32 × 3 = 96
+    expect(hand(g, 'KS KH').score).toBe(96);
+    const foil = game()._core.api.createJoker({ defId: 'impersonator', edition: 'foil' })!;
+    expect(foil.edition).toBe('foil');
   });
 
   it('když cíl během kola zmizí, do konce kola nekopíruje nic', () => {
@@ -325,10 +356,10 @@ describe('Napodobitel (impersonator)', () => {
     expect(g.state.jokers[0]!.state.target).toBe(uidOf(g, 'plus_mult'));
   });
 
-  it('nekopírovatelný cíl mimo obsah hry nedá nic, zvětralé (debuffnuté) žolíky nevybírá', () => {
+  it('nekopírovatelné (i mimo obsah hry — ptá se registru) ani zvětralé (debuffnuté) žolíky nevybírá', () => {
     const g = game(['impersonator', 'uncopyable']);
     ok(g.dispatch({ type: 'selectBlind' }));
-    expect(g.state.jokers[0]!.state.target).toBe(uidOf(g, 'uncopyable'));
+    expect(g.state.jokers[0]!.state.target).toBeNull();
     expect(hand(g, 'KS KH').score).toBe(32 * 9); // jen originál +7
     const g2 = game(['impersonator', { id: 'plus_mult', debuffed: true }, 'coaster']);
     ok(g2.dispatch({ type: 'selectBlind' }));
@@ -344,19 +375,12 @@ describe('Napodobitel (impersonator)', () => {
     // counter (stav 2) a jeho kopie: 32 × (2 + 2 + 2) = 192
     expect(hand(g, 'KS KH').score).toBe(192);
 
-    const g2 = game(['copier', 'impersonator', 'plus_mult']);
+    // Holografický +4 je dražší než testovací `copier` (ten si v obsahu hry `copyable: false` nese sám).
+    const g2 = game(['copier', 'impersonator', { id: 'plus_mult', edition: 'holo' }]);
     ok(g2.dispatch({ type: 'selectBlind' }));
     expect(g2._core.resolveCopy(g2.state.jokers[0]!, 0)).toBeNull();
-    expect(hand(g2, 'KS KH').score).toBe(320);
-  });
-
-  it('kopírovaný Sněhulák neroztaje dvakrát rychleji', () => {
-    const g = game(['impersonator', 'snowman']);
-    ok(g.dispatch({ type: 'selectBlind' }));
-    // ×2,5 (kopie) × 2,5: 32 × 2 × 6,25 = 400
-    expect(hand(g, 'KS KH').score).toBe(400);
-    winRound(g);
-    expect(g.state.jokers[1]!.state.xmult).toBe(2.25);
+    // +4 (kopie) + holografická +10 + 4: 32 × 20 = 640
+    expect(hand(g2, 'KS KH').score).toBe(640);
   });
 
   it('cíl přežije uložení a načtení (v kole i před výběrem útraty)', () => {
