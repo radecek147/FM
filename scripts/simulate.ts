@@ -280,6 +280,20 @@ export function reportText(report: SimReport, reg: ContentRegistry = contentRegi
         }),
       ),
     );
+    const st = s.strength;
+    if (st.reached > 0)
+      lines.push(
+        indent(
+          t('cli.sim.strength', {
+            reached: st.reached,
+            median: n0(st.medianBest8),
+            p90: n0(st.p90Best8),
+            wMedian: n0(st.winnersMedianBest8),
+            wP90: n0(st.winnersP90Best8),
+            ratio: n0(100 * st.medianFinalRatio),
+          }),
+        ),
+      );
     lines.push(indent(t('cli.sim.money', { earned: n1(s.avgMoneyEarned), spent: n1(s.avgMoneySpent) })));
     const shops = Object.entries(s.avgShopMoney)
       .map(([ante, money]) => t('cli.sim.shopItem', { ante: Number(ante), money: n1(money) }))

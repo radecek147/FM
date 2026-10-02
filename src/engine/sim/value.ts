@@ -140,6 +140,18 @@ export interface ValueView {
   readonly deckWorth: number;
   /** Kolik Kč má každá spotřebka držená ve slotu (žolík ×mult za držené spotřebky — Babiččina truhla). */
   readonly holdWorth: number;
+  /**
+   * Měřená hodnota bota (src/engine/sim/lab.ts), když ji bot dodá: +1 úroveň kombinace v Kč a změna sestavy žolíků
+   * v Kč (kopie hry po akci proti současnému stavu). Bez nich platí heuristika (`LEVEL_KC`, hodnocení × `JOKER_KC`).
+   */
+  readonly levelKc?: (hand: HandType) => number;
+  readonly jokersDelta?: (after: Game) => number;
+}
+
+/** Měřené ocenění, které bot může dodat do pohledu (viz `ValueView.levelKc`, `ValueView.jokersDelta`). */
+export interface MeasuredWorth {
+  levelKc?: (hand: HandType) => number;
+  jokersDelta?: (after: Game) => number;
 }
 
 const FLUSH_FAMILY: readonly HandType[] = [
@@ -183,6 +195,7 @@ export function makeView(
   env: EvalEnv,
   mainSuit: number,
   rating: (game: Game, joker: JokerInstance) => number,
+  measured: MeasuredWorth = {},
 ): ValueView {
   const s = game.state;
   const raw = {} as Record<HandType, number>;
@@ -221,6 +234,8 @@ export function makeView(
     rating,
     deckWorth: 0,
     holdWorth: holdWorth(game),
+    levelKc: measured.levelKc,
+    jokersDelta: measured.jokersDelta,
   };
   return { ...partial, deckWorth: deckWorth(partial, s.deck) };
 }
@@ -301,6 +316,7 @@ export function deckWorth(view: DeckView, deck: readonly Readonly<Card>[]): numb
 
 /** +1 úroveň kombinace. */
 export function levelWorth(view: ValueView, hand: HandType): number {
+  if (view.levelKc) return view.levelKc(hand);
   return LEVEL_KC * ((view.share[hand] ?? 0) + 0.03);
 }
 
@@ -378,7 +394,10 @@ export function stateDelta(view: ValueView, after: Game): Delta {
       else if (view.game.card(id)?.debuffed && after.card(id)?.debuffed === false) v += ROUND_CLEANSE_KC;
     }
   }
-  if (view.style.buysJokers) v += (jokerSum(view, after) - jokerSum(view, view.game)) * JOKER_KC;
+  if (view.style.buysJokers)
+    v += view.jokersDelta
+      ? view.jokersDelta(after)
+      : (jokerSum(view, after) - jokerSum(view, view.game)) * JOKER_KC;
   else if (a.jokers.length > b.jokers.length) v -= JOKER_KC;
   const owned = new Set(b.consumables.map((c) => c.uid));
   for (const c of a.consumables) if (!owned.has(c.uid)) v += consumableWorth(view, c.defId);

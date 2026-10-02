@@ -22,7 +22,7 @@
  * ve Večerce, zahrané ruce) bot čte ze stavu. Simulace je proto deterministická i při sdílení instance bota mezi
  * prokládanými runy a po uložení a načtení uprostřed runu pokračuje stejně.
  */
-import { FINAL_ANTE } from '../constants';
+import { FINAL_ANTE, RENTAL_FEE } from '../constants';
 import type { BoosterDef, JokerRarity, JokerTag, Rng } from '../content-types';
 import { cyrb128, rngFromState } from '../rng/rng';
 import type { Game } from '../run/game';
@@ -51,6 +51,7 @@ import {
   type EvalEnv,
   type PlayCandidate,
 } from './hand-eval';
+import { makeLab, type BuildLab } from './lab';
 import type { Bot, BotName } from './types';
 import {
   cardWorth,
@@ -62,6 +63,7 @@ import {
   planTargets,
   probe,
   probeSeed,
+  roundsLeft,
   sampledDelta,
   stateDelta,
   type Delta,
@@ -196,6 +198,28 @@ const TAG_VALUE: Readonly<Partial<Record<JokerTag, number>>> = {
 const DEAD_JOKER_VALUE = 0.25;
 const EDITION_VALUE: Readonly<Record<string, number>> = { foil: 1.1, holo: 1.2, poly: 1.4, negative: 1.5 };
 const STICKER_VALUE: Readonly<Record<string, number>> = { eternal: 0.95, perishable: 0.6, rental: 0.55 };
+
+// ─────────────────────────── Měřená hodnota žolíků (src/engine/sim/lab.ts) ───────────────────────────
+
+/** Kč za jednotku ln(skóre typických rukou) — ×1,5 ve skórování ≈ 8 Kč. */
+const POWER_KC = 20;
+/** Štítky efektů, které se projeví přímo ve skórování (měří je laboratoř). */
+const SCORING_TAGS: readonly JokerTag[] = ['chips', 'mult', 'xmult', 'retrigger', 'copy'];
+/** Žolík bez skórovacího efektu (ekonomika, užitek): heuristika × tolik Kč za jednotku hodnocení. */
+const NON_SCORING_KC = 4;
+/** Ekonomická a škálovací složka skórujícího žolíka (Kč × vzácnost, do konce runu). */
+const ECON_EXTRA_KC = 3;
+const SCALING_EXTRA_KC = 3;
+/** Negativní edice nezabírá slot. */
+const NEGATIVE_EXTRA_KC = 5;
+/** Koupit žolíka do volného slotu, když měřená hodnota ≥ cena × poměr × pocit z ceny (při málo žolících nižší). */
+const JOKER_BUY_RATIO = 0.8;
+const JOKER_FEW_RATIO = 0.45;
+/** Výměna žolíka: zisk musí převýšit čistou cenu (cena − prodej) × poměr + rezervu. */
+const JOKER_SWAP_RATIO = 1;
+const JOKER_SWAP_MARGIN_KC = 1.5;
+/** Apriorní hodnota +1 úrovně kombinace (Kč × podíl na historii runu / oblíbenost stylu). */
+const LEVEL_PRIOR_KC = 2;
 
 /** Pořadí žolíků: +čipy a +mult vlevo, ×mult vpravo (DESIGN 4.5). */
 function jokerOrderKey(tags: readonly JokerTag[]): number {
@@ -456,12 +480,18 @@ function drawInfo(hand: readonly CardValue[], favor: readonly number[] = [0, 0, 
 
 class StrategyBot implements Bot {
   readonly name: string;
+  /**
+   * Laboratoř buildu pro **jedno** rozhodnutí (líně vytvořená, na začátku každého `decide` zahozená) — bot tak
+   * mezi rozhodnutími nic nedrží; výsledky skórování sdílí jen čistá paměť v lab.ts.
+   */
+  private labCache: { game: Game; lab: BuildLab } | null = null;
 
   constructor(private readonly style: Style) {
     this.name = style.name;
   }
 
   decide(game: Game): Action {
+    this.labCache = null;
     const rng = decisionRng(game, this.name);
     switch (game.state.phase) {
       case 'blind_select':
@@ -530,11 +560,125 @@ class StrategyBot implements Bot {
     return out;
   }
 
-  /** Ocenění stavu pro toto rozhodnutí (src/engine/sim/value.ts). */
+  /** Ocenění stavu pro toto rozhodnutí (src/engine/sim/value.ts) s měřenou hodnotou úrovní a žolíků. */
   private view(game: Game): ValueView {
-    return makeView(game, this.style, makeEnv(game, this.handPref(game)), mainDeckSuit(game), (g, j) =>
-      this.jokerRating(g, j),
+    return makeView(
+      game,
+      this.style,
+      makeEnv(game, this.handPref(game)),
+      mainDeckSuit(game),
+      (g, j) => this.jokerRating(g, j),
+      {
+        levelKc: (hand) => this.levelKc(game, hand),
+        jokersDelta: (after) => this.jokersDelta(game, after.state.jokers),
+      },
     );
+  }
+
+  // ── laboratoř buildu: měřená hodnota žolíků a úrovní ──
+
+  /** Laboratoř pro skutečnou hru tohoto rozhodnutí (líně, jednou za `decide`). */
+  private lab(game: Game): BuildLab {
+    if (this.labCache?.game === game) return this.labCache.lab;
+    const favor = suitFavor(game);
+    const lab = makeLab(game, makeEnv(game, this.handPref(game)), (cards) =>
+      this.filler(cards, drawInfo(cards, favor)),
+    );
+    this.labCache = { game, lab };
+    return lab;
+  }
+
+  /** Sestava v pořadí, které by bot nastavil (+čipy/+mult vlevo, ×mult vpravo; stabilně). */
+  private ordered(game: Game, jokers: readonly JokerInstance[]): JokerInstance[] {
+    const tags = (j: JokerInstance): readonly JokerTag[] => game.registry.jokers[j.defId]?.tags ?? [];
+    return jokers
+      .map((j, i) => ({ j, i, key: jokerOrderKey(tags(j)) }))
+      .sort((a, b) => a.key - b.key || a.i - b.i)
+      .map((x) => x.j);
+  }
+
+  /** Podíl zbytku runu, po který žolík bude fungovat (zvětrávající jen `perishRounds` kol). */
+  private activeShare(game: Game, j: JokerInstance): number {
+    if (j.perishRounds === undefined) return 1;
+    return clamp(j.perishRounds / roundsLeft(game), 0, 1);
+  }
+
+  /**
+   * Nečíselná složka hodnoty žolíka v Kč: žolík bez skórovacího efektu podle heuristiky (`jokerRating`),
+   * skórující žolík s ekonomikou nebo růstem navíc paušál do konce runu; negativní edice (slot navíc), nájem.
+   */
+  private extrasKc(game: Game, j: JokerInstance): number {
+    const def = game.registry.jokers[j.defId];
+    if (!def) return 0;
+    const left = roundsLeft(game);
+    const rarity = RARITY_VALUE[def.rarity] ?? 1;
+    let v = 0;
+    if (!def.tags.some((t) => SCORING_TAGS.includes(t))) v += this.jokerRating(game, j) * NON_SCORING_KC;
+    else {
+      if (def.tags.includes('economy')) v += ECON_EXTRA_KC * rarity * clamp(left / 12, 0, 1);
+      if (def.tags.includes('scaling')) v += SCALING_EXTRA_KC * rarity * clamp(left / 15, 0, 1);
+      v *= this.activeShare(game, j);
+    }
+    if (j.edition === 'negative') v += NEGATIVE_EXTRA_KC;
+    if (j.stickers.includes('rental')) v -= RENTAL_FEE * Math.min(left, 12) * 0.5;
+    return v;
+  }
+
+  /** Kč za změnu skóre typických rukou z `from` na `to`. */
+  private powerKc(from: number, to: number): number {
+    return POWER_KC * Math.log((to + 1) / (from + 1));
+  }
+
+  /** Kč, o které by sestava `jokers` (v pořadí bota) byla lepší než současná sestava. */
+  private jokersDelta(game: Game, jokers: readonly JokerInstance[]): number {
+    const cur = game.state.jokers;
+    const same =
+      jokers.length === cur.length &&
+      jokers.every((j, i) => {
+        const c = cur[i]!;
+        return c.uid === j.uid && c.defId === j.defId && c.edition === j.edition;
+      });
+    if (same) return 0;
+    const lab = this.lab(game);
+    let extras = 0;
+    for (const j of jokers) extras += this.extrasKc(game, j);
+    for (const j of cur) extras -= this.extrasKc(game, j);
+    return this.powerKc(lab.base, lab.score(this.ordered(game, [...jokers]))) + extras;
+  }
+
+  /**
+   * Měřená hodnota žolíka `j` v Kč: přidání do sestavy (bez `replaceUid`, nebo místo žolíka `replaceUid`) proti
+   * současné sestavě. Skórovací část × podíl zbytku runu, kdy žolík funguje (zvětrávání).
+   */
+  private addKc(game: Game, j: JokerInstance, replaceUid?: number): number {
+    const lab = this.lab(game);
+    const cur = game.state.jokers;
+    const rest = replaceUid === undefined ? [...cur] : cur.filter((x) => x.uid !== replaceUid);
+    const gained = this.powerKc(lab.base, lab.score(this.ordered(game, [...rest, j])));
+    const removed = replaceUid === undefined ? null : cur.find((x) => x.uid === replaceUid);
+    return (
+      gained * this.activeShare(game, j) + this.extrasKc(game, j) - (removed ? this.extrasKc(game, removed) : 0)
+    );
+  }
+
+  /** Měřená hodnota vlastního žolíka v Kč: o kolik je sestava s ním lepší než bez něj. */
+  private keepKc(game: Game, j: JokerInstance): number {
+    const lab = this.lab(game);
+    const without = game.state.jokers.filter((x) => x.uid !== j.uid);
+    return Math.max(0, this.powerKc(lab.score(without), lab.base)) + this.extrasKc(game, j);
+  }
+
+  /**
+   * +1 úroveň kombinace v Kč: změna skóre typických rukou (laboratoř přepočte vzorky zahrané touto kombinací),
+   * u kombinace, kterou bot v typických rukou nehraje, jen malá apriorní hodnota podle oblíbenosti a historie runu.
+   */
+  private levelKc(game: Game, hand: HandType): number {
+    const lab = this.lab(game);
+    const measured = lab.typeShare[hand] ? this.powerKc(lab.base, lab.score(game.state.jokers, hand)) : 0;
+    const played = game.state.stats.handTypeCounts[hand] ?? 0;
+    const total = Math.max(1, game.state.stats.handsPlayed);
+    const prior = (this.style.favorHands.includes(hand) ? 0.6 : 0) + (0.8 * played) / total;
+    return measured + LEVEL_PRIOR_KC * prior;
   }
 
   /**

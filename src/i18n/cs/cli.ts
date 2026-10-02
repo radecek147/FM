@@ -67,6 +67,8 @@ export const cli = {
     actionLimit: 'limit akcí',
     score:
       'Skóre: nejlepší ruka v průměru {avg} (medián {median}), poslední kolo prohry v průměru {loss} ({ratio} % cíle)',
+    strength:
+      'Síla bota v patře 8 (dosáhlo {reached}): nejlepší ruka medián {median}, p90 {p90} · vítězové medián {wMedian}, p90 {wP90} · finálový šéf medián {ratio} % cíle',
     money: 'Peníze: vydělané v průměru {earned|money}, utracené {spent|money}',
     shopMoney: 'Peníze při vstupu do Večerky: {list}',
     shopItem: 'patro {ante} {money|money}',

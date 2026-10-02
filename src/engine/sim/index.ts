@@ -18,6 +18,7 @@ export {
   type PlayCandidate,
 } from './hand-eval';
 export {
+  botStrength,
   DEFAULT_MAX_ACTIONS,
   fallbackAction,
   MAX_CONSECUTIVE_INVALID,
@@ -32,6 +33,7 @@ export type {
   BossStat,
   Bot,
   BotName,
+  BotStrength,
   JokerStat,
   RunResult,
   ShopMoneySample,

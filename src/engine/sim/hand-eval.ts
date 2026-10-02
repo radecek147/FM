@@ -450,7 +450,7 @@ export function planCandidates(
 
 // ─────────────────────────── Přesné skóre (žolíci, šéfové) ───────────────────────────
 
-const RNG_STREAM_NAMES: readonly RngStreamName[] = [
+export const RNG_STREAM_NAMES: readonly RngStreamName[] = [
   'deck',
   'shop',
   'booster',

@@ -75,6 +75,26 @@ export interface RunResult {
   bosses: string[];
   /** Štítky získané přeskočením útrat (id v pořadí). */
   skipTags: string[];
+  /** Metrika síly bota: nejlepší ruka v každém dosaženém patře (`bestHandByAnte[a - 1]`, z událostí `handPlayed`). */
+  bestHandByAnte?: number[];
+  /** Poměr skóre/cíl kola finálového šéfa (patro `FINAL_ANTE`, výhra i prohra), null = run ho nedosáhl. */
+  finalBossRatio?: number | null;
+}
+
+/**
+ * Metrika síly bota (DESIGN 12.3): kolik bodů bot v patře 8 skutečně udělá. Medián a p90 nejlepší ruky v patře 8
+ * u vítězných runů a u všech runů, které patra 8 dosáhly, a medián poměru skóre/cíl kola finálového šéfa.
+ */
+export interface BotStrength {
+  /** Runů, které dosáhly patra 8. */
+  reached: number;
+  medianBest8: number;
+  p90Best8: number;
+  /** Totéž jen u vítězů. */
+  winnersMedianBest8: number;
+  winnersP90Best8: number;
+  /** Medián poměru skóre/cíl kola finálového šéfa (všechny runy, které ho hrály). */
+  medianFinalRatio: number;
 }
 
 /** Letalita šéfa (DESIGN 12.1): kolik runů se s ním utkalo v útratě Šéf a kolik na něm skončilo. */
@@ -130,4 +150,6 @@ export interface SimSummary {
   avgSkips: number;
   skipTags: Record<string, number>;
   invalidActions: number;
+  /** Metrika síly bota (patro 8). */
+  strength: BotStrength;
 }

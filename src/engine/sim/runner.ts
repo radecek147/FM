@@ -9,6 +9,7 @@ import type { Action } from '../types';
 import type {
   BossStat,
   Bot,
+  BotStrength,
   JokerStat,
   RunResult,
   ShopMoneySample,
@@ -70,6 +71,8 @@ export function simulateRun(registry: ContentRegistry, opts: SimulateRunOptions)
   const shopMoney: ShopMoneySample[] = [];
   const bosses: string[] = [];
   const skipTags: string[] = [];
+  const bestHandByAnte: number[] = [];
+  let finalBossRatio: number | null = null;
   const invalidByCode: Record<string, number> = {};
   let actions = 0;
   let invalid = 0;
@@ -91,9 +94,26 @@ export function simulateRun(registry: ContentRegistry, opts: SimulateRunOptions)
       if (e.type === 'shopEntered') shopMoney.push({ ante: game.state.ante, money: game.state.money });
       else if (e.type === 'blindSelected' && e.blind === 'boss' && e.bossId) bosses.push(e.bossId);
       else if (e.type === 'blindSkipped' && e.tagId) skipTags.push(e.tagId);
+      else if (e.type === 'handPlayed') {
+        const i = Math.max(0, game.state.ante - 1);
+        while (bestHandByAnte.length <= i) bestHandByAnte.push(0);
+        bestHandByAnte[i] = Math.max(bestHandByAnte[i]!, e.result.score);
+      } else if (e.type === 'roundWon' && e.ante === FINAL_ANTE && e.blind === 'boss' && e.target > 0)
+        finalBossRatio = e.score / e.target;
+      else if (e.type === 'gameOver' && e.info.ante === FINAL_ANTE && e.info.blind === 'boss' && e.info.target > 0)
+        finalBossRatio = e.info.score / e.info.target;
     }
   }
-  return buildResult(game, opts, { actions, invalid, invalidByCode, shopMoney, bosses, skipTags });
+  return buildResult(game, opts, {
+    actions,
+    invalid,
+    invalidByCode,
+    shopMoney,
+    bosses,
+    skipTags,
+    bestHandByAnte,
+    finalBossRatio,
+  });
 }
 
 function buildResult(
@@ -106,6 +126,8 @@ function buildResult(
     shopMoney: ShopMoneySample[];
     bosses: string[];
     skipTags: string[];
+    bestHandByAnte: number[];
+    finalBossRatio: number | null;
   },
 ): RunResult {
   const s = game.state;
@@ -149,6 +171,8 @@ function buildResult(
     shopMoney: run.shopMoney,
     bosses: run.bosses,
     skipTags: run.skipTags,
+    bestHandByAnte: run.bestHandByAnte,
+    finalBossRatio: run.finalBossRatio,
   };
 }
 
@@ -192,6 +216,31 @@ function median(xs: readonly number[]): number {
 }
 
 const pct = (part: number, whole: number): number => (whole > 0 ? (100 * part) / whole : 0);
+
+/** Percentil `p` (0–1) metodou nejbližšího pořadí; prázdný seznam → 0. */
+function percentile(xs: readonly number[], p: number): number {
+  if (xs.length === 0) return 0;
+  const sorted = [...xs].sort((a, b) => a - b);
+  return sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil(p * sorted.length) - 1))]!;
+}
+
+/** Metrika síly bota (DESIGN 12.3): nejlepší ruka v patře 8 a poměr skóre/cíl finálového šéfa. */
+export function botStrength(results: readonly RunResult[]): BotStrength {
+  const best8 = (rs: readonly RunResult[]): number[] =>
+    rs.filter((r) => r.ante >= FINAL_ANTE).map((r) => r.bestHandByAnte?.[FINAL_ANTE - 1] ?? 0);
+  const all = best8(results);
+  const winners = best8(results.filter((r) => r.won));
+  return {
+    reached: all.length,
+    medianBest8: median(all),
+    p90Best8: percentile(all, 0.9),
+    winnersMedianBest8: median(winners),
+    winnersP90Best8: percentile(winners, 0.9),
+    medianFinalRatio: median(
+      results.map((r) => r.finalBossRatio).filter((x): x is number => typeof x === 'number'),
+    ),
+  };
+}
 
 /**
  * Souhrn sady runů (DESIGN 12.3): výhry, dosažená patra, příčiny proher, skóre, peníze, délka runu a síla žolíků
@@ -292,5 +341,6 @@ export function summarizeRuns(results: readonly RunResult[], minJokerRuns = 1): 
     avgSkips: avg(results.map((r) => r.blindsSkipped)),
     skipTags,
     invalidActions: results.reduce((a, r) => a + r.invalidActions, 0),
+    strength: botStrength(results),
   };
 }
