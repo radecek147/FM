@@ -154,7 +154,8 @@ export function parseImport(text: string, registry: ContentRegistry, now = new D
     if (v > EXPORT_VERSION) throw new ImportError('tooNew');
     let profile: string | null = null;
     if (obj.profile !== null && obj.profile !== undefined) {
-      if (isRecord(obj.profile) || typeof obj.profile === 'string') profile = validateProfile(obj.profile, now);
+      if (isRecord(obj.profile) || typeof obj.profile === 'string')
+        profile = validateProfile(obj.profile, now);
       else throw new ImportError('invalidFormat');
     }
     const run = obj.run === null || obj.run === undefined ? null : validateRun(obj.run, registry, now);

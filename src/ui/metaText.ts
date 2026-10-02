@@ -128,7 +128,9 @@ export function unlockInfo(
 export function noticeText(notice: MetaNotice, registry: ContentRegistry): string {
   switch (notice.kind) {
     case 'unlock':
-      return t(`meta.notice.unlock.${notice.category}`, { name: unlockSubjectName(notice.category, notice.id) });
+      return t(`meta.notice.unlock.${notice.category}`, {
+        name: unlockSubjectName(notice.category, notice.id),
+      });
     case 'stake':
       return t('meta.notice.stake', {
         stake: stakeName(registry, notice.stake),

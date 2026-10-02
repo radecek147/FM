@@ -107,7 +107,11 @@ export function showProfileProblem(problem: ProfileProblem): void {
       });
       break;
     case 'corruptUnsaved':
-      toast(t('meta.profile.corruptUnsaved'), { kind: 'error', duration: 0, testId: 'toast-profile-corrupt' });
+      toast(t('meta.profile.corruptUnsaved'), {
+        kind: 'error',
+        duration: 0,
+        testId: 'toast-profile-corrupt',
+      });
       break;
     case 'saveFailed':
       toast(t('meta.profile.saveFailed'), { kind: 'warning', testId: 'toast-profile-save' });
@@ -297,7 +301,8 @@ export class ProfileController implements RunObserver {
     const state = controller.state;
     const notices = applyRunEvents(this.current, events, state, ctx);
     // Po prohře se run neukládá (pokračovat nejde) — do historie hned, ne až z pitvy.
-    if (state.phase === 'game_over' && this.current.current) notices.push(...finishRun(this.current, state, ctx));
+    if (state.phase === 'game_over' && this.current.current)
+      notices.push(...finishRun(this.current, state, ctx));
     this.save();
     this.pending.push(...notices);
   }

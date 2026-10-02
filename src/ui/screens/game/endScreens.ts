@@ -200,6 +200,8 @@ export function renderVictory(ctx: GameCtx): HTMLElement {
         variant: 'paper',
         testId: 'victory-end',
         onClick: () => {
+          // Výhra je v profilu od `victory`; teď run uzavřít (historie) a smazat uložení.
+          ctx.app.profiles.finish(ctx.controller);
           GameController.clearSaved(ctx.app.store);
           ctx.app.controller = null;
           ctx.app.go('menu');

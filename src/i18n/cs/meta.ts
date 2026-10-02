@@ -30,6 +30,120 @@ export const meta = {
     more: '…a {n|plural:další novinka,další novinky,dalších novinek}. Mrkni do Sbírky.',
   },
 
+  /**
+   * Podmínky odemčení (`UnlockCondition`, DESIGN 11.3) — klíče a parametry vrací `unlockText` / `unlockTextFor`
+   * (src/engine/meta/unlockText.ts): `items.<kategorie>.<id>` = věta konkrétní položky (má přednost), jinak obecná
+   * šablona `cond.*`. Parametry: `{count}`, `{ante}`, `{score}`, `{money}`, `{level}`, `{runs}`, `{wins}`; názvy
+   * (`{deck}`, `{stake}`, `{hand}`, `{boss}`, `{consumable}`, `{challenge}`, `{achievement}`, `{voucher}`) dosadí UI
+   * přeložené. Čísla vlastních podmínek jsou v `CUSTOM_UNLOCK_PARAMS` (src/engine/meta/unlocks.ts).
+   */
+  unlock: {
+    fromStart: 'Odemčeno od začátku.',
+    byDiscovery: 'Odemkne se, až ho poprvé získáš – legendy se rodí třeba z úředního razítka.',
+    cond: {
+      winRun: 'Vyhraj run.',
+      winRunDeck: 'Vyhraj run s balíčkem {deck}.',
+      winRunStake: 'Vyhraj run na síle piva {stake} nebo silnější.',
+      winRunDeckStake: 'Vyhraj run s balíčkem {deck} na síle piva {stake} nebo silnější.',
+      reachAnte: 'Dosáhni patra {ante}.',
+      playHand: 'Zahraj kombinaci {hand}.',
+      playHandCount: 'Zahraj kombinaci {hand} celkem {count}×.',
+      scoreInHand: 'Získej jednou rukou aspoň {score|plural:bod,body,bodů}.',
+      haveMoney: 'Měj najednou aspoň {money|money}.',
+      winsTotal: 'Vyhraj celkem {count|plural:run,runy,runů}.',
+      runsTotal: 'Odehraj celkem {count|plural:run,runy,runů}.',
+      discover: {
+        jokers: 'Objev {count|plural:žolíka,žolíky,žolíků}.',
+        consumables: 'Objev {count|plural:spotřebku,spotřebky,spotřebek}.',
+        vouchers: 'Objev {count|plural:kupón,kupóny,kupónů}.',
+        tags: 'Objev {count|plural:štítek,štítky,štítků}.',
+        bosses: 'Potkej {count|plural:šéfa,šéfy,šéfů}.',
+        boosters: 'Objev {count|plural:obálku,obálky,obálek}.',
+      },
+      /** Počítadla a rekordy profilu (`UnlockStat`); `{count}` = cílová hodnota. */
+      stat: {
+        handsPlayed: 'Zahraj celkem {count|plural:ruku,ruce,rukou}.',
+        cardsPlayed: 'Zahraj celkem {count|plural:kartu,karty,karet}.',
+        discards: 'Zahoď karty celkem {count}×.',
+        cardsDiscarded: 'Zahoď celkem {count|plural:kartu,karty,karet}.',
+        moneyEarned: 'Vydělej celkem {count|money}.',
+        moneySpent: 'Utrať ve Večerce celkem {count|money}.',
+        jokersBought: 'Kup celkem {count|plural:žolíka,žolíky,žolíků}.',
+        jokersSold: 'Prodej celkem {count|plural:žolíka,žolíky,žolíků}.',
+        vouchersBought: 'Kup celkem {count|plural:kupón,kupóny,kupónů}.',
+        consumablesUsed: 'Použij celkem {count|plural:spotřebku,spotřebky,spotřebek}.',
+        pranostikyUsed: 'Použij celkem {count|plural:pranostiku,pranostiky,pranostik}.',
+        radyUsed: 'Použij celkem {count|plural:babskou radu,babské rady,babských rad}.',
+        razitkaUsed: 'Použij celkem {count|plural:úřední razítko,úřední razítka,úředních razítek}.',
+        rerolls: 'Přehoď nabídku Večerky celkem {count}×.',
+        blindsSkipped: 'Přeskoč celkem {count|plural:útratu,útraty,útrat}.',
+        roundsWon: 'Vyhraj celkem {count|plural:kolo,kola,kol}.',
+        bossesDefeated: 'Poraz celkem {count|plural:šéfa,šéfy,šéfů}.',
+        glassBroken: 'Rozbij celkem {count|plural:skleněnou kartu,skleněné karty,skleněných karet}.',
+        boostersOpened: 'Otevři celkem {count|plural:obálku,obálky,obálek}.',
+        cardsAdded: 'Přidej do balíčku celkem {count|plural:kartu,karty,karet}.',
+        cardsDestroyed: 'Znič celkem {count|plural:hrací kartu,hrací karty,hracích karet}.',
+        firstHandRoundWins: 'Vyhraj hned první rukou celkem {count|plural:kolo,kola,kol}.',
+        shopsEntered: 'Navštiv Večerku celkem {count}×.',
+        maxMoney: 'Měj najednou aspoň {count|money}.',
+        maxJokers: 'Měj najednou {count|plural:žolíka,žolíky,žolíků}.',
+        maxSealedCards: 'Měj v balíčku najednou {count|plural:kartu,karty,karet} s pečetí.',
+        maxVouchers: 'Měj v jednom runu {count|plural:kupón,kupóny,kupónů}.',
+        maxHandLevel: 'Zvyš libovolnou kombinaci na úroveň {count}.',
+        highestAnte: 'Dosáhni patra {count}.',
+        bestHandScore: 'Získej jednou rukou aspoň {count|plural:bod,body,bodů}.',
+        bestRoundScore: 'Získej v jednom kole aspoň {count|plural:bod,body,bodů}.',
+      },
+      roundEndMoney: 'Dokonči kolo s nejvýš {money|money} v kapse.',
+      roundEndMoneyZero: 'Dokonči kolo s prázdnou kapsou – s {money|money} nebo v mínusu.',
+      roundEndMoneyDebt: 'Dokonči kolo se záporným zůstatkem.',
+      handLevel: 'Zvyš libovolnou kombinaci na úroveň {level}.',
+      handLevelHand: 'Zvyš kombinaci {hand} na úroveň {level}.',
+      beatBoss: 'Poraz celkem {count|plural:šéfa,šéfy,šéfů}.',
+      beatBossId: 'Poraz šéfa „{boss}“.',
+      beatBossIdCount: 'Poraz šéfa „{boss}“ celkem {count}×.',
+      useConsumable: {
+        any: 'Použij celkem {count|plural:spotřebku,spotřebky,spotřebek}.',
+        pranostika: 'Použij celkem {count|plural:pranostiku,pranostiky,pranostik}.',
+        rada: 'Použij celkem {count|plural:babskou radu,babské rady,babských rad}.',
+        razitko: 'Použij celkem {count|plural:úřední razítko,úřední razítka,úředních razítek}.',
+      },
+      useConsumableId: 'Použij spotřebku {consumable} celkem {count}×.',
+      winChallenge: 'Dokonči výzvu „{challenge}“.',
+      winChallengeCount: 'Dokonči celkem {count|plural:různou výzvu,různé výzvy,různých výzev}.',
+      achievement: 'Získej achievement „{achievement}“.',
+      /** Vlastní podmínky (`{ type: 'custom', id }`) — čísla z `CUSTOM_UNLOCK_PARAMS`. */
+      custom: {
+        vouchersBought5: 'Kup celkem {count|plural:kupón,kupóny,kupónů}.',
+        sealedCardsInRun: 'Měj v jednom runu v balíčku najednou {count|plural:kartu,karty,karet} s pečetí.',
+        roundEndInDebt: 'Dokonči kolo se záporným zůstatkem.',
+        radyUsed30: 'Použij celkem {count|plural:babskou radu,babské rady,babských rad}.',
+        jokersSold25: 'Prodej celkem {count|plural:žolíka,žolíky,žolíků}.',
+        handLevel6: 'Zvyš libovolnou kombinaci na úroveň {level}.',
+        voucherTier1TwoRuns:
+          'Kupón {voucher} kup ve Večerce v různých runech ({runs}×), nebo vyhraj celkem {wins|plural:run,runy,runů}.',
+        voucherTier1Wins: 'Vyhraj celkem {wins|plural:run,runy,runů}.',
+        distinctHands8:
+          'Zahraj {count|plural:různou kombinaci,různé kombinace,různých kombinací} (napříč runy, každou aspoň jednou).',
+      },
+      unknown: 'Tajná podmínka. Štamgast ví, ale neřekne.',
+    },
+    /** Věty konkrétních položek (hezčí skloňování než obecná šablona); parametry stejné jako u `cond.*`. */
+    items: {
+      jokers: {
+        carousel: 'Zahraj celkem {count|plural:Postupku,Postupky,Postupek}.',
+        snowman: 'Vyhraj kolo hned první rukou.',
+        tour_guide: 'Vyhraj run s Turistickým balíčkem.',
+        new_years_eve: 'Vyhraj run. Pak se slaví.',
+      },
+      decks: {
+        tourist: 'Zahraj celkem {count|plural:Postupku,Postupky,Postupek}.',
+        marias: 'Zahraj Čtveřici.',
+        court: 'Vyhraj run s Mariášovým balíčkem.',
+      },
+    },
+  },
+
   /** Sbírka (codex, DESIGN 11.4). */
   collection: {
     title: 'Sbírka',

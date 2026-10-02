@@ -20,7 +20,7 @@ import { backButton } from '../../components/button';
 import { closeAllModals, isModalOpen } from '../../components/modal';
 import { TOAST_ANCHOR_GAP, setToastAnchor } from '../../components/toast';
 import { hideTooltip, isTooltipVisible } from '../../components/tooltip';
-import { GameController } from '../../controller';
+import type { GameController } from '../../controller';
 import { h } from '../../dom';
 import { particles, type Particles } from '../../fx/particles';
 import { animate, createPresenter, type PresentView } from '../../present';
@@ -390,11 +390,13 @@ function noGameScreen(app: App): Screen {
 export const gameScreen: ScreenFactory = (app) => {
   let controller = app.controller;
   if (!controller || controller.state.phase === 'game_over') {
-    // Pokračování z uloženého runu (např. po obnovení stránky přímo na hře).
-    const resumed = GameController.resume({ registry: app.registry, store: app.store });
+    // Pokračování z uloženého runu (např. po obnovení stránky přímo na hře) — rovnou připojené k profilu.
+    const resumed = app.profiles.resume();
     if (resumed) controller = app.controller = resumed;
   }
   if (!controller) return noGameScreen(app);
+  // Události runu sleduje profil (statistiky, odemykání, achievementy) — i u runu založeného mimo profil.
+  if (!controller.hasObserver) app.profiles.attach(controller);
   const view = new GameView(app, controller);
   return {
     el: view.el,
