@@ -5,6 +5,8 @@
 import type { ContentRegistry, UnlockCondition } from '../engine';
 import type { MetaNotice, Profile, UnlockCategory } from '../engine/meta';
 import { evaluateUnlock, unlockConditionFor, unlockedByDiscovery } from '../engine/meta';
+import type { UnlockTextSpec } from '../engine/meta/unlockText';
+import { unlockText, unlockTextFor } from '../engine/meta/unlockText';
 import { hasKey, t } from '../i18n/cs';
 import { formatNumber } from '../i18n/format';
 
@@ -61,80 +63,24 @@ export function unlockSubjectName(category: UnlockCategory, id: string): string 
 
 // ─────────────────────────── Podmínky odemčení ───────────────────────────
 
+/**
+ * Věta z klíčů a parametrů `unlockText` (src/engine/meta/unlockText.ts): text konkrétní položky, je-li v i18n,
+ * jinak obecná šablona; `refs` (názvy balíčků, šéfů, kombinací…) se přeloží a dosadí.
+ */
+export function unlockSpecText(spec: UnlockTextSpec): string {
+  const params: Record<string, number | string> = { ...spec.params };
+  for (const [name, key] of Object.entries(spec.refs)) params[name] = hasKey(key) ? t(key) : key;
+  const key = spec.itemKey && hasKey(spec.itemKey) ? spec.itemKey : spec.key;
+  return t(key, params);
+}
+
 /** Jedna věta s podmínkou odemčení (bez průběhu). */
 export function unlockConditionText(
   cond: UnlockCondition,
   registry: ContentRegistry,
   subject?: { category: UnlockCategory; id: string },
 ): string {
-  switch (cond.type) {
-    case 'winRun': {
-      const deck = cond.deck ? deckName(cond.deck) : null;
-      const stake = cond.stake !== undefined ? stakeName(registry, cond.stake) : null;
-      if (deck && stake) return t('meta.unlock.winRunDeckStake', { deck, stake });
-      if (deck) return t('meta.unlock.winRunDeck', { deck });
-      if (stake) return t('meta.unlock.winRunStake', { stake });
-      return t('meta.unlock.winRun');
-    }
-    case 'reachAnte':
-      return t('meta.unlock.reachAnte', { ante: cond.ante });
-    case 'playHand':
-      return (cond.count ?? 1) > 1
-        ? t('meta.unlock.playHandCount', { hand: handName(cond.hand), count: cond.count ?? 1 })
-        : t('meta.unlock.playHand', { hand: handName(cond.hand) });
-    case 'scoreInHand':
-      return t('meta.unlock.scoreInHand', { atLeast: cond.atLeast });
-    case 'haveMoney':
-      return t('meta.unlock.haveMoney', { atLeast: cond.atLeast });
-    case 'winsTotal':
-      return t('meta.unlock.winsTotal', { count: cond.count });
-    case 'runsTotal':
-      return t('meta.unlock.runsTotal', { count: cond.count });
-    case 'discover':
-      return t(`meta.unlock.discover.${cond.category}`, { count: cond.count });
-    case 'stat':
-      return t(`meta.unlock.stat.${cond.stat}`, { n: cond.atLeast });
-    case 'roundEndMoney':
-      return cond.atMost < 0
-        ? t('meta.unlock.roundEndDebt')
-        : t('meta.unlock.roundEndMoney', { atMost: cond.atMost });
-    case 'handLevel':
-      return cond.hand
-        ? t('meta.unlock.handLevelHand', { hand: handName(cond.hand), level: cond.level })
-        : t('meta.unlock.handLevel', { level: cond.level });
-    case 'beatBoss': {
-      const count = cond.count ?? 1;
-      if (!cond.boss) return t('meta.unlock.beatBossAny', { count });
-      const boss = bossName(cond.boss);
-      return count > 1 ? t('meta.unlock.beatBossCount', { boss, count }) : t('meta.unlock.beatBoss', { boss });
-    }
-    case 'useConsumable': {
-      const count = cond.count ?? 1;
-      if (cond.id) {
-        const name = textOr(`consumables.${cond.id}.name`, cond.id);
-        return count > 1
-          ? t('meta.unlock.useConsumableCount', { name, count })
-          : t('meta.unlock.useConsumable', { name });
-      }
-      return t(`meta.unlock.useKind.${cond.kind ?? 'any'}`, { count });
-    }
-    case 'winChallenge':
-      return cond.challenge
-        ? t('meta.unlock.winChallenge', { name: challengeName(cond.challenge) })
-        : t('meta.unlock.winChallengeCount', { count: cond.count ?? 1 });
-    case 'achievement':
-      return t('meta.unlock.achievement', { name: achievementName(cond.id) });
-    case 'custom': {
-      if (cond.id === 'voucherTier1TwoRuns') {
-        const requires = subject?.category === 'vouchers' ? registry.vouchers[subject.id]?.requires : undefined;
-        return requires
-          ? t('meta.unlock.custom.voucherTier1TwoRuns', { requires: textOr(`vouchers.${requires}.name`, requires) })
-          : t('meta.unlock.custom.voucherTier1TwoRunsAny');
-      }
-      const key = `meta.unlock.custom.${cond.id}`;
-      return hasKey(key) ? t(key) : t('meta.unlock.custom.unknown');
-    }
-  }
+  return unlockSpecText(unlockText(registry, cond, subject));
 }
 
 /** Podmínka odemčení položky s průběhem (sbírka, nová hra). */
@@ -158,11 +104,12 @@ export function unlockInfo(
   category: UnlockCategory,
   id: string,
 ): UnlockInfo | null {
-  if (category === 'jokers' && unlockedByDiscovery(registry, id)) {
-    return { text: t('meta.unlock.legendary'), progress: 0, target: 1, met: false, progressText: null };
-  }
   const cond = unlockConditionFor(registry, category, id);
-  if (!cond) return null;
+  if (!cond) {
+    if (category !== 'jokers' || !unlockedByDiscovery(registry, id)) return null;
+    const text = unlockSpecText(unlockTextFor(registry, category, id));
+    return { text, progress: 0, target: 1, met: false, progressText: null };
+  }
   const subject = { category, id };
   const p = evaluateUnlock(cond, profile, undefined, { registry, subject });
   return {
@@ -170,7 +117,8 @@ export function unlockInfo(
     progress: p.progress,
     target: p.target,
     met: p.met,
-    progressText: p.target > 1 ? t('meta.unlock.progress', { progress: p.progress, target: p.target }) : null,
+    progressText:
+      p.target > 1 ? t('meta.collection.progress', { progress: p.progress, target: p.target }) : null,
   };
 }
 
