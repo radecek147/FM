@@ -217,27 +217,30 @@ Cíl útraty = `nice(base(patro) × násobek útraty × Modifiers.targetMult)`. 
 |     1 |            250 |    380 |    500 |            250 |    380 |    500 |            250 |    380 |    500 |
 |     2 |            550 |    830 |  1 100 |            550 |    830 |  1 100 |            600 |    900 |  1 200 |
 |     3 |          1 100 |  1 650 |  2 200 |          1 200 |  1 800 |  2 400 |          1 300 |  1 950 |  2 600 |
-|     4 |          2 300 |  3 500 |  4 600 |          2 600 |  3 900 |  5 200 |          2 800 |  4 200 |  5 600 |
-|     5 |          4 500 |  6 800 |  9 000 |          5 100 |  7 700 | 10 000 |          5 600 |  8 400 | 11 000 |
-|     6 |          8 200 | 12 500 | 16 500 |          9 300 | 14 000 | 18 500 |         10 000 | 15 000 | 20 000 |
-|     7 |         14 500 | 22 000 | 29 000 |         16 500 | 25 000 | 33 000 |         18 000 | 27 000 | 36 000 |
-|     8 |         23 000 | 35 000 | 46 000 |         26 000 | 39 000 | 52 000 |         29 000 | 44 000 | 58 000 |
+|     4 |          2 300 |  3 500 |  4 600 |          2 600 |  3 900 |  5 200 |          3 100 |  4 700 |  6 200 |
+|     5 |          4 500 |  6 800 |  9 000 |          5 100 |  7 700 | 10 000 |          6 300 |  9 500 | 12 500 |
+|     6 |          8 200 | 12 500 | 16 500 |          9 300 | 14 000 | 18 500 |         11 000 | 16 500 | 22 000 |
+|     7 |         14 500 | 22 000 | 29 000 |         16 500 | 25 000 | 33 000 |         20 000 | 30 000 | 40 000 |
+|     8 |         23 000 | 35 000 | 46 000 |         26 000 | 39 000 | 52 000 |         32 000 | 48 000 | 64 000 |
 
 Engine má v tabulce jen základy křivek (sloupce „Malá“); Velkou a Šéfa počítá přes `nice()`. Celá tabulka slouží
 jako test.
 
 **Kalibrace po fázi 7 (2026-10-02, plný obsah: 101 žolíků, 30 šéfů, 20 štítků, 51 spotřebek, 24 kupónů;
-`docs/DECISIONS.md` „Balanc po fázi 7“):** nejlepší rozumný bot na Desítce vyhraje 34 % runů (`flush`; `max` 31 %,
-`pairs` 26 %), na Imperialu 2,3 % a všechny střední síly piva leží v pásmech kap. 10. Křivka 1 je oproti fázi 6
-o ~5 % výš od patra 4 (Desítka byla na 36 %); křivky 2 a 3 jsou od patra 3 o ~13 % a ~23 % nad křivkou 1, protože
-Jedenáctka a Ležák mají mírnější ekonomické ztížení (platí až od 2. / 3. patra) a Dvanáctka, Speciál a Bock by
-jinak byly nad pásmem. Pořadí křivek (1 ≤ 2 ≤ 3 v každém patře) zůstává.
+`docs/DECISIONS.md` „Balanc po fázi 7“):** nejlepší rozumný bot na Desítce vyhraje 34 % runů (sady `SIM-A` i `SIM-B`;
+`max` 31–34 %, `flush` 29–34 %, `pairs` 26–27 %), na Imperialu 2,0 % (sady A–D 2,0–2,3 %) a všechny střední síly
+piva leží v pásmech kap. 10 (souhrn dvou až čtyř sad po 200–300 runech na bota). Křivka 1 je oproti fázi 6 o ~5 %
+výš od patra 4 (Desítka byla na 36 %); křivka 2 je od patra 3 o ~13 % nad křivkou 1 a křivka 3 od patra 4 o ~35–40 %,
+protože Jedenáctka a Ležák mají mírnější ekonomické ztížení (platí až od 2. / 3. patra), Speciál boty skoro nebrzdí
+a Doppelbock s Imperialem byly s nižší křivkou 3 nad pásmem. Pořadí křivek (1 ≤ 2 ≤ 3 v každém patře) zůstává.
 
 Historie: fáze 6 měla patro 8 21 000 / 23 000 / 26 000, fáze 5 (bez šéfů) 22 000 / 27 000 / 35 000, původní návrh
 80 000 / 150 000 / 250 000. **Dlouhodobý cíl CLAUDE.md kap. 3 (patro 8 řádově statisíce)** dnešní boti nedosáhnou:
-vítězné runy mají v patře 8 medián nejlepší ruky ~60 000 (p90 ~160–190 000) a kolo finálového šéfa končí na
-mediánu 1,27× cíle. Plán, jak se k cíli dostat (silnější boti a škálování obsahu, pak zvednout křivky po krocích), je
-v `docs/DECISIONS.md` („Balanc po fázi 7“, bod Patro 8) — patří do fáze 10.
+vítězné runy na Desítce (542 výher z 1 800 runů) mají v patře 8 medián nejlepší ruky 70 000 (p25 46 000, p75
+114 000, p90 231 000), ruku za ≥ 100 000 zahraje jen 30 % vítězů a kolo finálového šéfa končí na mediánu 1,28× cíle.
+Pokus se základem patra 8 50 000 (geometrický náběh od patra 4) srazil Desítku na 12 % výher, se 100 000 na 3 %.
+Plán (metrika síly bota, silnější boti, pak křivky po krocích, případně škálování pozdního obsahu) je
+v `docs/DECISIONS.md` („Balanc po fázi 7“, bod 5) — patří do fáze 10.
 
 #### 2.3.2 Zaokrouhlení `nice(x)`
 
@@ -259,14 +262,14 @@ z balíčků, výzev a kupónů, nekonečný režim).
 
 | Patro |    g | Křivka 1: Malá |       Velká |         Šéf | Křivka 2: Malá |         Šéf | Křivka 3: Malá |         Šéf |
 | ----: | ---: | -------------: | ----------: | ----------: | -------------: | ----------: | -------------: | ----------: |
-|     9 | 2,20 |         51 000 |      77 000 |     100 000 |         57 000 |     115 000 |         64 000 |     130 000 |
-|    10 | 2,35 |        125 000 |     190 000 |     250 000 |        145 000 |     290 000 |        160 000 |     320 000 |
-|    11 | 2,50 |        360 000 |     540 000 |     720 000 |        410 000 |     820 000 |        450 000 |     900 000 |
-|    12 | 2,65 |      1 150 000 |   1 750 000 |   2 300 000 |      1 300 000 |   2 600 000 |      1 450 000 |   2 900 000 |
-|    13 | 2,80 |      4 000 000 |   6 000 000 |   8 000 000 |      4 500 000 |   9 000 000 |      5 000 000 |  10 000 000 |
-|    14 | 2,95 |     15 000 000 |  23 000 000 |  30 000 000 |     17 000 000 |  34 000 000 |     19 000 000 |  38 000 000 |
-|    15 | 3,10 |     63 000 000 |  95 000 000 | 125 000 000 |     72 000 000 | 145 000 000 |     80 000 000 | 160 000 000 |
-|    16 | 3,25 |    290 000 000 | 440 000 000 | 580 000 000 |    320 000 000 | 640 000 000 |    360 000 000 | 720 000 000 |
+|     9 | 2,20 |         51 000 |      77 000 |     100 000 |         57 000 |     115 000 |         70 000 |     140 000 |
+|    10 | 2,35 |        125 000 |     190 000 |     250 000 |        145 000 |     290 000 |        175 000 |     350 000 |
+|    11 | 2,50 |        360 000 |     540 000 |     720 000 |        410 000 |     820 000 |        500 000 |   1 000 000 |
+|    12 | 2,65 |      1 150 000 |   1 750 000 |   2 300 000 |      1 300 000 |   2 600 000 |      1 600 000 |   3 200 000 |
+|    13 | 2,80 |      4 000 000 |   6 000 000 |   8 000 000 |      4 500 000 |   9 000 000 |      5 500 000 |  11 000 000 |
+|    14 | 2,95 |     15 000 000 |  23 000 000 |  30 000 000 |     17 000 000 |  34 000 000 |     21 000 000 |  42 000 000 |
+|    15 | 3,10 |     63 000 000 |  95 000 000 | 125 000 000 |     72 000 000 | 145 000 000 |     88 000 000 | 175 000 000 |
+|    16 | 3,25 |    290 000 000 | 440 000 000 | 580 000 000 |    320 000 000 | 640 000 000 |    400 000 000 | 800 000 000 |
 
 Pro orientaci (křivka 1): patro 20 ≈ 240 000 000 000, patro 24 ≈ 5,4e14, patro 32 ≈ 2,6e22, patro 40 ≈ 1,25e31
 (zápis jako ve hře: od 1e15 vědecky, koncové nuly mantisy se ořezávají).
@@ -1176,7 +1179,7 @@ nově dobrané karty) má 1,5×, Pan starosta a Velká voda 2,5×, Krajský úř
 |   2 | Štamgastův (`regulars`)     | +1 slot žolíka (6); start s 0 Kč.                                                                             | od začátku                            | „Má tu vlastní věšák. Na žolíky.“                   |
 |   3 | Úřednický (`clerk`)         | Start s kupóny Trhací kalendář a Kamarád za pultem.                                                           | kup celkem 5 kupónů                   | „Všechno vyřízeno předem. Na razítko.“              |
 |   4 | Turistický (`tourist`)      | Postupka i Barva stačí ze 4 karet; cíle všech útrat ×1,2.                                                     | zahraj celkem 25 Postupek             | „Po červené, pak po modré, pak se ztratit.“         |
-|   5 | Mariášový (`marias`)        | 32 karet: 7–A ve 4 barvách (bez 2–6). Postupka A-2-3-4-5 tu není možná.                                       | zahraj Čtveřici                       | „Kdo nehraje, nevyhraje. Kdo hraje, flekuje.“       |
+|   5 | Mariášový (`marias`)        | 32 karet: 7–A ve 4 barvách (bez 2–6). Postupka A-2-3-4-5 tu není možná; cíle všech útrat ×1,2.                | zahraj Čtveřici                       | „Kdo nehraje, nevyhraje. Kdo hraje, flekuje.“       |
 |   6 | Obrázkový (`court`)         | 32 karet: J, Q, K, A ve 4 barvách, každá karta 2×; −1 karta v ruce (7); cíle ×1,5.                            | vyhraj run s Mariášovým               | „Samí páni, žádní pěšáci.“                          |
 |   7 | Notářský (`notary`)         | Každá karta má při stavbě balíčku 25% šanci na náhodnou pečeť (4 druhy rovnoměrně); −1 slot spotřebky.        | měj v jednom runu 5 karet s pečetí    | „Ověřeno, orazítkováno, zaplombováno.“              |
 |   8 | Zbohatlík (`nouveau_riche`) | Odměny za útraty a úrok ×2, nevyužitá ruka +2 Kč; −2 ruce (2).                                                | měj najednou 50 Kč                    | „Peníze jsou, čas není.“                            |
@@ -1197,6 +1200,11 @@ Upřesnění:
 - **Dlužník:** `startingMoney −10`, `debtLimit +20`, `interestMult ×2`. Odemyká se stejnou podmínkou jako
   achievement „Na sekeru“ (dokončit kolo v mínusu jde se žolíkem Sekera nebo ve výzvě Byrokracie) — dluh si hráč
   musí nejdřív „vyzkoušet“.
+- **Síla balíčků** (Desítka, nejlepší z botů `max` a `flush`, 200 runů `SIM-A-*`, 2026-10-02 po kalibraci fáze 7;
+  `docs/DECISIONS.md` „Balanc po fázi 7“): Hospodský 34 %, Štamgastův 39,5 %, Úřednický 34,5 %, Turistický 41 %,
+  Mariášový 40 % (bez cílů ×1,2 60,5 %), Obrázkový 50,5 %, Notářský 50 %, Zbohatlík 30,5 %, Dlužník 30,5 %,
+  Babiččin 44 %, Vetešnický 35 %, Kalendářový 43 %. Obrázkový, Notářský, Babiččin a Kalendářový jsou nad pásmem
+  kap. 12.1 (±7 p. b. od Hospodského) — ladění ve fázi 10 spolu se silnějšími boty.
 - Pořadí v menu = pořadí v tabulce. Balíček s vyšší dosaženou silou piva má na obálce „tácek“ s číslem úrovně.
 
 ## 10. Obtížnosti „Síla piva“ (8)
@@ -1204,23 +1212,27 @@ Upřesnění:
 Každá úroveň zahrnuje všechna ztížení nižších úrovní a přidává jedno nové. **Výhra na úrovni N s daným balíčkem
 odemkne úroveň N + 1 pro tento balíček.** Desítka je odemčená vždy.
 
-| Úr. | Název (`id`)              | Nové ztížení                                                                                                                                           | Implementace                                       | Cíl výher (simulace) |
-| --: | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------- | -------------------: |
-|   1 | Desítka (`desitka`)       | Základní pravidla, křivka cílů 1.                                                                                                                      | `targetCurve: 1`                                   |              25–35 % |
-|   2 | Jedenáctka (`jedenactka`) | **Dražší pivo:** od 2. patra stojí ve Večerce všechno o 1 Kč víc (žolíci, spotřebky, karty, obálky, kupóny, přehození). Prodejní ceny se nemění.       | `shopPriceAdd +1` od patra 2 (`passive` čte patro) |              20–30 % |
-|   3 | Dvanáctka (`dvanactka`)   | Křivka cílů 2.                                                                                                                                         | `targetCurve: 2`                                   |              14–22 % |
-|   4 | Speciál (`special`)       | **Zvětrávání:** 25 % žolíků v obchodě a obálkách je zvětrávajících (po 6 kolech přestanou fungovat).                                                   | `stickerChance.perishable: 0,25`                   |              10–17 % |
-|   5 | Ležák (`lezak`)           | **Bez dýška:** od 3. patra nevyužité ruce nedávají peníze.                                                                                             | `moneyPerUnusedHand −1` od patra 3                 |               7–12 % |
-|   6 | Bock (`bock`)             | Křivka cílů 3.                                                                                                                                         | `targetCurve: 3`                                   |                4–8 % |
-|   7 | Doppelbock (`doppelbock`) | **Bazar a půjčovna:** 20 % žolíků v nabídce je přibitých a 15 % zapůjčených.                                                                           | `stickerChance.eternal: 0,2`, `rental: 0,15`       |                3–6 % |
-|   8 | Imperial (`imperial`)     | **Šéf i ve Velké:** Velká útrata má navíc pravidlo náhodného běžného šéfa (jiného než šéf patra, `minAnte ≤ patro`); cíl 1,5× a odměna 4 Kč zůstávají. | `bigBlindBoss: true` (nové pole)                   |        1–3 % (< 3 %) |
+| Úr. | Název (`id`)              | Nové ztížení                                                                                                                                                                              | Implementace                                       | Cíl výher (simulace) |
+| --: | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | -------------------: |
+|   1 | Desítka (`desitka`)       | Základní pravidla, křivka cílů 1.                                                                                                                                                         | `targetCurve: 1`                                   |              25–35 % |
+|   2 | Jedenáctka (`jedenactka`) | **Dražší pivo:** od 2. patra stojí ve Večerce všechno o 1 Kč víc (žolíci, spotřebky, karty, obálky, kupóny, přehození). Prodejní ceny se nemění.                                          | `shopPriceAdd +1` od patra 2 (`passive` čte patro) |              20–30 % |
+|   3 | Dvanáctka (`dvanactka`)   | Křivka cílů 2.                                                                                                                                                                            | `targetCurve: 2`                                   |              14–22 % |
+|   4 | Speciál (`special`)       | **Zvětrávání:** 25 % žolíků v obchodě a obálkách je zvětrávajících (po 6 kolech přestanou fungovat).                                                                                      | `stickerChance.perishable: 0,25`                   |              10–17 % |
+|   5 | Ležák (`lezak`)           | **Bez dýška:** od 3. patra nevyužité ruce nedávají peníze.                                                                                                                                | `moneyPerUnusedHand −1` od patra 3                 |               7–12 % |
+|   6 | Bock (`bock`)             | Křivka cílů 3.                                                                                                                                                                            | `targetCurve: 3`                                   |                4–8 % |
+|   7 | Doppelbock (`doppelbock`) | **Bazar a půjčovna:** 25 % žolíků v nabídce je přibitých a 25 % zapůjčených.                                                                                                              | `stickerChance.eternal: 0,25`, `rental: 0,25`      |                3–6 % |
+|   8 | Imperial (`imperial`)     | **Šéf i ve Velké:** Velká útrata má navíc pravidlo náhodného běžného šéfa (jiného než šéf patra, `minAnte ≤ patro`; její cíl 1,5× a odměna 4 Kč zůstávají) a cíle šéfů jsou o 20 % vyšší. | `bigBlindBoss: true`, `bossTargetMult ×1,2`        |        1–3 % (< 3 %) |
 
 - **Jedenáctka a Ležák platí až od 2. / 3. patra** (kalibrace po fázi 7, `docs/DECISIONS.md` „Balanc po fázi 7“):
   ekonomické ztížení od prvního kola srazilo výhry Jedenáctky z ~33 na ~20 % a Ležáku ze ~13 na ~3 % a přes
   kumulaci táhlo pod pásmo i Bock a Doppelbock. Patro se zvedá při výplatě po šéfovi, takže Večerka po šéfovi
-  1. patra už stojí o 1 Kč víc. Zapůjčený žolík stojí 1 Kč plus příplatek Jedenáctky (od 2. patra 2 Kč).
+  1. patra už stojí o 1 Kč víc. Zapůjčený žolík stojí 2 Kč plus příplatek Jedenáctky (od 2. patra 3 Kč).
+- **Kalibrace vyšších sil piva po fázi 7** (sady `SIM-A` až `SIM-D`, `docs/DECISIONS.md` „Balanc po fázi 7“):
+  Doppelbock a Imperial byly nad pásmem (5,8 % a 4,0 %), proto je křivka 3 od patra 4 o ~12 % výš, Doppelbock má
+  25 % přibitých a 25 % zapůjčených (dřív 20 % / 15 %; 30 % je číslo žebříčku předlohy, příloha A) a Imperial
+  navíc cíle šéfů ×1,2. Výsledek: Bock 6,5 %, Doppelbock 3,5 %, Imperial 2,0 % (každá sada 2,0–2,3 %).
 - Nálepky se losují v pořadí přibitý → zapůjčený → zvětrávající, takže skutečné podíly na Doppelbocku a výš jsou
-  přibližně 20 % přibitých, 12 % zapůjčených, 17 % zvětrávajících a 51 % bez nálepky.
+  přibližně 25 % přibitých, 19 % zapůjčených, 14 % zvětrávajících a 42 % bez nálepky.
 - Imperial: pro Velkou útratu se nelosují šéfové, jejichž pravidlo je jen vyšší cíl (Šanon na šanonu), ani šéf
   téhož patra.
 - Výzvy se hrají na Desítce (pokud výzva neříká jinak), denní run má úroveň danou seedem (kap. 11.7).
@@ -1619,7 +1631,7 @@ skleněná ×2, čipy karet, 1/1,5/2× cíle útrat, 5 slotů žolíků, 2 sloty
 | Zlatá pečeť                        | +3 Kč                                                                                              | +2 Kč                                                                                                            | shoda                                                                  |
 | Kazící se žolík                    | debuff po 5 kolech                                                                                 | „zvětrá“ po 6 kolech                                                                                             | shoda                                                                  |
 | Zapůjčený žolík                    | cena 1 Kč, −3 Kč za kolo                                                                           | cena 2 Kč, −2 Kč za kolo                                                                                         | shoda                                                                  |
-| Žebříček síly piva                 | malá bez odměny / křivka 2 / věční 30 % / −1 zahození / křivka 3 / kazící se 30 % / zapůjčení 30 % | Dražší pivo / křivka 2 / zvětrávání 25 % / Bez dýška / křivka 3 / přibití 20 % + zapůjčení 15 % / Šéf i ve Velké | celý žebříček odpovídal 1:1 (pořadí, pravidla i 30 %)                  |
+| Žebříček síly piva                 | malá bez odměny / křivka 2 / věční 30 % / −1 zahození / křivka 3 / kazící se 30 % / zapůjčení 30 % | Dražší pivo / křivka 2 / zvětrávání 25 % / Bez dýška / křivka 3 / přibití 25 % + zapůjčení 25 % / Šéf i ve Velké | celý žebříček odpovídal 1:1 (pořadí, pravidla i 30 %)                  |
 | Nekonečný režim                    | `base(8) × g^(a−8)`                                                                                | `nice(base(8) × g(a)^(a−8))`                                                                                     | upřesnění zápisu, stejné zaokrouhlení jako hlavní hra                  |
 | Edice hrací karty (revize fáze 5)  | lesklá 4 %, holografická 2,8 %, duhová 1,2 %                                                       | 5 % / 2,5 % / 1 %                                                                                                | shoda (karetní obálka)                                                 |
 | Karetní obálka (revize fáze 5)     | vylepšení 40 %                                                                                     | 35 % (pečeť 15 % beze změny)                                                                                     | shoda                                                                  |
@@ -1637,7 +1649,7 @@ Obsah v tomto dokumentu počítá s těmito doplňky `src/engine/types.ts` a `sr
 | Kde                         | Doplněk                                                                                                                                 | Kvůli                                                                                        |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | `Modifiers`                 | `shopPriceAdd: number` (0)                                                                                                              | Jedenáctka                                                                                   |
-| `Modifiers`                 | `playingCardEnhanceChance: number` (0,2), `playingCardSealChance: number` (0)                                                           | Kartářka, hrací karty ve Večerce                                                             |
+| `Modifiers`                 | `playingCardEnhanceChance: number` (0,2), `playingCardSealChance: number` (0)                                                           | Sběratelská burza, hrací karty ve Večerce                                                    |
 | `Modifiers`                 | `disableEnhancements: boolean`                                                                                                          | Bílá hora                                                                                    |
 | `Modifiers`                 | `fixedCardChips: number` (0 = vypnuto)                                                                                                  | Normalizace                                                                                  |
 | `StakeDef`                  | `bigBlindBoss?: boolean`                                                                                                                | Imperial                                                                                     |
@@ -1648,7 +1660,7 @@ Obsah v tomto dokumentu počítá s těmito doplňky `src/engine/types.ts` a `sr
 | `TagHooks`                  | `roundEndMoney?(ctx): number` (řádek `tag:<id>` v rozpisu odměn; `onRoundEnd` štítků až po rozpisu)                                     | Termínovaný vklad                                                                            |
 | `Modifiers`                 | `bossTargetMult: number` (1; násobí jen cíl šéfa)                                                                                       | Šéf má chřipku                                                                               |
 | `EngineApi`                 | `openBooster(id)` (fronta obálek zdarma), `addFreeRerolls(n)`, `addShopJoker(opts)`, `setShopJokerEdition(edition)`, `addShopVoucher()` | obálky zdarma, štítky „v příští Večerce“                                                     |
-| `ShopPriced`                | `priceMult?`, `noEditionSurcharge?`, `extra?` (položka navíc, přehození ji nemění)                                                      | Doporučení od známého, Protekce, Vyleštěné příbory, Fotonegativ                              |
+| `ShopPriced`                | `priceMult?`, `noEditionSurcharge?`, `extra?` (položka navíc, přehození ji nemění)                                                      | Doporučení od známého, Protekce, Vyleštěné příbory, Rentgen od zubaře                        |
 | `DeckDef`                   | `onBossDefeated?(ctx)`                                                                                                                  | Kalendářový                                                                                  |
 | `EngineApi`                 | `discardFromHand(cardId)`                                                                                                               | Kapsář v tramvaji, Tchyně na návštěvě                                                        |
 | `EngineApi`                 | `setJokerDebuffed(uid, on)`                                                                                                             | Exekutor, Jednooký hejtman, Krajský úřad, Výpadek proudu                                     |
@@ -1687,14 +1699,14 @@ o Vánocích.“, tip „+mult patří doleva, ×mult doprava.“, tip „Ocelov
 
 Šéfové, kteří se nevešli do 25 (pro obsahové patche po 1.0):
 
-| Název            | Pravidlo                                                             |
-| ---------------- | -------------------------------------------------------------------- |
-| Fronta na banány | První zahraná ruka kola neskóruje (karty odejdou jako při zahození). |
-| Pomalá obsluha   | Po zahrání nebo zahození se dobírají nejvýš 2 karty.                 |
-| Zamrzlé potrubí  | Po zahození se nedobírá.                                             |
-| Povinná výbava   | Každá zahraná ruka musí mít aspoň 4 karty, jinak neskóruje.          |
-| Řetízkáč         | Před každou rukou se pořadí žolíků náhodně zamíchá.                  |
-| Pátek třináctého | Šance „1 z N“ v tomto kole nikdy nevyjdou (sklo nepraskne).          |
+| Název             | Pravidlo                                                             |
+| ----------------- | -------------------------------------------------------------------- |
+| Čekárna u doktora | První zahraná ruka kola neskóruje (karty odejdou jako při zahození). |
+| Pomalá obsluha    | Po zahrání nebo zahození se dobírají nejvýš 2 karty.                 |
+| Zamrzlé potrubí   | Po zahození se nedobírá.                                             |
+| Povinná výbava    | Každá zahraná ruka musí mít aspoň 4 karty, jinak neskóruje.          |
+| Řetízkáč          | Před každou rukou se pořadí žolíků náhodně zamíchá.                  |
+| Pátek třináctého  | Šance „1 z N“ v tomto kole nikdy nevyjdou (sklo nepraskne).          |
 
 Další nápady: čtvrtý typ spotřebky „Stírací losy“ (5.5), žolíci ze zásobníku 4.9, výzvy „Hradec vs. Brno“
 (jen ♥ a ♠) a „Silvestr“ (každé 3. kolo cíl ×2, odměny ×3).

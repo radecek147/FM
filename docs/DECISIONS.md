@@ -2056,7 +2056,8 @@ patro 4 ~27 Kč (cíl 8–14 / 15–30). Neplatné akce 0 u všech botů. Doba: 
   kupón, `onRedeem`, vyřadí ho z nabídky patra), **před** `onRunStart` balíčku, bez kontroly `VoucherDef.available`;
   kupón uplatněný dvakrát (balíček + výzva) se přeskočí, neznámé id se tiše přeskočí (jako u výzev). Nepočítá se do
   nákupů (`stats`) — pro odemčení „kup 5 kupónů“ se počítají jen koupené.
-- **Úřednický:** `startingVouchers: ['loyalty_card', 'tear_calendar']`. Popisek jmenuje kupóny natvrdo (DeckDef
+- **Úřednický:** `startingVouchers: ['loyalty_card', 'tear_calendar']` (později `['tear_calendar', 'counter_buddy']`, viz
+  „Balanc po fázi 7“). Popisek jmenuje kupóny natvrdo (DeckDef
   `params` jsou jen čísla a řetězce bez i18n), test hlídá, že obsahuje přesně `vouchers.<id>.name`.
 - **Babiččin:** `consumableSlots +1`; v `onRunStart` vytvoří **2 různé** babské rady (vážený los z `RADY` podle
   `ConsumableDef.weight`, bez `noShop`, stream `misc`, kandidáti seřazení podle id). Různé, protože „dvě stejné rady“
@@ -2079,7 +2080,8 @@ Hospodský 30 %, Štamgastův 40 %, **Úřednický 67,5 %**, Turistický 27,5 %,
 55 %, Zbohatlík 30 %, Dlužník 25 %, Babiččin 47,5 %, Vetešnický 40 %, Kalendářový 50 %. Všechny balíčky bot dohraje
 bez neplatné akce a do 12 seedů aspoň jednou vyhraje (test). Úřednický je zřetelně nejsilnější (dva kupóny za 18 Kč
 hned na startu; bot sám kupóny kupuje málo, takže pro něj je dar cennější než pro hráče) — **úkol pro fázi 10**
-(balanc): zvážit např. jen Věrnostní kartu, nebo kupóny za cenu startovních peněz. Pravidla teď drží DESIGN kap. 9.
+(balanc): zvážit např. jen Věrnostní kartu, nebo kupóny za cenu startovních peněz (vyřešeno 2026-10-02: Trhací
+kalendář + Kamarád za pultem, „Balanc po fázi 7“). Pravidla teď drží DESIGN kap. 9.
 
 **Tajné kombinace (DESIGN 2.2.4) — ověřeno end-to-end se skutečným obsahem** (`secret-hands.test.ts`): detekce Pětice,
 Barevného full housu a Barevné pětice i s divokými kartami a relace „obsahuje“; objev v runu (`discoveredHands`,
@@ -2249,7 +2251,7 @@ místa a události, Žižka ve flavoru Válečné kořisti je historická postav
   pairs 30 %. Dechovka a Dálnice D1 jsou v malých vzorcích (3–8 runů) mezi „nejsilnějšími“ u více botů — sledovat
   při balancu ve fázi 10 (`joker-value.ts` je má v pásmu).
 
-**Mimo zadání (nahlášeno, neopraveno):** kupón „Věrnostní karta“ (fáze 5) nese český překlad názvu žolíka předlohy
+**Mimo zadání (nahlášeno; kupón opraven 2026-10-02 přejmenováním na Žlutou cenovku, viz „Balanc po fázi 7“):** kupón „Věrnostní karta“ (fáze 5) nese český překlad názvu žolíka předlohy
 (Loyalty Card) — obecný pojem s jinou mechanikou, ale CONTENT-GUIDE 13 zakazuje i přeložené názvy; přejmenovat při
 revizi kupónů (balíček Úřednický ho uvádí jménem a test to hlídá). UI: `copyStatusText` mimo kolo hlásí „vybere na
 začátku kola“ i u Archiváře a Kopíráku, kteří kopírují i mimo kolo (soubory UI patří fázi 6).
@@ -2353,3 +2355,231 @@ zboží a balíček); `tests/unit/ui-hand.test.ts` — kotva-funkce dostane vý�
 
 **Proč:** CLAUDE.md kap. 4 (tablet s dotykem plně funkční, rozvržení), 8 (konzole bez chyb); zadání vizuální kontroly
 fáze 5.
+
+## 2026-10-02 — Fáze 8 (M1): meta engine — profil, odemykání, statistiky, denní run
+
+Meta vrstva je v `src/engine/meta/**` (čistý TS bez DOM a hodin; čas dodává volající jako `nowIso`), přehled API
+v `docs/ARCHITECTURE.md` 5.1, testy `tests/unit/meta-{profile,settings,unlocks,runs,daily}.test.ts`.
+
+- **Profil = jediný zdroj meta dat** (`karban.profile`, obálka `save.ts` kind `profile`, `PROFILE_VERSION` 1,
+  migrace `PROFILE_MIGRATIONS`). Po migracích vždy `normalizeProfile`: poškozené pole se nahradí výchozím, neplatné
+  položky se zahodí — platná obálka se kvůli jednomu poli **neztratí**. Neplatná obálka nebo novější verze →
+  `restoreProfile` vrátí nový profil a původní data k záloze; zálohu `karban.profile.backup.<ms>` zapíše
+  `src/ui/settings.ts` a nový profil zapíše **jen po úspěšné záloze** (jinak nechá data na místě).
+- **Nastavení je součást profilu** (DESIGN 13.4): `Settings`, `DEFAULT_SETTINGS`, `sanitizeSettings` se přesunuly do
+  `engine/meta/settings.ts`, `src/ui/settings.ts` je reexportuje (API beze změny); `loadSettings` / `saveSettings`
+  čtou a píšou profil. Starý klíč `karban.settings` se při prvním načtení zmigruje do nového profilu a smaže (při
+  existujícím profilu se jen uklidí).
+- **Achievementy v registru:** `ContentRegistry.achievements?` je volitelné (testovací registry enginu se nemění, run
+  ho nečte); obsah `src/content/achievements.ts`. Definice `AchievementDef` má `id`, `category`, `hidden?`,
+  `allowSeeded?`, `icon?` a `check(ctx)`, která vrací `boolean` nebo `{ progress, target }`; výjimka = nesplněno
+  (rozbitý achievement nesmí shodit hru), uložený průběh = maximum. Kontrola běží po každé události, na konci runu
+  a v `refreshMeta` (mimo run).
+- **Funkce mutují profil** (jako engine `RunState`) a vracejí `MetaNotice[]` (`unlock` / `stake` / `achievement`) pro
+  toasty. „Čisté“ = bez IO, DOM, hodin a `Math.random`, deterministické (stejné akce = stejný profil — test).
+- **Co se kam počítá:**
+
+  | Run                                                    | Statistiky runů, balíčků, sil piva | Počítadla, rekordy, objevy, odemčení, achievementy | Síla piva | Historie |
+  | ------------------------------------------------------ | :--------------------------------: | :------------------------------------------------: | :-------: | :------: |
+  | hlavní hra                                             |                ano                 |                        ano                         |    ano    |   ano    |
+  | denní run — oficiální pokus                            |                ano                 |                        ano                         |    ne     |   ano    |
+  | denní run mimo soutěž (další pokus, ručně / starý den) |                 ne                 |         ne (jako seedovaný; `allowSeeded`)         |    ne     |   ano    |
+  | výzva                                                  |  ne (vlastní `stats.challenges`)   |                        ano                         |    ne     |   ano    |
+  | seedovaný run                                          |                 ne                 |           jen achievementy `allowSeeded`           |    ne     |   ano    |
+
+  Seedovaný run nemění ani objevy: ve známém seedu by šly „farmit“ objevové achievementy a legendární žolíci.
+  `runsTotal` počítá i pokusy výzev, `winsTotal` / `winRun` jen hlavní hru a oficiální denní run (DESIGN 11.1
+  „výhry napříč balíčky a obtížnostmi“).
+
+- **Výsledek se zapisuje hned:** `victory` = výhra (série, nejrychlejší výhra, odemčení síly piva), `gameOver` =
+  prohra (příčina pro pitvu, šéf); `finishRun` pak jen zapíše historii a denní záznam. Nekonečný režim po výhře
+  zůstává výhrou (v historii nejvyšší patro). Opuštění (nová hra přes neuzavřený run — `startRun` ho uzavře sám —
+  nebo `finishRun` mimo `game_over` / `victory`) přerušuje sérii.
+- **Rozehraný run v profilu** (`Profile.current`): druh runu, seedovaný/oficiální, počítadla runu (`RunCounters`:
+  útrata a přehození v jedné Večerce, série max. úroku, Na dřeň, zůstatek na konci kola, sklo, spotřebky podle druhu,
+  koupené kupóny, kola první rukou) — přežije reload. Identita = seed + balíček + síla + výzva + denní; `resumeRun` je
+  idempotentní, při neshodě (import profilu) uzavře cizí run jako opuštěný a tento zaeviduje jako nezadaný seed.
+- **Pool nového runu** (`unlockedPoolFor`): hlavní hra a výzvy = odemčení žolíci a kupóny; legendární žolíci bez
+  podmínky jsou v poolu vždy (odemykají se objevením z razítka, takže musí jít vytvořit). Denní **i seedovaný** run =
+  celý obsah: stejný seed = stejný run pro všechny (sdílení seedu, reprodukce chyb) a seedovaný run se nepočítá, takže
+  to nejde zneužít.
+- **Odemykání jen ze stavu profilu:** počítadla a rekordy se aktualizují živě po každé události, `evaluateUnlock`
+  proto dává i průběh do sbírky. `UnlockCondition` rozšířena o `stat`, `roundEndMoney`, `handLevel`, `beatBoss`,
+  `useConsumable`, `winChallenge`, `achievement` (a `discover` o štítky, šéfy, obálky). Vlastní podmínky: registr
+  v `unlocks.ts` s vestavěnými id obsahu (`vouchersBought5`, `sealedCardsInRun`, `roundEndInDebt`, `radyUsed30`,
+  `jokersSold25`, `handLevel6`, `voucherTier1TwoRuns`) + `registerCustomUnlock`; `validateRegistry` hlásí neznámé id.
+  Seznamy odemčených položek se ukládají (odemčení je trvalé, i kdyby podmínka později „přestala platit“).
+- **Výzvy bez vlastního `unlock`** mají výchozí podmínku podle pořadí v registru (po pěti: 1 / 3 / 6 / 10 výher).
+- **Tier 2 kupónu:** tier 1 **koupený ve Večerce** ve 2 různých runech (startovní kupóny balíčku a výzvy se
+  nepočítají), nebo 3 výhry.
+- **Síla piva:** výhra na úrovni N ≥ nejvyšší odemčené → N + 1 pro ten balíček (opakovaná výhra níž nic nedá,
+  Imperial je strop); jen hlavní hra.
+- **Objev** = položka se hráči ukázala: sloty, Večerka (zboží, obálky, kupón), obálka, výběr útraty (šéf, štítky),
+  šéf kola, karty balíčku (vylepšení, pečetě, edice), zahrané kombinace. Štítek „Nové“ = `Profile.unseen`
+  (`kategorie:id`) — přidá ho odemčení, objev i achievement; výchozí odemčené položky „Nové“ nejsou.
+- **Seed:** `parseSeedInput` (mezery pryč, velká písmena, abeceda bez I/O/0/1, délka 8) vrací kód chyby `empty` /
+  `invalidChars` / `tooShort` / `tooLong` / `invalidDate` / `reserved`; ruční `DEN-YYYYMMDD` je platný (přehraje den
+  mimo soutěž), jiné tvary s pomlčkou (`SIM-…`) `reserved`.
+- **Denní run:** balíček z id seřazených podle kódových jednotek, síla piva 1–min(5, nejvyšší úroveň) z vlastní kopie
+  streamu `misc` seedu. Oficiální pokus se zabere **při startu** (odchod a nový start nedá druhý oficiální pokus);
+  pokračování z uložení zůstane oficiální, je-li dnešní záznam rozehraný se stejným seedem.
+- **Statistiky:** „utraceno“ = platby ve Večerce (`moneyChanged` s důvodem `purchase`, stejně jako
+  `RunStats.moneySpent`), „vyděláno“ = kladné změny peněz; „maximální úrok“ = úrok ≥ ⌊`interestCap` ×
+  `interestMult`⌋ z modifikátorů (`MetaCtx.mods` od UI, jinak dopočet z kopie stavu runu).
+- **Tutoriál:** 9 kroků DESIGN 13.5 (`TUTORIAL_STEPS`) jde dokončit i mimo pořadí; přeskočení vypne
+  `settings.tutorial`, znovuzapnutí ho zapne a začne od začátku; achievement pozná `profile.tutorial.completed`.
+
+Zbývá na další agenty fáze 8: obsah achievementů (`src/content/achievements.ts` + texty), podmínky odemčení ~31
+žolíků v `src/content/jokers/*.ts` (DESIGN 11.3: ≈ 70 od začátku), UI (profil v `App`, toasty, sbírka, statistiky,
+historie, denní run, zadání seedu s kódy chyb, tutoriál).
+
+**Proč:** CLAUDE.md kap. 2 (ukládání: verzovat, migrace, nikdy neztratit profil), 3 (odemykání, sbírka, statistiky,
+achievementy, denní a seedované runy, historie), 4 (nastavení, tutoriál); DESIGN 9–11 a 13.4–13.5.
+
+## 2026-10-02 — Balanc po fázi 7: převzaté názvy, síly piva, balíčky, patro 8
+
+**Co:** uzavření obsahu fáze 7 — přejmenování názvů převzatých z předlohy, kalibrace všech 8 sil piva a balíčků
+simulací s plným obsahem (101 žolíků, 30 šéfů, 20 štítků, 51 spotřebek, 24 kupónů) a měření, kolik bodů dnes boti
+v patře 8 skutečně udělají. Navazuje na rozpracovaný stav (křivky 1–3 zvednuté proti fázi 6, Jedenáctka a Ležák až
+od 2. / 3. patra, Úřednický s Kamarádem za pultem), který jsem simulací ověřil a dotáhl.
+
+**1. Převzaté názvy z předlohy — přejmenováno** (CLAUDE.md kap. 1 a 7, CONTENT-GUIDE 13: ani přeložené názvy).
+Hráč ani uložení nová id ještě neviděli (před 1.0, nic nasazeno), proto bez migrace uložení.
+
+| Typ          | Dřív (`id`)                          | Nově (`id`)                           | Proč                                                     |
+| ------------ | ------------------------------------ | ------------------------------------- | -------------------------------------------------------- |
+| kupón tier 1 | Věrnostní karta (`loyalty_card`)     | Žlutá cenovka (`yellow_price`)        | překlad názvu žolíka předlohy                            |
+| kupón tier 2 | Zlatá věrnostní (`gold_loyalty`)     | Přelepená cenovka (`relabeled_price`) | odvozený od tier 1                                       |
+| kupón tier 2 | Kartářka (`card_reader`)             | Sběratelská burza (`collectors_fair`) | překlad názvu žolíka předlohy                            |
+| štítek       | Fotonegativ (`photo_negative`)       | Rentgen od zubaře (`dental_xray`)     | štítek „negativní“ předlohy pod stejným obrazem negativu |
+| štítek       | Úřední poukaz (`voucher_slip`)       | Leták ve schránce (`mailbox_flyer`)   | překlad štítku na kupón z předlohy                       |
+| finální šéf  | Protihluková stěna (`noise_barrier`) | Fronta na banány (`banana_queue`)     | „zeď s vysokým cílem“ = obraz šéfa předlohy              |
+| test         | testovací šéf `fortune_teller`       | `suit_oracle`                         | anglický název žolíka předlohy v testu                   |
+| rezerva (D)  | Fronta na banány (jiné pravidlo)     | Čekárna u doktora                     | kolize s novým finálním šéfem                            |
+
+Mechaniky a čísla se nemění (Žlutá cenovka 20 %, Přelepená 40 % celkem, Sběratelská burza 50 % / 20 %, Fronta na
+banány 4,5× základ patra). Texty, art (`ticket`/`papers`, `magnifying-glass`, `tooth`, `papers`, `hourglass` +
+`shopping-cart`), testy (`vouchers`, `tags`, `bosses-final`, `decks`, `phase6-review`, `review2-rules`), DESIGN 6,
+7, 8.3, 9 a přílohy B a D, CONTENT-GUIDE (vzor kupónu, výzvy, velká písmena) a ARCHITECTURE jsou přepsané. Boti
+kupóny ani štítky podle id nepoznávají (oceňují je sondou), takže je přejmenování nezměnilo.
+
+**Audit ostatních názvů:** prošel jsem všech 101 žolíků, 24 kupónů, 20 štítků, 30 šéfů, 12 balíčků, 8 sil piva,
+51 spotřebek, 15 obálek, 17 úprav karet a 13 kombinací proti názvům předlohy (žolíci, kupóny, štítky, útraty a
+šéfové, balíčky, sázky, tarotové, planetární a spektrální karty, druhy obálek). Další přeložený ani obrazem převzatý
+název jsem nenašel; obecné pojmy dané zadáním (kombinace, vylepšení, pečetě a edice v CLAUDE.md kap. 3) zůstávají.
+Staré názvy zůstaly jen v komentářích souborů, které tento úkol neměl měnit (paralelní fáze 8):
+`src/engine/types.ts` (Kartářka, Fotonegativ), `src/engine/content-types.ts`, `src/engine/shop/prices.ts` a
+`src/ui/screens/game/shop.ts` (Fotonegativ) — opravit při nejbližší úpravě těch souborů.
+
+**2. Simulace — metodika.** Boti `max`, `flush`, `pairs` (Desítka, Imperial; 300 runů na bota) a `max`, `flush`
+(Jedenáctka–Doppelbock; 200 runů), balíček Hospodský, sady seedů `SIM-A-*` (= `npm run simulate`), `SIM-B-*`,
+u Doppelbocku a Imperialu i `SIM-C-*` a `SIM-D-*`. Číslo „nejlepší“ = nejlepší bot po sloučení sad (v závorce
+nejlepší bot jednotlivých sad). Rozptyl je velký: při 200 runech a ~6 % je směrodatná chyba ~1,7 p. b. a sady se
+běžně liší o 3 p. b. (Imperial `max`: A 2,3 %, B 6,0 %, C 3,7 % na stejných pravidlech), proto rozhoduje souhrn
+sad, ne jedna sada. `npm run simulate -- --runs 300 --stake 1 --bot all` dává stejná čísla jako sada A (max
+31,3 %, flush 34 %, pairs 25,7 %, econ 18 %, random 0 % — 99,7 % proher v patře 1, nojoker 0 % s mediánem prohry
+v patře 3, 0 neplatných akcí) a `--stake 8` po kalibraci stejná jako sada A Imperialu (max 2 %, flush 0,7 %,
+pairs 0 %, econ 0,3 %, random a nojoker 0 %).
+
+**3. Síly piva — před a po** (před = stav na začátku této práce; Desítka–Ležák se pravidly nezměnily):
+
+| Síla piva  | Pásmo   | Před: nejlepší (sady)     | Po: nejlepší (sady)              | Změna                                        |
+| ---------- | ------- | ------------------------- | -------------------------------- | -------------------------------------------- |
+| Desítka    | 25–35 % | 32,7 % (A 34, B 34)       | beze změny                       | —                                            |
+| Jedenáctka | 20–30 % | 22,0 % (A 23,5, B 22,5)   | beze změny                       | —                                            |
+| Dvanáctka  | 14–22 % | 14,0 % (A 14,5, B 13,5)   | beze změny                       | —                                            |
+| Speciál    | 10–17 % | 16,0 % (A 16, B 17)       | beze změny                       | —                                            |
+| Ležák      | 7–12 %  | 9,0 % (A 7,5, B 10,5)     | beze změny                       | —                                            |
+| Bock       | 4–8 %   | 7,3 % (A 6,5, B 8)        | 6,5 % (A 6, B 7,5, D 7,5)        | křivka 3 od patra 4 ×~1,12                   |
+| Doppelbock | 3–6 %   | 5,8 % (A 4,5, B 7)        | 3,5 % (A 3,5, B 4, C 4, D 3,5)   | + přibitých 25 % (20), zapůjčených 25 % (15) |
+| Imperial   | < 3 %   | 4,0 % (A 2,3, B 6, C 3,7) | 2,0 % (A 2, B 2,3, C 2,3, D 2,3) | + cíle šéfů ×1,2                             |
+
+- **Křivka 3** od patra 4: 2 800 / 5 600 / 10 000 / 18 000 / 29 000 → 3 100 / 6 300 / 11 000 / 20 000 / 32 000
+  (×~1,12; patra 1–3 beze změny). Samotná křivka stáhla Imperial jen na 3,2 % (A–C) a Doppelbock na 5,3 % (A, B).
+- **Doppelbock 25 % / 25 %** (dřív 20 % / 15 %): s novou křivkou 3 Doppelbock 3,5 % (A–D). Měřená byla i varianta
+  30 % / 25 % (Doppelbock 4,2 % ze sad A, B, D; Imperial bez ×1,2 2,9 %), ale 30 % je číslo žebříčku předlohy
+  (DESIGN příloha A) — proto 25 %.
+- **Imperial: cíle šéfů ×1,2** (`bossTargetMult`, stejné pole jako štítek Šéf má chřipku; násobky se násobí).
+  S ×1,1 2,8 % (sada B 4,3 %), s ×1,2 2,0 % a všechny čtyři sady 2,0–2,3 %. Pravidlo zůstává jedno — „šéf u každého
+  stolu“: pravidlo šéfa ve Velké útratě a přísnější šéfové; popisek i DESIGN 10 to říkají.
+- **Jedenáctka a Ležák až od 2. / 3. patra** (rozpracovaná změna) — ověřeno: se ztížením od 1. patra a dnešními
+  křivkami sada A Jedenáctka 19,5 % (teď 23,5 %) a Ležák 4,5 % (teď 7,5 %), Ležák by byl pod pásmem.
+- **Speciál (zvětrávání) boty prakticky nebrzdí:** Speciál se zvětráváním 0 / 25 / 50 % → 14,0 / 16,0 / 15,5 %
+  (A+B). Dvanáctka a Speciál proto leží v překryvu pásem 14–17 % a křivka 2 zůstává (snížit ji by vytlačilo
+  Speciál nad 17 %). Úkol pro fázi 10: ztížení Speciálu, které bota (i hráče) opravdu stojí.
+
+**4. Balíčky** (Desítka, nejlepší z `max` a `flush`, 200 runů, sada A; Hospodský 34 %):
+
+| Balíček    |  Výhry | Balíček   |  Výhry | Balíček     | Výhry |
+| ---------- | -----: | --------- | -----: | ----------- | ----: |
+| Štamgastův | 39,5 % | Obrázkový | 50,5 % | Babiččin    |  44 % |
+| Úřednický  | 34,5 % | Notářský  |   50 % | Vetešnický  |  35 % |
+| Turistický |   41 % | Zbohatlík | 30,5 % | Kalendářový |  43 % |
+| Mariášový  |   40 % | Dlužník   | 30,5 % |             |       |
+
+- **Úřednický:** se Žlutou cenovkou a Trhacím kalendářem 66,5 % (`flush`; `max` 64 %) — sleva 20 % od prvního
+  nákupu je nejsilnější ekonomika; s Trhacím kalendářem a Kamarádem za pultem (rozpracovaná změna) **34,5 %**
+  (`max` 32 %), tedy jako Hospodský a v rozmezí ostatních balíčků. Popisek, DESIGN 9 a test (`decks.test.ts` hlídá
+  názvy kupónů v popisku) odpovídají.
+- **Mariášový nad rozmezím:** bez úprav 60,5 % (`max`; `flush` 52 %) — v 32 kartách 7–A chodí Barva i Postupka skoro
+  samy. Nově **cíle všech útrat ×1,2** (jako Turistický): 40 % (`flush`; `max` 39 %); ×1,3 dalo 37 %, −1 zahození
+  53 %. Popisek „… a cíle všech útrat jsou ×1,2“, DESIGN 9, test (`modsDiff`, cíle 300 / 450 / 600).
+- Obrázkový, Notářský, Babiččin a Kalendářový jsou nad pásmem DESIGN 12.1 (±7 p. b. od Hospodského), ale v rozmezí
+  25–55 %; ladit až se silnějšími boty ve fázi 10 (boti dnes hrají „ekonomicky“ a malé nebo pečetěné balíčky jim
+  sedí víc než člověku).
+
+**5. Patro 8 — kolik boti skutečně udělají** (Desítka, sady A+B, 542 vítězných runů z 1 800): nejlepší ruka v patře 8
+má medián **70 000** (p25 46 000, p75 114 000, **p90 231 000**; `max` 68 000 / p90 199 000, `flush` 75 000 /
+272 000, `pairs` 70 000 / 210 000), ruku ≥ 100 000 zahraje 30 % vítězů a ≥ 200 000 12 %; kolo finálového šéfa
+končí na mediánu 81 000 bodů při cíli 58 000 (1,28×). Imperial po kalibraci (46 výher z 3 600 runů, sady A–D):
+medián 59 000, p90 128 000.
+**Pokusy se zvednutou křivkou 1** (patra 1–3 beze změny, od patra 4 geometricky): základ patra 8 **50 000**
+(`… 2300, 5000, 10500, 23000, 50000`) → Desítka 12 % (`flush`; `max` 9,5 %, `pairs` 7 %); **100 000**
+(`… 2300, 5900, 15000, 39000, 100000`) → 3 % (vítězové pak mají v patře 8 medián nejlepší ruky 290 000).
+Zvednout patro 8 na ~100 000 a udržet pásmo 25–35 % tedy dnes nejde — křivky 1 a 2 zůstávají (základ patra 8:
+23 000 / 26 000 / 32 000, Šéf 46 000–64 000 a na Imperialu 77 000, Fronta na banány 105 000–145 000 a na Imperialu
+175 000) a cíl „statisíce“ přechází do fáze 10:
+
+**Plán pro fázi 10 (v tomto pořadí, každý krok s celou sadou simulací podle DESIGN 12.4):**
+
+1. **Metrika síly bota do `npm run simulate`:** `RunResult.bestHandByAnte` (nejlepší ruka v každém patře, z událostí
+   `handPlayed`) a do souhrnu medián a p90 nejlepší ruky v patře 8 u vítězných runů a medián poměru skóre/cíl
+   v kole finálového šéfa (dnes jen scratch skript nad `simulateRun`). Cíl celé akce: medián ≥ 250 000.
+2. **Silnější boti** (`src/engine/sim/bots.ts`, `value.ts`):
+   - `jokerRating` (dnes vzácnost × štítky z tabulek `RARITY_VALUE`/`TAG_VALUE`) nahradit **měřenou mezní hodnotou**:
+     přesné skóre (`exactPlayScore`) 3–5 typických rukou bota (nejhranější kombinace z `handLevels.played`
+     poskládané z aktuálního balíčku) se žolíkem a bez něj; ×mult a škálující žolíci tak v pozdních patrech dostanou
+     váhu, kterou mají, a ploché +čipy se včas prodají;
+   - **plán buildu:** od patra 2 hlavní kombinace (úroveň × četnost) a pranostiky na ni kupovat i nad poměr ceny —
+     úrovně se sčítají přes celý run; obálky pranostik brát, když v nich hlavní kombinace je;
+   - **úprava balíčku:** babské rady a razítka cílit i na zúžení balíčku (ničit karty mimo hlavní barvu nebo hodnoty)
+     a přebarvení na hlavní barvu, ne jen na „největší přínos jedné karty“; - pořadí žolíků ověřit přesným skóre dvou pořadí (jako u Jednookého hejtmana), přehazovat pro chybějící ×mult;
+   - přijetí kroku: na dnešních křivkách Desítka ≥ 45 % a medián nejlepší ruky v patře 8 aspoň 2× dnešní.
+3. **Zvednout křivky po krocích:** základ patra 8 křivky 1 23 000 → 35 000 → 50 000 → 70 000 → 100 000; patra 4–8
+   geometricky se stejným poměrem mezi patry, patra 1–3 beze změny (rozjezd bez žolíků se nemění); křivky 2 a 3
+   držet ve stejném poměru ke křivce 1 jako dnes (patro 8: +13 % a +39 %). Po každém kroku všech 8 sil piva × 3
+   prefixy; krok, který stáhne některou sílu piva pod pásmo, se vrátí a pokračuje se krokem 2.
+4. **Když boti narazí na strop dřív** (zlepšení < 10 % mediánu za další úpravu): škálovat **pozdní** obsah, ne
+   rozjezd — přírůstky úrovní kombinací (DESIGN 2.2.1) ×1,5 od Trojice výš, ×mult epických a legendárních žolíků
+   +0,25 až +0,5, růst škálujících žolíků ×1,5; přeměřit tabulku 4.3 (`scripts/joker-value.ts`,
+   `tests/unit/jokers-value.test.ts`, `content.test.ts`) a znovu krok 3.
+5. **Kontrola člověkem:** 3–5 runů na Desítce s novými čísly; vyhrává-li člověk zjevně snáz než boti (> 60 %),
+   zvednout křivku i bez dalšího zlepšení botů a pásma v DESIGN 12.1 brát jako dolní mez.
+
+**Mimo pásmo / otevřené (fáze 10):** Δ výher žolíků ze `simulate` není normalizovaná na patro koupě (DESIGN 4.3,
+pravidlo 4) — epičtí žolíci jako Pivní sommelier, Směnárna nebo Karlův most ukazují +30 až +54 p. b. hlavně proto,
+že žolíka mají runy, které přežily déle; před laděním čísel žolíků přidat normalizaci (runy, které dosáhly patra
+koupě) a minimální počet kol ve slotu. Letalita šéfů po uzavření obsahu (Desítka, `max` + `flush` + `pairs`, sada A, nenormovaná podle
+patra): fináloví Fronta na banány 33 %, Bílá paní 29 %, Krajský úřad 23 %, Velká voda 22 %, Pan starosta 18 % (těsně
+pod pásmem 20–40 %); běžní 0,4–14 % (nejvýš Garsonka 1+kk 14 % a Nová vyhláška 14 %, nejníž Parkovné 0,4 % a
+Pověrčivá babka 1,7 % — oba `minAnte 1`, potkávají hráče v prvních patrech). Normované přeměření a případné doladění
+`targetMult` patří do fáze 10 spolu se silnějšími boty.
+
+**Testy:** `stakes.test.ts` (Doppelbock 25 / 25 %, Imperial `bossTargetMult` 1,2 a cíl šéfa 600 v patře 1, popisek;
+oprava `'done'` → `'defeated'` v rozpracovaném testu Jedenáctky), `targets.test.ts` a `endless.test.ts` (křivka 3
+v patrech 4–20), `game.test.ts` (cíl šéfa patra 16 v nekonečném režimu 580 000 000 po zvednutí křivky 1),
+`decks.test.ts` (Mariášový), `review-correctness.test.ts` (testovací šéf `suit_oracle`). DESIGN 2.3.1, 2.3.3, 6,
+9, 10, příloha A, B a D, `src/engine/sim/runner.ts` (komentář pásem).
+
+**Proč:** CLAUDE.md kap. 1 a 7 (žádné převzaté názvy ani čísla), kap. 3 (patro 8 řádově statisíce — zatím plán),
+kap. 8 (Desítka 25–35 %, Imperial < 3 %, žádné auto-win), DESIGN 10, 12.1 a 12.4.

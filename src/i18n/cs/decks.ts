@@ -27,7 +27,7 @@ export const decks = {
   marias: {
     name: 'Mariášový',
     // \u2060 (word joiner) za spojovníky: „A-2-3-4-5“ se v popisku balíčku nezalomí na konci řádku.
-    desc: '{cards} karet: sedmičky až esa ve čtyřech barvách, bez dvojek až šestek. Postupka A-\u20602-\u20603-\u20604-\u20605 tu nejde.',
+    desc: '{cards} karet: sedmičky až esa ve čtyřech barvách, bez dvojek až šestek. Postupka A-\u20602-\u20603-\u20604-\u20605 tu nejde a cíle všech útrat jsou {target|x}.',
     flavor: 'Kdo nehraje, nevyhraje. Kdo hraje, flekuje.',
   },
   court: {

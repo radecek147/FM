@@ -6,7 +6,7 @@ import type { BlindKind } from '../types';
 export const TARGET_CURVES: readonly (readonly number[])[] = [
   [250, 550, 1100, 2300, 4500, 8200, 14500, 23000],
   [250, 550, 1200, 2600, 5100, 9300, 16500, 26000],
-  [250, 600, 1300, 2800, 5600, 10000, 18000, 29000],
+  [250, 600, 1300, 3100, 6300, 11000, 20000, 32000],
 ];
 
 /** Re-export pro starší importy — násobky útrat žijí v engine/constants.ts. */

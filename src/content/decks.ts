@@ -16,8 +16,12 @@ export const REGULARS_STARTING_MONEY = 0;
 /** Turistický: Postupka i Barva ze 4 karet, cíle ×1,2. */
 export const TOURIST_CARDS = 4;
 export const TOURIST_TARGET_MULT = 1.2;
-/** Mariášový: hodnoty 7–A. */
+/**
+ * Mariášový: hodnoty 7–A; cíle ×1,2. Bez cílů navíc bot s 32 kartami vyhrával 60 % proti 34 % Hospodského (v malém
+ * balíčku chodí Barva i Postupka skoro samy); s ×1,2 ~40 % (DECISIONS 2026-10-02 „Balanc po fázi 7“).
+ */
 export const MARIAS_LOWEST_RANK: Rank = 7;
+export const MARIAS_TARGET_MULT = 1.2;
 /** Obrázkový: J, Q, K, A, každá karta 2×; −1 karta v ruce; cíle ×1,5. */
 export const COURT_LOWEST_RANK: Rank = 11;
 export const COURT_COPIES = 2;
@@ -36,8 +40,8 @@ export const DEBTOR_DEBT_LIMIT = 20;
 export const DEBTOR_INTEREST_MULT = 2;
 /**
  * Úřednický: startovní kupóny (Trhací kalendář, Kamarád za pultem). Dřív Žlutá cenovka (sleva 20 %) + Trhací
- * kalendář — bot s nimi vyhrával 71 % proti 33 % Hospodského (sleva od prvního nákupu je nejsilnější ekonomika);
- * s Kamarádem za pultem ~42 %, uprostřed ostatních balíčků (DECISIONS 2026-10-02 „Balanc po fázi 7“).
+ * kalendář — bot s nimi vyhrával 66,5 % proti 34 % Hospodského (sleva od prvního nákupu je nejsilnější ekonomika);
+ * s Kamarádem za pultem 34,5 %, v rozmezí ostatních balíčků (DECISIONS 2026-10-02 „Balanc po fázi 7“).
  */
 export const CLERK_VOUCHERS: readonly string[] = ['tear_calendar', 'counter_buddy'];
 /** Babiččin: +1 slot spotřebky, start se 2 různými náhodnými babskými radami. */
@@ -146,7 +150,8 @@ export const DECKS: DeckDef[] = [
   {
     id: 'marias',
     buildDeck: () => ranksFrom(MARIAS_LOWEST_RANK),
-    params: { cards: ranksFrom(MARIAS_LOWEST_RANK).length },
+    passive: () => ({ targetMult: MARIAS_TARGET_MULT }),
+    params: { cards: ranksFrom(MARIAS_LOWEST_RANK).length, target: MARIAS_TARGET_MULT },
     art: { icon: 'card-random', bg: '#14532d', fg: '#ecfdf5', accent: '#facc15', pattern: 'grid' },
     unlock: { type: 'playHand', hand: 'four' },
   },

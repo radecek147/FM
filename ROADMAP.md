@@ -35,9 +35,8 @@ v `docs/DECISIONS.md`, 2026-10-02 „Revize a uzavření fáze 3“). Run jde v 
   (46 souborů, 1 999 testů), `build` (hlavní chunk 357 kB / 118 kB gzip, ikony 344 kB / 155 kB gzip), `test:e2e`
   (29 testů: `smoke`, `menu`, `game`, `a11y`, `jokers`; 60 snímků `visual.spec.ts` jen s `KARBAN_VISUAL=1`).
 
-**Fáze 5 (spotřebky, obálky, kupóny, úpravy karet):** všechny podúkoly odškrtnuté, **čeká jen na commit**
-`feat: consumables, boosters, vouchers, card modifiers` (většinu UI práce už přibral commit `b6a0e52` paralelního
-workflow fáze 7; zbytek je v pracovním stromu). Obsah a engine: pranostiky (13), babské rady (22), razítka (16), obálky
+**Fáze 5 (spotřebky, obálky, kupóny, úpravy karet) je hotová** a commitnutá (`9ffd384 feat: complete phase 5
+consumables, boosters, vouchers and card modifiers in UI`). Obsah a engine: pranostiky (13), babské rady (22), razítka (16), obálky
 (15 = 5 druhů × 3 velikosti), kupóny (24, 12 párů), 9 vylepšení, 4 pečetě, 4 edice
 (`src/content/{modifiers,pranostiky,rady,razitka,boosters,vouchers}.ts`, testy
 `tests/unit/{pranostiky,rady,razitka,boosters,vouchers,modifiers,phase5-review}*.test.ts`). UI: Večerka (Koupit /
@@ -56,28 +55,42 @@ v `docs/DECISIONS.md`, 2026-10-02 „Revize fáze 6“): 25 běžných + 5 finá
 `tests/e2e/bosses.spec.ts`), ladění simulací (DESIGN 8.2/8.3, DECISIONS „Fáze 6: ladění se šéfy“), testy
 `tests/unit/{bosses-a,bosses-b,bosses-final,tags,sim-bosses,ui-bosses,phase6-review}.test.ts`.
 
-**Fáze 7 (obsah naplno)** běží v paralelním workflow (`b6a0e52 content: complete phase 7 jokers to 101, 12 decks`;
-v pracovním stromu přejmenování kupónů, štítků a finálových šéfů).
+**Fáze 7 (obsah naplno): všechny podúkoly hotové a ověřené, čeká na commit** `content: full content set` (orchestrátor;
+rozpracovaný stav je v `ae43ec8 wip: phase 7 close …`, dokončení v pracovním stromu). Odemykání vyšší síly piva
+výhrou na nižší je přesunuté do fáze 8 (potřebuje profil). Uzavření (DECISIONS 2026-10-02 „Balanc po fázi 7“):
 
-Kontroly (2026-10-02, celý pracovní strom včetně rozpracované fáze 7): `typecheck` a `eslint src tests` zelené,
-`build` zelený (hlavní chunk 428 kB / 139 kB gzip), `test:e2e` 53 testů zelených (+ 60 snímků `visual.spec.ts`
-s `KARBAN_VISUAL=1` taky zelených), `vitest run` 3 288 / 3 289 — padá jen kouřový test hodnoty žolíků
-`tests/unit/jokers-value.test.ts` („Stálý host“: 15,3 místo 16 ± 0,5 mult; měření na obsahu, který paralelní workflow
-fáze 7 právě mění).
+- **Převzaté názvy přejmenované:** kupóny Žlutá cenovka / Přelepená cenovka (dřív Věrnostní karta / Zlatá
+  věrnostní), Sběratelská burza (Kartářka), štítky Rentgen od zubaře (Fotonegativ) a Leták ve schránce (Úřední
+  poukaz), finální šéf Fronta na banány (Protihluková stěna); audit ostatních názvů bez nálezu.
+- **Síly piva v pásmech** (souhrn sad `SIM-A`–`SIM-D`): Desítka 34 %, Jedenáctka 22 %, Dvanáctka 14 %, Speciál 16 %,
+  Ležák 9 %, Bock 6,5 %, Doppelbock 3,5 %, Imperial 2,0 %. Změny: křivka 3 od patra 4 ×~1,12, Doppelbock 25 % přibitých
+  a 25 % zapůjčených, Imperial cíle šéfů ×1,2 (`src/engine/run/targets.ts`, `src/content/stakes.ts`); Jedenáctka a
+  Ležák až od 2. / 3. patra (ověřeno).
+- **Balíčky:** Úřednický 34,5 % (dřív 66,5 %; Trhací kalendář + Kamarád za pultem), Mariášový cíle ×1,2 → 40 %
+  (dřív 60,5 %); ostatní 30,5–50,5 % (DESIGN 9).
+- **Patro 8:** vítězové na Desítce mají v patře 8 medián nejlepší ruky 70 000 (p90 231 000); základ patra 8 50 000
+  srazil Desítku na 12 %, 100 000 na 3 % — křivky 1–2 zůstávají, plán na „statisíce“ (silnější boti, pak křivky po
+  krocích) je v DECISIONS a ve fázi 10.
+
+Kontroly (2026-10-02, celý pracovní strom včetně rozpracované fáze 8): `typecheck` a `eslint src tests scripts`
+zelené, `vitest run` 3 466 / 3 467 (64 souborů) — padá jen `tests/unit/challenges.test.ts` („express: bot dohraje run
+bez neplatných akcí“, `cannotUse`), tedy test rozpracované fáze 8 (výzvy); soubory fáze 7 jsou zelené.
 
 **Známé otevřené body (řešit v uvedené fázi):**
 
-- fáze 7: `tests/unit/jokers-value.test.ts` (Stálý host) po změnách obsahu — přeměřit / naladit (paralelní workflow);
-- fáze 6–7: konečná kalibrace křivek cílů (patro 8 má podle CLAUDE.md kap. 3 vyžadovat statisíce až miliony) a
-  přeměření letality šéfů po uzavření obsahu fáze 7 (DECISIONS „Fáze 6: ladění se šéfy“, „Mimo pásmo / otevřené“);
+- fáze 8: odemykání vyšší síly piva výhrou na nižší (per balíček, DESIGN 10); objev tajných kombinací přes runy;
+  komentáře se starými názvy v `src/engine/{types,content-types}.ts`, `src/engine/shop/prices.ts`,
+  `src/ui/screens/game/shop.ts` (Kartářka, Fotonegativ) opravit při nejbližší úpravě;
 - fáze 9: na 1366 × 768 se pod Večerku vejdou jen 1–2 hlášky — tři vyšší jdou pod záhlaví a na chvíli zakryjí obrázek
   zboží (ne tlačítka); pořadí hlášek po pranostice („… je teď na úrovni 2“ před „Použito: …“) podle pořadí událostí;
-- fáze 10: střední síly piva mimo pásmo (ekonomika Jedenáctky a Ležáku), Imperial — cíl pravidla šéfa ve Velké útratě.
+- fáze 10: patro 8 „řádově statisíce“ (plán v DECISIONS „Balanc po fázi 7“, bod 5); Speciál boty nebrzdí
+  (zvětrávání 0 / 25 / 50 % → stejné výhry); Obrázkový, Notářský, Babiččin a Kalendářový nad ±7 p. b. od
+  Hospodského; Δ výher žolíků v `simulate` normalizovat na patro koupě; normovaná letalita šéfů (Pan starosta 18 %).
 
-**Další krok:** commit fáze 5 (`feat: consumables, boosters, vouchers, card modifiers`) — soubory fáze 5 v pracovním
-stromu: `src/ui/components/{toast,consumableCard}.ts`, `src/ui/screens/game/index.ts`, `src/ui/styles/game.css`,
-`tests/e2e/{consumables,bosses}.spec.ts`, `tests/unit/ui-hand.test.ts`, `docs/{DESIGN,DECISIONS}.md`, `ROADMAP.md`
-(ostatní změny patří paralelnímu workflow fáze 7); pak dokončit fázi 7.
+**Další krok:** commit fáze 7 (`content: full content set`) — soubory fáze 7 v pracovním stromu: `src/content/{decks,
+stakes}.ts`, `src/i18n/cs/{decks,stakes}.ts`, `src/engine/run/targets.ts`, `src/engine/sim/runner.ts`,
+`tests/unit/{stakes,targets,endless,game,decks,review-correctness}.test.ts`, `docs/{DESIGN,DECISIONS}.md`,
+`ROADMAP.md`; pak dokončit fázi 8.
 
 ## Jak pokračovat v nové session
 
@@ -162,7 +175,7 @@ projde, hra se pořád spustí; commit `feat(engine): …`; fáze odškrtnutá.
 - [x] `engine/save`: serializace `RunState`, obálka `{ format: 'karban-save', kind, version, data }`, rámec migrací + test
 - [x] `engine/sim`: bot „max. kombinace“ + `scripts/simulate.ts` (`--runs`, `--stake`, `--deck`, `--strategy`, `--seed-prefix`, `--json`); výstup: % výher podle patra, průměrné skóre, příčiny prohry
 - [x] Textový headless režim hratelný bez UI (`npm run simulate -- --play`): výpis ruky, zadávání akcí v terminálu
-- [ ] První kalibrace křivky cílů simulací, čísla zapsaná do `docs/DESIGN.md` — _odloženo do fáze 4–5 (až budou žolíci a pranostiky), viz DECISIONS „Fáze 2: simulace a boti“_
+- [x] První kalibrace křivky cílů simulací, čísla zapsaná do `docs/DESIGN.md` — _předběžně ve fázi 5, se šéfy ve fázi 6, s plným obsahem po fázi 7 (DESIGN 2.3.1, DECISIONS „Balanc po fázi 7“)_
 - [x] Testy: stejný seed + stejné akce = identický stav, odměny a úrok, výhra/prohra, save/load roundtrip, migrace, simulace jako smoke test
 
 **Hotovo, když:** run jde odehrát od prvního patra do výhry/prohry v textovém režimu i botem,
@@ -246,15 +259,15 @@ přeskočení útraty dá štítek s funkčním bonusem; kontroly zelené; commi
 
 ## Fáze 7 — Obsah naplno
 
-- [ ] Žolíci na **100+**, z toho **6+ legendárních**; rozložení vzácností a cen dle `docs/DESIGN.md`; každý s testem a rozpoznatelným artem
-- [ ] **12 startovních balíčků** (`src/content/decks.ts`), každý mění pravidla (např. Mariášový s 32 kartami, jen figury, náhodné pečetě, Dlužník se záporným zůstatkem a 2× úrokem)
-- [ ] **8 obtížností „Síla piva“** (Desítka, Jedenáctka, Dvanáctka, Speciál, Ležák, Bock, Doppelbock, Imperial) — kumulativní ztížení, nálepky žolíků (přibitý, zvětrávající, zapůjčený)
-- [ ] Odemykání vyšší obtížnosti výhrou na nižší
-- [ ] Tajné kombinace v UI skryté do prvního zahrání (pranostiky pro ně jen po objevu)
-- [ ] Nekonečný režim: exponenciální cíle, finálový šéf každé 8. patro, statistika nejvyššího patra
-- [ ] Výběr balíčku a obtížnosti v „Nová hra“ (+ zadání seedu)
-- [ ] Simulace: tabulka síly žolíků vs. cílové hodnoty vzácností, ladění čísel, zápis do DESIGN a DECISIONS
-- [ ] Testy: každý balíček a obtížnost, nekonečný režim, tajné kombinace
+- [x] Žolíci na **100+**, z toho **6+ legendárních**; rozložení vzácností a cen dle `docs/DESIGN.md`; každý s testem a rozpoznatelným artem
+- [x] **12 startovních balíčků** (`src/content/decks.ts`), každý mění pravidla (např. Mariášový s 32 kartami, jen figury, náhodné pečetě, Dlužník se záporným zůstatkem a 2× úrokem)
+- [x] **8 obtížností „Síla piva“** (Desítka, Jedenáctka, Dvanáctka, Speciál, Ležák, Bock, Doppelbock, Imperial) — kumulativní ztížení, nálepky žolíků (přibitý, zvětrávající, zapůjčený)
+- [ ] Odemykání vyšší obtížnosti výhrou na nižší — _přesunuto do fáze 8: pravidlo je v DESIGN 10 a výběr síly piva v „Nová hra“ hotový, ale výhry si pamatuje až profil (`engine/meta`)_
+- [x] Tajné kombinace v UI skryté do prvního zahrání (pranostiky pro ně jen po objevu) — v rámci runu (Info o runu „???“, `secret-hands.test.ts`); objev přes runy v profilu a ve Sbírce patří fázi 8
+- [x] Nekonečný režim: exponenciální cíle, finálový šéf každé 8. patro, statistika nejvyššího patra — patro runu v pitvě; nejvyšší patro v profilových statistikách patří fázi 8
+- [x] Výběr balíčku a obtížnosti v „Nová hra“ (+ zadání seedu)
+- [x] Simulace: tabulka síly žolíků vs. cílové hodnoty vzácností, ladění čísel, zápis do DESIGN a DECISIONS (hodnoty 4.3 po skupinách; balanc sil piva a balíčků v DECISIONS „Balanc po fázi 7“)
+- [x] Testy: každý balíček a obtížnost, nekonečný režim, tajné kombinace (`decks`, `stakes`, `endless`, `secret-hands`)
 
 **Hotovo, když:** obsah splňuje minimální počty z `CLAUDE.md` kap. 3 (bez meta), run jde dohrát na
 všech balíčcích; kontroly zelené; commit `content: full content set`; fáze odškrtnutá.
@@ -263,6 +276,7 @@ všech balíčcích; kontroly zelené; commit `content: full content set`; fáze
 
 - [ ] `engine/meta`: profil hráče (verzovaný formát, migrace, záloha poškozených dat `karban.profile.backup.<timestamp>`)
 - [ ] Odemykání podle `UnlockCondition` (žolíci, balíčky, kupóny, kombinace) + oznámení v UI
+- [ ] Odemykání vyšší síly piva výhrou na nižší (pro každý balíček zvlášť, DESIGN 10) — _přesunuto z fáze 7_
 - [ ] **Sbírka** (codex): žolíci, spotřebky, kupóny, balíčky, šéfové, štítky, kombinace, úpravy — s podmínkami odemčení, neobjevené jako siluety
 - [ ] **60+ achievementů** s vtipnými názvy (`src/content/achievements.ts`), toast při získání
 - [ ] **Statistiky**: nejlepší ruka, nejvyšší skóre, nejčastější žolík, výhry/prohry podle balíčku a obtížnosti
@@ -295,6 +309,8 @@ průměrném notebooku; kontroly zelené; commit `feat(ui): juice and audio`; f�
 
 - [ ] Balanc simulací: na Desítce rozumná strategie vyhraje ~25–35 % runů, na Imperialu < 3 %; tabulky v `docs/DESIGN.md` aktuální
 - [ ] Žádný žolík zjevně bezcenný ani „auto-win“ (porovnání s cílovými hodnotami vzácností)
+- [ ] Patro 8 řádově statisíce: metrika síly bota v `simulate`, silnější boti, pak křivky po krocích (plán v DECISIONS „Balanc po fázi 7“, bod 5)
+- [ ] Ztížení Speciálu, které boty i hráče opravdu stojí; balíčky v ±7 p. b. od Hospodského (DESIGN 12.1); Δ výher žolíků normalizovaná na patro koupě
 - [ ] Bugfix, konzole bez chyb a varování
 - [ ] Lighthouse: výkon a přístupnost > 90 na herní obrazovce
 - [ ] Jazyková korektura všech textů (pravopis, typografie, `plural()`, tykání)

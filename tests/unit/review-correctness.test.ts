@@ -42,7 +42,7 @@ const curseReg = () =>
           isCardDebuffed: (ctx, card) => cursedIds(ctx.round.flags).includes(card.id),
         },
       }),
-      boss('fortune_teller', {
+      boss('suit_oracle', {
         hooks: {
           // Na začátku kola „vyvěští“ barvu (♥) do flags — debuffnuté jsou karty té barvy.
           onRoundStart: (ctx) => {
@@ -93,7 +93,7 @@ describe('dočasné debuffy karet z round.flags (DESIGN příloha B, Černá ko�
 
   it('pravidlo vylosované v onRoundStart platí pro celý balíček, nejen pro líznuté karty', () => {
     const game = makeGame({ registry: curseReg() });
-    selectBoss(game, 'fortune_teller');
+    selectBoss(game, 'suit_oracle');
     const round = game.state.round!;
     const hearts = game.state.deck.filter((c) => c.suit === 'H');
     expect(hearts.length).toBeGreaterThan(0);

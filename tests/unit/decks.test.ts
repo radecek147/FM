@@ -81,6 +81,9 @@ describe('balíčky – seznam a texty', () => {
     }
     expect(t('decks.debtor.desc', DECKS.find((d) => d.id === 'debtor')!.params)).toContain('−10 Kč');
     expect(t('decks.court.desc', DECKS.find((d) => d.id === 'court')!.params)).toContain('×1,5');
+    expect(t('decks.marias.desc', DECKS.find((d) => d.id === 'marias')!.params)).toContain(
+      'cíle všech útrat jsou ×1,2',
+    );
     expect(t('decks.grandmas.desc', DECKS.find((d) => d.id === 'grandmas')!.params)).toContain(
       typo('o 1 slot víc. Na startu dostaneš 2 různé náhodné babské rady'),
     );
@@ -155,13 +158,14 @@ describe('balíčky – pravidla', () => {
     expect(g.preview(run.slice(0, 4).map((c) => c.id)).hand?.type).toBe('straight');
   });
 
-  it('Mariášový: 32 karet 7–A ve 4 barvách, Postupka A-2-3-4-5 nejde', () => {
+  it('Mariášový: 32 karet 7–A ve 4 barvách, Postupka A-2-3-4-5 nejde, cíle ×1,2', () => {
     const g = newGame('marias');
     expect(g.state.deck).toHaveLength(32);
     const expected = SUITS.flatMap((s) => RANKS.filter((r) => r >= 7).map((r) => `${r}${s}`));
     expect(composition(g.state.deck)).toEqual([...expected].sort());
     expect(g.state.deck.some((c) => c.rank < 7)).toBe(false);
-    expect(modsDiff('marias')).toEqual({});
+    expect(modsDiff('marias')).toEqual({ targetMult: 1.2 });
+    expect([g.blindTarget('small'), g.blindTarget('big'), g.blindTarget('boss')]).toEqual([300, 450, 600]);
   });
 
   it('Obrázkový: 32 karet J–A, každá 2×; 7 karet v ruce; cíle ×1,5', () => {

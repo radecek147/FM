@@ -97,6 +97,7 @@ describe('obtížnosti – seznam (DESIGN kap. 10)', () => {
     expect(t('stakes.special.desc', STAKES[3]!.params)).toContain('25 %');
     expect(t('stakes.special.desc', STAKES[3]!.params)).toContain('6 kolech');
     expect(t('stakes.dvanactka.desc', STAKES[2]!.params)).toContain(formatNumber(26_000));
+    expect(t('stakes.imperial.desc', STAKES[7]!.params)).toContain(typo('cíle šéfů jsou o 20 % vyšší'));
   });
 });
 
@@ -122,8 +123,8 @@ describe('obtížnosti – každá úroveň přidává právě své ztížení',
     // Večerka po šéfovi 1. patra už patří 2. patru (patro se zvedne při výplatě) → příplatek.
     const boss = newGame(2);
     boss._core.state.blindIndex = 2;
-    boss._core.state.blinds[0]!.status = 'done';
-    boss._core.state.blinds[1]!.status = 'done';
+    boss._core.state.blinds[0]!.status = 'defeated';
+    boss._core.state.blinds[1]!.status = 'defeated';
     boss._core.state.blinds[2]!.status = 'current';
     boss.dispatch({ type: 'selectBlind' });
     expect(boss.state.round!.blind).toBe('boss');
@@ -167,17 +168,17 @@ describe('obtížnosti – každá úroveň přidává právě své ztížení',
   it('6 Bock: křivka cílů 3', () => {
     expect(newGame(5).targetCurve()).toBe(2);
     expect(newGame(6).targetCurve()).toBe(3);
-    expect(finalSmallTarget(6)).toBe(29_000);
+    expect(finalSmallTarget(6)).toBe(32_000);
     expect(modsDiff(6)).toEqual(modsDiff(5));
   });
 
-  it('7 Doppelbock: 20 % přibitých a 15 % zapůjčených žolíků (zvětrávání ze Speciálu zůstává)', () => {
+  it('7 Doppelbock: 25 % přibitých a 25 % zapůjčených žolíků (zvětrávání ze Speciálu zůstává)', () => {
     expect(stakeStickerChance(newGame(6)._core)).toEqual({ perishable: 0.25 });
-    expect(stakeStickerChance(newGame(7)._core)).toEqual({ perishable: 0.25, eternal: 0.2, rental: 0.15 });
+    expect(stakeStickerChance(newGame(7)._core)).toEqual({ perishable: 0.25, eternal: 0.25, rental: 0.25 });
     expect(modsDiff(7)).toEqual(modsDiff(6));
   });
 
-  it('8 Imperial: Velká útrata má pravidlo jiného běžného šéfa s pravidlem; cíl a odměna zůstávají', () => {
+  it('8 Imperial: Velká útrata má pravidlo jiného běžného šéfa s pravidlem (cíl a odměna zůstávají), šéf ×1,2', () => {
     const withBosses = { ...makeRegistry(), stakes: reg.stakes, decks: reg.decks };
     for (const seed of ['IMP1', 'IMP2', 'IMP3', 'IMP4']) {
       const g7 = Game.newRun({ seed, deckId: 'pub', stake: 7 }, withBosses);
@@ -191,8 +192,11 @@ describe('obtížnosti – každá úroveň přidává právě své ztížení',
       expect(def.final).not.toBe(true);
       expect(bossHasRule(def)).toBe(true);
       expect(g8.blindTarget('big')).toBe(g7.blindTarget('big'));
+      expect(g8.blindTarget('small')).toBe(g7.blindTarget('small'));
+      // Cíl šéfa: 500 × 1,2 = 600 (patro 1, výchozí násobek šéfa 2×).
+      expect([g7.blindTarget('boss'), g8.blindTarget('boss')]).toEqual([500, 600]);
     }
-    expect(modsDiff(8)).toEqual(modsDiff(7));
+    expect(modsDiff(8)).toEqual({ ...modsDiff(7), bossTargetMult: 1.2 });
   });
 });
 
@@ -202,7 +206,7 @@ describe('obtížnosti – kumulace', () => {
     expect(g.targetCurve()).toBe(3);
     expect(g.modifiers().shopPriceAdd).toBe(1);
     expect(g.modifiers().moneyPerUnusedHand).toBe(0);
-    expect(stakeStickerChance(g._core)).toEqual({ perishable: 0.25, eternal: 0.2, rental: 0.15 });
+    expect(stakeStickerChance(g._core)).toEqual({ perishable: 0.25, eternal: 0.25, rental: 0.25 });
     expect(Object.values(reg.stakes).some((s) => s.level <= 8 && s.bigBlindBoss)).toBe(true);
   });
 
@@ -215,7 +219,7 @@ describe('obtížnosti – kumulace', () => {
       expect(g.modifiers().shopPriceAdd).toBe(stake >= 2 ? 1 : 0);
       expect(g.modifiers().moneyPerUnusedHand).toBe(stake >= 5 ? 0 : 1);
       expect(stakeStickerChance(g._core).perishable ?? 0).toBe(stake >= 4 ? 0.25 : 0);
-      expect(stakeStickerChance(g._core).eternal ?? 0).toBe(stake >= 7 ? 0.2 : 0);
+      expect(stakeStickerChance(g._core).eternal ?? 0).toBe(stake >= 7 ? 0.25 : 0);
     }
   });
 

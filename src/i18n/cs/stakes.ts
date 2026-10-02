@@ -41,7 +41,7 @@ export const stakes = {
   },
   imperial: {
     name: 'Imperial',
-    desc: 'Šéf i ve Velké: Velká útrata má navíc pravidlo náhodného běžného šéfa. Cíl i odměna zůstávají.',
+    desc: 'Šéf i ve Velké: Velká útrata má navíc pravidlo náhodného běžného šéfa (její cíl i odměna zůstávají) a cíle šéfů jsou o {boss} % vyšší.',
     flavor: 'Šéf sedí u každého stolu.',
   },
 };

@@ -25,9 +25,19 @@ export const UNUSED_HAND_PENALTY = -1;
 export const UNUSED_HAND_FROM_ANTE = 3;
 /** Speciál: šance na zvětrávajícího žolíka v obchodě a obálce. */
 export const PERISHABLE_CHANCE = 0.25;
-/** Doppelbock: šance na přibitého a zapůjčeného žolíka. */
-export const ETERNAL_CHANCE = 0.2;
-export const RENTAL_CHANCE = 0.15;
+/**
+ * Doppelbock: šance na přibitého a zapůjčeného žolíka. Dřív 20 % a 15 % — Doppelbock (5,75 %) i Imperial (4 %) byly
+ * nad pásmem; s 25 % / 25 % a vyšší křivkou 3 jsou v pásmu (DECISIONS 2026-10-02 „Balanc po fázi 7“). Ne 30 %:
+ * to je číslo žebříčku předlohy (DESIGN příloha A).
+ */
+export const ETERNAL_CHANCE = 0.25;
+export const RENTAL_CHANCE = 0.25;
+
+/**
+ * Imperial: násobek cílů útrat Šéf (vedle pravidla šéfa ve Velké útratě). Bez něj vyhrával nejlepší bot ~3 % (sady
+ * A–D 2,3–4,3 %), s ×1,2 2,0–2,3 % (DECISIONS 2026-10-02 „Balanc po fázi 7“).
+ */
+export const IMPERIAL_BOSS_TARGET_MULT = 1.2;
 
 /** Pravděpodobnost v procentech pro popisek (0,25 → 25). */
 const pct = (p: number): number => Math.round(p * 100);
@@ -74,7 +84,8 @@ export const STAKES: StakeDef[] = [
   {
     id: 'lezak',
     level: 5,
-    passive: (ctx) => (ctx.state.ante >= UNUSED_HAND_FROM_ANTE ? { moneyPerUnusedHand: UNUSED_HAND_PENALTY } : {}),
+    passive: (ctx) =>
+      ctx.state.ante >= UNUSED_HAND_FROM_ANTE ? { moneyPerUnusedHand: UNUSED_HAND_PENALTY } : {},
     params: { money: -UNUSED_HAND_PENALTY, fromAnte: UNUSED_HAND_FROM_ANTE },
     art: { icon: 'tap', bg: '#8c6d1f', fg: '#fffbe6', accent: '#f2d16b', pattern: 'grid' },
   },
@@ -108,6 +119,8 @@ export const STAKES: StakeDef[] = [
     id: 'imperial',
     level: 8,
     bigBlindBoss: true,
+    passive: () => ({ bossTargetMult: IMPERIAL_BOSS_TARGET_MULT }),
+    params: { boss: Math.round((IMPERIAL_BOSS_TARGET_MULT - 1) * 100) },
     art: { icon: 'imperial-crown', bg: '#1a0f08', fg: '#f5d76e', accent: '#7a1f1f', pattern: 'rays' },
   },
 ];

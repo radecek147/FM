@@ -1140,7 +1140,7 @@ describe('výhra v patře 8 a nekonečný režim (DESIGN 1.2, 1.3)', () => {
     const events = beatBossAt(game, 16);
     expect(game.state.round!.bossId).toBe('final_boss');
     expect(events.target).toBe(blindTarget(16, 'boss', 1));
-    expect(events.target).toBe(520_000_000);
+    expect(events.target).toBe(580_000_000);
     expect(game.state.phase).toBe('round_end');
     expect(types(events)).not.toContain('victory');
   });
@@ -1589,6 +1589,8 @@ describe('založení runu s výzvou, balíčkem a obtížností', () => {
         {
           id: 'trial',
           deckId: 'plain',
+          // Výzva určuje sílu piva sama (`ChallengeDef.stake`, výchozí 1) — `NewRunOptions.stake` se ignoruje.
+          stake: 2,
           startingMoney: 12,
           customDeck: [
             { suit: 'S', rank: 14 },

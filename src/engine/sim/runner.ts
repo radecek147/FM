@@ -23,8 +23,7 @@ export const MAX_CONSECUTIVE_INVALID = 3;
 
 /**
  * Cílové pásmo % výher rozumné strategie podle síly piva (DESIGN 10 a 12.1) — [min, max] v procentech, pro hotovou
- * hru se šéfy. Kalibrace fáze 6 (šéfové a štítky): Desítka i Imperial v pásmu; střední síly piva pod pásmem kvůli
- * ekonomice (Jedenáctka, Ležák) — ladění ve fázi 10 (docs/DECISIONS.md „Fáze 6: ladění se šéfy“).
+ * hru se šéfy. Kalibrace po fázi 7 (plný obsah): všech 8 sil piva v pásmu (docs/DECISIONS.md „Balanc po fázi 7“).
  */
 export const WIN_RATE_TARGETS: Readonly<Record<number, readonly [number, number]>> = Object.freeze({
   1: [25, 35],
