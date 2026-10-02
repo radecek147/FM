@@ -15,8 +15,10 @@ s `KARBAN_VISUAL=1` / `KARBAN_JUICE=1`). Fáze 9: částice, screen shake, velk�
 **Fáze 10 (Dokončení 1.0) rozpracovaná** (necommitnuto v pracovním stromu): hotový výkon (code splitting, hlavní
 chunk 93 kB místo 630 kB), offline (service worker, `src/sw/sw.ts`, `scripts/sw-plugin.ts`, `src/ui/serviceWorker.ts`),
 Lighthouse > 90 (výkon i přístupnost, opravy kontrastu a ARIA) a bugfix z průchodů přes UI (třesení při hoveru,
-Štamgast bez ikon); nové testy `tests/unit/{app-lazy,service-worker}.test.ts`, e2e `tests/e2e/{offline,sweep,hover}.spec.ts`.
-Shrnutí v DECISIONS „Fáze 10 (výkon, offline, přístupnost, bugfix)“, popis v ARCHITECTURE kap. 8.
+Štamgast bez ikon, Enter po detailu žolíka, pořadí debuffů žolíků); nové testy `tests/unit/{app-lazy,service-worker}.test.ts`, e2e `tests/e2e/{offline,sweep,hover}.spec.ts`.
+Shrnutí v DECISIONS „Fáze 10 (výkon, offline, přístupnost, bugfix)“, popis v ARCHITECTURE kap. 8. Kontroly
+(2026-10-02): `typecheck`, `eslint`, `npx vitest run` (78 souborů, 3 794 testů), `build` (bez varování o velikosti
+chunku), `test:e2e` (71 prošlo); `prettier --check` hlásí jen rozpracované soubory balancu v `src/engine/sim/`.
 **Další krok:** balanc simulací (silnější boti a zvednutí cíle patra 8 podle plánu v DECISIONS „Balanc po fázi 7“,
 bod 5; střední síly piva; balíčky nad Hospodským), jazyková korektura, README česky se screenshoty a GIFem, deploy na
 GitHub Pages, tag `v1.0.0`.
@@ -344,9 +346,9 @@ průměrném notebooku; kontroly zelené; commit `feat(ui): juice and audio`; f�
 - [ ] Žádný žolík zjevně bezcenný ani „auto-win“ (porovnání s cílovými hodnotami vzácností)
 - [ ] Patro 8 řádově statisíce: metrika síly bota v `simulate`, silnější boti, pak křivky po krocích (plán v DECISIONS „Balanc po fázi 7“, bod 5)
 - [ ] Ztížení Speciálu, které boty i hráče opravdu stojí; balíčky v ±7 p. b. od Hospodského (DESIGN 12.1); Δ výher žolíků normalizovaná na patro koupě
-- [x] Bugfix, konzole bez chyb a varování (36 průchodů `ui-walkthrough` přes balíčky, síly piva, výzvy a denní run, s animacemi i bez; e2e `sweep.spec.ts` přes všechny obrazovky mimo hru; opraveno třesení prvků při hoveru a Štamgast bez ikon — DECISIONS „Fáze 10 (výkon, offline, přístupnost, bugfix)“)
+- [x] Bugfix, konzole bez chyb a varování (45 průchodů `ui-walkthrough` přes balíčky, síly piva, výzvy a denní run, s animacemi i bez; e2e `sweep.spec.ts` přes všechny obrazovky mimo hru; opraveno třesení prvků při hoveru, Štamgast bez ikon, Enter po zavření detailu žolíka a pořadí debuffů žolíků závislé na cestě — DECISIONS „Fáze 10 (výkon, offline, přístupnost, bugfix)“)
 - [x] Výkon: code splitting — hlavní chunk 93 kB / 33 kB gzip (dřív 630 / 202 kB), obrazovky mimo menu jako líné chunky s přednačtením, ikony až po vykreslení menu (ARCHITECTURE 8.1)
-- [x] Lighthouse: výkon a přístupnost > 90 na herní obrazovce (desktop: menu 99 / 100, přechod do hry 100, herní obrazovka přístupnost 100; mobil: menu 98; přístupnost 100 na všech obrazovkách a fázích hry)
+- [x] Lighthouse: výkon a přístupnost > 90 na herní obrazovce (desktop: menu výkon 99–100 / přístupnost 100, přechod do hry 100, herní obrazovka přístupnost 100; mobil: menu 97–98; přístupnost 100 na všech obrazovkách a fázích hry)
 - [ ] Jazyková korektura všech textů (pravopis, typografie, `plural()`, tykání)
 - [ ] `ASSETS.md` kompletní s licencemi, atribuce (game-icons.net, Pixelify Sans) i v Titulcích
 - [ ] README česky: popis, screenshoty, GIF, jak spustit, „inspirováno hrou Balatro“, licence

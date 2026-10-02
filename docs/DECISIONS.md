@@ -2980,27 +2980,37 @@ animací a shaku), kap. 9 bod 9; DESIGN 13.4 a 13.6.
   WebWorker lib by s ní kolidovala). `tsconfig`: `allowImportingTsExtensions` (vite.config importuje plugin
   s příponou `.ts`, jinak Vite 8 varuje kvůli budoucímu nativnímu načítání configu).
 - **Lighthouse 12** (jen ve scratchpadu, Chromium z `/opt/pw-browsers`; user flow: navigace menu → timespan
-  Pokračovat → snapshot hry). Desktop: menu výkon 99 / přístupnost 100 / best practices 100 (FCP 0,6 s, LCP 0,8 s,
-  TBT 0, CLS 0,002); Pokračovat → hra výkon 100 (TBT 40 ms, INP 130 ms); herní obrazovka přístupnost 100. Mobil
-  (pomalé 4G, 4× CPU): menu výkon 98 (dřív 91; LCP 2,0 s místo 3,2 s), druhé načtení ze service workeru 100,
-  přechod do hry 95. Snapshot herní obrazovky nemá skóre výkonu (Lighthouse ho ve snapshotu nepočítá).
+  Pokračovat → snapshot hry; dva běhy po sobě). Desktop: menu výkon 99–100 / přístupnost 100 / best practices 100
+  (FCP 0,4–0,6 s, LCP 0,4–0,8 s, TBT 0, CLS 0,002); Pokračovat → hra výkon 100 (TBT 30–40 ms, INP 130 ms); herní
+  obrazovka přístupnost 100. Mobil (pomalé 4G, 4× CPU): menu výkon 97–98 (před změnami 91; LCP 2,0 s místo 3,2 s),
+  druhé načtení ze service workeru 100, přechod do hry 95–96. Snapshot herní obrazovky nemá skóre výkonu
+  (Lighthouse ho ve snapshotu nepočítá).
 - **Přístupnost (snapshoty všech obrazovek a fází hry):** opraveno `aria-label` na `<p>` počtu ve sbírce (čtečky
   ho ignorují → skrytý text), `aria-label` na oblasti oznámení bez role (→ `role="region"`), kontrast čísla výzvy
   (průhlednost 0,75 → 0,85), odměny na kartě útraty (`#6f5005`), pilulky šéfa (`#b33128`) a tlumení útrat: odehrané
   a přeskočené místo průhlednosti odbarvené (průhledný jen žeton), nadcházející už nejsou průsvitné. Přístupné názvy položek menu s cedulkou
   obsahují i text cedulky (WCAG 2.5.3). Zbývá jen skrytý experimentální audit `label-content-name-mismatch` (váha 0)
   u karet v ruce (viditelná je jen číslice klávesy) a voleb balíčku/výzev — přístupný název je tam záměrně popisný.
-- **Bugy nalezené průchody přes UI** (`scripts/ui-walkthrough.ts`, 30+ běhů: 4 boti, 12 balíčků, síly piva 1–8,
-  11 výzev, denní run, s animacemi i bez; konzole čistá všude):
+- **Bugy nalezené průchody přes UI** (`scripts/ui-walkthrough.ts`, 45 běhů: 4 boti, 12 balíčků, síly piva 1–8,
+  13 výzev, denní run, s animacemi i bez; konzole čistá všude; po opravách všechny běhy bez rozdílu):
   - **Třesoucí se prvky při hoveru:** karta v ruce (a obecně prvek, který se při najetí posune nahoru — žolíci,
     tlačítka, záložky, volby balíčku a síly piva, balíček) se třásla, když kurzor stál u spodní hrany: posun kurzor
     z prvku vysunul, hover zmizel, prvek sjel zpět. Oprava: neviditelný pás pod posunutým prvkem jen během hoveru
     (`fx.css`), e2e `tests/e2e/hover.spec.ts` (před opravou červený).
   - **Štamgast bez kníru a půllitru:** bublina tutoriálu vznikala před načtením ikon, takže avatar měl náhradní
     glyfy; teď se překreslí při připojení ke hře (unit test v `ui-meta-m5.test.ts`).
+  - **Enter po zavření detailu žolíka znovu otevřel žolíka místo Zahrát:** Esc vrátí focus na žolíka (přístupnost)
+    a Enter na zaměřeném ovládacím prvku patří tomu prvku. Výběr karty klávesou 1–9 teď přesune focus do ruky
+    (skupina karet, `tabindex="-1"`, bez rámečku), pokud byl na jiném ovládacím prvku; zaměřená karta v ruce focus
+    drží dál (dosavadní chování). e2e v `hand.spec.ts` (před opravou červený).
+  - **Pořadí `round.jokerDebuffs` záviselo na cestě:** přeřazení žolíků po krocích (UI „Posunout doleva“) a najednou
+    skončilo stejnou sadou vypnutých žolíků v jiném pořadí, když debuff pravidla mezi kroky přeskakoval (Jednooký
+    hejtman, výzva Večer při svíčkách) — uložení se lišilo od enginu. `refreshBossJokerDebuffs` teď řadí kanonicky
+    podle pozice žolíka (`src/engine/run/draw.ts`, test v `bosses-b.test.ts`).
   - Nástroj: výchozí seed `WALK1` po fázi 8 neprošel kontrolou seedu (8 znaků bez I, O, 0, 1) → `WALKWAYS`
     a kontrola předem; peníze v DOM se četly bez typografického minus (balíček Dlužník); přibyly `--deck`,
-    `--stake`, `--challenge`, `--daily`, snímek a uložený run při chybě, důvod neúspěšného kliku a `KARBAN_WALK_LOG`.
+    `--stake`, `--challenge`, `--daily`, `--seed` i pro výzvu (podvržené losování seedu → přehrání konkrétního
+    runu), snímek, stav před akcí a uložený run při chybě, důvod neúspěšného kliku a `KARBAN_WALK_LOG`.
 - **Konzole:** nový e2e `sweep.spec.ts` projde s profilem „vše odemčené a objevené“ všechny záložky sbírky
   (s detailem), statistik, všechny výzvy, denní run, titulky, nastavení (přepínače, export) a galerii — bez chyb
   a varování. Grep `src/ui` na české texty mimo `t()`: jen popisky chyb do konzole (pro vývojáře) a copyright písma.
