@@ -98,7 +98,7 @@ export const editions = {
   },
   negative: {
     name: 'Negativní',
-    desc: 'Přinese si vlastní místo: +{slots|plural:slot,sloty,slotů} pro svůj druh (žolíka nebo spotřebku).',
+    desc: '+{slots|plural:slot,sloty,slotů} pro svůj druh (žolíka nebo spotřebku) – přinese si vlastní místo.',
     flavor: 'Jako negativ ze starého alba – je tam, a přitom nikde.',
   },
 };

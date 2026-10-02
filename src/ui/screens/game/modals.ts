@@ -3,7 +3,7 @@
  * a detail spotřebky (Použít s vybranými kartami jako cíli, Prodat). Vše přes `openModal` (focus trap,
  * Esc, návrat focusu) a akce controlleru.
  */
-import type { Card, HandType, Suit } from '../../../engine';
+import type { Card, HandType, JokerInstance, Suit } from '../../../engine';
 import { HAND_TYPES, RANKS, SUITS, handValueAtLevel } from '../../../engine';
 import { t } from '../../../i18n/cs';
 import { formatNumber } from '../../../i18n/format';
@@ -15,6 +15,8 @@ import { openModal } from '../../components/modal';
 import { hideTooltip, richText } from '../../components/tooltip';
 import {
   consumableTexts,
+  copiedByText,
+  copyStatusText,
   deckTexts,
   isRanklessCard,
   jokerTexts,
@@ -90,6 +92,49 @@ function handsTable(ctx: GameCtx): HTMLElement {
       ),
     ),
     h('tbody', null, rows),
+  );
+}
+
+/**
+ * Žolíci v pořadí vyhodnocení: pozice, název, mechanika s aktuálním stavem (počítadla přes `describe`), stav
+ * kopírování, edice, nálepky (zbývající kola) a mimo provoz.
+ */
+function jokerList(ctx: GameCtx): HTMLElement {
+  const c = ctx.controller;
+  const s = c.state;
+  const opts = { registry: ctx.registry, mods: c.engine.modifiers() };
+  const title = t('game.runInfo.jokersCount', { n: s.jokers.length, max: c.engine.modifiers().jokerSlots });
+  if (s.jokers.length === 0) {
+    return h(
+      'div',
+      { 'data-testid': 'run-info-jokers' },
+      h('p', { class: 'run-info__muted' }, title),
+      h('p', { class: 'run-info__none' }, t('game.runInfo.none')),
+    );
+  }
+  const roundDebuffs = s.round?.jokerDebuffs ?? [];
+  const item = (j: Readonly<JokerInstance>, i: number): HTMLElement => {
+    const tx = jokerTexts(j.defId, j as JokerInstance, opts);
+    const extras: string[] = [];
+    const copy = copyStatusText(s, j, ctx.registry);
+    if (copy) extras.push(copy);
+    const by = copiedByText(s, j, ctx.registry);
+    if (by) extras.push(by);
+    if (tx.edition) extras.push(t('art.tooltip.edition', { name: tx.edition.name, desc: tx.edition.desc }));
+    extras.push(...tx.stickers);
+    if (j.debuffed || roundDebuffs.includes(j.uid)) extras.push(t('art.tooltip.jokerDebuffed'));
+    return h(
+      'li',
+      { 'data-uid': j.uid, 'data-def-id': j.defId },
+      richText(t('game.runInfo.jokerItem', { n: i + 1, name: tx.name, desc: tx.desc })),
+      extras.map((line) => h('span', { class: 'run-info__sub' }, richText(line))),
+    );
+  };
+  return h(
+    'div',
+    { 'data-testid': 'run-info-jokers' },
+    h('p', { class: 'run-info__muted' }, title),
+    h('ol', { class: 'run-info__list run-info__list--jokers', role: 'list' }, s.jokers.map(item)),
   );
 }
 
@@ -175,15 +220,7 @@ export function openRunInfo(ctx: GameCtx): void {
         'div',
         { class: 'run-info__columns' },
         infoSection(t('game.runInfo.sections.deck'), deckSummary(ctx)),
-        infoSection(
-          t('game.runInfo.sections.jokers'),
-          textList(
-            s.jokers.map((j) => {
-              const tx = jokerTexts(j.defId, j, opts);
-              return t('game.runInfo.item', { name: tx.name, desc: tx.desc });
-            }),
-          ),
-        ),
+        infoSection(t('game.runInfo.sections.jokers'), jokerList(ctx)),
         infoSection(
           t('game.runInfo.sections.tags'),
           textList(
@@ -341,6 +378,8 @@ export function openJokerDetail(ctx: GameCtx, uid: number): void {
   const position = h('p', { class: 'detail__position', 'data-testid': 'joker-position' });
   const eternal = joker.stickers.includes('eternal');
   const sellValue = c.engine.sellValue(uid);
+  const copyLine = copyStatusText(c.state, joker, ctx.registry);
+  const copiedLine = copiedByText(c.state, joker, ctx.registry);
 
   const move = async (delta: number): Promise<void> => {
     const list = c.state.jokers.map((j) => j.uid);
@@ -395,7 +434,10 @@ export function openJokerDetail(ctx: GameCtx, uid: number): void {
         tx.edition
           ? h('p', { class: 'detail__line' }, richText(`${tx.edition.name}: ${tx.edition.desc}`))
           : null,
+        copyLine ? h('p', { class: 'detail__line', 'data-testid': 'joker-copy-status' }, copyLine) : null,
         tx.stickers.map((line) => h('p', { class: 'detail__line detail__line--muted' }, line)),
+        copiedLine ? h('p', { class: 'detail__line detail__line--muted' }, copiedLine) : null,
+        tx.copyable ? null : h('p', { class: 'detail__line detail__line--muted' }, t('art.copy.notCopyable')),
         tx.flavor ? h('p', { class: 'detail__flavor' }, t('art.tooltip.flavor', { text: tx.flavor })) : null,
         position,
         h('p', { class: 'detail__hint' }, t('game.joker.orderHint')),

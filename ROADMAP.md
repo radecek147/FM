@@ -11,29 +11,41 @@ _Aktualizováno: 2026-10-02_
 Z fáze 2 zůstal jen podúkol „První kalibrace křivky cílů“ — předběžná kalibrace proběhla ve fázi 5
 (`docs/DECISIONS.md`, 2026-10-01 „Fáze 5: boti se spotřebkami a předběžná kalibrace cílů“), konečná až po fázi 6–7.
 
-**Fáze 3 (Herní UI v1) je hotová** — všechny podúkoly odškrtnuté, revize proběhla (`docs/DECISIONS.md`,
-2026-10-02 „Revize a uzavření fáze 3“). Čeká jen na commit `feat(ui): …` (pracovní strom sdílí rozpracované
-změny fází 4–5 z paralelních workflow).
+**Fáze 3 (Herní UI v1) je hotová** a commitnutá (`81d813f feat(ui): complete phase 3 game UI v1`; revize
+v `docs/DECISIONS.md`, 2026-10-02 „Revize a uzavření fáze 3“). Run jde v prohlížeči dohrát od menu po pitvu i výhru
+→ Nekonečný režim myší, klávesnicí i dotykem; autosave po každé akci. QA nástroj:
+`npx tsx scripts/ui-walkthrough.ts --seed S --bot flush [--anim]` (proti `vite preview` na portu 4173).
 
-- Run jde v prohlížeči dohrát od menu po pitvu i výhru → Nekonečný režim myší, klávesnicí (1–8, Enter, X, S/B, Esc,
-  mezerník) i dotykem; autosave po každé akci, Pokračovat po reloadu; konzole bez chyb a varování.
-- Kód: `src/main.ts`, `src/ui/{app,controller,present,describe,dom,settings,storage}.ts`, `src/ui/anim/queue.ts`,
-  `src/ui/fx/particles.ts`, `src/ui/art/*` (SVG karty, žolíci z `ArtSpec`, stůl, číslicové písmo),
-  `src/ui/components/*` (karta, žolík, spotřebka, tlačítko, dialog s focus trapem, tooltip, oznámení),
-  `src/ui/screens/{menu,newGame,settings,credits,gallery}.ts`, `src/ui/screens/game/*` (levý panel, horní řada
-  s drag & drop žolíků, ruka a balíček, výběr útraty, konec kola, Večerka, obálka, pitva, výhra, dialogy),
-  `src/ui/styles/*`; texty `src/i18n/cs/{ui,game}.ts`.
-- Kontroly zelené: `typecheck`, `lint`, `npm test` (41 souborů, 1 592 testů), `build` (hlavní chunk 332 kB / 109 kB
-  gzip, ikony samostatně 344 kB / 155 kB gzip), `test:e2e` (26 testů: `smoke`, `menu`, `game`, `a11y`; 60 snímků
-  `visual.spec.ts` jen s `KARBAN_VISUAL=1`).
-- QA nástroj: `npx tsx scripts/ui-walkthrough.ts --seed S --bot flush [--anim]` (proti `vite preview` na portu 4173)
-  — celý run přes UI s porovnáním uloženého stavu s enginem po každé akci.
+**Fáze 4 (Žolíci v1 + Večerka) je hotová** — všechny podúkoly odškrtnuté, audit a finální ověření proběhly
+(`docs/DECISIONS.md`, 2026-10-02 „Uzavření fáze 4“). **Čeká jen na commit** `feat: jokers v1 and shop` — pracovní
+strom sdílí rozpracované změny fází 5–6 z paralelních workflow, do commitu patří jen soubory fáze 4:
+`src/ui/{describe.ts,components/tooltip.ts,components/jokerCard.ts,art/icons.ts}`,
+`src/ui/screens/game/{topRow,modals,shop}.ts`, `src/ui/styles/{cards,game}.css`,
+`src/i18n/cs/{art,game,modifiers}.ts` (u `art.ts`/`game.ts` pozor na případné hunky šéfů), `tests/unit/ui-jokers.test.ts`,
+`tests/e2e/jokers.spec.ts`, `ROADMAP.md` a záznam v `docs/DECISIONS.md`.
 
-**Fáze 4–5 (paralelní workflow) jsou rozpracované:** 30 žolíků (commit `eb62685`), pranostiky, babské rady, razítka,
-obálky a kupóny (`wip` commity `e65c934`, `296a99a` a necommitnuté změny v `src/engine/sim`, `src/engine/run/targets.ts`,
-`tests/unit/*`). UI pro ně už existuje a je otestované: Večerka (nákup, Koupit a použít, obálky, kupón, Přehodit,
-prázdný stav), řada žolíků s **drag & drop myší i dotykem** (a přesun klávesnicí v detailu žolíka), detail s prodejem,
-spotřebky (Použít s cíli vybranými v ruce / Prodat), výběr z obálky s dobranou rukou, Info o runu.
+- Engine: hooky žolíků a `EngineApi` (`src/engine/effects/*`), edice (lesklá/holo před efektem, duhová po něm,
+  negativní +1 slot), kopírování (`copyTarget`, `isCopy`), retriggery, debuff; registr s validací (`src/content/index.ts`);
+  Večerka (`src/engine/shop/*`: zboží, obálky, kupón, ceny, prodej za polovinu, Přehodit, úrok, prázdný stav).
+- Obsah: 30 žolíků 15/10/5 v `src/content/jokers/{common,rare,epic}.ts`, texty
+  `src/i18n/cs/jokers/*.ts`, obrázky z `ArtSpec` (`src/ui/art/art.ts`), test ke každému; naladěno měřením
+  `scripts/joker-value.ts`.
+- UI: Večerka (tooltip s cenou i prodejní cenou, Koupit / Koupit a použít, obálky, kupón, Přehodit, „Večerka zavřená –
+  inventura“), řada žolíků x/N s drag & drop myší i prstem (dlouhý stisk = tooltip, tap = detail), přesun klávesnicí
+  v detailu, prodej, Napodobitel (odznak se šipkou ke kopírovanému žolíkovi, zvýrazněný cíl, „Teď kopíruje: …“),
+  nálepky (přibitý, zvětrávající se zbývajícími koly, zapůjčený), Info o runu se žolíky v pořadí vyhodnocení a se stavem
+  počítadel.
+- Simulace: boti nakupují žolíky, `npm run simulate -- --runs 50 --stake 1` vypisuje „Nejsilnější žolíci“.
+- Kontroly zelené (2026-10-02, celý pracovní strom včetně rozpracovaných fází 5–6): `typecheck`, `lint`, `npm test`
+  (46 souborů, 1 999 testů), `build` (hlavní chunk 357 kB / 118 kB gzip, ikony 344 kB / 155 kB gzip), `test:e2e`
+  (29 testů: `smoke`, `menu`, `game`, `a11y`, `jokers`; 60 snímků `visual.spec.ts` jen s `KARBAN_VISUAL=1`).
+
+**Fáze 5 (obsah) je rozpracovaná v paralelním workflow:** pranostiky (13), babské rady (22), razítka (16), obálky (15)
+a kupóny (24) včetně revize obsahu — `src/content/{pranostiky,rady,razitka,boosters,vouchers}.ts`, `src/engine/**`,
+`src/engine/sim/**`, texty `src/i18n/cs/{pranostiky,rady,razitka,boosters,vouchers}.ts`, testy
+`tests/unit/{pranostiky,rady,razitka,boosters,vouchers,phase5-review}*.test.ts`. UI pro spotřebky, obálky a kupóny už
+existuje (Použít s cíli vybranými v ruce / Prodat, výběr z obálky s dobranou rukou). **Fáze 6 (šéfové)** se taky
+rozpracovává paralelně (`src/content/bosses/*`, `src/i18n/cs/bosses/*`, `tests/unit/bosses-*.test.ts`).
 
 **Známé otevřené body (řešit v uvedené fázi):**
 
@@ -44,10 +56,9 @@ spotřebky (Použít s cíli vybranými v ruce / Prodat), výběr z obálky s do
 - fáze 6–7: konečná kalibrace křivek cílů (patro 8 má podle CLAUDE.md kap. 3 vyžadovat statisíce až miliony);
 - fáze 7: balíčky Úřednický, Babiččin, Vetešnický a Kalendářový (potřebují kupóny, spotřebky a žolíky).
 
-**Další krok:** commit fáze 3 (`feat(ui): game UI v1 …`), pak **Fáze 4** — projít podúkoly proti hotovému kódu
-a odškrtnout je (engine hooků a edic, registr s validací, 30 žolíků s testy, Večerka v enginu, úrok, UI Večerky
-s drag & drop — hotové, e2e koupě/prodeje — hotové v `tests/e2e/game.spec.ts`), doplnit, co chybí, a fázi uzavřít
-zelenými kontrolami a commitem `feat: jokers v1 and shop`.
+**Další krok:** commit fáze 4 (`feat: jokers v1 and shop`, jen soubory vyjmenované výše), pak **Fáze 5** — až
+paralelní workflow obsahu doběhne: odškrtnout podúkoly proti hotovému kódu, doplnit přesun karet v ruce (otevřený bod
+výše) a uzavřít fázi zelenými kontrolami a commitem.
 
 ## Jak pokračovat v nové session
 
@@ -161,19 +172,19 @@ dotykem, konzole bez chyb; e2e zelené; commit `feat(ui): …`; fáze odškrtnut
 
 ## Fáze 4 — Žolíci v1 + Večerka
 
-- [ ] `engine/effects`: volání všech `JokerHooks` ve správných okamžicích a pořadí, implementace `EngineApi`
-- [ ] Edice žolíků: lesklá a holografická **před** efektem, duhová **po** něm, negativní = +1 slot
-- [ ] Kopírující žolíci (`copyTarget`, `isCopy` — bez dvojího navyšování stavu), retriggery, debuff žolíka
-- [ ] `src/content/index.ts`: sestavení `ContentRegistry` + validace (unikátní id, existence textů, platné odkazy)
-- [ ] `src/content/jokers.ts`: **30 žolíků** (rozložení vzácností dle `docs/DESIGN.md`), texty `jokers.<id>.name|desc|flavor`, `ArtSpec`, test ke každému
-- [ ] `tests/unit/content.test.ts`: každá položka má název, popis a flavor; typografie textů (uvozovky, NBSP, desetinná čárka)
-- [ ] `engine/shop`: generování Večerky (2 sloty karet, 2 sloty balíčků, 1 kupón — zatím zástupné), ceny, nákup, prodej za polovinu, Přehodit za rostoucí cenu
-- [ ] Úrok a peníze napojené na obchod; prázdný stav „Večerka zavřená — inventura“
-- [ ] UI: obrazovka Večerky, řada žolíků s drag & drop (myš i dotyk), detail žolíka (mechanika + flavor), prodej
-- [ ] `src/ui/art/joker.ts`: procedurální SVG žolíka z `ArtSpec` (ikona z game-icons + paleta + vzor)
-- [ ] „Info o runu“: úrovně kombinací, žolíci, složení balíčku
-- [ ] Simulace: bot nakupuje žolíky (jednoduchá heuristika)
-- [ ] e2e: otevřít Večerku, koupit žolíka, prodat ho
+- [x] `engine/effects`: volání všech `JokerHooks` ve správných okamžicích a pořadí, implementace `EngineApi`
+- [x] Edice žolíků: lesklá a holografická **před** efektem, duhová **po** něm, negativní = +1 slot
+- [x] Kopírující žolíci (`copyTarget`, `isCopy` — bez dvojího navyšování stavu), retriggery, debuff žolíka (v UI: odznak Napodobitele se šipkou k cíli, zvýrazněný cíl, „Teď kopíruje: …“, poznámka u nekopírovatelných)
+- [x] `src/content/index.ts`: sestavení `ContentRegistry` + validace (unikátní id, existence textů, platné odkazy)
+- [x] `src/content/jokers.ts`: **30 žolíků** (rozložení vzácností dle `docs/DESIGN.md`), texty `jokers.<id>.name|desc|flavor`, `ArtSpec`, test ke každému (rozděleno do `src/content/jokers/{common,rare,epic}.ts`, texty `src/i18n/cs/jokers/*.ts`)
+- [x] `tests/unit/content.test.ts`: každá položka má název, popis a flavor; typografie textů (uvozovky, NBSP, desetinná čárka)
+- [x] `engine/shop`: generování Večerky (2 sloty karet, 2 sloty balíčků, 1 kupón — zatím zástupné), ceny, nákup, prodej za polovinu, Přehodit za rostoucí cenu
+- [x] Úrok a peníze napojené na obchod; prázdný stav „Večerka zavřená — inventura“
+- [x] UI: obrazovka Večerky, řada žolíků s drag & drop (myš i dotyk), detail žolíka (mechanika + flavor), prodej (tooltip zboží s cenou i prodejní cenou, tlačítka polic v jedné linii)
+- [x] `src/ui/art/joker.ts`: procedurální SVG žolíka z `ArtSpec` (ikona z game-icons + paleta + vzor) — hotové v `src/ui/art/art.ts`
+- [x] „Info o runu“: úrovně kombinací, žolíci, složení balíčku (žolíci v pořadí vyhodnocení se stavem počítadel, kopírováním, edicí a nálepkami)
+- [x] Simulace: bot nakupuje žolíky (jednoduchá heuristika)
+- [x] e2e: otevřít Večerku, koupit žolíka, prodat ho (`tests/e2e/jokers.spec.ts` — myš, dotyk, Napodobitel; `tests/e2e/game.spec.ts`)
 
 **Hotovo, když:** jde koupit, přesouvat a prodávat 30 žolíků a jejich efekty se projeví ve skóre
 podle pořadí; každý žolík má test; kontroly zelené; commit `feat: jokers v1 and shop`; fáze odškrtnutá.

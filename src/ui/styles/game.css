@@ -859,6 +859,31 @@
   justify-content: center;
 }
 
+/* Nízké okno (1024×768, 1366×768): Večerka o pár pixelů sevřenější, ať se i se spotřebkou ve zboží (dvě tlačítka)
+   a dvouřádkovým názvem obálky vejde na stůl bez posouvání — cedule se nezalomí, mezery mezi policemi menší. */
+@media (min-width: 901px) and (max-height: 800px) {
+  .shop__header {
+    column-gap: 0.75rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .shop__bar .btn {
+    padding-inline: 0.75em;
+  }
+
+  .shop__shelves {
+    gap: 0.45rem;
+  }
+
+  .shop-section {
+    padding-block: 0.3rem 0.55rem;
+  }
+
+  .game[data-phase='shop'] .game-panel-host {
+    padding-bottom: 0.25rem;
+  }
+}
+
 /* Police: tmavá výloha s dřevěnou lištou dole (na ní „stojí“ zboží). */
 .shop-section {
   flex: var(--slots, 1) 1 auto;
@@ -905,8 +930,11 @@
   position: relative;
 }
 
+/* Název má místo na dva řádky, ať hlavní tlačítka (Koupit / Otevřít / Uplatnit) sedí ve všech policích v jedné
+   linii i pod dvouřádkovým názvem („Krabice od bot · Hrací karty“); „Koupit a použít“ visí pod nimi. */
 .shop-slot__name {
   max-width: 100%;
+  min-height: 2.4em;
   font-size: 0.85rem;
   line-height: 1.2;
   text-align: center;
@@ -1591,6 +1619,17 @@
 .run-info__none,
 .run-info__muted {
   font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+/* Žolíci v Info o runu: pořadí vyhodnocení (číslo pozice je v textu), stav a nálepky pod mechanikou. */
+.run-info__list--jokers {
+  list-style: none;
+}
+
+.run-info__sub {
+  display: block;
+  font-size: 0.8rem;
   color: var(--ink-soft);
 }
 

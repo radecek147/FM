@@ -1222,3 +1222,140 @@ použít nejde, dokud fáze 6 a 7 nepřinesou šéfy a legendy). Nálezy a oprav
 
 **Proč:** CLAUDE.md kap. 3, 5, 6 a 7 (žádné názvy, texty ani čísla z cizích her), kap. 8 (testy, determinismus);
 CONTENT-GUIDE 12–13; DESIGN 2.6, 2.9, 5.1–5.4, 6, příloha A.
+
+## 2026-10-02 — Fáze 6: běžní šéfové 1–13 (výklad pravidel)
+
+**Co:** `src/content/bosses/a.ts` (`BOSSES_A`), texty `src/i18n/cs/bosses/a.ts`, testy `tests/unit/bosses-a.test.ts`
+(skutečný engine: kolo šéfa, zahrání, zahození, dobírání, Odvolání, uložení a načtení). Id, od patra, cíle, příchody
+a porážky podle DESIGN 8.2; pitva podle přílohy C, u šéfů 6–13 vlastní hlášky. Bez změny enginu — stačily existující
+hooky a `EngineApi` (včetně `cardRank` a `BossDef.params`, které doplnila skupina šéfů 14–25).
+
+- **Strop „jen 1 ruka / 0 zahození / nejvýš 4 karty“** (Polední pauza, Sucho v obci, Garsonka 1+kk) = `passive`
+  s rozdílem spočítaným v `onRoundStart` a uloženým v `round.flags` (ARCHITECTURE 2.7). Prostá delta (`hands: −3`)
+  by s kupónem nebo balíčkem s jiným počtem rukou neplatila přesně; nové pole „strop“ v `Modifiers` by potřebovalo
+  jinou skládací sémantiku (minimum). Žolík/štítek, který ruku přidá až během kola, platí navíc; Odvolání vrátí rozdíl.
+- **Výluka na trati:** „každá druhá líznutá karta“ se počítá přes všechna dobrání kola (počítadlo v `round.flags`,
+  hook `onDraw` + `setCardFaceDown`) — na začátku kola 2., 4., 6., 8. karta, pak střídavě dál. `drawIndex` v
+  `isDrawnFaceDown` je jen pořadí v jednom dobrání (po zahrání 1 karty by nikdy nic nezakryl).
+- **Inventura** používá `api.isFace`: se `allFaces` (Dvorní malíř, fáze 7) je mimo provoz každá karta s hodnotou —
+  vědomá protisynergie, pravidla figur platí všude stejně (DESIGN 2.1). Kamenná karta figurou není.
+- **Pověrčivá babka:** barva se losuje streamem `boss` v `onRoundStart`; divoká karta (všechny barvy) je mimo provoz,
+  kamenná ne; `mergedSuits` platí jako všude (`api.hasSuit`). Hláška z DESIGN „…špatný den na {suit}.“ je
+  `bosses.superstitious_granny.omen.<S|H|D|C>` (čtyři hotové věty, `api.message` po vylosování), protože UI ukazuje
+  `intro` už při výběru útraty bez parametrů a obsah nesmí skládat české názvy barev; `intro` je „Počkej, nejdřív se
+  kouknu do snáře.“
+- **Černá kočka** vybírá 2 karty náhodně (stream `boss`) z karet, které po zahrání zůstaly v ruce (před dobráním),
+  a vynechá už prokleté a vrácené do provozu (`cleansedCards`) — kletba tak vždy zasáhne nové karty. Méně karet
+  v ruce = prokleje, kolik jich je.
+- **Kapsář v tramvaji:** „nejvyšší hodnota“ = eso nejvýš, kamenná hodnotu nemá; při shodě karta nejvíc vlevo (hráč
+  pořadí ovlivní přeřazením). Nucené zahození nespotřebuje zahození a ruka se dobere hned po zahrání. Mlha nad Labem
+  stejně: kamenná trojka hodnotu nemá → lícem nahoru.
+- **Exekutor:** vybírá jen z fungujících žolíků (zvětralý je už mimo provoz, zabavení by nic nezměnilo); při shodě
+  prodejní ceny žolík nejvíc vlevo. Debuff je na uid (přeřazení ho nepřenese) a končí s kolem nebo Odvoláním.
+- **Kontrola z finančáku, Parkovné:** srážka `addMoney(−1)` do dluhového limitu (bez peněz a bez limitu nic);
+  daň po každé zahrané ruce včetně ruky zakázané Sousedem, parkovné za každé zahození bez ohledu na počet karet.
+- **Odchylka — čísla v `rule` napsaná rovnou:** UI `bossTexts` (`src/ui/describe.ts`) zatím nepředává `params` šéfů,
+  takže `{param}` by se v levém panelu a na výběru útraty ukázal nedosazený (a padal by `tests/unit/ui-art.test.ts`).
+  Čísla jsou proto v textu a v `params`; test hlídá, že každé číslo z `params` v pravidle je. Až `bossTexts` dosadí
+  `describeParams(def.params)`, přepíše se `rule` na `{fee|money}`, `{hands|plural:ruku,ruce,rukou}` apod.
+- `tests/unit/ui-game.test.ts` (výběr útraty) čekal registr bez šéfů („obecné pravidlo“) — teď ověřuje jméno
+  vylosovaného šéfa, bez šéfů v registru dál obecný text.
+
+**Proč:** CLAUDE.md kap. 3 (šéfové s jedním jasným pravidlem), 5 (humor), 6 (texty jen v i18n), 8 (test na každou
+položku, determinismus); DESIGN 8.1–8.2, příloha B a C; CONTENT-GUIDE 4 a 12.
+
+## 2026-10-02 — Fáze 6: běžní šéfové 14–25 a fináloví šéfové F1–F5 (výklad pravidel, engine)
+
+**Co:** `src/content/bosses/b.ts` (`BOSSES_B`) a `src/content/bosses/final.ts` (`BOSSES_FINAL`, `final: true`), texty
+`src/i18n/cs/bosses/{b,final}.ts`, testy `tests/unit/bosses-b.test.ts` a `tests/unit/bosses-final.test.ts` (skutečný
+engine: kolo šéfa, zahrání, zahození, přeřazení, prodej, Odvolání, konec kola, uložení a načtení). Id, od patra, cíle,
+příchody a porážky podle DESIGN 8.2–8.3; pitva finálových šéfů podle přílohy C, u běžných 14–25 vlastní hlášky.
+
+**Engine (obecně, s testy):**
+
+- `BossHooks.isJokerDebuffed(ctx, joker, index)` — čistá funkce „má být žolík na této pozici mimo provoz?“. Engine ji
+  přepočítá na začátku kola, po ruce, po zahození a po každé akci v kole (`refreshBossJokerDebuffs`), takže Jednooký
+  hejtman sleduje **pozici** i po přeřazení a Výpadek proudu skončí hned po první ruce (ruka se pak dobere už se
+  žolíky). Vypnuté žolíky eviduje volitelné `RoundState.ruleJokerDebuffs` (podmnožina `jokerDebuffs`) — cizí debuff
+  (Krajský úřad) pravidlo nepřivlastní ani nezruší; bez migrace (chybí = žádné). Alternativa „dynamická kontrola
+  pozice všude, kde se čte `debuffed`“ by znamenala měnit skórování, modifikátory, kopírování, odměny i UI.
+- Ruce/zahození z pasivních efektů žolíků se po přepočtu nemění (platí stav na začátku kola jako u Exekutora) —
+  jinak by šlo přeřazováním pod Hejtmanem ruce sbírat.
+- `EngineApi.cardRank(card)` (kamenná karta hodnotu nemá → `null`, při Bílé hoře ano) a `BossDef.params`.
+- `scripts/joker-value.ts`: ruce, ve kterých byl měřený žolík mimo provoz kvůli šéfovi (Výpadek proudu, Hejtman,
+  Exekutor, Krajský úřad), se do hodnoty žolíka nepočítají — o jeho síle nic neříkají (kouřový test Pivního tácku).
+
+**Výklad pravidel:**
+
+- **Krajské derby:** rozhoduje celá zahraná ruka (i neskórující karta). Divoká karta (všechny barvy) ani kamenná (žádná)
+  stranu nevolí, `mergedSuits` na červené/černé nic nemění. Poloviny nahoru (DESIGN 8.2), i v náhledu ruky.
+- **Nová vyhláška:** `modifyBase` = `api.handBase(typ, 1)`; náhled ukazuje čipy × mult úrovně 1 (číslo úrovně v náhledu
+  zůstává skutečné — UI).
+- **Zabijačka:** po ruce (`afterHandPlayed`, stream `boss`) zničí 1 kartu ze skórujících (i mimo provoz), karty
+  zničené už během skórování vynechá; skóre ruky se nemění, zničení je trvalé (balíček runu).
+- **Bílá hora / Normalizace / Kocovina:** `passive` (`disableEnhancements`, `fixedCardChips: 5`, `hands: −1`) — Odvolání
+  vrátí vše jako u každého `passive`. Normalizace dává 5 čipů i kamenné kartě (+50 z vylepšení) a ignoruje trvalé
+  bonusové čipy karty (`cardChips`).
+- **Jednooký hejtman:** mimo provoz pozice `≥ ceil(n/2)` (5 → 4. a 5., 4 → 3. a 4., 1 → nikdo); počítá se celá řada
+  včetně zvětralých a negativních žolíků. Na začátku kola po `onBlindSelect` žolíků (jako Exekutor).
+- **Tchyně na návštěvě:** náhodná karta ze zbytku ruky (zahazované karty už v ruce nejsou), `api.discardFromHand` —
+  nespotřebuje zahození a nespouští pečetě ani žolíky na zahození; ruka se dobere normálně.
+- **Influencerka Nikča:** kombinace se vybere jednou v `onRoundStart` podle `handLevels[*].played` (počty za run),
+  při shodě silnější (pozdější v `HAND_TYPES`), uloží se do `round.flags['influencer.hand']` a během kola se nemění.
+  Bez zahraných kombinací nepůlí nic. Kterou kombinaci si vybrala, hráč pozná z náhledu (UI ji zatím nevypisuje).
+- **Výpadek proudu:** „v první ruce kola“ = od začátku kola do zahrání první ruky, tedy i při zahazování před ní
+  (`onRoundStart` žolíků taky ne). Pasivní velikost ruky se vrátí hned po první ruce; pasivní ruce/zahození žolíků
+  se v tomto kole nezapočítají (stav na začátku kola).
+- **Sudé dny:** A, 3, 5, 7, 9 přes `cardRank` — figury (J = 11 taky) ani kamenné karty liché nejsou.
+- **Pan starosta:** `adjustHandScore` porovná skóre ruky se **skutečným** skóre předchozí ruky (i nezapočítané),
+  ostře větší; první ruka kola vždy. Předchozí skóre v `round.flags['mayor.lastScore']`.
+- **Krajský úřad:** po každé ruce `setJokerDebuffed` na náhodného fungujícího (nedebuffnutého) žolíka; zvětralý
+  se nevybírá, když nefunguje nikdo, nic. Konec kola a Odvolání debuffy ruší.
+- **Velká voda:** místo `api.addRoundHandSize(−1)` počítadlo `round.flags['great_flood.hands']` + `passive`
+  `handSize: −počet` — Odvolání tak vrátí celou velikost ruky a dočasná velikost z jiných efektů zůstane. Ruka nejmíň
+  1 karta (`clampModifiers`), karty navíc se nezahazují.
+- **Bílá paní:** po ruce i zahození se karty, které v ruce **zůstaly**, otočí lícem dolů a zamíchají (`shuffleHand`);
+  nově dobrané přijdou lícem nahoru. Celá ruka zakrytá by byla hra naslepo, takhle je to paměťovka.
+- **Odchylka — čísla v `rule` napsaná rovnou** (stejně jako skupina 1–13): `bossTexts` v `src/ui/describe.ts`
+  `params` šéfů nedosazuje. Testy hlídají, že každé číslo z `params` v pravidle je. Až UI dosadí
+  `describeParams(def.params)`, přepíší se pravidla na `{level}`, `{chips|plural:čip,čipy,čipů}` apod.
+
+**Proč:** CLAUDE.md kap. 3 (šéfové s jedním jasným pravidlem, 5 finálových), 5 (humor), 6 (texty jen v i18n), 8 (test
+na každou položku, determinismus — náhoda jen streamem `boss`/`deck`); DESIGN 8.1–8.3, příloha B a C; CONTENT-GUIDE 4.
+
+## 2026-10-02 — Uzavření fáze 4 (žolíci v1 + Večerka): audit, finální ověření a vizuální opravy
+
+**Co:** Fáze 4 je uzavřená, všech 13 podúkolů v `ROADMAP.md` odškrtnutých po kontrole proti kódu. Commit
+`feat: jokers v1 and shop` čeká — pracovní strom sdílí rozpracované změny fází 5–6, commitují se jen soubory fáze 4
+(výčet v `ROADMAP.md`, Aktuální stav).
+
+- **Doplněno v auditu:** oprava tažení žolíka prstem (`src/ui/screens/game/topRow.ts` — dotykové tažení se rušilo hned
+  po startu); Napodobitel v řadě (odznak s maskou a šipkou, zvýrazněný kopírovaný žolík, „Teď kopíruje: …“ /
+  „Právě ho kopíruje: …“ v popisku pro čtečky, tooltipu, detailu i Info o runu); poznámka „Nejde zkopírovat“
+  u `copyable: false`; tooltip zboží ve Večerce s cenou i prodejní cenou (engine počítá nad kopií stavu); Info o runu
+  se žolíky v pořadí vyhodnocení, stavem počítadel, edicí, nálepkami a mimo provoz; testy `tests/unit/ui-jokers.test.ts`
+  a `tests/e2e/jokers.spec.ts` (myš, dotyk, Napodobitel; konzole bez chyb).
+- **Vizuální opravy z finální kontroly** (snímky Playwrightem v `test-results/phase4/`: 1366×768, 1024×768, 1920×1080,
+  tablet 820×1180, telefon 390×844 — Večerka se žolíky, tooltipy, detail, řada v kole s negativním a zvětrávajícím
+  žolíkem, Info o runu):
+  1. **Tlačítka polic Večerky nebyla v jedné linii**, když se název zalomil („Krabice od bot · Hrací karty“ — tlačítko
+     o řádek níž než soused). `.shop-slot__name` má `min-height` na dva řádky, takže hlavní tlačítko (Koupit / Otevřít
+     / Uplatnit) sedí ve všech policích ve stejné výšce a „Koupit a použít“ visí pod ním. Zamítnuto: tlačítka ke dnu
+     slotu (`margin-top: auto`) — se spotřebkou ve zboží by se „Koupit“ ostatních slotů zarovnalo s „Koupit a použít“;
+     CSS subgrid s `auto-fill` — v obsahem určené šířce flex položky by se spočítal jediný sloupec.
+  2. **1024×768 se spotřebkou ve zboží** (dvě tlačítka) byla Večerka o 27 px vyšší než stůl a spodní tlačítka obálek
+     a kupónu uříznutá (už před fází 4 o 25 px). Media query `(min-width: 901px) and (max-height: 800px)` Večerku
+     sevře: užší tlačítka lišty (cedule se nezalomí na dva řádky), menší mezery polic a spodní odsazení panelu.
+     Všechna tlačítka jsou vidět, zbývá ~8 px posunu stolu (jen dřevěná lišta police). Jen layout, žádná animace.
+  3. **Text negativní edice** dával v tooltipu dvě dvojtečky za sebou („Negativní: Přinese si vlastní místo: +1 slot…“).
+     Nově „+1 slot pro svůj druh (žolíka nebo spotřebku) – přinese si vlastní místo.“ (číslo napřed jako u ostatních
+     edic, `src/i18n/cs/modifiers.ts`).
+  - Prověřeno, není chyba: „(teď+3 mult)“ v Info o runu — v DOM mezera je, jen háček „ď“ v Pixelify Sans do ní
+    vizuálně zasahuje; „Nejde zkopírovat – …“ má pomlčku, Pixelify ji kreslí krátkou.
+- **Ověření** (celý pracovní strom včetně rozpracovaných fází 5–6): `npm run typecheck` ✓, `npm run lint` ✓,
+  `npm test` 46 souborů / 1 999 testů ✓, `npm run build` ✓, `npm run test:e2e` 29 ✓ (60 vizuálních přeskočeno bez
+  `KARBAN_VISUAL=1`). První běh e2e souběžně s úpravami jiného workflow (build zachytil rozpracované soubory) hlásil
+  15 selhání; opakovaný běh na ustáleném stromu 29/29 — selhání byla přechodná, ne regrese fáze 4.
+
+**Proč:** CLAUDE.md kap. 9 (definice hotovo fáze), kap. 4 (Večerka, řada žolíků s drag & drop, Info o runu), kap. 6
+(typografie textů), kap. 2 (min. 1024 px, dotyk plně funkční); DESIGN kap. 4 a 13.

@@ -7,7 +7,7 @@
  * následný klik (výběr karty), takže si hráč může obsah prohlédnout bez akce.
  */
 import '../styles/cards.css';
-import type { Card, ConsumableInstance, JokerInstance, Modifiers } from '../../engine/types';
+import type { Card, ConsumableInstance, JokerInstance, Modifiers, RunState } from '../../engine/types';
 import type { ContentRegistry } from '../../engine/content-types';
 import { cardChips } from '../../engine';
 import { registry as defaultRegistry } from '../../content';
@@ -18,6 +18,8 @@ import {
   capitalize,
   cardName,
   consumableTexts,
+  copiedByText,
+  copyStatusText,
   contentTexts,
   editionTexts,
   enhancementTexts,
@@ -366,23 +368,46 @@ export function cardTooltip(
   return { title, subtitle: t('art.kind.card'), lines, footer: priceFooter(opts) };
 }
 
-/** Tooltip žolíka: název, vzácnost, mechanika (aktuální čísla), edice, nálepky, flavor, cena. */
-export function jokerTooltip(
-  joker: Readonly<JokerInstance>,
-  opts?: TooltipOptions & { debuffed?: boolean },
-): TooltipContent {
+export interface JokerTooltipOptions extends TooltipOptions {
+  /** Dočasný debuff v kole (`round.jokerDebuffs`). */
+  debuffed?: boolean;
+  /**
+   * Stav runu pro žolíka ve slotech (kopírování: koho Napodobitel kopíruje, kdo kopíruje tohoto žolíka).
+   * Funkce, ať tooltip čte aktuální stav při každém zobrazení.
+   */
+  run?: () => Readonly<RunState>;
+}
+
+/**
+ * Tooltip žolíka: název, vzácnost, mechanika (aktuální čísla), stav kopírování, edice, nálepky, poznámka
+ * o nekopírovatelnosti, flavor, cena a prodejní cena (přibitý „Prodat nejde“).
+ */
+export function jokerTooltip(joker: Readonly<JokerInstance>, opts?: JokerTooltipOptions): TooltipContent {
+  const r = opts?.registry ?? defaultRegistry();
   const tx = jokerTexts(joker.defId, joker as JokerInstance, opts);
   const lines: (string | TooltipLine)[] = [tx.desc];
+  const run = opts?.run?.();
+  if (run) {
+    const copy = copyStatusText(run, joker, r);
+    if (copy) lines.push(copy);
+  }
   if (tx.edition) lines.push(labeled(tx.edition.name, tx.edition.desc));
   for (const s of tx.stickers) lines.push({ text: s, muted: true });
   if (joker.debuffed || opts?.debuffed) lines.push({ text: t('art.tooltip.jokerDebuffed'), muted: true });
+  const by = run ? copiedByText(run, joker, r) : null;
+  if (by) lines.push({ text: by, muted: true });
+  if (!tx.copyable) lines.push({ text: t('art.copy.notCopyable'), muted: true });
+  const footer = priceFooter(opts);
+  if (opts?.sellValue !== undefined && joker.stickers.includes('eternal')) {
+    footer[footer.length - 1] = t('art.tooltip.noSell');
+  }
   return {
     title: tx.name,
     subtitle: `${tx.rarity} · ${t('art.kind.joker')}`,
     tone: `rarity-${tx.rarityId}`,
     lines,
     flavor: tx.flavor,
-    footer: priceFooter(opts),
+    footer,
   };
 }
 

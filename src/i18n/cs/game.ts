@@ -273,6 +273,8 @@ export const game = {
     seed: 'Seed: {seed}',
     stakeLevel: '{name} (úroveň {level})',
     item: '{name}: {desc}',
+    jokerItem: '{n}. {name}: {desc}',
+    jokersCount: 'Sloty {n}/{max} · vyhodnocují se shora dolů (zleva doprava v řadě).',
   },
 
   /** Pauza (Esc). */

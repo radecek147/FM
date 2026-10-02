@@ -4,7 +4,8 @@
  * inventura“. Nákup obecně přes akce enginu (`buy`, `buyAndUse`, `buyBooster`, `buyVoucher`, `reroll`) —
  * obsah registru se může libovolně rozšiřovat.
  */
-import type { ShopItem } from '../../../engine';
+import type { RunState, ShopItem } from '../../../engine';
+import { Game } from '../../../engine';
 import { t } from '../../../i18n/cs';
 import { button } from '../../components/button';
 import { createCardView } from '../../components/card';
@@ -30,12 +31,48 @@ function itemName(ctx: GameCtx, item: ShopItem): string {
   return capitalize(cardName(item.card, ctx.registry));
 }
 
-function itemVisual(ctx: GameCtx, item: ShopItem): HTMLElement {
+/**
+ * Prodejní ceny zboží po koupi (tooltip „Cena · Prodej za“), podle slotu. Počítá je engine (`Game.sellValue`) nad
+ * kopií stavu, do které se zboží „přidá“ — vzorec prodejní ceny (edice, zapůjčený, `sellBonus`) tak zůstává na
+ * jednom místě a skutečný run se nemění. Hrací karty se neprodávají (bez ceny).
+ */
+function prospectiveSellValues(ctx: GameCtx): Map<number, number> {
+  const out = new Map<number, number>();
+  const s = ctx.controller.state;
+  const items = s.shop?.items ?? [];
+  if (!items.some((i) => !i.sold && i.kind !== 'card')) return out;
+  try {
+    const copy = structuredClone(s) as RunState;
+    const slots: [number, number][] = [];
+    items.forEach((item, slot) => {
+      if (item.sold) return;
+      if (item.kind === 'joker') {
+        copy.jokers.push(structuredClone(item.joker));
+        slots.push([slot, item.joker.uid]);
+      } else if (item.kind === 'consumable') {
+        copy.consumables.push(structuredClone(item.consumable));
+        slots.push([slot, item.consumable.uid]);
+      }
+    });
+    const game = Game.fromState(copy, ctx.registry);
+    for (const [slot, uid] of slots) out.set(slot, game.sellValue(uid));
+  } catch {
+    // Bez prodejní ceny v tooltipu se dá nakupovat dál.
+  }
+  return out;
+}
+
+function itemVisual(ctx: GameCtx, item: ShopItem, sellValue: number | undefined): HTMLElement {
   const mods = ctx.controller.engine.modifiers();
   if (item.kind === 'joker')
-    return createJokerCard(item.joker, { price: item.price, registry: ctx.registry, mods });
+    return createJokerCard(item.joker, { price: item.price, sellValue, registry: ctx.registry, mods });
   if (item.kind === 'consumable')
-    return createConsumableCard(item.consumable, { price: item.price, registry: ctx.registry, mods });
+    return createConsumableCard(item.consumable, {
+      price: item.price,
+      sellValue,
+      registry: ctx.registry,
+      mods,
+    });
   return h(
     'div',
     { class: 'shop-slot__playing' },
@@ -82,6 +119,7 @@ export function renderShop(ctx: GameCtx): HTMLElement {
   const s = c.state;
   const shop = s.shop;
 
+  const sellValues = prospectiveSellValues(ctx);
   const items = (shop?.items ?? []).map((item, slot) => {
     const testId = `shop-item-${slot}`;
     if (item.sold) return soldSlot(testId);
@@ -120,7 +158,7 @@ export function renderShop(ctx: GameCtx): HTMLElement {
     return h(
       'li',
       { class: ['shop-slot', `shop-slot--${item.kind}`], 'data-testid': testId },
-      h('div', { class: 'shop-slot__card' }, itemVisual(ctx, item)),
+      h('div', { class: 'shop-slot__card' }, itemVisual(ctx, item, sellValues.get(slot))),
       h('p', { class: 'shop-slot__name', id: `${testId}-name` }, itemName(ctx, item)),
       h('div', { class: 'shop-slot__actions' }, actions),
     );

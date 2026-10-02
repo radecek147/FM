@@ -5,7 +5,7 @@
  * při startu aplikace před prvním vykreslením. Potom je `iconMarkup()` synchronní. Dokud ikony nejsou načtené
  * (nebo ikona neexistuje), vrací náhradní glyf, takže se nic nerozbije.
  *
- * Vestavěné glyfy (`suit-S|H|D|C`, `star`, `sparkle`, `question`) jsou k dispozici vždy, i bez načtení.
+ * Vestavěné glyfy (`suit-S|H|D|C`, `star`, `sparkle`, `arrow`, `question`) jsou k dispozici vždy, i bez načtení.
  */
 
 interface IconData {
@@ -41,6 +41,8 @@ const BUILTIN: Readonly<Record<string, string>> = {
   sparkle: glyphPath(
     'M256 32c20 144 80 204 224 224c-144 20-204 80-224 224c-20-144-80-204-224-224c144-20 204-80 224-224z',
   ),
+  /** Šipka doprava (doleva = CSS `scaleX(-1)`). */
+  arrow: glyphPath('M48 216h300l-96-96 56-56 192 192-192 192-56-56 96-96H48z'),
   question: glyphPath(
     'M256 24a232 232 0 1 0 0 464a232 232 0 0 0 0-464zm0 56c62 0 108 38 108 92c0 44-28 66-56 84c-22 14-28 22-28 44v12h-56v-18c0-38 16-56 46-76c22-14 36-26 36-46c0-24-20-40-50-40c-32 0-52 18-56 48l-58-8c8-58 52-92 114-92zm-30 296h60v58h-60z',
   ),

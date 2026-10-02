@@ -28,6 +28,7 @@ import type {
   HandType,
   JokerInstance,
   Modifiers,
+  RunState,
   StickerId,
 } from '../engine/types';
 import { PERISH_ROUNDS, RENTAL_FEE } from '../engine/constants';
@@ -58,6 +59,8 @@ export interface JokerTexts extends ContentTexts {
   edition: ContentTexts | null;
   /** Řádky nálepek (přibitý, zvětrávající se zbývajícími koly, zapůjčený). */
   stickers: string[];
+  /** Smí ho kopírovat kopírující žolík (`JokerDef.copyable !== false`)? */
+  copyable: boolean;
 }
 
 export interface ConsumableTexts extends ContentTexts {
@@ -196,7 +199,71 @@ export function jokerTexts(
     rarity: t(`art.rarity.${rarityId}`),
     edition: inst?.edition ? editionTexts(inst.edition, opts) : null,
     stickers: (inst?.stickers ?? []).map((s) => stickerText(s, inst)),
+    copyable: def?.copyable !== false,
   };
+}
+
+// ─────────────────────────── Kopírující žolíci ───────────────────────────
+
+/** Kopíruje žolík schopnost jiného žolíka (`hooks.copyTarget`, např. Napodobitel)? */
+export function isCopyJoker(defId: string, r: ContentRegistry = defaultRegistry()): boolean {
+  return typeof r.jokers[defId]?.hooks.copyTarget === 'function';
+}
+
+/**
+ * Uid žolíka, jehož schopnost kopírující žolík právě používá (jen pro zobrazení), jinak null.
+ *
+ * UI nesmí volat `copyTarget` (výběr cíle mění stav i RNG), proto čte konvenci obsahu: kopírující žolík drží uid
+ * cíle ve `state.target` a kopíruje jen během kola (`RunState.round`). Stejně jako `GameCore.resolveCopy` se
+ * nepočítá cíl, který zmizel, je mimo provoz nebo nejde kopírovat, ani kopírující žolík mimo provoz.
+ */
+export function copyTargetUid(
+  state: Readonly<Pick<RunState, 'round' | 'jokers'>>,
+  joker: Readonly<JokerInstance>,
+  r: ContentRegistry = defaultRegistry(),
+): number | null {
+  if (!state.round || joker.debuffed || !isCopyJoker(joker.defId, r)) return null;
+  const uid = joker.state.target;
+  if (typeof uid !== 'number' || uid === joker.uid) return null;
+  const target = state.jokers.find((j) => j.uid === uid);
+  if (!target || target.debuffed) return null;
+  return r.jokers[target.defId]?.copyable === false ? null : uid;
+}
+
+/**
+ * Stav kopírujícího žolíka pro tooltip, detail a Info o runu („Teď kopíruje: Pivní tácek.“; mimo kolo „…vybere
+ * na začátku kola“; v kole bez cíle „nemá koho“). Pro ostatní žolíky null.
+ */
+export function copyStatusText(
+  state: Readonly<Pick<RunState, 'round' | 'jokers'>>,
+  joker: Readonly<JokerInstance>,
+  r: ContentRegistry = defaultRegistry(),
+): string | null {
+  if (!isCopyJoker(joker.defId, r)) return null;
+  if (!state.round) return t('art.copy.idle');
+  const uid = copyTargetUid(state, joker, r);
+  const target = uid === null ? undefined : state.jokers.find((j) => j.uid === uid);
+  return target ? t('art.copy.active', { name: t(`jokers.${target.defId}.name`) }) : t('art.copy.none');
+}
+
+/** Žolíci, kteří právě kopírují daného žolíka (v pořadí řady). */
+export function copiedBy(
+  state: Readonly<Pick<RunState, 'round' | 'jokers'>>,
+  joker: Readonly<JokerInstance>,
+  r: ContentRegistry = defaultRegistry(),
+): JokerInstance[] {
+  return state.jokers.filter((j) => j.uid !== joker.uid && copyTargetUid(state, j, r) === joker.uid);
+}
+
+/** „Právě ho kopíruje: Napodobitel.“, nebo null, když ho nikdo nekopíruje. */
+export function copiedByText(
+  state: Readonly<Pick<RunState, 'round' | 'jokers'>>,
+  joker: Readonly<JokerInstance>,
+  r: ContentRegistry = defaultRegistry(),
+): string | null {
+  const by = copiedBy(state, joker, r);
+  if (by.length === 0) return null;
+  return t('art.copy.copiedBy', { names: by.map((j) => t(`jokers.${j.defId}.name`)).join(', ') });
 }
 
 // ─────────────────────────── Spotřebky, kupóny, štítky ───────────────────────────

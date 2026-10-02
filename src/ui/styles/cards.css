@@ -372,6 +372,50 @@ button.kcard[aria-disabled='true'] {
   background: #7a2e3a;
 }
 
+/* Kopírování (Napodobitel): odznak vlevo nahoře (naproti nálepkám) — u kopírujícího maska + šipka k cíli,
+   u kopírovaného maska. */
+.kcopy {
+  position: absolute;
+  top: 3%;
+  left: 3%;
+  z-index: 1;
+  display: inline-flex;
+  gap: 1px;
+  align-items: center;
+  height: 1.35em;
+  padding: 0 0.25em;
+  font-size: max(0.6rem, calc(var(--card-w) * 0.1));
+  line-height: 1;
+  color: #eef2ff;
+  pointer-events: none;
+  background: #3730a3;
+  border: 1px solid #c7d2fe;
+  border-radius: 999px;
+}
+
+.kcopy .icon {
+  width: 1em;
+  height: 1em;
+}
+
+.kcopy--left .kcopy__arrow {
+  transform: scaleX(-1);
+}
+
+.kcopy--target {
+  color: #312e81;
+  background: #c7d2fe;
+  border-color: #312e81;
+}
+
+/* Kopírovaný žolík: jemný indigový rámeček (statický, bez animace). */
+.jcard.is-copy-target .kcard__inner {
+  box-shadow:
+    0 0 0 2px #a5b4fc,
+    0 3px 0 rgb(0 0 0 / 22%),
+    0 8px 18px rgb(0 0 0 / 28%);
+}
+
 .icon {
   display: inline-block;
   flex: none;

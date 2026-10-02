@@ -12,6 +12,7 @@ import { t } from '../../../i18n/cs';
 import { createConsumableCard } from '../../components/consumableCard';
 import { createJokerCard, updateJokerCard } from '../../components/jokerCard';
 import { hideTooltip } from '../../components/tooltip';
+import { copyTargetUid } from '../../describe';
 import { h } from '../../dom';
 import type { GameCtx } from './shared';
 import { consumableSlots, jokerSlots } from './shared';
@@ -79,21 +80,49 @@ export function createTopRow(ctx: GameCtx, actions: TopRowActions): TopRow {
 
   // ─────────────── Žolíci ───────────────
 
-  const jokerSig = (j: Readonly<JokerInstance>, debuffed: boolean, sell: number): string =>
+  type Copying = { defId: string; dir: -1 | 1 } | null;
+
+  const jokerSig = (
+    j: Readonly<JokerInstance>,
+    debuffed: boolean,
+    sell: number,
+    copying: Copying,
+    copiedBy: readonly string[],
+  ): string =>
     `${j.defId}|${j.edition ?? ''}|${j.debuffed ? 1 : 0}|${debuffed ? 1 : 0}|${j.stickers.join(',')}|${
       j.perishRounds ?? ''
-    }|${sell}`;
+    }|${sell}|${copying ? `${copying.defId}${copying.dir}` : ''}|${copiedBy.join(',')}`;
+
+  /** Kdo koho kopíruje (Napodobitel): kopírující → cíl a směr, cíl → seznam kopírujících. */
+  const copyMap = (): { copying: Map<number, Copying>; copiedBy: Map<number, string[]> } => {
+    const s = c.state;
+    const copying = new Map<number, Copying>();
+    const copiedBy = new Map<number, string[]>();
+    s.jokers.forEach((j, i) => {
+      const uid = copyTargetUid(s, j, ctx.registry);
+      if (uid === null) return;
+      const ti = s.jokers.findIndex((x) => x.uid === uid);
+      const target = s.jokers[ti];
+      if (!target) return;
+      copying.set(j.uid, { defId: target.defId, dir: ti < i ? -1 : 1 });
+      copiedBy.set(uid, [...(copiedBy.get(uid) ?? []), j.defId]);
+    });
+    return { copying, copiedBy };
+  };
 
   const updateJokers = (): void => {
     const s = c.state;
     const roundDebuffs = s.round?.jokerDebuffs ?? [];
+    const copies = copyMap();
     const seen = new Set<number>();
     const order: HTMLElement[] = [];
     for (const j of s.jokers) {
       seen.add(j.uid);
       const debuffed = roundDebuffs.includes(j.uid);
       const sell = c.engine.sellValue(j.uid);
-      const sig = jokerSig(j, debuffed, sell);
+      const copying = copies.copying.get(j.uid) ?? null;
+      const copiedBy = copies.copiedBy.get(j.uid) ?? [];
+      const sig = jokerSig(j, debuffed, sell, copying, copiedBy);
       let item = jokers.get(j.uid);
       if (!item) {
         const card = createJokerCard(j, {
@@ -101,6 +130,9 @@ export function createTopRow(ctx: GameCtx, actions: TopRowActions): TopRow {
           debuffed,
           sellValue: sell,
           mods: c.engine.modifiers(),
+          run: () => c.state,
+          copying,
+          copiedBy,
           onClick: (joker) => {
             if (suppressClick) return;
             actions.openJoker(joker.uid);
@@ -111,7 +143,13 @@ export function createTopRow(ctx: GameCtx, actions: TopRowActions): TopRow {
         item = { li, card, sig };
         jokers.set(j.uid, item);
       } else if (item.sig !== sig) {
-        updateJokerCard(item.card, j, { debuffed, sellValue: sell, mods: c.engine.modifiers() });
+        updateJokerCard(item.card, j, {
+          debuffed,
+          sellValue: sell,
+          mods: c.engine.modifiers(),
+          copying,
+          copiedBy,
+        });
         item.card.dataset.jokerUid = String(j.uid);
         item.sig = sig;
       }
@@ -300,7 +338,10 @@ export function createTopRow(ctx: GameCtx, actions: TopRowActions): TopRow {
   jokerList.addEventListener('pointerup', (e) => endDrag(e, false));
   jokerList.addEventListener('pointercancel', (e) => endDrag(e, true));
   jokerList.addEventListener('lostpointercapture', (e) => {
-    if (drag?.started && e.pointerId === drag.pointerId) endDrag(e, false);
+    // Jen ztráta capture, které jsme nastavili na položku. Dotyk má implicitní capture na prvku pod prstem
+    // (SVG v kartě) — `setPointerCapture` ho přesune na položku a ten prvek dostane `lostpointercapture`, který
+    // tažení ukončit nesmí (jinak by se na dotykových zařízeních tažení hned po startu zrušilo).
+    if (drag?.started && e.pointerId === drag.pointerId && e.target === drag.li) endDrag(e, false);
   });
   // Zachycení kliku po tažení (fáze capture — dřív než klik karty).
   jokerList.addEventListener(

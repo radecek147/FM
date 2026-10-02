@@ -147,6 +147,18 @@ export const art = {
     rental: { name: 'Zapůjčený', desc: 'Na konci každého kola stojí {fee|money}.' },
   },
 
+  /** Kopírující žolíci (`hooks.copyTarget`, např. Napodobitel): stav v tooltipu, detailu, Info o runu a v řadě. */
+  copy: {
+    active: 'Teď kopíruje: {name}.',
+    idle: 'Koho bude kopírovat, si vybere na začátku kola.',
+    none: 'V tomto kole nemá koho kopírovat.',
+    copiedBy: 'Právě ho kopíruje: {names}.',
+    notCopyable: 'Nejde zkopírovat – napodobitelé na něj nemají.',
+    /** Doplněk aria-label karty v řadě. */
+    labelActive: 'kopíruje: {name}',
+    labelCopied: 'kopíruje ho {names}',
+  },
+
   /** Tooltip (bublina s detailem). */
   tooltip: {
     flavor: '„{text}“',
@@ -155,6 +167,7 @@ export const art = {
     edition: '{name}: {desc}',
     level: 'úroveň {level}',
     jokerDebuffed: 'Mimo provoz – v tomto kole nefunguje.',
+    noSell: 'Prodat nejde',
   },
 
   /** Slova, za kterými tooltip zvýrazní číslo barvou (čipy modře, mult červeně), oddělená čárkou. */

@@ -12,7 +12,7 @@
  */
 import '../styles/cards.css';
 import type { ContentRegistry } from '../../engine/content-types';
-import type { JokerInstance, Modifiers } from '../../engine/types';
+import type { JokerInstance, Modifiers, RunState } from '../../engine/types';
 import { registry as defaultRegistry } from '../../content';
 import { t } from '../../i18n/cs';
 import { formatMoney, formatNumber } from '../../i18n/format';
@@ -43,6 +43,12 @@ export interface JokerCardOptions {
   mods?: Partial<Pick<Modifiers, 'probabilityMult'>>;
   registry?: ContentRegistry;
   className?: string;
+  /** Stav runu pro tooltip žolíka ve slotech (stav kopírování) — čte se při každém zobrazení. */
+  run?: () => Readonly<RunState>;
+  /** Kopírující žolík (Napodobitel) právě kopíruje: id cíle a směr k němu v řadě (−1 vlevo, 1 vpravo). */
+  copying?: { defId: string; dir: -1 | 1 } | null;
+  /** Id žolíků, kteří tohoto žolíka právě kopírují (odznak a zvýraznění v řadě). */
+  copiedBy?: readonly string[];
 }
 
 type JokerEl = HTMLElement & { __joker?: Readonly<JokerInstance>; __opts?: JokerCardOptions };
@@ -70,6 +76,12 @@ function jokerLabel(joker: Readonly<JokerInstance>, opts: JokerCardOptions): str
     );
   }
   if (joker.debuffed || opts.debuffed) extras.push(t('art.card.debuffed'));
+  if (opts.copying) extras.push(t('art.copy.labelActive', { name: t(`jokers.${opts.copying.defId}.name`) }));
+  if (opts.copiedBy && opts.copiedBy.length > 0) {
+    extras.push(
+      t('art.copy.labelCopied', { names: opts.copiedBy.map((id) => t(`jokers.${id}.name`)).join(', ') }),
+    );
+  }
   if (opts.price !== undefined) extras.push(t('art.label.price', { price: opts.price }));
   return extras.length === 0 ? label : t('art.label.withExtras', { label, extras: extras.join(', ') });
 }
@@ -92,6 +104,34 @@ function renderStickers(joker: Readonly<JokerInstance>): HTMLElement | null {
   );
 }
 
+/**
+ * Odznak kopírování (vlevo nahoře): u kopírujícího žolíka maska a šipka směrem k cíli, u kopírovaného jen maska.
+ * Text nese aria-label karty a tooltip, odznak je jen vizuální.
+ */
+function renderCopyBadge(opts: JokerCardOptions): HTMLElement | null {
+  if (opts.copying) {
+    return h(
+      'span',
+      {
+        class: ['kcopy', 'kcopy--from', opts.copying.dir < 0 ? 'kcopy--left' : 'kcopy--right'],
+        'aria-hidden': 'true',
+        'data-testid': 'joker-copying',
+      },
+      opts.copying.dir < 0 ? iconElement('arrow', { className: 'kcopy__arrow' }) : null,
+      iconElement('drama-masks'),
+      opts.copying.dir > 0 ? iconElement('arrow', { className: 'kcopy__arrow' }) : null,
+    );
+  }
+  if (opts.copiedBy && opts.copiedBy.length > 0) {
+    return h(
+      'span',
+      { class: ['kcopy', 'kcopy--target'], 'aria-hidden': 'true', 'data-testid': 'joker-copied' },
+      iconElement('drama-masks'),
+    );
+  }
+  return null;
+}
+
 function render(el: JokerEl, joker: Readonly<JokerInstance>, opts: JokerCardOptions): void {
   const reg = opts.registry ?? defaultRegistry();
   const def = reg.jokers[joker.defId];
@@ -105,6 +145,8 @@ function render(el: JokerEl, joker: Readonly<JokerInstance>, opts: JokerCardOpti
   if (joker.edition) el.classList.add(`ed-${joker.edition}`);
   el.classList.toggle('is-selected', !!opts.selected);
   el.classList.toggle('is-debuffed', joker.debuffed || !!opts.debuffed);
+  el.classList.toggle('is-copying', !!opts.copying);
+  el.classList.toggle('is-copy-target', !!opts.copiedBy && opts.copiedBy.length > 0);
   el.dataset.uid = String(joker.uid);
   el.dataset.defId = joker.defId;
   el.setAttribute('aria-label', jokerLabel(joker, opts));
@@ -112,6 +154,7 @@ function render(el: JokerEl, joker: Readonly<JokerInstance>, opts: JokerCardOpti
   const parts = [
     h('span', { class: 'kcard__inner' }, art, h('span', { class: 'kshine', 'aria-hidden': 'true' })),
     renderStickers(joker),
+    renderCopyBadge(opts),
     opts.price !== undefined
       ? h('span', { class: 'price-tag', 'aria-hidden': 'true' }, formatMoney(opts.price))
       : null,
@@ -152,6 +195,7 @@ export function createJokerCard(joker: Readonly<JokerInstance>, opts: JokerCardO
             price: o.price,
             sellValue: o.sellValue,
             debuffed: o.debuffed,
+            run: o.run,
           })
         : null;
     });
