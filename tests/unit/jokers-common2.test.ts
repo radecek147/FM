@@ -218,7 +218,7 @@ describe('běžní žolíci fáze 7 – definice', () => {
       grill_dad: { chips: 60, discards: 1 },
       teacher: { mult: 15 },
       hejkal: { chance: 1, odds: 3, mult: 15 },
-      tram_driver: { mult: 15 },
+      tram_driver: { mult: 18 },
       punter: { chance: 1, odds: 3, money: 7 },
       pavlac_gossip: { xmult: 1.5 },
       round_for_everyone: { xmult: 1.4, cards: 5 },
@@ -325,7 +325,7 @@ describe('běžní žolíci fáze 7 – texty', () => {
       teacher:
         '+15 mult, pokud mají všechny skórující karty sudou hodnotu (dvojky, čtyřky, šestky, osmičky a desítky).',
       hejkal: '1 z 3, že zahraná ruka dostane +15 mult.',
-      tram_driver: '+15 mult, pokud to není první ruka kola a v kole už se zahazovalo.',
+      tram_driver: '+18 mult, pokud to není první ruka kola a v kole už se zahazovalo.',
       punter: 'Na konci kola 1 z 3, že vyhraje 7 Kč.',
       pavlac_gossip: '×1,5 mult, pokud je zahraná kombinace stejná jako v minulé ruce.',
       round_for_everyone: '×1,4 mult, pokud zahraješ 5 karet a všechny skórují.',
@@ -709,12 +709,12 @@ describe('Hejkal (hejkal)', () => {
 });
 
 describe('Tramvaják (tram_driver)', () => {
-  it('+15 mult, když to není první ruka kola a už se zahazovalo', () => {
+  it('+18 mult, když to není první ruka kola a už se zahazovalo', () => {
     const game = roundGame(['tram_driver']);
     ok(game.dispatch({ type: 'discard', cardIds: [game.state.round!.hand[0]!] }));
     expect(jokerDelta(playHand(game, 'KS'), 'tram_driver').steps).toBe(0); // první ruka
     const r = playHand(game, 'KS');
-    expect([r.chips, r.mult, r.score]).toEqual([16, 16, 256]);
+    expect([r.chips, r.mult, r.score]).toEqual([16, 19, 304]);
   });
 
   it('bez zahození nic ani ve druhé ruce', () => {

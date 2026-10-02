@@ -10,16 +10,20 @@ import type { BossCtx, BossDef } from '../../engine/content-types';
 
 // ─────────────────────────── Čísla ───────────────────────────
 
-/** Fronta na banány: násobek základního cíle patra. */
-const BANANA_QUEUE_TARGET_MULT = 4.5;
+/**
+ * Fronta na banány: násobek základního cíle patra. Fáze 10: 4,5 → 3,5 — s cíli patra 8 fáze 10 a silnějšími boty
+ * letalita 55 % (pásmo 20–40 %, DECISIONS „Fáze 10: silnější boti…“).
+ */
+const BANANA_QUEUE_TARGET_MULT = 3.5;
 /**
  * Cíle finálových šéfů laděné simulací na letalitu 20–40 % (docs/DESIGN.md 12.1, DECISIONS „Fáze 6: ladění se
- * šéfy“): Pan starosta, Krajský úřad a Velká voda měli s 2× ~16–19 %, Bílá paní ~35–48 %.
+ * šéfy“): Pan starosta, Krajský úřad a Velká voda měli s 2× ~16–19 %, Bílá paní ~35–48 %. Fáze 10: Bílá paní 1,5 → 1,25
+ * (letalita 54 %).
  */
 const MAYOR_TARGET_MULT = 2.5;
 const OFFICE_TARGET_MULT = 2.25;
 const FLOOD_TARGET_MULT = 2.5;
-const WHITE_LADY_TARGET_MULT = 1.5;
+const WHITE_LADY_TARGET_MULT = 1.25;
 /** Velká voda: o kolik karet se po každé zahrané ruce zmenší ruka (do konce kola). */
 const FLOOD_HAND_SIZE = 1;
 /** Krajský úřad: kolik fungujících žolíků se po každé ruce vypne. */

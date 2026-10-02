@@ -167,11 +167,11 @@ describe('epičtí žolíci fáze 7 – definice', () => {
       tour_guide: { chips: 40, hand: 'flush' },
       spartakiada: { retriggers: 2 },
       voucher_privatization: { money: 1, pct: 5, max: 8 },
-      spa_guest: { xmult: 0.15 },
+      spa_guest: { xmult: 0.13 },
       brass_band: { retriggers: 2, hand: 'pair' },
       charles_bridge: { xmult: 3 },
       d1_motorway: { xmult: 2, cards: 1 },
-      exchange_office: { base: 1, xmult: 0.1, chips: 15, max: 2.5 },
+      exchange_office: { base: 1, xmult: 0.1, chips: 15, max: 2.1 },
       new_years_eve: { xmult: 0.2 },
     });
   });
@@ -239,11 +239,11 @@ describe('epičtí žolíci fáze 7 – texty', () => {
       spartakiada: 'V první ruce kola skóruje každá skórující karta ještě 2×.',
       voucher_privatization:
         'Na konci kola +1 Kč za každých 5 % cíle, o které skóre kola cíl překročilo (nejvýš 8 Kč).',
-      spa_guest: 'Za každé kolo, ve kterém se nezahazovalo, trvale +×0,15 mult (teď ×1).',
+      spa_guest: 'Za každé kolo, ve kterém se nezahazovalo, trvale +×0,13 mult (teď ×1).',
       brass_band: 'Každá skórující karta skóruje ještě 2× za každou další skórující kartu stejné hodnoty.',
       charles_bridge: '×3 mult, pokud držíš v ruce kartu stejné hodnoty jako některá skórující karta.',
       d1_motorway: '×2 mult; v ruce máš o 1 kartu méně.',
-      exchange_office: '×1 mult a navíc +×0,1 za každých 15 čipů, které ruka v tu chvíli má (nejvýš ×2,5).',
+      exchange_office: '×1 mult a navíc +×0,1 za každých 15 čipů, které ruka v tu chvíli má (nejvýš ×2,1).',
       new_years_eve: 'Po každé porážce šéfa trvale +×0,2 mult (teď ×1).',
     });
   });
@@ -253,7 +253,7 @@ describe('epičtí žolíci fáze 7 – texty', () => {
       ...newJokerInstance(game()._core, id),
       state,
     });
-    expect(descOf('spa_guest', inst('spa_guest', { rounds: 3 }))).toContain('(teď ×1,45)');
+    expect(descOf('spa_guest', inst('spa_guest', { rounds: 3 }))).toContain('(teď ×1,39)');
     expect(descOf('new_years_eve', inst('new_years_eve', { bosses: 4 }))).toContain('(teď ×1,8)');
     // Poškozený stav (cizí save) = výchozí hodnota.
     expect(descOf('spa_guest', inst('spa_guest', { rounds: 'x' }))).toContain('(teď ×1)');
@@ -313,8 +313,8 @@ describe('Archivář (archivist)', () => {
 
   it('kopíruje i epické žolíky (na rozdíl od Napodobitele a Kopíráku)', () => {
     const g = roundGame([{ id: 'spa_guest', state: { rounds: 2 } }, 'archivist']);
-    // 32 × 2 × 1,3 × 1,3
-    expect(playHand(g, 'KS KH').score).toBe(Math.floor(32 * 2 * 1.3 * 1.3)); // 108
+    // 32 × 2 × 1,26 × 1,26
+    expect(playHand(g, 'KS KH').score).toBe(Math.floor(32 * 2 * 1.26 * 1.26)); // 101
   });
 
   it('nekopírovatelného souseda (ani jiného Archiváře) nekopíruje a cíl nezapíše', () => {
@@ -488,7 +488,7 @@ describe('Kupónová privatizace (voucher_privatization)', () => {
 // ─────────────────────────── Lázeňský host ───────────────────────────
 
 describe('Lázeňský host (spa_guest)', () => {
-  it('na začátku nic; po kole bez zahazování trvale +×0,15', () => {
+  it('na začátku nic; po kole bez zahazování trvale +×0,13', () => {
     const g = roundGame(['spa_guest']);
     const r = playHand(g, 'KS KH');
     expect(r.score).toBe(64);
@@ -497,8 +497,8 @@ describe('Lázeňský host (spa_guest)', () => {
     expect(joker(g, 'spa_guest').state.rounds).toBe(1);
     toBlindSelect(g);
     const r2 = playHand(g, 'KS KH');
-    expect(jokerSteps(r2, 'spa_guest')).toMatchObject([{ xmult: 1.15 }]);
-    expect(r2.score).toBe(Math.floor(32 * 2 * 1.15)); // 73
+    expect(jokerSteps(r2, 'spa_guest')).toMatchObject([{ xmult: 1.13 }]);
+    expect(r2.score).toBe(Math.floor(32 * 2 * 1.13)); // 72
   });
 
   it('kolo se zahozením se nepočítá', () => {
@@ -514,7 +514,7 @@ describe('Lázeňský host (spa_guest)', () => {
     winRound(g);
     expect(joker(g, 'spa_guest').state.rounds).toBe(1);
     const g2 = roundGame(['copier', { id: 'spa_guest', state: { rounds: 2 } }]);
-    expect(playHand(g2, 'KS KH').score).toBe(Math.floor(32 * 2 * 1.3 * 1.3)); // 108
+    expect(playHand(g2, 'KS KH').score).toBe(Math.floor(32 * 2 * 1.26 * 1.26)); // 101
   });
 
   it('stav přežije uložení a načtení', () => {
@@ -525,7 +525,7 @@ describe('Lázeňský host (spa_guest)', () => {
     g = reload(g);
     expect(joker(g, 'spa_guest').state.rounds).toBe(2);
     toBlindSelect(g);
-    expect(playHand(g, 'KS KH').score).toBe(Math.floor(32 * 2 * 1.3)); // 83
+    expect(playHand(g, 'KS KH').score).toBe(Math.floor(32 * 2 * 1.26)); // 80
   });
 });
 
@@ -621,11 +621,11 @@ describe('Směnárna (exchange_office)', () => {
     expect(playHand(roundGame(['exchange_office']), 'KS+12 KH').score).toBe(Math.floor(44 * 2 * 1.2));
   });
 
-  it('počítá i čipy od žolíků nalevo; strop ×2,5; pod 15 čipů nic', () => {
+  it('počítá i čipy od žolíků nalevo; strop ×2,1; pod 15 čipů nic', () => {
     expect(playHand(roundGame(['coaster', 'exchange_office']), 'KS KH').score).toBe(Math.floor(42 * 4 * 1.2));
     const capped = playHand(roundGame(['exchange_office']), 'KS+300 KH');
-    expect(jokerSteps(capped, 'exchange_office')).toMatchObject([{ xmult: 2.5 }]);
-    expect(capped.score).toBe(332 * 5);
+    expect(jokerSteps(capped, 'exchange_office')).toMatchObject([{ xmult: 2.1 }]);
+    expect(capped.score).toBe(Math.floor(332 * 2 * 2.1));
     const low = playHand(roundGame(['exchange_office']), '2S');
     expect(low.score).toBe(8);
     expect(jokerSteps(low, 'exchange_office')).toEqual([]);

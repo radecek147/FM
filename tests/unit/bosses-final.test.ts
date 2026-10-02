@@ -60,8 +60,8 @@ describe('fináloví šéfové – data (DESIGN 8.3)', () => {
       mayor: 2.5,
       regional_office: 2.25,
       great_flood: 2.5,
-      white_lady: 1.5,
-      banana_queue: 4.5,
+      white_lady: 1.25,
+      banana_queue: 3.5,
     };
     expect(BOSSES_FINAL.map((b) => b.id).sort()).toEqual(Object.keys(table).sort());
     for (const b of BOSSES_FINAL) {
@@ -101,7 +101,7 @@ describe('fináloví šéfové – data (DESIGN 8.3)', () => {
     }
     const rule = (id: string): string =>
       t(`bosses.${id}.rule`, BOSSES_FINAL.find((b) => b.id === id)?.params);
-    expect(rule('banana_queue')).toContain('4,5×');
+    expect(rule('banana_queue')).toContain('3,5×');
     expect(rule('great_flood')).toContain('o\u00a01\u00a0kartu');
     expect(t('bosses.great_flood.rule', { cards: 2 })).toContain('o\u00a02\u00a0karty');
     // Pitva podle DESIGN příloha C.
@@ -191,14 +191,14 @@ describe('Krajský úřad (regional_office)', () => {
 // ─────────────────────────── F3 Fronta na banány ───────────────────────────
 
 describe('Fronta na banány (banana_queue)', () => {
-  it('cíl je 4,5× základ patra (hezky zaokrouhlený, DESIGN 2.3.2)', () => {
+  it('cíl je 3,5× základ patra (hezky zaokrouhlený, DESIGN 2.3.2)', () => {
     const g = bossGame('banana_queue');
-    expect(g.state.round!.target).toBe(niceRound(anteBase(1, 1) * 4.5));
-    expect(g.state.round!.target).toBe(1150);
+    expect(g.state.round!.target).toBe(niceRound(anteBase(1, 1) * 3.5));
+    expect(g.state.round!.target).toBe(880);
     g._core.state.ante = 8;
-    expect(g.blindTarget('boss', 'banana_queue')).toBe(niceRound(anteBase(8, 1) * 4.5));
-    // Víc než dvojnásobek běžného šéfa (2× základ patra).
-    expect(g.blindTarget('boss', 'banana_queue')).toBeGreaterThan(2 * niceRound(anteBase(8, 1) * 2));
+    expect(g.blindTarget('boss', 'banana_queue')).toBe(niceRound(anteBase(8, 1) * 3.5));
+    // Víc než 1,5× cíl běžného šéfa (2× základ patra).
+    expect(g.blindTarget('boss', 'banana_queue')).toBeGreaterThan(1.5 * niceRound(anteBase(8, 1) * 2));
   });
 });
 

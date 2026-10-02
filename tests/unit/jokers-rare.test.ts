@@ -125,7 +125,7 @@ describe('vzácní žolíci — definice a texty', () => {
     expect(descOf('late_train')).toBe('×1,5 mult; 1 z 6, že efekt „nabere zpoždění“ a nenastane.');
     expect(descOf('head_waiter')).toBe('×2 mult, pokud zahraná ruka má nejvýš 3 karty.');
     expect(descOf('old_guard')).toBe('×1,5 mult, pokud má zahraná kombinace úroveň aspoň 3.');
-    expect(descOf('herbalist')).toBe('Po každé použité babské radě trvale +2 mult (teď +0 mult).');
+    expect(descOf('herbalist')).toBe('Po každé použité babské radě trvale +1 mult (teď +0 mult).');
     expect(descOf('regular')).toBe('+1 mult za každé kolo, které od koupě strávil ve slotu (teď +0 mult).');
     expect(descOf('beer_belly')).toBe('Po každé zahrané ruce trvale +2 čipy (teď +0 čipů).');
     expect(descOf('carousel')).toBe(
@@ -253,29 +253,29 @@ describe('Kořenářka (herbalist)', () => {
     ok(g.dispatch({ type: 'useConsumable', uid: c!.uid }));
   }
 
-  it('začíná na +0; každá babská rada trvale +2 mult, jiné spotřebky nic', () => {
+  it('začíná na +0; každá babská rada trvale +1 mult, jiné spotřebky nic', () => {
     const g = game(['herbalist']);
     const r0 = hand(g, 'KS KH');
     expect(r0.score).toBe(64);
     expect(jokerSteps(r0, 'herbalist')).toEqual([]);
     useConsumable(g, 'rada_a');
-    expect(hand(g, 'KS KH').score).toBe(32 * 4);
+    expect(hand(g, 'KS KH').score).toBe(32 * 3);
     useConsumable(g, 'pr_pair'); // pranostika (Dvojice +1 úroveň) — Kořenářku nezajímá
     useConsumable(g, 'stamp'); // razítko taky ne
-    expect(g.state.jokers[0]!.state.mult).toBe(2);
+    expect(g.state.jokers[0]!.state.mult).toBe(1);
     useConsumable(g, 'rada_b');
-    // Dvojice úr. 2 = 40 + 20 = 60 čipů, mult 4 + 4 = 8
-    expect(hand(g, 'KS KH').score).toBe(60 * 8);
+    // Dvojice úr. 2 = 40 + 20 = 60 čipů, mult 4 + 2 = 6
+    expect(hand(g, 'KS KH').score).toBe(60 * 6);
   });
 
   it('kopie nenavyšuje počítadlo, ale bonus kopíruje; stav přežije uložení a načtení', () => {
     let g = game(['copier', 'herbalist']);
     useConsumable(g, 'rada_a');
-    expect(g.state.jokers[1]!.state.mult).toBe(2);
+    expect(g.state.jokers[1]!.state.mult).toBe(1);
     g = reload(g);
-    expect(g.state.jokers[1]!.state.mult).toBe(2);
-    // +2 (kopie) +2 (originál): 32 × 6 = 192
-    expect(hand(g, 'KS KH').score).toBe(192);
+    expect(g.state.jokers[1]!.state.mult).toBe(1);
+    // +1 (kopie) +1 (originál): 32 × 4 = 128
+    expect(hand(g, 'KS KH').score).toBe(128);
   });
 });
 

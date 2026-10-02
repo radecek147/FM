@@ -96,7 +96,7 @@ describe('obtížnosti – seznam (DESIGN kap. 10)', () => {
     expect(t('stakes.lezak.desc', STAKES[4]!.params)).toContain(typo('od 3. patra'));
     expect(t('stakes.special.desc', STAKES[3]!.params)).toContain('40 %');
     expect(t('stakes.special.desc', STAKES[3]!.params)).toContain('6 kolech');
-    expect(t('stakes.dvanactka.desc', STAKES[2]!.params)).toContain(formatNumber(120_000));
+    expect(t('stakes.dvanactka.desc', STAKES[2]!.params)).toContain(formatNumber(110_000));
     expect(t('stakes.imperial.desc', STAKES[7]!.params)).toContain(typo('cíle šéfů jsou o 10 % vyšší'));
   });
 });
@@ -105,7 +105,7 @@ describe('obtížnosti – každá úroveň přidává právě své ztížení',
   it('1 Desítka: základní pravidla, křivka cílů 1', () => {
     expect(modsDiff(1)).toEqual({});
     expect(newGame(1).targetCurve()).toBe(1);
-    expect(finalSmallTarget(1)).toBe(100_000);
+    expect(finalSmallTarget(1)).toBe(95_000);
     const g = newGame(1);
     expect([g.blindTarget('small'), g.blindTarget('big'), g.blindTarget('boss')]).toEqual([250, 380, 500]);
     expect(stakeStickerChance(g._core)).toEqual({});
@@ -144,8 +144,8 @@ describe('obtížnosti – každá úroveň přidává právě své ztížení',
   it('3 Dvanáctka: křivka cílů 2', () => {
     expect(modsDiff(3)).toEqual({ rerollBaseCost: BASE_MODIFIERS.rerollBaseCost + 1 });
     expect(newGame(3).targetCurve()).toBe(2);
-    expect(finalSmallTarget(3)).toBe(120_000);
-    expect(finalSmallTarget(2)).toBe(100_000);
+    expect(finalSmallTarget(3)).toBe(110_000);
+    expect(finalSmallTarget(2)).toBe(95_000);
   });
 
   it('4 Speciál: 40 % žolíků zvětrávajících', () => {
@@ -170,7 +170,7 @@ describe('obtížnosti – každá úroveň přidává právě své ztížení',
   it('6 Bock: křivka cílů 3', () => {
     expect(newGame(5).targetCurve()).toBe(2);
     expect(newGame(6).targetCurve()).toBe(3);
-    expect(finalSmallTarget(6)).toBe(140_000);
+    expect(finalSmallTarget(6)).toBe(115_000);
     expect(modsDiff(6)).toEqual(modsDiff(5));
   });
 

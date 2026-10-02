@@ -41,8 +41,8 @@ const EVEN_RANKS: readonly Rank[] = [2, 4, 6, 8, 10];
 const HEJKAL_CHANCE = 1;
 const HEJKAL_ODDS = 3;
 const HEJKAL_MULT = 15;
-/** Tramvaják: +mult, když to není první ruka kola a už se zahazovalo. */
-const TRAM_MULT = 15;
+/** Tramvaják: +mult, když to není první ruka kola a už se zahazovalo. Fáze 10: +15 → +18 (R1 32 %, pod pásmem). */
+const TRAM_MULT = 18;
 /** Sázkař: na konci kola „1 z 3“ výhra. */
 const PUNTER_CHANCE = 1;
 const PUNTER_ODDS = 3;

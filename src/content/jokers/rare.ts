@@ -90,7 +90,8 @@ const oldGuard: JokerDef = {
 
 // ─────────────────────────── #19 Kořenářka ───────────────────────────
 
-const HERBALIST_MULT = 2;
+/** Fáze 10: +2 → +1 — silnější boti používají víc babských rad (R2 86 % nad pásmem vzácného). */
+const HERBALIST_MULT = 1;
 
 const herbalist: JokerDef = {
   id: 'herbalist',

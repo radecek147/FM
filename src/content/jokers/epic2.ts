@@ -237,7 +237,8 @@ const voucherPrivatization: JokerDef = {
 // ─────────────────────────── Lázeňský host ───────────────────────────
 
 const SPA_BASE = 1;
-const SPA_XMULT = 0.15;
+/** Fáze 10: 0,15 → 0,13 (R2 127 % nad pásmem epického, DECISIONS „Fáze 10: silnější boti…“). */
+const SPA_XMULT = 0.13;
 
 const spaXmult = (self: JokerInstance): number => cents(SPA_BASE + SPA_XMULT * stateNum(self, 'rounds'));
 
@@ -385,7 +386,10 @@ const d1Motorway: JokerDef = {
 const EXCHANGE_BASE = 1;
 const EXCHANGE_XMULT = 0.1;
 const EXCHANGE_CHIPS = 15;
-const EXCHANGE_MAX = 2.5;
+/**
+ * Fáze 10: strop 2,5 → 2,1 — s dvojnásobnými přírůstky úrovní mají ruce víc čipů a strop platil skoro vždy (R2 122 %).
+ */
+const EXCHANGE_MAX = 2.1;
 
 /**
  * Čipy v okamžiku kroku 4 na pozici Směnárny (`ctx.chips`: základ, karty, žolíci nalevo a vlastní lesklá edice — edice

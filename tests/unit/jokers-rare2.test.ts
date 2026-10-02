@@ -208,7 +208,7 @@ describe('vzácní žolíci fáze 7 – definice', () => {
       will_o_wisp: { xmult: 2 },
       noon_witch: { xmult: 2 },
       klekanice: { xmult: 2 },
-      parish_priest: { mult: 5 },
+      parish_priest: { mult: 2.5 },
       seer: {},
       court_painter: {},
       colorblind_uncle: {},
@@ -324,7 +324,7 @@ describe('vzácní žolíci fáze 7 – texty', () => {
       will_o_wisp: 'V kole se šéfem dá každá ruka ×2 mult.',
       noon_witch: 'Druhá ruka kola dá ×2 mult.',
       klekanice: '×2 mult, pokud ti po zahrání v ruce nezůstala žádná figura.',
-      parish_priest: '+5 mult za každou kartu v balíčku, která má vylepšení, pečeť nebo edici.',
+      parish_priest: '+2,5 mult za každou kartu v balíčku, která má vylepšení, pečeť nebo edici.',
       seer: 'Když jediná ruka dosáhne celého cíle Malé útraty, vytvoří pranostiku její kombinace (potřebuje volný slot).',
       court_painter: 'Všechny karty kromě kamenných se počítají jako figury.',
       colorblind_uncle: 'Srdcové a kárové karty se počítají jako jedna barva, pikové a křížové taky.',
@@ -668,31 +668,31 @@ describe('Klekánice (klekanice)', () => {
 });
 
 describe('Pan farář (parish_priest)', () => {
-  it('+5 mult za každou kartu plného balíčku s vylepšením, pečetí nebo edicí (i v ruce a na stole)', () => {
+  it('+2,5 mult za každou kartu plného balíčku s vylepšením, pečetí nebo edicí (i v ruce a na stole)', () => {
     const game = roundGame(['parish_priest']);
-    // Dvojice králů, v ruce 4 upravené karty (glass@gold má dvě úpravy, počítá se jednou): 32 × (2 + 20).
+    // Dvojice králů, v ruce 4 upravené karty (glass@gold má dvě úpravy, počítá se jednou): 32 × (2 + 10).
     const r = playHand(game, 'KS KH 2C:bonus 3D@red 4H~foil 5S:glass@gold', [0, 1]);
-    expect([r.chips, r.mult, r.score]).toEqual([32, 22, 704]);
+    expect([r.chips, r.mult, r.score]).toEqual([32, 12, 384]);
     // Zahraný K♠ s vylepšením se počítá taky (je v balíčku).
-    expect(jokerDelta(playHand(roundGame(['parish_priest']), 'KS:mult KH'), 'parish_priest').mult).toBe(5);
+    expect(jokerDelta(playHand(roundGame(['parish_priest']), 'KS:mult KH'), 'parish_priest').mult).toBe(2.5);
   });
 
   it('obyčejný balíček nic (ani prázdný krok); Bílá hora vylepšení nepočítá; zničená karta zmizí z počtu', () => {
     expect(jokerDelta(playHand(roundGame(['parish_priest']), 'KS KH'), 'parish_priest').steps).toBe(0);
     const white = roundGame(['parish_priest']);
     white._core.api.addPermanentModifier({ disableEnhancements: true });
-    expect(jokerDelta(playHand(white, 'KS KH 2C:bonus 3D@red', [0, 1]), 'parish_priest').mult).toBe(5);
+    expect(jokerDelta(playHand(white, 'KS KH 2C:bonus 3D@red', [0, 1]), 'parish_priest').mult).toBe(2.5);
     const game = roundGame(['parish_priest']);
     const cards = setupRound(game, 'KS KH 2C:bonus 3D@red');
     game._core.api.destroyCard(cards[3]!.id, 'test');
-    expect(jokerDelta(play(game, [cards[0]!, cards[1]!]).result, 'parish_priest').mult).toBe(5);
+    expect(jokerDelta(play(game, [cards[0]!, cards[1]!]).result, 'parish_priest').mult).toBe(2.5);
   });
 
   it('kopie dá efekt znovu; s Notářem roste (zlatá pečeť = další farník)', () => {
-    // Prémiová K♠ je jediný farník: 2 + 5 (originál) + 5 (kopie).
-    expect(playHand(roundGame(['copier', 'parish_priest']), 'KS:bonus KH').mult).toBe(12);
+    // Prémiová K♠ je jediný farník: 2 + 2,5 (originál) + 2,5 (kopie).
+    expect(playHand(roundGame(['copier', 'parish_priest']), 'KS:bonus KH').mult).toBe(7);
     const game = roundGame(['notary_public', 'parish_priest']);
-    expect(jokerDelta(playHand(game, 'KS KH'), 'parish_priest').mult).toBe(5);
+    expect(jokerDelta(playHand(game, 'KS KH'), 'parish_priest').mult).toBe(2.5);
   });
 });
 

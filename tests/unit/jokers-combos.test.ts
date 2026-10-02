@@ -431,7 +431,7 @@ describe('žolíci – vyrenderované popisky (params + počáteční stav)', ()
       teacher:
         '+15 mult, pokud mají všechny skórující karty sudou hodnotu (dvojky, čtyřky, šestky, osmičky a desítky).',
       hejkal: '1 z 3, že zahraná ruka dostane +15 mult.',
-      tram_driver: '+15 mult, pokud to není první ruka kola a v kole už se zahazovalo.',
+      tram_driver: '+18 mult, pokud to není první ruka kola a v kole už se zahazovalo.',
       punter: 'Na konci kola 1 z 3, že vyhraje 7 Kč.',
       pavlac_gossip: '×1,5 mult, pokud je zahraná kombinace stejná jako v minulé ruce.',
       round_for_everyone: '×1,4 mult, pokud zahraješ 5 karet a všechny skórují.',
@@ -450,7 +450,7 @@ describe('žolíci – vyrenderované popisky (params + počáteční stav)', ()
       late_train: '×1,5 mult; 1 z 6, že efekt „nabere zpoždění“ a nenastane.',
       head_waiter: '×2 mult, pokud zahraná ruka má nejvýš 3 karty.',
       old_guard: '×1,5 mult, pokud má zahraná kombinace úroveň aspoň 3.',
-      herbalist: 'Po každé použité babské radě trvale +2 mult (teď +0 mult).',
+      herbalist: 'Po každé použité babské radě trvale +1 mult (teď +0 mult).',
       regular: '+1 mult za každé kolo, které od koupě strávil ve slotu (teď +0 mult).',
       beer_belly: 'Po každé zahrané ruce trvale +2 čipy (teď +0 čipů).',
       carousel: 'Postupka smí jít kolem dokola (např. Q-K-A-2-3) a každá Postupka dá +14 mult.',
@@ -469,7 +469,7 @@ describe('žolíci – vyrenderované popisky (params + počáteční stav)', ()
       will_o_wisp: 'V kole se šéfem dá každá ruka ×2 mult.',
       noon_witch: 'Druhá ruka kola dá ×2 mult.',
       klekanice: '×2 mult, pokud ti po zahrání v ruce nezůstala žádná figura.',
-      parish_priest: '+5 mult za každou kartu v balíčku, která má vylepšení, pečeť nebo edici.',
+      parish_priest: '+2,5 mult za každou kartu v balíčku, která má vylepšení, pečeť nebo edici.',
       seer: 'Když jediná ruka dosáhne celého cíle Malé útraty, vytvoří pranostiku její kombinace (potřebuje volný slot).',
       court_painter: 'Všechny karty kromě kamenných se počítají jako figury.',
       colorblind_uncle: 'Srdcové a kárové karty se počítají jako jedna barva, pikové a křížové taky.',
@@ -483,7 +483,7 @@ describe('žolíci – vyrenderované popisky (params + počáteční stav)', ()
       social_bubble:
         'Když mají všechny skórující karty stejnou barvu nebo stejnou hodnotu, každá dá +15 čipů.',
       snowman: '×2,5 mult; po každém kole −×0,25, při ×1 roztaje a zničí se (teď ×2,5).',
-      mushroom_picker: '×1 mult a navíc +×0,25 za každou hrací kartu zničenou od jeho koupě (teď ×1).',
+      mushroom_picker: '×1 mult a navíc +×0,22 za každou hrací kartu zničenou od jeho koupě (teď ×1).',
       impersonator:
         'Při získání bez edice dostane duhovou; v každém kole kopíruje tvého nejdražšího běžného nebo vzácného žolíka.',
       innkeeper: '×2,2 mult, dokud se v tomto kole nezahazovalo.',
@@ -497,11 +497,11 @@ describe('žolíci – vyrenderované popisky (params + počáteční stav)', ()
       spartakiada: 'V první ruce kola skóruje každá skórující karta ještě 2×.',
       voucher_privatization:
         'Na konci kola +1 Kč za každých 5 % cíle, o které skóre kola cíl překročilo (nejvýš 8 Kč).',
-      spa_guest: 'Za každé kolo, ve kterém se nezahazovalo, trvale +×0,15 mult (teď ×1).',
+      spa_guest: 'Za každé kolo, ve kterém se nezahazovalo, trvale +×0,13 mult (teď ×1).',
       brass_band: 'Každá skórující karta skóruje ještě 2× za každou další skórující kartu stejné hodnoty.',
       charles_bridge: '×3 mult, pokud držíš v ruce kartu stejné hodnoty jako některá skórující karta.',
       d1_motorway: '×2 mult; v ruce máš o 1 kartu méně.',
-      exchange_office: '×1 mult a navíc +×0,1 za každých 15 čipů, které ruka v tu chvíli má (nejvýš ×2,5).',
+      exchange_office: '×1 mult a navíc +×0,1 za každých 15 čipů, které ruka v tu chvíli má (nejvýš ×2,1).',
       new_years_eve: 'Po každé porážce šéfa trvale +×0,2 mult (teď ×1).',
       forefather:
         'První ruka každého kola ještě před skórováním zvýší úroveň zahrané kombinace o 1 (zatím +0 úrovní).',

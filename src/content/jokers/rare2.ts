@@ -33,8 +33,12 @@ const NOON_XMULT = 2;
 const NOON_HAND_INDEX = 1;
 /** Klekánice: ×mult, když v ruce nezůstala žádná figura. */
 const KLEKANICE_XMULT = 2;
-/** Pan farář: +mult za každou kartu plného balíčku s vylepšením, pečetí nebo edicí („farníka“). */
-const PRIEST_MULT = 5;
+/**
+ * Pan farář: +mult za každou kartu plného balíčku s vylepšením, pečetí nebo edicí („farníka“). Fáze 10: +5 → +2,5 —
+ * boti upravují víc karet; s +5 špička R2 228 %, s +3 142 % (> 2× horní hranice vzácného), s +2 R2 19 % (pod
+ * pásmem); +2,5 ≈ R2 24–27 %, špička ~115 %.
+ */
+const PRIEST_MULT = 2.5;
 /** Válečná kořist: Kč na konci kola za každého šéfa poraženého od koupě. */
 const LOOT_MONEY = 2;
 /** Anonymní diskutér: +mult za každou zahranou kartu, která neskóruje. */
