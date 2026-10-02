@@ -548,12 +548,25 @@ test('myš: klik vybere a zruší kartu, limit výběru, Zahrát, Zahodit, tří
   const sorted = await readRun(page);
   const ranks = sorted.round!.hand.map((id) => sorted.deck.find((c) => c.id === id)!.rank);
   expect([...ranks].sort((a, b) => b - a)).toEqual(ranks);
+  await expect(page.getByTestId('sort-rank')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('sort-suit')).toHaveAttribute('aria-pressed', 'false');
+
+  // Třídění zůstává zapnuté: i karty dobrané po zahození se zařadí podle hodnoty.
+  await cards.nth(0).click();
+  await cards.nth(1).click();
+  await page.getByTestId('discard').click();
+  await idle(page);
+  await expect(page.getByTestId('discards-left')).toHaveText('1');
+  const resorted = await readRun(page);
+  expect(resorted.handSort).toBe('rank');
+  const ranksAfter = resorted.round!.hand.map((id) => resorted.deck.find((c) => c.id === id)!.rank);
+  expect([...ranksAfter].sort((a, b) => b - a)).toEqual(ranksAfter);
 
   // Náhled balíčku: 52 karet, zahrané/zahozené zašedlé.
   await page.getByTestId('deck').click();
   await expect(page.getByTestId('deck-modal')).toBeVisible();
   await expect(page.getByTestId('deck-modal').locator('.deck-mini')).toHaveCount(52);
-  await expect(page.getByTestId('deck-modal').locator('.deck-mini.is-out')).toHaveCount(52 - 38);
+  await expect(page.getByTestId('deck-modal').locator('.deck-mini.is-out')).toHaveCount(52 - 36);
   await page.screenshot({ path: 'test-results/game-deck.png', animations: 'disabled' });
   await page.getByTestId('deck-close').click();
   await expect(page.getByTestId('deck-modal')).toHaveCount(0);

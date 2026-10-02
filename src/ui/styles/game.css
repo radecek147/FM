@@ -1676,6 +1676,15 @@
   font-size: 0.85rem;
 }
 
+/* Zapnuté trvalé třídění (RunState.handSort) — stejně jako aktivní záložka. */
+.gb-sort .btn.is-active:not(:disabled) {
+  color: var(--ink);
+  background: var(--accent);
+  box-shadow:
+    0 4px 0 var(--accent-dark),
+    0 5px 0 rgb(0 0 0 / 25%);
+}
+
 .gb-selected {
   font-size: 0.8rem;
   color: var(--on-felt-muted);

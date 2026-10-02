@@ -38,6 +38,7 @@ import type {
   ConsumableInstance,
   GameEvent,
   HandPreview,
+  HandSortMode,
   Modifiers,
   RoundRewards,
   RoundState,
@@ -229,6 +230,7 @@ export class Game {
       // automatické přeskočení útrat (`Modifiers.autoSkip`).
       this.settle();
       this.ensureRoundPlayable();
+      this.keepHandSorted();
       core.invalidate();
       // Ceny ve Večerce sledují aktuální modifikátory (kupón se slevou, Amnestie…).
       if (core.state.shop) refreshShopPrices(core, core.state.shop);
@@ -687,21 +689,40 @@ export class Game {
       fail('invalidSelection');
     for (const id of cardIds) if (!target.includes(id)) fail('invalidSelection');
     target.splice(0, target.length, ...cardIds);
+    // Vlastní pořadí hráče má přednost — trvalé třídění se vypne.
+    this.core.state.handSort = null;
   }
 
   /**
    * Třídění ruky podle hodnoty / barvy. Karty lícem dolů se podle skryté hodnoty netřídí — pořadí by prozradilo, co je
    * pod rubem (Výluka na trati, Mlha nad Labem, Bílá paní): zůstanou za odkrytými kartami v dosavadním pořadí.
    */
-  private sortHand(by: 'rank' | 'suit'): void {
-    const core = this.core;
+  private sortHand(by: HandSortMode): void {
     const target = this.sortableHand();
     if (by !== 'rank' && by !== 'suit') fail('invalidSelection');
+    this.core.state.handSort = by;
+    this.sortIds(target, by);
+  }
+
+  private sortIds(target: number[], by: HandSortMode): void {
+    const core = this.core;
     const enh = core.enhancements();
     const faceUp = target.filter((id) => !core.mustCard(id).faceDown);
     const faceDown = target.filter((id) => core.mustCard(id).faceDown);
     faceUp.sort((a, b) => compareCards(core.mustCard(a), core.mustCard(b), by, enh));
     target.splice(0, target.length, ...faceUp, ...faceDown);
+  }
+
+  /**
+   * Trvalé třídění (`RunState.handSort`): po každé akci se ruka v kole i v obálce znovu seřadí, takže nově dobrané
+   * a přidané karty se zařadí na své místo. Karty lícem dolů zůstanou vzadu v dosavadním pořadí (`sortHand`).
+   */
+  private keepHandSorted(): void {
+    const s = this.core.state;
+    const by = s.handSort;
+    if (by !== 'rank' && by !== 'suit') return;
+    if (s.phase === 'round' && s.round) this.sortIds(s.round.hand, by);
+    else if (s.phase === 'booster' && s.booster) this.sortIds(s.booster.hand, by);
   }
 
   // ── konec kola ──

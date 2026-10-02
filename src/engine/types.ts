@@ -475,7 +475,15 @@ export interface RunState {
   rewards: RoundRewards | null;
   gameOver: GameOverInfo | null;
   nextUid: number;
+  /**
+   * Trvalé třídění ruky (tlačítka Hodnota / Barva): po každé akci, která ruku změní (dobrání, nová karta), se ruka
+   * znovu seřadí. Ruční přesun karty ho zruší. Chybí (starší uložení) nebo null = ruka se sama netřídí.
+   */
+  handSort?: HandSortMode | null;
 }
+
+/** Podle čeho se ruka třídí: hodnota (sestupně), nebo barva. */
+export type HandSortMode = 'rank' | 'suit';
 
 // ─────────────────────────── Akce ───────────────────────────
 
@@ -486,7 +494,8 @@ export type Action =
   | { type: 'play'; cardIds: number[] }
   | { type: 'discard'; cardIds: number[] }
   | { type: 'reorderHand'; cardIds: number[] }
-  | { type: 'sortHand'; by: 'rank' | 'suit' }
+  /** Seřadí ruku a zapne trvalé třídění (`RunState.handSort`) — i nově dobrané karty se zařadí. */
+  | { type: 'sortHand'; by: HandSortMode }
   | { type: 'cashOut' }
   | { type: 'buy'; slot: number }
   | { type: 'buyAndUse'; slot: number; targetIds?: number[] }

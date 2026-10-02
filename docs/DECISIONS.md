@@ -3226,3 +3226,16 @@ cíle odrážely slabost botů, ne obtížnost pro hráče.
 
 **Proč:** CLAUDE.md kap. 6 (správná čeština, skloňování všude, kde se číslo pojí se slovem) a kap. 9–10 (definice
 hotovo, tag `v1.0.0`).
+
+## 2026-10-02 — Trvalé třídění ruky
+
+**Co:** Tlačítka **Hodnota** / **Barva** (klávesy S / B) ruku seřadí a zapnou trvalé třídění. Režim se uloží do
+`RunState.handSort` a po každé akci (`Game.dispatch` → `keepHandSorted`) se ruka v kole i v obálce znovu seřadí,
+takže nově dobrané a přidané karty se zařadí na své místo. Režim platí přes další kola runu a přežije uložení.
+Ruční přesun karty (tažení, Shift + šipky, akce `reorderHand`) třídění vypne a nové karty pak chodí na konec jako
+dřív. Karty lícem dolů zůstanou vzadu v dosavadním pořadí jako u jednorázového třídění, takže pořadí nic
+neprozradí. Zapnuté tlačítko je zvýrazněné (`is-active`, `aria-pressed`) a tooltip vysvětluje chování. Karty, které
+se posunou kvůli nově zařazené kartě, jedou na nové místo animací (FLIP) místo skoku.
+
+**Proč:** přání hráče — po seřazení nechce řadit znovu po každém dobrání. Pole je nepovinné, takže starší uložení
+se načtou bez migrace (chybí = netřídí se). Boti nikdy netřídí, simulace se nemění.

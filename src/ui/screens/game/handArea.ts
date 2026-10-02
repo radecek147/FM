@@ -99,6 +99,7 @@ export function createHandArea(ctx: GameCtx, actions: HandAreaActions): HandArea
   const sortRank = button({
     label: t('game.hand.sortRank'),
     ariaLabel: t('game.hand.sortRankLabel'),
+    title: `${t('game.hand.sortRankLabel')}. ${t('game.hand.sortHint')}`,
     variant: 'paper',
     size: 'small',
     testId: 'sort-rank',
@@ -108,6 +109,7 @@ export function createHandArea(ctx: GameCtx, actions: HandAreaActions): HandArea
   const sortSuit = button({
     label: t('game.hand.sortSuit'),
     ariaLabel: t('game.hand.sortSuitLabel'),
+    title: `${t('game.hand.sortSuitLabel')}. ${t('game.hand.sortHint')}`,
     variant: 'paper',
     size: 'small',
     testId: 'sort-suit',
@@ -293,10 +295,13 @@ export function createHandArea(ctx: GameCtx, actions: HandAreaActions): HandArea
         cards.delete(id);
       }
     }
-    // Jen změna pořadí (třídění, přesun klávesnicí) → FLIP; nové karty animuje presenter (rozdání z balíčku).
+    // Změna pořadí (třídění, přesun klávesnicí, nová karta zařazená doprostřed seřazené ruky) → FLIP karet, které už
+    // v ruce byly; nové karty animuje presenter (rozdání z balíčku).
     const orderKey = ids.join(',');
-    const reorder = orderKey !== lastOrder && created.size === 0 && lastOrder !== '';
-    const before = reorder ? new Map(order.map((n) => [n, n.getBoundingClientRect()])) : null;
+    const reorder = orderKey !== lastOrder && lastOrder !== '';
+    const before = reorder
+      ? new Map(order.filter((n) => !created.has(n)).map((n) => [n, n.getBoundingClientRect()]))
+      : null;
     // Přesunutý uzel (insertBefore) v prohlížeči ztratí focus — vrátit ho kartě, která ho měla.
     const active = document.activeElement;
     const focusedCard = active instanceof HTMLElement && active.parentElement === handRow ? active : null;
@@ -349,6 +354,12 @@ export function createHandArea(ctx: GameCtx, actions: HandAreaActions): HandArea
     discardBtn.disabled = !inRound || nSel === 0 || (round?.discardsLeft ?? 0) <= 0;
     sortRank.disabled = !showHand;
     sortSuit.disabled = !showHand;
+    // Trvalé třídění (RunState.handSort): zapnutý režim je vidět na tlačítku.
+    const sortMode = s.handSort ?? null;
+    sortRank.classList.toggle('is-active', sortMode === 'rank');
+    sortRank.setAttribute('aria-pressed', String(sortMode === 'rank'));
+    sortSuit.classList.toggle('is-active', sortMode === 'suit');
+    sortSuit.setAttribute('aria-pressed', String(sortMode === 'suit'));
 
     const total = s.deck.length;
     const left = round && (s.phase === 'round' || s.phase === 'round_end') ? round.drawPile.length : total;
