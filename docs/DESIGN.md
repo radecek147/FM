@@ -1656,6 +1656,7 @@ Rozvržení a chování UI podle `CLAUDE.md` kap. 4 a 7. Všechny texty jsou v `
 | S / B         | seřadit podle hodnoty / podle barvy                                                  |
 | Shift + ← / → | posunout vybranou kartu v ruce o místo doleva / doprava (bez výběru zaměřenou kartu) |
 | Mezerník      | přeskočit (zrychlit) běžící animaci                                                  |
+| M             | ztlumit / zase pustit zvuk (kdekoli ve hře, ne při psaní do textového pole)          |
 | Esc           | menu / zavřít dialog                                                                 |
 
 Shift + šipka posune kartu, na které je focus, pokud je vybraná; jinak naposledy vybranou; jinak zaměřenou (Tab).
@@ -1669,7 +1670,7 @@ Každý ovládací prvek je dosažitelný klávesnicí (Tab) a má viditelný fo
 
 ### 13.4 Nastavení (výchozí hodnoty)
 
-Hlasitost SFX 70 % · hudba 50 % · rychlost hry 1× (1×–4×) · animace zap · screen shake zap · celá obrazovka vyp ·
+Hlasitost SFX 70 % · hudba 50 % · ztlumit vše vyp (i klávesou M) · rychlost hry 1× (1×–4×) · animace zap · screen shake zap · celá obrazovka vyp ·
 barvoslepý režim vyp · velikost UI 100 % (80–140 %) · rady Štamgasta zap (+ „Zapnout tutoriál znovu“) · přehled
 klávesových zkratek · export/import uložení · reset profilu (dvojí potvrzení). Nastavení je součást profilu
 (`karban.profile`).
@@ -1713,9 +1714,58 @@ Dokončení = achievement „Štamgastův žák“.
 
 - **SFX** (syntetizované ve Web Audio): klik, výběr karty, zamíchání, „tik“ za každý `ScoreStep` (výška tónu roste
   s multem), velké skóre (≥ cíl jednou rukou), zaplacení, prodej, zahození, příchod šéfa, výhra, prohra, odemčení.
+  - Vlastní syntezátor ve stylu jsfxr (`src/ui/audio/sfx.ts`): square / triangle / saw / sine / šum, obálka náběh –
+    výdrž – doznění, posun a skok výšky, vibrato, filtr. Banka: klik, výběr / zrušení výběru (výška roste s počtem
+    vybraných karet), rozdání (cvrnknutí za kartu, max. 8), zamíchání, karty na stůl, `scoreTick` / `multTick` /
+    `xmultTick`, velké skóre, mince / pokladna, prodej, zahození, příchod šéfa, výhra kola, výhra, prohra, odemčení,
+    achievement, chyba, obálka, kupón (razítko), prasklé sklo, vylepšení kombinace, použitá spotřebka, „puf“.
+  - Výška „tiku“: pentatonika podle průběžného multu — o stupeň za každých ~⅔ zdvojnásobení (mult 1 = C5, 2 = +2,
+    4 = +7, 16 = +14), strop dvě oktávy. Krok s +mult zní jasněji, ×mult arpeggiem nahoru, peníze mincí.
+  - Škrcení: „tik“ nejvýš každých 25 ms × rychlost hry (při 4× tedy méně tiků), ostatní zvuky 20–1500 ms podle
+    druhu; nejvýš 40 současných hlasů (nedůležité zvuky se při plném počtu zahodí). Při přeskočení animace (mezerník)
+    nebo s vypnutými animacemi „tiky“ mlčí a hrají jen důležité zvuky.
+  - Klik na tlačítko zazní jen tehdy, když akce tlačítka nemá vlastní zvuk (koupě = pokladna, Zahrát = karty na
+    stůl) — nikdy dvakrát.
 - **Hudba:** procedurální chiptune smyčka; v menu klidnější, ve hře rytmičtější, u šéfa tempo +15 %.
+  - Menu: hospodský valčík (3/4, G dur, 100 BPM, ~58 s), měkký trojúhelník s vibratem. Hra: polka „um-ca“ (2/4,
+    F dur, 128 BPM, ~30 s) — basa střídá základ a kvintu, akordy na „ca“, buben, virbl, hi-hat. Forma A A′ B A;
+    melodii skládá seedovaný generátor z akordových a sousedních tónů (vlastní, žádná převzatá melodie).
+  - Šéf v kole: tempo +15 % od další hranice taktu; změna nálady (menu ↔ hra) také na hranici taktu.
+  - Výhra: fanfára s vířením a činelem, prohra: sestup do moll končící na dominantě. Smyčka pak mlčí až do další
+    obrazovky (nekonečný režim ji pustí hned).
+- **Hlasitost:** hudba i efekty z nastavení živě (kvadratická křivka, 50 % ≈ čtvrtina výkonu), „ztlumit vše“ (M).
+  Hudba při 0 % nebo ztlumení vůbec neběží. Skrytá karta prohlížeče zvuk ztlumí a kontext uspí.
+- **Autoplay:** `AudioContext` vzniká až po prvním gestu hráče (klik, klávesa, dotyk) — žádné varování prohlížeče;
+  bez Web Audio je zvuk tichá no-op.
 - **Efekty:** částice na jediném `<canvas>` (mince, střepy skla, jiskry u ×mult), screen shake u velkého skóre,
   tilt a hover karet, počítadlo skóre; animuje se jen `transform`/`opacity`, rychlost podle `--speed`.
+  - **Částice** (`src/ui/fx/particles.ts`, pevný bazén 640 částic v typovaných polích, smyčka rAF jen dokud něco
+    žije, plátno podle `devicePixelRatio` ≤ 2): mince (vydělané peníze a výplata vyletí, placení padá), střepy +
+    bílé jiskry + kruh (prasklé sklo, po celé ploše karty), plamínky + jiskry + rudý kruh (krok ×mult, síla podle
+    násobku), modrý / červený obláček pixelů (+čipy / +mult), prach (zničená karta nebo žolík), zlaté jiskry, kruhy
+    a konfety (velké skóre), dvě konfetová děla + déšť (výhra), hrst konfet z oznámení (achievement). Rychlost hry
+    zrychlí fyziku o √rychlosti. Skrytá karta prohlížeče částice zahodí.
+  - **Screen shake** (`src/ui/fx/shake.ts`, model „trauma“: výchylka ~ trauma², max. 14 px a 0,8°, doznívá ~0,7 s
+    při 1×, rychlost ho zkracuje): jen `transform` obalu `.game-main` (žolíci, stůl, ruka — levý panel s čísly
+    stojí). Ruka ≥ 50 % cíle kola = lehké ťuknutí (0,3), ruka ≥ cíl = 0,55 + 0,3 · log₁₀(skóre / cíl) (strop 1),
+    příchod šéfa 0,22, prasklé sklo 0,26; otřesy se sčítají. Přeskočení mezerníkem ho hned zastaví.
+  - **Velké skóre** (ruka sama ≥ cíl kola, stejný práh jako zvuk): obří zlatá bublina s překmitem, „To je rána!“
+    nad ní, zlatý záblesk přes obrazovku (jen opacity), jiskry a kruhy na stole, záře za počítadlem skóre kola.
+    Počítadlo „tik tik“ dojíždí exponenciálně (420–1000 ms podle přírůstku ÷ rychlost) a během počítání je o 8 %
+    větší; čísla čipů a multu při každém kroku povyskočí (×mult víc).
+  - **Karty:** hover = povytažení, náklon za myší až ±6° (žolíci ±7°) s odleskem, který sleduje ukazatel; na dotyku
+    ani s vypnutými animacemi se nenaklání. Vybraná karta vyskočí s lehkým překmitem. Žolík se při najetí zakolébá
+    (vlastnost `rotate`), zboží ve Večerce se nadzvedne a cenovka zhoupne.
+  - **Přechody obrazovek** (`src/ui/fx/transitions.ts`): nová obrazovka se objeví za 200 ms ÷ rychlost — z menu dál
+    přijede zprava, zpět do menu zleva (18 px + prolnutí), herní obrazovka jen prolnutím (rozměry sedí od prvního
+    snímku). Router zůstává synchronní: obrazovka je v DOM a má focus hned.
+  - **Nastavení:** animace vyp → vše okamžitě (žádné částice, shake, přechody, bubliny); rychlost 1×–4× dělí
+    délky; screen shake vyp → bez otřesů; `prefers-reduced-motion` → bez shaku, částic, záblesku a přechodů, čekání
+    ve frontě animací zkrácené na polovinu (`REDUCED_MOTION_FACTOR`), CSS animace zkracuje `base.css`.
+  - **Výkon** (ověřuje `KARBAN_JUICE=1 npx playwright test juice`): během skórování s 5 žolíky a dvěma desítkami
+    kroků medián snímku 16,7 ms ve všech bězích, 95. percentil 16,8 ms na volném stroji (33 ms, když vedle běží
+    další testy a stroj se 4 jádry má zátěž 5–6), 0 dlouhých úloh, ~0,27 přepočtu layoutu na snímek (každý krok
+    nejdřív změří zdroj, pak zapisuje).
 
 ### 13.7 Oznámení odemčení a achievementů
 

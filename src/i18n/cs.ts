@@ -102,7 +102,7 @@ const errors = {
   notEnoughMoney: 'Na to nemáš. A na sekeru ti to tady nenapíšou.',
   slotsFull: 'Plno. Víc se tam nevejde, ani kdyby na to dupal celý lokál.',
   soldOut: 'Vyprodáno. Poslední kus si odnesla paní z vedlejšího vchodu.',
-  invalidTarget: 'Na tohle to nezabere. Vyber jiný cíl.',
+  invalidTarget: 'Na tohle to nezabere – jako házet hrách na zeď. Vyber jiný cíl.',
   cannotSell: 'Tohle neprodáš. Je to přibité jako obraz jelena u babičky.',
   cannotUse: 'Teď to použít nejde. Přečti si příbalový leták.',
   unknownItem: 'Tohle tu nevedeme. Zkus to ve Večerce naproti.',

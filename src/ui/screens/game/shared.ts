@@ -5,6 +5,7 @@
 import type { Action, ContentRegistry, EditionId, RunState } from '../../../engine';
 import { t } from '../../../i18n/cs';
 import type { App } from '../../app';
+import { sound } from '../../audio/hooks';
 import { toast } from '../../components/toast';
 import type { GameController } from '../../controller';
 import { h } from '../../dom';
@@ -26,6 +27,7 @@ export interface GameCtx {
 export function createGameCtx(app: App, controller: GameController, render: () => void): GameCtx {
   const report = (res: { ok: boolean; error?: string }): boolean => {
     if (res.ok) return true;
+    sound('error');
     if (res.error) toast(t(`errors.${res.error}`), { kind: 'warning', testId: 'toast-action-error' });
     return false;
   };

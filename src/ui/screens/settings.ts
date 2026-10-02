@@ -22,6 +22,7 @@ import {
 import { mergeDailyRecords, restartTutorial } from '../../engine/meta';
 import { t } from '../../i18n/cs';
 import type { App, ScreenFactory } from '../app';
+import { sound } from '../audio/hooks';
 import { backButton, button } from '../components/button';
 import type { ModalHandle } from '../components/modal';
 import { confirmModal, openModal } from '../components/modal';
@@ -310,6 +311,8 @@ interface RangeOptions {
   value: number;
   format: (v: number) => string;
   onInput: (v: number) => void;
+  /** Po puštění posuvníku (událost `change`) — např. zkušební zvuk. */
+  onChange?: (v: number) => void;
   hint?: string;
 }
 
@@ -332,6 +335,7 @@ function rangeControl(o: RangeOptions): HTMLElement {
       input.setAttribute('aria-valuetext', o.format(v));
       o.onInput(v);
     },
+    onChange: () => o.onChange?.(Number(input.value)),
   });
   return h(
     'div',
@@ -404,7 +408,7 @@ function speedControl(app: App): HTMLElement {
 }
 
 function keysTable(): HTMLElement {
-  const ids = ['select', 'play', 'discard', 'sort', 'move', 'skip', 'menu', 'focus'];
+  const ids = ['select', 'play', 'discard', 'sort', 'move', 'skip', 'mute', 'menu', 'focus'];
   return h(
     'table',
     { class: 'keys-table', 'data-testid': 'keys-table' },
@@ -575,6 +579,18 @@ function settingsPanel(app: App, opts: PanelOptions): Panel {
     opts.onReset();
   };
 
+  // Ztlumit vše (i klávesou M kdekoli — pak se přepínač srovná přes `onSettingsChange`).
+  const muteToggle = toggleControl({
+    id: 'settings-mute',
+    label: t('settings.mute'),
+    checked: s.muted,
+    hint: t('settings.muteHint'),
+    onChange: (on) => app.updateSettings({ muted: on }),
+  });
+  const offSettings = app.onSettingsChange((next) => {
+    muteToggle.input.checked = next.muted;
+  });
+
   // Rady Štamgasta: vypnout / zapnout (zapnutí vrátí i přeskočený tutoriál); restart začne od první rady.
   const tutorialToggle = toggleControl({
     id: 'settings-tutorial',
@@ -603,6 +619,8 @@ function settingsPanel(app: App, opts: PanelOptions): Panel {
         value: Math.round(s.sfxVolume * 100),
         format: pct,
         onInput: (v) => app.updateSettings({ sfxVolume: v / 100 }),
+        // Zkušební cinknutí po puštění posuvníku — hned je slyšet, jak hlasitě to bude.
+        onChange: () => sound('coin'),
       }),
       rangeControl({
         id: 'settings-music',
@@ -615,6 +633,7 @@ function settingsPanel(app: App, opts: PanelOptions): Panel {
         onInput: (v) => app.updateSettings({ musicVolume: v / 100 }),
         hint: t('settings.volumeHint'),
       }),
+      muteToggle.el,
     ),
     section(
       'settings-sec-game',
@@ -735,7 +754,10 @@ function settingsPanel(app: App, opts: PanelOptions): Panel {
 
   return {
     el: h('div', { class: 'settings__panel', 'data-testid': 'settings-panel' }, left, right),
-    dispose: () => document.removeEventListener('fullscreenchange', syncFullscreen),
+    dispose: () => {
+      document.removeEventListener('fullscreenchange', syncFullscreen);
+      offSettings();
+    },
   };
 }
 

@@ -11,6 +11,7 @@ import { t } from './i18n/cs';
 import type { ScreenId } from './ui/app';
 import { App } from './ui/app';
 import { loadIcons } from './ui/art/icons';
+import { installAudio } from './ui/audio/hooks';
 import { toast } from './ui/components/toast';
 import { h, mount, qs } from './ui/dom';
 import { challengesScreen } from './ui/screens/challenges';
@@ -25,6 +26,8 @@ import { settingsScreen } from './ui/screens/settings';
 import { statsScreen } from './ui/screens/stats';
 import { browserStore } from './ui/storage';
 import { installTutorial } from './ui/tutorial';
+// „Šťáva“ (fáze 9) až za styly obrazovek a karet — přebíjí je při stejné specifičnosti.
+import './ui/styles/fx.css';
 
 /** Vývojářská galerie grafiky (`#gallery`) — není běžná obrazovka menu, router ji zná jen pod tímto id. */
 const GALLERY = 'gallery' as ScreenId;
@@ -61,6 +64,8 @@ async function boot(): Promise<void> {
   mount(root, h('p', { class: 'boot-loading', role: 'status' }, t('app.loading')));
 
   const app = new App(root, browserStore(), registry());
+  // Zvuk (DESIGN 13.6): AudioContext vznikne až po prvním gestu hráče, hudba podle obrazovky.
+  installAudio(app);
   app.register('menu', menuScreen);
   app.register('newGame', newGameScreen);
   app.register('game', gameScreen);

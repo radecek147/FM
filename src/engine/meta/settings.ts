@@ -8,6 +8,8 @@ export interface Settings {
   sfxVolume: number;
   /** Hlasitost hudby 0–1. */
   musicVolume: number;
+  /** Ztlumit všechno (klávesa M) — hlasitosti zůstanou, jen se nehraje. */
+  muted: boolean;
   /** Rychlost hry 1–4. */
   speed: number;
   animations: boolean;
@@ -23,6 +25,7 @@ export interface Settings {
 export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   sfxVolume: 0.7,
   musicVolume: 0.5,
+  muted: false,
   speed: 1,
   animations: true,
   screenShake: true,
@@ -43,6 +46,7 @@ export function sanitizeSettings(raw: unknown): Settings {
   return {
     sfxVolume: clamp(r.sfxVolume, 0, 1, d.sfxVolume),
     musicVolume: clamp(r.musicVolume, 0, 1, d.musicVolume),
+    muted: bool(r.muted, d.muted),
     speed: clamp(r.speed, 1, 4, d.speed),
     animations: bool(r.animations, d.animations),
     screenShake: bool(r.screenShake, d.screenShake),

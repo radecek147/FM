@@ -311,14 +311,14 @@ dává stejný seed; kontroly zelené; commit `feat(meta): …`; fáze odškrtnu
 
 ## Fáze 9 — Šťáva a zvuk
 
-- [ ] Částice na jednom `<canvas>` overlay, screen shake, tilt a hover karet, počítadlo skóre, efekt „velkého skóre“
-- [ ] Přechody obrazovek (jen `transform`/`opacity`), respektovat `prefers-reduced-motion`
+- [x] Částice na jednom `<canvas>` overlay, screen shake, tilt a hover karet, počítadlo skóre, efekt „velkého skóre“ (`src/ui/fx/*`, `src/ui/styles/fx.css`; DESIGN 13.6, DECISIONS „Fáze 9 (šťáva)“)
+- [x] Přechody obrazovek (jen `transform`/`opacity`), respektovat `prefers-reduced-motion` (`src/ui/fx/transitions.ts`)
 - [ ] SFX syntetizované ve Web Audio (jsfxr-like): klik, výběr karty, míchání, „tik tik tik“ skóre, velké skóre, zaplacení, prodej, zahození, příchod šéfa, výhra, prohra, odemčení
 - [ ] Procedurální chiptune hudba: jiná v menu a ve hře, u šéfa rychlejší tempo
-- [ ] Nastavení: hlasitost SFX/hudba, rychlost hry 1×–4×, animace zap/vyp, screen shake, celá obrazovka, velikost UI, přehled klávesových zkratek
-- [ ] Barvoslepý režim: 4barevný balíček (druhý styl SVG karet)
-- [ ] Vtip všude: loading tipy, prázdné stavy, chybové hlášky, titulky
-- [ ] Výkon: 60 fps, žádný layout thrashing, profilování animací
+- [x] Nastavení: hlasitost SFX/hudba, rychlost hry 1×–4×, animace zap/vyp, screen shake, celá obrazovka, velikost UI, přehled klávesových zkratek (ověřeno: ovládání v `src/ui/screens/settings.ts`, ukládá se v profilu; animace / rychlost / shake respektuje i šťáva — `src/ui/fx/motion.ts`)
+- [x] Barvoslepý režim: 4barevný balíček (druhý styl SVG karet) (ověřeno: `.colorblind` v `styles/cards.css`, přepínač v Nastavení, e2e `menu.spec.ts` a `game.spec.ts`)
+- [x] Vtip všude: loading tipy, prázdné stavy, chybové hlášky, titulky (prošlo se; doplněné pointy v DECISIONS)
+- [x] Výkon: 60 fps, žádný layout thrashing, profilování animací (`KARBAN_JUICE=1 npx playwright test juice`: medián snímku 16,7 ms, p95 16,8 ms na volném stroji / 33 ms pod cizí zátěží, ~0,27 přepočtu layoutu na snímek během skórování)
 
 **Hotovo, když:** hra „šťavnatě“ reaguje, zvuk i hudba jdou ztlumit, nastavení se ukládá, 60 fps na
 průměrném notebooku; kontroly zelené; commit `feat(ui): juice and audio`; fáze odškrtnutá.

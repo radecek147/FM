@@ -320,7 +320,7 @@ export const meta = {
     stakeCondition: 'Vyhraj s libovolným balíčkem na síle piva {stake}.',
     hiddenAchievement: 'Skrytý achievement – prozradí se, až ho získáš.',
     empty: 'Tahle polička je zatím prázdná. Truhlář slíbil, že ji do pátku dodělá.',
-    emptyFilter: 'Nic takového tu není. Zkus jiný filtr.',
+    emptyFilter: 'Nic takového tu není, ani v zadní místnosti. Zkus jiný filtr.',
     itemLabel: '{name}, {state}',
     states: {
       locked: 'zamčeno',

@@ -2847,3 +2847,102 @@ přístupnost > 90).
 
 **Proč:** CLAUDE.md kap. 2 (profil se nikdy neztratí), 3 (výzvy, achievementy, denní run, seed), 5–6 (tykání,
 humor, plural), DESIGN 11, 13.4; CONTENT-GUIDE kap. 12 (rodová neutralita).
+
+## 2026-10-02 — Fáze 9 (zvuk): syntetizované efekty, procedurální hudba, ztlumení
+
+**Co:**
+
+- **Žádné zvukové soubory.** Všechno se syntetizuje za běhu ve Web Audio (`src/ui/audio`): efekty vlastním
+  syntezátorem ve stylu jsfxr (oscilátory square / triangle / saw / sine a šum, obálka náběh – výdrž – doznění,
+  posun a skok výšky, vibrato přes `detune`, filtr dolní / horní / pásmová propust), hudba procedurálním chiptune.
+  Build ani hra nepotřebují síť, nic se nestahuje, `ASSETS.md` to uvádí. Šum je deterministický buffer (LCG), ne
+  `Math.random`.
+- **Autoplay bez varování:** `AudioContext` vzniká až v posluchači gesta (pointerdown / pointerup / click / keydown /
+  keyup / touchend na dokumentu, zachytávací fáze) a jen když `navigator.userActivation.hasBeenActive` (Esc ani jiná
+  klávesa, která aktivaci nedává, kontext nevytvoří). Načtení stránky, oznámení při startu ani e2e testy bez
+  interakce tedy kontext nezaloží — konzole zůstane čistá. Bez Web Audio (Node, starý prohlížeč) je všechno tichá
+  no-op, nic nevyhazuje a nic nepíše do konzole.
+- **Hlasitost:** kvadratická křivka (posuvník 50 % = čtvrtina výkonu — zní jako „polovina“), efekty × 0,9 a hudba ×
+  0,55 jako rezerva (hudba je podklad). Změny jdou plynule (`setTargetAtTime`, 30 ms), takže posuvník nevrže; nová
+  `App.onSettingsChange` je promítne hned, engine si je navíc levně ověří před každým zvukem (import profilu bez
+  `updateSettings`). Hudba při 0 % nebo ztlumení vůbec neplánuje noty. Skrytá karta = ztlumit a `suspend()`.
+- **Ztlumit vše = nové pole nastavení `muted`** (výchozí vyp, starší profily ho doplní `sanitizeSettings`, migrace
+  není potřeba). Přepínač v Nastavení a klávesa **M** kdekoli kromě psaní do textového pole (oznámení „Zvuk
+  vypnutý…“); hlasitosti zůstanou, takže odtlumení vrátí přesně původní stav. Přepínač v otevřeném nastavení se
+  srovná i po stisku M. Po puštění posuvníku efektů zazní zkušební cinknutí.
+- **Synchronizace s animací:** presenter volá `soundForEvent` na začátku přehrání každé události a `soundScoreStep` za
+  každý `ScoreStep` (jednořádkové volání v `present.ts`), takže zvuk sedí na bublinu a částice, ne na okamžik akce.
+  Rozdání: cvrnknutí za každou kartu se stejným rozestupem jako přílet z balíčku (60 ms / rychlost, max. 8). Sklo
+  rozbité skórováním zazní se střepy v `presentHand` (událost `cardDestroyed` s důvodem `score` přijde až po
+  animaci).
+- **„Tik“ a mult:** výška po pentatonice (vždy ladí), o stupeň za ~⅔ zdvojnásobení multu, strop dvě oktávy —
+  i mult v milionech zůstane příjemný. Rozestup tiků 25 ms × rychlost hry (při 4× méně tiků, jak chce zadání);
+  při přeskočení mezerníkem a bez animací tiky mlčí (zbytek dávky by jinak vystřelil najednou), důležité zvuky
+  (peníze, výhra, šéf…) hrají dál díky škrcení každý jen jednou. Limit 40 hlasů, nedůležité zvuky se zahodí první.
+- **Klik bez zdvojení:** delegovaný posluchač v zachytávací fázi si zapamatuje počet přehraných zvuků a po makroúloze
+  (`setTimeout 0`, tj. po synchronní části akce a jejích mikroúlohách) zahraje klik jen tehdy, když akce tlačítka
+  sama nezazněla (koupě = pokladna, Zahrát = karty na stůl, neplatná akce = chybový bzučák). Karty v ruce mají vlastní
+  zvuk výběru (výška stoupá s počtem vybraných karet), `data-sfx="none"` klik vypne. Výběr se pozná rozdílem
+  `controller.selected` mezi oznámeními; změna výběru po akci (zahrání, použití spotřebky) zvuk nemá.
+- **Hudba — původní, skládaná kódem:** harmonie jsou obecné lidové kadence (T–D–T polky, valčíková I–IV–V7), melodii
+  skládá seedovaný generátor (mulberry32, pevný seed pro každou náladu) z akordových tónů na dobách a krokových
+  tónů mezi nimi; forma A A′ B A. Menu = hospodský valčík (3/4, G dur, 100 BPM, měkký trojúhelník s vibratem), hra =
+  polka „um-ca“ (2/4, F dur, 128 BPM, basa základ–kvinta, akordy na „ca“, buben, virbl, hi-hat) — česká hospoda
+  místo obecného chiptune. Plánovač „lookahead“ (časovač 25 ms, okno 150 ms) na hodinách Web Audio; opožděný časovač
+  zmeškané noty přeskočí místo dávky naráz.
+- **Šéf a změny nálady na hranici taktu:** tempo +15 % (šéf v kole podle stavu controlleru) i přepnutí menu ↔ hra
+  se projeví až na začátku dalšího taktu, aby hudba nezakopla. Výhra a prohra mají znělku (fanfára s vířením /
+  sestup do moll končící na dominantě) přes sběrnici hudby a k tomu krátký efekt; smyčka pak mlčí do další obrazovky
+  (pitva a výhra jsou chvíle ticha), nekonečný režim ji pustí hned.
+
+**Proč:** CLAUDE.md kap. 2 (Web Audio, SFX syntetizované v kódu, procedurální hudba), 4 (nastavení hlasitosti),
+7 (seznam zvuků, hudba v menu jiná než ve hře, u šéfa rychlejší; nic z Balatra), 8 (konzole bez chyb a varování);
+DESIGN 13.3, 13.4, 13.6.
+
+## 2026-10-02 — Fáze 9 (šťáva): částice, screen shake, velké skóre, náklon karet, přechody obrazovek
+
+**Co:**
+
+- **Pohybové předvolby na jednom místě** (`src/ui/fx/motion.ts`): animace vyp = vše okamžitě (žádné částice, shake,
+  přechody ani bubliny), rychlost 1×–4× dělí délky, screen shake vyp = bez otřesů. `prefers-reduced-motion` vypne
+  shake, částice, zlatý záblesk a přechody obrazovek a **zkrátí** čekání ve frontě animací na polovinu
+  (`REDUCED_MOTION_FACTOR = 0,5`; DESIGN 13.4 chce „zkrátit“, ne vypnout — hráč musí stihnout přečíst bubliny).
+- **Částice** (`src/ui/fx/particles.ts`): pevný bazén 640 částic v typovaných polích, plný bazén přepisuje dokola
+  (žádné alokace ve smyčce snímku), rAF běží jen, dokud něco žije, a sám se zastaví; plátno podle
+  `devicePixelRatio` (max. 2) jen po změně okna; skrytá karta prohlížeče částice zahodí (po návratu by „doletěly
+  z minulosti“). Nové druhy: plamínky ×mult, obláčky +čipy / +mult, prach, kruh (rázová vlna), konfetová děla.
+  Pojmenované efekty berou prvek **nebo už změřený obdélník** — presenter změří zdroj kroku jednou a teprve pak
+  zapisuje (bubliny i částice použijí stejný obdélník). Rychlost hry zrychlí fyziku jen o √rychlosti (při 4× by
+  lineárně částice zmizely dřív, než je hráč uvidí). Achievement = hrst konfet z oznámení.
+- **Screen shake** (`src/ui/fx/shake.ts`): model „trauma“ (výchylka ~ trauma², otřesy se sčítají se stropem 1,
+  deterministický pseudo-šum ze sinusovek, žádná náhoda). Třese se jen `.game-main` (žolíci, stůl, ruka) — levý
+  panel s počítadly stojí, aby šla čísla číst. **Práh:** lehké ťuknutí od 50 % cíle kola jednou rukou (0,3), plný
+  efekt od 100 % (0,55 + 0,3 · log₁₀(skóre / cíl)); 50 % je v kole se 4 rukama nadprůměrná ruka, takže odměna
+  přijde i bez okamžité výhry, ale velký efekt zůstane vzácný. Dál příchod šéfa (0,22) a prasklé sklo (0,26).
+- **Velké skóre = ruka sama ≥ cíl kola** (stejný práh jako zvuk „velké skóre“ v DESIGN 13.6): obří zlatá bublina,
+  „To je rána!“ nad ní (dřív seděla přes počítadlo skóre v levém panelu), zlatý záblesk (jen opacity, nový prvek
+  ve vrstvě bublin — bez vynuceného reflow), záře za počítadlem. Počítadlo dojíždí exponenciálně, délka podle
+  přírůstku 420–1000 ms, text se přepisuje jen při změně.
+- **Bubliny nad žolíky** se u horního okraje okna ořezávaly — když nad zdrojem není místo, ukážou se pod ním.
+- **Náklon karet** přesunut z `card.ts` do `src/ui/fx/tilt.ts` a použit i u žolíků (vnitřek žolíka se při
+  překreslení mění, hledá se znovu). Odlesk sleduje ukazatel (CSS proměnné `--glare-*`, `::before` vnitřku).
+  Dotyk, tažení, vypnuté animace i reduced motion = bez náklonu. Kolébání žolíka přes vlastnost `rotate` (skládá se
+  s `transform` náklonu, nepřepisuje ho) jen na vnitřku — obdélník tlačítka se nemění (tažení a testy měří tlačítko).
+- **Přechody obrazovek** (`src/ui/fx/transitions.ts`, `App.go`): jen vstup nové obrazovky (200 ms ÷ rychlost),
+  router zůstává synchronní — stará obrazovka zmizí hned, nová je v DOM a má focus okamžitě (testy, tutoriál
+  i čtečky počítají s okamžitou změnou; odchodová animace by vyžadovala držet v DOM dvě obrazovky se stejnými
+  `data-testid`). Herní obrazovka jen prolnutím bez posunu: rozměry karet a žolíků sedí od prvního snímku.
+- **Styly šťávy** v novém `src/ui/styles/fx.css`, importovaném v `main.ts` až za obrazovkami (při stejné
+  specifičnosti přebíjí `cards.css` / `game.css`).
+- **Ověření:** `tests/unit/ui-fx.test.ts` (bazén, vypnutí, skrytá karta, shake podle nastavení, přechody bez
+  animací, náklon, počítadlo), `tests/e2e/juice.spec.ts` (velké skóre v prohlížeči: bubliny, záblesk, částice
+  opravdu na plátně, shake jen `.game-main`; bez animací nic; přechod obrazovky). S `KARBAN_JUICE=1` snímky
+  uprostřed animací (`test-results/phase9/`) a měření snímků (headless Chromium 1366 × 768, 8 běhů): medián
+  16,7 ms vždy, p95 16,8 ms na volném stroji a 33 ms pod cizí zátěží (paralelní Playwright, load 5–6 na 4 jádrech;
+  se zvukem i bez něj stejně — rozhoduje zátěž, ne syntéza), 0–1 dlouhá úloha, ~0,27 přepočtu layoutu na snímek.
+  Test hlídá medián < 20 ms, p95 < 34 ms (nejvýš občas 2 snímky) a < 2 přepočty layoutu na snímek.
+- **Vtip všude:** prošly se prázdné stavy a chybové hlášky; doplněny pointy tam, kde byla jen suchá věta (prázdná
+  ruka, filtr sbírky, chyby importu uložení, neplatný cíl).
+
+**Proč:** CLAUDE.md kap. 2 (60 fps, jen transform/opacity, žádný layout thrashing), kap. 4 (nastavení rychlosti,
+animací a shaku), kap. 9 bod 9; DESIGN 13.4 a 13.6.

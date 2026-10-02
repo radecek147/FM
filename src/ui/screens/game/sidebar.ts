@@ -25,6 +25,9 @@ export interface Sidebar {
   handInfoEl: HTMLElement;
   moneyEl: HTMLElement;
   roundScoreEl: HTMLElement;
+  /** Čísla čipů a multu v náhledu kombinace (presenter je při změně nechá povyskočit). */
+  chipsEl: HTMLElement;
+  multEl: HTMLElement;
   showScoring(s: { hand: HandType; level: number; chips: number; mult: number } | null): void;
   setChipsMult(chips: number, mult: number): void;
   setRoundScore(n: number): void;
@@ -346,6 +349,8 @@ export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
     handInfoEl,
     moneyEl,
     roundScoreEl,
+    chipsEl,
+    multEl,
     showScoring(s) {
       scoring = s;
       updateHand();

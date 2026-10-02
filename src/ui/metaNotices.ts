@@ -8,8 +8,10 @@ import type { ContentRegistry } from '../engine';
 import type { MetaNotice } from '../engine/meta';
 import { hasKey, t } from '../i18n/cs';
 import { iconElement } from './art/icons';
+import { sound } from './audio/hooks';
 import { toast } from './components/toast';
 import { h } from './dom';
+import { particles } from './fx/particles';
 import { achievementName, deckName, stakeName, unlockSubjectName } from './metaText';
 
 /** Kolik oznámení meta vrstvy visí naráz (zbytek čeká ve frontě). */
@@ -116,7 +118,8 @@ export function noticeIcon(view: Pick<NoticeView, 'kind' | 'icon'>, className = 
 /** Ukáže jedno oznámení jako toast; `onClose` se zavolá, až odejde. */
 export function showNoticeToast(n: MetaNotice, registry: ContentRegistry, onClose?: () => void): void {
   const view = noticeView(n, registry);
-  toast(view.text || view.title, {
+  sound(n.kind === 'achievement' ? 'achievement' : 'unlock');
+  const handle = toast(view.text || view.title, {
     kind: 'success',
     title: view.title,
     eyebrow: view.eyebrow,
@@ -126,6 +129,12 @@ export function showNoticeToast(n: MetaNotice, registry: ContentRegistry, onClos
     className: `toast--meta toast--meta-${n.kind}`,
     onClose,
   });
+  // Achievement = hrst konfet z oznámení (src/ui/fx/particles.ts; bez animací nic). Měří se v příštím snímku,
+  // až je oznámení na místě.
+  if (n.kind === 'achievement' && typeof requestAnimationFrame === 'function')
+    requestAnimationFrame(() => {
+      if (handle.el.isConnected) particles().celebrate(handle.el);
+    });
 }
 
 type ShowFn = (n: MetaNotice, registry: ContentRegistry, onClose: () => void) => void;

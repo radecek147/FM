@@ -8,7 +8,8 @@
  * - `<button>` (s `onClick`) nebo `<div role="img">`, `data-uid`, `data-def-id`, `aria-label` s názvem,
  *   vzácností, edicí, nálepkami a cenou,
  * - rámeček podle vzácnosti (art.ts), edice třídou `ed-<id>` (třpyt v CSS), nálepky jako odznaky,
- *   zvětralý / dočasně debuffnutý = `is-debuffed`, cenovka (`price`), tooltip s aktuálním popisem.
+ *   zvětralý / dočasně debuffnutý = `is-debuffed`, cenovka (`price`), tooltip s aktuálním popisem,
+ *   náklon za myší s odleskem (src/ui/fx/tilt.ts) a kolébání při najetí (CSS).
  */
 import '../styles/cards.css';
 import type { ContentRegistry } from '../../engine/content-types';
@@ -20,6 +21,7 @@ import { artElement, UNKNOWN_ART } from '../art/art';
 import { iconElement } from '../art/icons';
 import { previewJokerInstance } from '../describe';
 import { h } from '../dom';
+import { bindTilt } from '../fx/tilt';
 import { attachTooltip, jokerTooltip } from './tooltip';
 
 export interface JokerCardOptions {
@@ -176,6 +178,8 @@ export function createJokerCard(joker: Readonly<JokerInstance>, opts: JokerCardO
   el.__joker = joker;
   el.__opts = opts;
   render(el, joker, opts);
+  // Náklon za myší a odlesk (src/ui/fx/tilt.ts); kolébání při najetí řeší CSS (styles/cards.css).
+  bindTilt(el, { max: 7 });
   if (interactive) {
     el.addEventListener('click', (e) => {
       if (el.__joker) el.__opts?.onClick?.(el.__joker, e);

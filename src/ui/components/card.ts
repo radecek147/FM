@@ -7,7 +7,8 @@
  * - interaktivní karta je `<button>` s `aria-pressed` (výběr) a `aria-label` s názvem a úpravami,
  *   neinteraktivní je `<div role="img">`,
  * - `data-card-id`, třídy stavu `is-selected` / `is-debuffed` / `is-face-down`, edice `ed-<id>`,
- *   vylepšení `enh-<id>` (styly v styles/cards.css; výběr = posun nahoru, hover/tilt jen transform),
+ *   vylepšení `enh-<id>` (styles/cards.css; výběr = posun nahoru s pérováním, hover = povytažení, náklon za
+ *   myší a odlesk — src/ui/fx/tilt.ts; vše jen transform/opacity),
  * - mezerník na zaměřené kartě přepne výběr; Enter propadne k obrazovce (ve hře = Zahrát, DESIGN 13.3),
  * - tooltip (hover/focus/dlouhý stisk) s detailem karty.
  */
@@ -18,6 +19,7 @@ import { registry as defaultRegistry } from '../../content';
 import { cardFaceElement, cardFaceKey } from '../art/cards';
 import { cardLabel } from '../describe';
 import { h } from '../dom';
+import { bindTilt } from '../fx/tilt';
 import { attachTooltip, cardTooltip } from './tooltip';
 
 export interface CardViewOptions {
@@ -82,53 +84,6 @@ function renderArt(el: CardEl, card: Readonly<Card>, opts: CardViewOptions): voi
   if (old) old.replaceWith(svgEl);
   else inner.prepend(svgEl);
   el.dataset.visual = visualKey(card);
-}
-
-/**
- * Jemný 3D náklon za ukazatelem (jen transform přes CSS proměnné). Nejvýš jeden zápis za snímek
- * (requestAnimationFrame) a rozměry karty se měří jen při najetí — pohyb myši nevynucuje přepočet layoutu.
- */
-function bindTilt(el: HTMLElement): void {
-  const inner = el.querySelector<HTMLElement>('.pcard__inner');
-  if (!inner) return;
-  let rect: DOMRect | null = null;
-  let last: { x: number; y: number } | null = null;
-  let frame = 0;
-  const apply = (): void => {
-    frame = 0;
-    if (!last) return;
-    rect ??= el.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return;
-    const dx = (last.x - rect.left) / rect.width - 0.5;
-    const dy = (last.y - rect.top) / rect.height - 0.5;
-    inner.style.setProperty('--tilt-x', `${(-dy * 10).toFixed(2)}deg`);
-    inner.style.setProperty('--tilt-y', `${(dx * 12).toFixed(2)}deg`);
-  };
-  // Najetí a klik (výběr kartu povytáhne) = změřit znovu.
-  const remeasure = (): void => {
-    rect = null;
-  };
-  el.addEventListener('pointerenter', remeasure);
-  el.addEventListener('pointerdown', remeasure);
-  const reset = (): void => {
-    if (frame) cancelAnimationFrame(frame);
-    frame = 0;
-    last = null;
-    rect = null;
-    inner.style.removeProperty('--tilt-x');
-    inner.style.removeProperty('--tilt-y');
-  };
-  el.addEventListener('pointermove', (e) => {
-    if (e.pointerType === 'touch') return;
-    // Tažená karta (přesun v ruce) se nenaklání — změřený obdélník by s posunem neseděl.
-    if (el.classList.contains('is-dragging')) {
-      if (last) reset();
-      return;
-    }
-    last = { x: e.clientX, y: e.clientY };
-    if (!frame) frame = requestAnimationFrame(apply);
-  });
-  el.addEventListener('pointerleave', reset);
 }
 
 /** Vytvoří hrací kartu. */

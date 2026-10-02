@@ -100,7 +100,7 @@ export const game = {
   /** Ruka, stůl a balíček. */
   hand: {
     label: 'Tvoje ruka, {n|plural:karta,karty,karet}',
-    empty: 'Ruka je prázdná.',
+    empty: 'Ruka je prázdná. Jako peněženka po pouti.',
     play: 'Zahrát',
     discard: 'Zahodit',
     playLabel: 'Zahrát vybrané karty (Enter)',

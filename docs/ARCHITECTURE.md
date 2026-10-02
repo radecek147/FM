@@ -299,8 +299,28 @@ flavor a že texty dodržují typografii.
 - `src/ui/controller.ts` — drží instanci `Game`, předává akce, řadí události do fronty animací,
   po každé akci autosave.
 - Obrazovky v `src/ui/screens/*`, komponenty v `src/ui/components/*`.
-- Animace: CSS transform/opacity + `src/ui/fx/particles.ts` (jediný `<canvas>` overlay).
-- Zvuk: `src/ui/audio/` — syntetizované SFX (jsfxr-like) a procedurální chiptune.
+- Animace: CSS transform/opacity + `src/ui/fx/` („šťáva“, DESIGN 13.6):
+  - `motion.ts` — jediné místo pro pohybové předvolby (animace, rychlost, screen shake, `prefers-reduced-motion`),
+  - `particles.ts` — částice na jediném `<canvas id="fx">` (pevný bazén, rAF jen když něco žije, pojmenované efekty
+    `coins` / `glass` / `xmult` / `puff` / `dust` / `bigScore` / `confetti` / `celebrate`; cíl je prvek nebo už
+    změřený obdélník, ať volající měří dřív, než zapisuje),
+  - `shake.ts` — screen shake (`Shaker`, model trauma, jen `transform` obalu), `shakeForScore`,
+  - `tilt.ts` — náklon karty za myší s odleskem (CSS proměnné, jeden zápis za snímek, měření jen při najetí),
+  - `transitions.ts` — přechody obrazovek pro `App.go` (Web Animations, jen opacity/transform),
+  - styly v `src/ui/styles/fx.css` (importuje se v `main.ts` až za styly obrazovek).
+- Zvuk: `src/ui/audio/` — syntetizované SFX (jsfxr-like) a procedurální chiptune, bez jediného zvukového souboru:
+  - `engine.ts` — `AudioEngine`: líný `AudioContext` až po gestu hráče (`installGestureUnlock`, kontrola
+    `navigator.userActivation`), graf `sfxBus` / `musicBus` → `master` → výstup, hlasitosti z nastavení
+    (`syncVolumes`, kvadratická křivka, plynulé `setTargetAtTime`), skrytá karta = ztlumit + `suspend()`.
+    Bez Web Audio tichá no-op.
+  - `sfx.ts` — syntéza hlasu (`synthVoice`: oscilátor / šum → filtr → obálka, slide, skok výšky, vibrato přes
+    `detune`), banka `SOUNDS` a `SfxPlayer` (škrcení opakování, limit hlasů, `playCount`).
+  - `music.ts` — `composeSong` (seedovaný skladatel: valčík do menu, polka do hry, znělky) a `MusicPlayer`
+    (plánovač „lookahead“ po 25 ms na hodinách Web Audio; nálada a tempo šéfa se mění na hranici taktu).
+  - `hooks.ts` — `installAudio(app)` (src/main.ts) a funkce pro presenter: `soundForEvent` na začátku přehrání
+    každé události, `soundScoreStep` za krok skórování, `sound(name)` odkudkoli (no-op bez instalace).
+    Hudba podle `App.onScreenChange`, hlasitosti podle `App.onSettingsChange`, výběr karet a šéf podle controlleru,
+    delegovaný klik na tlačítka (bez zdvojení se zvukem akce), klávesa M = ztlumit vše (`Settings.muted`).
 - Témata a barvoslepý režim přes CSS proměnné na `:root`.
 - Obrázky: `src/ui/art/` skládá SVG žolíků z `ArtSpec` (ikona + paleta + vzor), karty jsou SVG.
 - Šéfové a štítky v UI (fáze 6): texty přes `describe.ts` (`bossTexts` dosazuje `BossDef.params`, `bossReasonText`

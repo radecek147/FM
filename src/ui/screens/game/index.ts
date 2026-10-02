@@ -23,7 +23,8 @@ import { hideTooltip, isTooltipVisible } from '../../components/tooltip';
 import type { GameController } from '../../controller';
 import { h } from '../../dom';
 import { particles, type Particles } from '../../fx/particles';
-import { animate, createPresenter, type PresentView } from '../../present';
+import { Shaker } from '../../fx/shake';
+import { createPresenter, type PresentView } from '../../present';
 import { blindSelectKey, renderBlindSelect } from './blindSelect';
 import { createBossBanner, type BossBanner } from './bossBanner';
 import { boosterKey, renderBooster } from './booster';
@@ -80,6 +81,7 @@ class GameView implements PresentView {
   private readonly fx: HTMLElement;
   private readonly live: HTMLElement;
   private readonly bossBanner: BossBanner;
+  private readonly shaker: Shaker;
   private panelKey = '';
   private readonly unsubscribe: () => void;
 
@@ -137,6 +139,12 @@ class GameView implements PresentView {
       this.main,
       this.fx,
       this.live,
+    );
+
+    // Screen shake třese jen hlavní částí (žolíci, stůl, ruka) — levý panel s čísly zůstává čitelný.
+    this.shaker = new Shaker(
+      () => (this.main.isConnected ? this.main : null),
+      () => ({ ...this.app.settings, instant: this.anim.instant }),
     );
 
     const presenter = createPresenter(this);
@@ -276,23 +284,38 @@ class GameView implements PresentView {
     this.sidebar.setMoney(n);
   }
 
-  shake(): void {
-    const reduced =
-      typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!this.app.settings.screenShake || reduced) return;
-    void animate(
-      this.anim,
-      this.main,
-      [
-        { transform: 'translate(0, 0)' },
-        { transform: 'translate(-6px, 3px)' },
-        { transform: 'translate(5px, -4px)' },
-        { transform: 'translate(-3px, 2px)' },
-        { transform: 'translate(0, 0)' },
-      ],
-      360,
-      { easing: 'linear' },
-    );
+  shake(intensity = 0.5): void {
+    this.shaker.shake(intensity);
+  }
+
+  /**
+   * Velké skóre: zlatý záblesk přes obrazovku (vrstva bublin, jen opacity) a záře počítadla skóre kola. Bez animací
+   * nebo s `prefers-reduced-motion` nic.
+   */
+  bigScore(strength: number): void {
+    if (this.anim.instant || !this.particles.ready) return;
+    const flash = h('div', {
+      class: 'game-flash',
+      style: { '--flash': Math.max(0.2, Math.min(0.6, 0.25 + strength * 0.35)).toFixed(2) },
+    });
+    this.fx.appendChild(flash);
+    const remove = (): void => flash.remove();
+    flash.addEventListener('animationend', remove, { once: true });
+    window.setTimeout(remove, 1500);
+    // Záře za počítadlem: nový prvek (animace začne sama, bez vynuceného přepočtu layoutu).
+    const glow = h('span', { class: 'gs-score__glow', 'aria-hidden': 'true' });
+    this.sidebar.roundScoreEl.parentElement?.appendChild(glow);
+    const removeGlow = (): void => glow.remove();
+    glow.addEventListener('animationend', removeGlow, { once: true });
+    window.setTimeout(removeGlow, 2500);
+  }
+
+  chipsEl(): HTMLElement | null {
+    return this.sidebar.chipsEl;
+  }
+
+  multEl(): HTMLElement | null {
+    return this.sidebar.multEl;
   }
 
   announce(text: string): void {
@@ -366,6 +389,7 @@ class GameView implements PresentView {
     this.bossBanner.hide();
     this.unsubscribe();
     this.controller.setPresenter(async () => undefined);
+    this.shaker.stop();
     this.particles.clear();
     hideTooltip();
   }

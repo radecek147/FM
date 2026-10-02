@@ -1,0 +1,272 @@
+/*
+ * „Šťáva“ (fáze 9, DESIGN 13.6): odlesk a náklon karet, kolébání žolíků, pérování vybrané karty, police Večerky,
+ * efekt velkého skóre (obří bublina, zlatý záblesk, záře počítadla) a počítadlo skóre. Částice kreslí
+ * src/ui/fx/particles.ts na <canvas id="fx">, screen shake src/ui/fx/shake.ts, přechody obrazovek
+ * src/ui/fx/transitions.ts.
+ *
+ * Animuje se jen transform/opacity (u kolébání vlastnost `rotate`, která se skládá s `transform`), délky dělí
+ * `--speed`; `html.no-anim` i prefers-reduced-motion efekty vypínají (dole).
+ */
+
+/* ─────────────────────────── Karty: odlesk za myší ─────────────────────────── */
+
+/* Odlesk sleduje ukazatel (proměnné --glare-* nastavuje src/ui/fx/tilt.ts spolu s náklonem). */
+.pcard__inner::before,
+.jcard .kcard__inner::before {
+  position: absolute;
+  inset: -50%;
+  z-index: 2;
+  pointer-events: none;
+  content: '';
+  background: radial-gradient(
+    circle at center,
+    rgb(255 255 255 / 42%) 0%,
+    rgb(255 255 255 / 16%) 16%,
+    transparent 36%
+  );
+  opacity: 0;
+  transform: translate(var(--glare-x, 0%), var(--glare-y, 0%));
+  transition: opacity var(--t-med) ease-out;
+}
+
+.pcard__inner.is-tilted::before,
+.jcard .kcard__inner.is-tilted::before {
+  opacity: 1;
+}
+
+/* ─────────────────────────── Karty: výběr s pérováním ─────────────────────────── */
+
+/* Vybraná karta vyskočí s lehkým překmitem (zpět bez něj — základní přechod z cards.css). */
+.gb-hand > .pcard.is-selected:not(.is-shifting, .is-dragging) {
+  transition: transform calc(var(--t-med) * 1.15) cubic-bezier(0.34, 1.7, 0.6, 1);
+}
+
+/* ─────────────────────────── Žolíci: kolébání při najetí ─────────────────────────── */
+
+@media (hover: hover) {
+  .gt-row--jokers button.jcard:hover:not(:disabled) .kcard__inner,
+  .shop-slot:not(.is-sold):hover .jcard .kcard__inner {
+    animation: joker-wobble calc(540ms / var(--speed)) ease-in-out;
+  }
+
+  /* Police Večerky: zboží se při najetí nadzvedne, cenovka se zhoupne. */
+  .shop-slot__card {
+    transition: transform var(--t-fast) ease-out;
+  }
+
+  .shop-slot:not(.is-sold):hover .shop-slot__card {
+    transform: translateY(-6px);
+  }
+
+  .shop-slot:not(.is-sold):hover .price-tag {
+    animation: price-swing calc(620ms / var(--speed)) ease-in-out;
+  }
+}
+
+@keyframes joker-wobble {
+  0% {
+    rotate: 0deg;
+  }
+
+  22% {
+    rotate: -4deg;
+  }
+
+  48% {
+    rotate: 3deg;
+  }
+
+  74% {
+    rotate: -1.4deg;
+  }
+
+  100% {
+    rotate: 0deg;
+  }
+}
+
+@keyframes price-swing {
+  0% {
+    rotate: 0deg;
+  }
+
+  30% {
+    rotate: -7deg;
+  }
+
+  62% {
+    rotate: 4deg;
+  }
+
+  100% {
+    rotate: 0deg;
+  }
+}
+
+/* ─────────────────────────── Počítadlo skóre kola ─────────────────────────── */
+
+.gs-score {
+  position: relative;
+  isolation: isolate;
+}
+
+.gs-score__value {
+  transform-origin: left center;
+  transition: transform var(--t-med) ease-out;
+}
+
+/* Během „tik tik“ je číslo o kousek větší (src/ui/present.ts → tickNumber). */
+.gs-score__value.is-counting {
+  transform: scale(1.08);
+}
+
+/* Záře za počítadlem po velkém skóre (prvek vloží herní obrazovka a po animaci ho odstraní). */
+.gs-score__glow {
+  position: absolute;
+  inset: -3px;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 32% 55%,
+    rgb(255 220 110 / 80%) 0%,
+    rgb(232 169 42 / 40%) 42%,
+    transparent 74%
+  );
+  border-radius: inherit;
+  opacity: 0;
+  animation: score-glow calc(1500ms / var(--speed)) ease-out forwards;
+}
+
+@keyframes score-glow {
+  0% {
+    opacity: 0;
+  }
+
+  14% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ─────────────────────────── Velké skóre ─────────────────────────── */
+
+/* Zlatý záblesk přes obrazovku (vrstva bublin, jen opacity; síla v --flash). */
+.game-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 58% 46%,
+    rgb(255 244 200 / 95%) 0%,
+    rgb(255 210 95 / 60%) 34%,
+    rgb(255 190 60 / 18%) 60%,
+    transparent 80%
+  );
+  opacity: 0;
+  animation: game-flash calc(950ms / var(--speed)) ease-out forwards;
+}
+
+@keyframes game-flash {
+  0% {
+    opacity: 0;
+  }
+
+  10% {
+    opacity: var(--flash, 0.4);
+  }
+
+  35% {
+    opacity: calc(var(--flash, 0.4) * 0.6);
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Obří zlatá bublina skóre ruky, která sama dosáhla cíle kola. */
+.game-bubble--huge {
+  z-index: 1;
+  animation-duration: calc(1700ms / var(--speed));
+}
+
+.game-bubble--huge .game-bubble__text {
+  padding: 0.12em 0.6em 0.18em;
+  font-size: 2.9rem;
+  color: var(--ink);
+  letter-spacing: 0.02em;
+  background: linear-gradient(180deg, #ffe58a 0%, var(--accent) 55%, #c98a12 100%);
+  box-shadow:
+    0 0 0 3px #fff3c4,
+    0 6px 0 rgb(0 0 0 / 35%),
+    0 0 34px rgb(255 215 94 / 70%);
+  animation-name: bubble-huge;
+  animation-duration: calc(1700ms / var(--speed));
+}
+
+@keyframes bubble-huge {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3) rotate(-8deg);
+  }
+
+  12% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.32) rotate(3deg);
+  }
+
+  22% {
+    transform: translate(-50%, -50%) scale(0.96) rotate(-1deg);
+  }
+
+  30% {
+    transform: translate(-50%, -50%) scale(1.04) rotate(0deg);
+  }
+
+  80% {
+    opacity: 1;
+    transform: translate(-50%, -62%) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -88%) scale(0.96);
+  }
+}
+
+/* ─────────────────────────── Vypnuté animace / omezený pohyb ─────────────────────────── */
+
+.no-anim .game-flash,
+.no-anim .gs-score__glow,
+.no-anim .pcard__inner::before,
+.no-anim .kcard__inner::before {
+  display: none;
+}
+
+.no-anim .gs-score__value,
+.no-anim .shop-slot__card,
+.no-anim .gb-hand > .pcard.is-selected {
+  transition: none;
+}
+
+.no-anim .price-tag,
+.no-anim .game-bubble--huge,
+.no-anim .game-bubble--huge .game-bubble__text {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-flash,
+  .pcard__inner::before,
+  .kcard__inner::before {
+    display: none;
+  }
+
+  .shop-slot:not(.is-sold):hover .shop-slot__card,
+  .gs-score__value.is-counting {
+    transform: none;
+  }
+}
