@@ -70,12 +70,12 @@ export const razitka = {
   },
   occupancy_permit: {
     name: 'Kolaudace',
-    desc: 'Trvale +{jokerSlots|plural:slot,sloty,slotů} žolíka a −{consumableSlots|plural:slot,sloty,slotů} spotřebky (jen když máš aspoň {minSlots|plural:slot,sloty,slotů} spotřebek).',
+    desc: 'Trvale +{jokerSlots|plural:slot,sloty,slotů} žolíka a −{consumableSlots|plural:slot,sloty,slotů} spotřebky (jen když máš aspoň {minSlots|plural:slot,sloty,slotů} spotřebek a ostatní spotřebky se pak vejdou).',
     flavor: 'Stavba je hotová, chybí jen schody.',
   },
   appeal: {
     name: 'Odvolání',
-    desc: 'Jen v kole se šéfovským pravidlem: vypne ho do konce kola. Stojí {cost|money} (smí jít do dluhu, ale jen do limitu).',
+    desc: 'Jen v kole se šéfovským pravidlem: za {cost|money} ho vypne do konce kola (platba smí jít do dluhu, ale jen do limitu).',
     flavor: 'Odvolání má odkladný účinek. Za pět korun.',
   },
   expropriation: {

@@ -207,6 +207,15 @@ Ceny počítá `shop/prices.ts` podle DESIGN 2.5.2 (sleva zaokrouhlená polovino
 (`refreshShopPrices`), takže kupón se slevou platí hned. Prodejní ceny nezávisí na slevách ani `shopPriceAdd`.
 Akce `pickBooster` umí `keep: true` — vybraná spotřebka se uloží do slotu místo použití.
 
+Kupóny (fáze 5): `VoucherDef.available?(ctx)` je čistá funkce (běží v `GameCore.readOnly`, neposune RNG ani stav),
+která říká, jestli má kupón teď smysl — Úřední škrt a Amnestie („−1 patro“) až od patra 2. `voucherAvailable` ji
+vyhodnotí, `eligibleVouchers` (los kupónu patra) ji respektuje a `buyVoucher` odmítne (`cannotUse`, stav beze změny)
+kupón nedostupný, už vlastněný nebo tier 2 bez vlastněného tier 1; startovní kupóny výzvy ji obcházejí. Po uplatnění
+kupónu `syncShopSlots` doplní otevřenou Večerku na aktuální `shopCardSlots`/`shopBoosterSlots` (Druhý regál, Regál
+u pokladny platí hned): chybějící sloty vylosuje streamem `shop` jako při vstupu, vystavené ani prodané zboží nemění
+a sloty nikdy neubírá. Kupón, jehož `passive` čte stav (Rozkládací stůl: `round.blind === 'boss'`), se přepočítá při
+každém `invalidate()` — výběr útraty, výplata.
+
 ## 3. Obsah (`src/content`)
 
 Každá položka = jeden objekt v odpovídajícím souboru + texty v `src/i18n/cs/*.ts` + test.
@@ -245,6 +254,9 @@ flavor a že texty dodržují typografii.
   save/load roundtrip, migrace, obsahová konzistence, simulace jako smoke test. Pokrytí enginu ≥ 80 %.
 - `tests/e2e/**` (Playwright): spuštění, zahrání ruky, obchod, uložení/načtení, screenshot,
   vykreslení věty „Příliš žluťoučký kůň úpěl ďábelské ódy“.
+  `tests/e2e/a11y.spec.ts` projde všechny obrazovky a fáze hry: přístupný název každého ovládacího prvku, platné
+  odkazy `aria-*`, Tab jen po viditelných prvcích s viditelnou změnou focusu, focus trap dialogů (Tab i Shift+Tab)
+  a návrat focusu po Esc. `tests/e2e/visual.spec.ts` (snímky v 5 rozlišeních) běží jen s `KARBAN_VISUAL=1`.
 
 ## 7. Skripty
 
@@ -257,3 +269,7 @@ flavor a že texty dodržují typografii.
   příkazy oddělené středníkem neinteraktivně (testy a ukázky).
 - `npm run fetch-assets` — stáhne/extrahuje volně licencované assety a přegeneruje `ASSETS.md`.
 - `npm run deploy` — build pro GitHub Pages (`BASE_PATH=/<repo>/`).
+- `npx tsx scripts/ui-walkthrough.ts [--seed S] [--bot max|flush|pairs|econ] [--anim]` — QA průchod celým runem přes
+  UI (běžící `vite preview` na portu 4173): bot rozhoduje, prohlížeč klávesami a myší provádí akce a po každé z nich
+  se uložený stav porovná s tím, co by z předchozího uložení udělal engine; cestou dva reloady (Pokračovat), po výhře
+  Nekonečný režim; hlídá konzoli. Trvá minuty, proto není součástí `test:e2e`.

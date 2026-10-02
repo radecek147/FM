@@ -11,7 +11,7 @@
 import type { ArtSpec, ConsumableCtx, ConsumableDef } from '../engine/content-types';
 import type { HandType, Rank } from '../engine/types';
 import { HAND_TYPES } from '../engine/types';
-import { ENHANCEMENTS } from './modifiers';
+import { EDITIONS, ENHANCEMENTS } from './modifiers';
 
 // ─────────────────────────── Čísla ───────────────────────────
 
@@ -48,11 +48,11 @@ const MATTRESS_MAX = 12;
 const FROG_RANDOM = 1;
 /** Rosnička bez zahraných rukou (shodně se štítkem Předpověď počasí, DESIGN kap. 7). */
 const FROG_FALLBACK_HAND: HandType = 'high_card';
-/** Zaříkávání: „1 z 3“ na edici žolíka, jinak útěcha v Kč. */
-const INCANTATION_CHANCE = 1;
-const INCANTATION_ODDS = 3;
-const INCANTATION_MONEY = 2;
-const INCANTATION_EDITIONS: readonly string[] = ['foil', 'holo'];
+/** Zaklepat na dřevo: „1 z 3“ na edici žolíka, jinak útěcha v Kč. */
+const KNOCK_CHANCE = 1;
+const KNOCK_ODDS = 3;
+const KNOCK_MONEY = 2;
+const KNOCK_EDITIONS: readonly string[] = ['foil', 'holo'];
 /** Studený obklad: zahození navíc v tomto kole. */
 const COMPRESS_DISCARDS = 2;
 /** Česnek na krk: až kolik karet vrátí do provozu. */
@@ -72,10 +72,16 @@ function enhancementParams(id: string): Record<string, number | string> {
   return { ...(def.params ?? {}) };
 }
 
-/** Kolik spotřebek se ještě vejde, když rada uvolní svůj vlastní slot (DESIGN 5.1). */
+/**
+ * Kolik spotřebek se ještě vejde, když rada uvolní svůj vlastní slot (DESIGN 5.1). Rada použitá ze slotu si odnese
+ * i slot, který přinesla (negativní edice) — ten se do volného místa nepočítá.
+ */
 function freeConsumableSlots(ctx: ConsumableCtx): number {
   const others = ctx.state.consumables.filter((c) => c.uid !== ctx.self.uid).length;
-  return ctx.mods.consumableSlots - others;
+  const inSlots = ctx.state.consumables.some((c) => c.uid === ctx.self.uid);
+  const ownSlots =
+    inSlots && ctx.self.edition ? (EDITIONS.find((e) => e.id === ctx.self.edition)?.extraSlots ?? 0) : 0;
+  return ctx.mods.consumableSlots - ownSlots - others;
 }
 
 /** Právě běží kolo (rady „jen v kole“). */
@@ -211,6 +217,8 @@ export const RADY: ConsumableDef[] = [
     cost: RADA_COST,
     target: { min: DYE_MIN, max: DYE_MAX },
     params: { min: DYE_MIN, max: DYE_MAX },
+    // Bez platného cíle (všechny už mají barvu levé karty) je Použít neaktivní (DESIGN 5.3).
+    canUse: (ctx) => ctx.targets.some((c) => c.suit !== ctx.targets[0]?.suit),
     use: (ctx) => {
       const [first, ...rest] = ctx.targets;
       if (!first) return;
@@ -231,6 +239,8 @@ export const RADY: ConsumableDef[] = [
     cost: RADA_COST,
     target: { min: PAIR_CARDS, max: PAIR_CARDS },
     params: { cards: PAIR_CARDS },
+    // Stejná hodnota by nic nezměnila.
+    canUse: (ctx) => ctx.targets[0]?.rank !== ctx.targets[1]?.rank,
     use: (ctx) => {
       const [left, right] = ctx.targets;
       if (left && right) ctx.api.modifyCard(left.id, { rank: right.rank });
@@ -243,6 +253,8 @@ export const RADY: ConsumableDef[] = [
     cost: RADA_COST,
     target: { min: 1, max: DOUGH_CARDS },
     params: { cards: DOUGH_CARDS, ranks: DOUGH_RANKS },
+    // Samá esa (strop) by nic nezměnila.
+    canUse: (ctx) => ctx.targets.some((c) => c.rank < ACE),
     use: (ctx) => {
       for (const card of ctx.targets) {
         const rank = Math.min(ACE, card.rank + DOUGH_RANKS) as Rank;
@@ -358,26 +370,26 @@ export const RADY: ConsumableDef[] = [
 
   // ── žolíci (2) ──
   {
-    id: 'incantation',
+    id: 'knock_on_wood',
     kind: 'rada',
     cost: RADA_COST,
-    params: { chance: INCANTATION_CHANCE, odds: INCANTATION_ODDS, money: INCANTATION_MONEY },
+    params: { chance: KNOCK_CHANCE, odds: KNOCK_ODDS, money: KNOCK_MONEY },
     canUse: (ctx) => ctx.state.jokers.some((j) => j.edition === null),
     use: (ctx) => {
       const plain = ctx.state.jokers.filter((j) => j.edition === null);
-      if (plain.length > 0 && ctx.chance(INCANTATION_CHANCE, INCANTATION_ODDS)) {
+      if (plain.length > 0 && ctx.chance(KNOCK_CHANCE, KNOCK_ODDS)) {
         const joker = ctx.rng.pick(plain);
-        ctx.api.setJokerEdition(joker.uid, ctx.rng.pick(INCANTATION_EDITIONS));
+        ctx.api.setJokerEdition(joker.uid, ctx.rng.pick(KNOCK_EDITIONS));
       } else {
-        ctx.api.addMoney(INCANTATION_MONEY, 'rada');
+        ctx.api.addMoney(KNOCK_MONEY, 'rada');
       }
     },
     art: {
-      icon: 'crystal-ball',
-      bg: '#33204f',
-      fg: '#f3e8ff',
-      accent: '#a78bfa',
-      pattern: 'rays',
+      icon: 'fist',
+      bg: '#5a3d24',
+      fg: '#fbefdf',
+      accent: '#d9a66b',
+      pattern: 'stripes',
       prop: 'sparkles',
     },
   },

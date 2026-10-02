@@ -252,13 +252,13 @@ describe('rollEdition (DESIGN 2.6)', () => {
     expectNear(d.poly!, n, notNeg * 0.004);
   });
 
-  it('hrací karty: lesklá 4 %, holo 2,8 %, duhová 1,2 %, nikdy negativní', () => {
+  it('hrací karty: lesklá 5 %, holo 2,5 %, duhová 1 %, nikdy negativní', () => {
     const n = 200_000;
     const d = distribution('card', n);
     expect(d.negative).toBe(0);
-    expectNear(d.foil!, n, 0.04);
-    expectNear(d.holo!, n, 0.028);
-    expectNear(d.poly!, n, 0.012);
+    expectNear(d.foil!, n, 0.05);
+    expectNear(d.holo!, n, 0.025);
+    expectNear(d.poly!, n, 0.01);
   });
 
   it('editionRateMult násobí lesklou/holo/duhovou, negativní ne', () => {
@@ -282,10 +282,12 @@ describe('rollEdition (DESIGN 2.6)', () => {
     expect(rollEdition(core, scripted([0.5, 0.0439]), 'joker')).toBe('foil');
     expect(rollEdition(core, scripted([0.5, 0.0441]), 'joker')).toBeNull();
     // karta: bez hodu na negativní
-    expect(rollEdition(core, scripted([0.0119]), 'card')).toBe('poly');
-    expect(rollEdition(core, scripted([0.039]), 'card')).toBe('holo');
-    expect(rollEdition(core, scripted([0.079]), 'card')).toBe('foil');
-    expect(rollEdition(core, scripted([0.08]), 'card')).toBeNull();
+    expect(rollEdition(core, scripted([0.0099]), 'card')).toBe('poly');
+    expect(rollEdition(core, scripted([0.0101]), 'card')).toBe('holo');
+    expect(rollEdition(core, scripted([0.0349]), 'card')).toBe('holo');
+    expect(rollEdition(core, scripted([0.0351]), 'card')).toBe('foil');
+    expect(rollEdition(core, scripted([0.0849]), 'card')).toBe('foil');
+    expect(rollEdition(core, scripted([0.0851]), 'card')).toBeNull();
   });
 
   it('stejný seed = stejné edice', () => {
@@ -469,7 +471,7 @@ describe('hrací karty v obchodě a obálkách (DESIGN 2.5.3, 2.9)', () => {
     expect(seal).toBe(0);
   });
 
-  it('karetní obálka: vylepšení 40 %, pečeť 15 %', () => {
+  it('karetní obálka: vylepšení 35 %, pečeť 15 %', () => {
     const core = newCore(reg);
     let enh = 0;
     let seal = 0;
@@ -482,6 +484,7 @@ describe('hrací karty v obchodě a obálkách (DESIGN 2.5.3, 2.9)', () => {
         if (opt.card.seal) seal++;
       }
     }
+    expect(BOOSTER_CARD_ENHANCE_CHANCE).toBe(0.35);
     expect(enh / total).toBeCloseTo(BOOSTER_CARD_ENHANCE_CHANCE, 1);
     expect(seal / total).toBeCloseTo(0.15, 1);
   });

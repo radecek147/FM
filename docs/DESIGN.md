@@ -91,12 +91,12 @@ Po porážce šéfa patra 8 → VÝHRA (titulky, statistika) → nabídka Nekone
   base(a) = nice( base(8) × g(a)^(a − 8) ),   g(a) = 2,2 + 0,15 × (a − 9)
   ```
 
-  kde `base(8)` je základ patra 8 zvolené křivky (80 000 / 150 000 / 250 000). Růst je nadexponenciální
-  (poměr mezi patry se zvyšuje z ×2,2 v patře 9 na zhruba ×4,5 v patře 16 a dál roste).
+  kde `base(8)` je základ patra 8 zvolené křivky (22 000 / 27 000 / 35 000, předběžně — kap. 2.3.1).
+  Růst je nadexponenciální (poměr mezi patry se zvyšuje z ×2,2 v patře 9 na zhruba ×4,5 v patře 16 a dál roste).
 
 - `nice(x)` je stejné zaokrouhlení jako v hlavní hře (kap. 2.3.2). Útraty pak `nice(base × 1 / 1,5 / 2)`.
 - **Finálový šéf** se objevuje v každém 8. patře (16, 24, 32…), ostatní patra mají běžné šéfy.
-- **Přetečení:** pokud by cíl nebo skóre přestalo být konečné číslo (≈ patro 209), použije se
+- **Přetečení:** pokud by cíl nebo skóre přestalo být konečné číslo (≈ patro 210), použije se
   `Number.MAX_VALUE` a UI ukáže „nekonečno“. Achievement „Tepelná smrt vesmíru“.
 - Statistika nekonečného režimu: nejvyšší dosažené patro (per balíček a síla piva).
 
@@ -211,19 +211,26 @@ Cíl útraty = `nice(base(patro) × násobek útraty × Modifiers.targetMult)`. 
 Šéf 2× (některý šéf jinak, viz kap. 8). Křivku určuje síla piva: **křivka 1** (Desítka, Jedenáctka),
 **křivka 2** (od Dvanáctky), **křivka 3** (od Bocku).
 
-| Patro | Křivka 1: Malá |   Velká |     Šéf | Křivka 2: Malá |   Velká |     Šéf | Křivka 3: Malá |   Velká |     Šéf |
-| ----: | -------------: | ------: | ------: | -------------: | ------: | ------: | -------------: | ------: | ------: |
-|     1 |            250 |     380 |     500 |            250 |     380 |     500 |            250 |     380 |     500 |
-|     2 |            650 |     980 |   1 300 |            750 |   1 150 |   1 500 |            850 |   1 300 |   1 700 |
-|     3 |          1 600 |   2 400 |   3 200 |          2 000 |   3 000 |   4 000 |          2 500 |   3 800 |   5 000 |
-|     4 |          4 000 |   6 000 |   8 000 |          5 500 |   8 300 |  11 000 |          7 500 |  11 500 |  15 000 |
-|     5 |          9 500 |  14 500 |  19 000 |         14 000 |  21 000 |  28 000 |         20 000 |  30 000 |  40 000 |
-|     6 |         20 000 |  30 000 |  40 000 |         32 000 |  48 000 |  64 000 |         50 000 |  75 000 | 100 000 |
-|     7 |         40 000 |  60 000 |  80 000 |         70 000 | 105 000 | 140 000 |        115 000 | 175 000 | 230 000 |
-|     8 |         80 000 | 120 000 | 160 000 |        150 000 | 230 000 | 300 000 |        250 000 | 380 000 | 500 000 |
+| Patro | Křivka 1: Malá |  Velká |    Šéf | Křivka 2: Malá |  Velká |    Šéf | Křivka 3: Malá |  Velká |    Šéf |
+| ----: | -------------: | -----: | -----: | -------------: | -----: | -----: | -------------: | -----: | -----: |
+|     1 |            250 |    380 |    500 |            250 |    380 |    500 |            250 |    380 |    500 |
+|     2 |            550 |    830 |  1 100 |            600 |    900 |  1 200 |            650 |    980 |  1 300 |
+|     3 |          1 100 |  1 650 |  2 200 |          1 200 |  1 800 |  2 400 |          1 300 |  1 950 |  2 600 |
+|     4 |          2 200 |  3 300 |  4 400 |          2 500 |  3 800 |  5 000 |          2 800 |  4 200 |  5 600 |
+|     5 |          4 200 |  6 300 |  8 400 |          4 900 |  7 400 |  9 800 |          5 800 |  8 700 | 11 500 |
+|     6 |          7 500 | 11 500 | 15 000 |          9 000 | 13 500 | 18 000 |         11 000 | 16 500 | 22 000 |
+|     7 |         13 000 | 19 500 | 26 000 |         16 000 | 24 000 | 32 000 |         20 000 | 30 000 | 40 000 |
+|     8 |         22 000 | 33 000 | 44 000 |         27 000 | 41 000 | 54 000 |         35 000 | 53 000 | 70 000 |
 
 Engine má v tabulce jen základy křivek (sloupce „Malá“); Velkou a Šéfa počítá přes `nice()`. Celá tabulka slouží
 jako test.
+
+**Předběžná kalibrace (fáze 5, 2026-10-01):** křivky jsou naladěné simulací na obsah fáze 5 (30 žolíků, spotřebky,
+obálky, kupóny, **bez šéfů a štítků**) tak, aby nejlepší rozumný bot na Desítce vyhrál ~35–45 % runů (šéfové ve
+fázi 6 to ztíží k cílovým 25–35 %) a na Imperialu < 3 %. Původní křivky (patro 8: 80 000 / 150 000 / 250 000) dnešní
+obsah nedosáhne — bot by vyhrál ~1 % runů. Cíle se znovu naladí po fázi 6 (šéfové) a fázi 7 (100+ žolíků,
+legendární ×mult), kdy patro 8 má zase chtít řádově statisíce (CLAUDE.md kap. 3); postup a výsledky simulací jsou
+v `docs/DECISIONS.md` („Fáze 5: boti se spotřebkami a předběžná kalibrace cílů“).
 
 #### 2.3.2 Zaokrouhlení `nice(x)`
 
@@ -243,18 +250,18 @@ z balíčků, výzev a kupónů, nekonečný režim).
 
 `g(a) = 2,2 + 0,15 × (a − 9)`, `base(a) = nice(base(8) × g(a)^(a − 8))`.
 
-| Patro |    g | Křivka 1: Malá |         Velká |           Šéf | Křivka 2: Malá |           Šéf | Křivka 3: Malá |           Šéf |
-| ----: | ---: | -------------: | ------------: | ------------: | -------------: | ------------: | -------------: | ------------: |
-|     9 | 2,20 |        175 000 |       260 000 |       350 000 |        330 000 |       660 000 |        550 000 |     1 100 000 |
-|    10 | 2,35 |        440 000 |       660 000 |       880 000 |        830 000 |     1 650 000 |      1 400 000 |     2 800 000 |
-|    11 | 2,50 |      1 250 000 |     1 900 000 |     2 500 000 |      2 300 000 |     4 600 000 |      3 900 000 |     7 800 000 |
-|    12 | 2,65 |      3 900 000 |     5 900 000 |     7 800 000 |      7 400 000 |    15 000 000 |     12 500 000 |    25 000 000 |
-|    13 | 2,80 |     14 000 000 |    21 000 000 |    28 000 000 |     26 000 000 |    52 000 000 |     43 000 000 |    86 000 000 |
-|    14 | 2,95 |     53 000 000 |    80 000 000 |   105 000 000 |     99 000 000 |   200 000 000 |    165 000 000 |   330 000 000 |
-|    15 | 3,10 |    220 000 000 |   330 000 000 |   440 000 000 |    410 000 000 |   820 000 000 |    690 000 000 | 1 400 000 000 |
-|    16 | 3,25 |  1 000 000 000 | 1 500 000 000 | 2 000 000 000 |  1 850 000 000 | 3 700 000 000 |  3 100 000 000 | 6 200 000 000 |
+| Patro |    g | Křivka 1: Malá |       Velká |         Šéf | Křivka 2: Malá |         Šéf | Křivka 3: Malá |         Šéf |
+| ----: | ---: | -------------: | ----------: | ----------: | -------------: | ----------: | -------------: | ----------: |
+|     9 | 2,20 |         48 000 |      72 000 |      96 000 |         59 000 |     120 000 |         77 000 |     155 000 |
+|    10 | 2,35 |        120 000 |     180 000 |     240 000 |        150 000 |     300 000 |        195 000 |     390 000 |
+|    11 | 2,50 |        340 000 |     510 000 |     680 000 |        420 000 |     840 000 |        550 000 |   1 100 000 |
+|    12 | 2,65 |      1 100 000 |   1 650 000 |   2 200 000 |      1 350 000 |   2 700 000 |      1 750 000 |   3 500 000 |
+|    13 | 2,80 |      3 800 000 |   5 700 000 |   7 600 000 |      4 600 000 |   9 200 000 |      6 000 000 |  12 000 000 |
+|    14 | 2,95 |     14 500 000 |  22 000 000 |  29 000 000 |     18 000 000 |  36 000 000 |     23 000 000 |  46 000 000 |
+|    15 | 3,10 |     61 000 000 |  92 000 000 | 120 000 000 |     74 000 000 | 150 000 000 |     96 000 000 | 190 000 000 |
+|    16 | 3,25 |    270 000 000 | 410 000 000 | 540 000 000 |    340 000 000 | 680 000 000 |    440 000 000 | 880 000 000 |
 
-Pro orientaci (křivka 1): patro 20 ≈ 850 000 000 000, patro 24 ≈ 1,9e15, patro 32 ≈ 9e22, patro 40 ≈ 4,4e31
+Pro orientaci (křivka 1): patro 20 ≈ 230 000 000 000, patro 24 ≈ 5,2e14, patro 32 ≈ 2,5e22, patro 40 ≈ 1,2e31
 (zápis jako ve hře: od 1e15 vědecky, koncové nuly mantisy se ořezávají).
 
 ### 2.4 Kolo a peníze
@@ -363,9 +370,9 @@ Výchozí podíl: žolík 70 %, pranostika 15 %, babská rada 15 %.
 
 | Edice (`id`)           | Efekt                                            | Na čem           | Šance u žolíka (obchod, obálka) | Šance u hrací karty | Příplatek |
 | ---------------------- | ------------------------------------------------ | ---------------- | ------------------------------: | ------------------: | --------: |
-| Lesklá (`foil`)        | +50 čipů                                         | žolík, karta     |                           2,5 % |                 4 % |     +1 Kč |
-| Holografická (`holo`)  | +10 mult                                         | žolík, karta     |                           1,5 % |               2,8 % |     +2 Kč |
-| Duhová (`poly`)        | ×1,5 mult                                        | žolík, karta     |                           0,4 % |               1,2 % |     +4 Kč |
+| Lesklá (`foil`)        | +50 čipů                                         | žolík, karta     |                           2,5 % |                 5 % |     +1 Kč |
+| Holografická (`holo`)  | +10 mult                                         | žolík, karta     |                           1,5 % |               2,5 % |     +2 Kč |
+| Duhová (`poly`)        | ×1,5 mult                                        | žolík, karta     |                           0,4 % |                 1 % |     +4 Kč |
 | Negativní (`negative`) | +1 slot (žolíka u žolíka, spotřebky u spotřebky) | žolík, spotřebka |                          0,25 % |                   — |     +6 Kč |
 
 - **Načasování u žolíka:** lesklá a holografická se aplikují **před** vlastním efektem žolíka, duhová **po** něm
@@ -438,7 +445,7 @@ Pravidla:
 - Možnosti v jedné obálce se neopakují. Pranostiková obálka nabízí jen kombinace dostupné v runu (tajné po objevu).
   Razítko „Výjimka z vyhlášky“ má v razítkové obálce váhu 0,25 (ostatní 1).
 - **Karetní obálka:** hodnota a barva z výchozího složení startovního balíčku (Mariášový jen 7–A, Obrázkový jen
-  J–A); vylepšení 40 %, pečeť 15 %, edice podle 2.6.
+  J–A); vylepšení 35 %, pečeť 15 %, edice podle 2.6.
 - **Žolíková obálka:** vzácnosti 68 / 26 / 6, edice a nálepky jako v obchodě.
 
 ### 2.10 Konstanty (souhrn pro `src/engine/constants.ts`)
@@ -674,7 +681,7 @@ přibitý → zapůjčený → zvětrávající (první úspěšný hod vyhráv�
 |  24 | Šťastná sedmička (`lucky_seven`)    | vzácný   |    6 | opakování       | Každá skórující 7 skóruje ještě 2×.                                                            | `retriggerScored`                  | „Do třetice všeho dobrého.“                         |
 |  25 | Sekera (`tab`)                      | vzácný   |    6 | ekonomika       | Můžeš jít do mínusu až −15 Kč; dokud máš záporný zůstatek, dává +8 mult.                       | `passive`, `onHandPlayed`          | „Zapište mi to.“                                    |
 |  26 | Sněhulák (`snowman`)                | epický   |    8 | ×mult           | ×2,5 mult; po každém kole −×0,25; při ×1 roztaje (zničí se).                                   | `onHandPlayed`, `onRoundEnd`       | „Na jaře z něj zbude jen mrkev.“                    |
-|  27 | Sběrač hub (`mushroom_picker`)      | epický   |    9 | škálování       | ×1 mult a navíc +×0,15 za každou hrací kartu zničenou od jeho koupě.                           | `onCardDestroyed`, `onHandPlayed`  | „Rostou tam, kde něco zmizelo.“                     |
+|  27 | Sběrač hub (`mushroom_picker`)      | epický   |    9 | škálování       | ×1 mult a navíc +×0,25 za každou hrací kartu zničenou od jeho koupě.                           | `onCardDestroyed`, `onHandPlayed`  | „Rostou tam, kde něco zmizelo.“                     |
 |  28 | Napodobitel (`impersonator`)        | epický   |   10 | kopírování      | Na začátku kola si náhodně vybere jiného tvého žolíka a do konce kola kopíruje jeho schopnost. | `onRoundStart`, `copyTarget`       | „Umí každého, jen sebe ne.“                         |
 |  29 | Hostinský (`innkeeper`)             | epický   |    8 | ×mult           | ×2,5 mult, dokud v tomto kole nikdo nezahazoval.                                               | `onHandPlayed`                     | „U mě se nic nevylévá.“                             |
 |  30 | Babiččina truhla (`grandmas_chest`) | epický   |    8 | ×mult           | ×1,3 mult za každou spotřebku, kterou držíš ve slotech.                                        | `onHandPlayed`                     | „Na půdě je všechno, co jednou bude k něčemu.“      |
@@ -683,7 +690,9 @@ přibitý → zapůjčený → zvětrávající (první úspěšný hod vyhráv�
 
 Čísla č. 4, 5, 6, 11, 14, 22, 23 a 29 jsou po měření hodnoty (`npx tsx scripts/joker-value.ts`, kap. 4.2–4.3)
 upravená proti původnímu návrhu; staré → nové číslo, naměřené hodnoty a důvody jsou v `docs/DECISIONS.md`
-(„Ladění žolíků fáze 4 podle hodnoty 4.3“).
+(„Ladění žolíků fáze 4 podle hodnoty 4.3“). Č. 27 (Sběrač hub, +×0,15 → +×0,25 za kartu) je upravené po přeměření
+se spotřebkami ve fázi 5 („Fáze 5: boti se spotřebkami a předběžná kalibrace cílů“); Kořenářka, Babiččina truhla,
+Meteorolog a Stará garda jsou po přeměření v pásmu beze změny.
 
 Rozložení fáze 4: +mult 7, +čipy 3, ×mult 6, ekonomika 4, škálování 5, opakování 2, úpravy pravidel 2, kopírování 1.
 Pro start bez odemykání (fáze 4–7) jsou všichni dostupní; podmínky odemčení přijdou ve fázi 8.
@@ -790,7 +799,7 @@ objevují až po objevení kombinace v aktuálním runu (kap. 2.2.4). Popisek ve
 |   7 | Full house                 | Martin na koni (`martin_horse`)        | „Martin přijel na bílém koni a chalupa je plná.“                           |
 |   8 | Čtveřice                   | Ledoví muži (`ice_saints`)             | „Pankrác, Servác, Bonifác — a Žofie, aby jich byla čtveřice.“              |
 |   9 | Postupka v barvě           | Březen, duben, máj (`march_april_may`) | „Březen, za kamna vlezem; duben, ještě tam budem; máj — postupka v barvě.“ |
-|  10 | Královská postupka         | Svatý Václav (`saint_wenceslas`)       | „Kníže sice nebyl král, ale postupku má královskou.“                       |
+|  10 | Královská postupka         | Svatý Václav (`saint_wenceslas`)       | „Na svatého Václava sklizeň bývá hotová. I ta královská.“                  |
 |  11 | Pětice (tajná)             | Na Hromnice (`candlemas`)              | „Na Hromnice o hodinu více. A o kartu taky.“                               |
 |  12 | Barevný full house (tajná) | Kateřina na ledě (`catherine_ice`)     | „Kateřina na ledě, Vánoce na blátě, plný dům v jedné barvě.“               |
 |  13 | Barevná pětice (tajná)     | Lucie noci upije (`lucy_night`)        | „Nejdelší noc v roce. Dost času poskládat pět stejných.“                   |
@@ -816,14 +825,16 @@ objevují až po objevení kombinace v aktuálním runu (kap. 2.2.4). Popisek ve
 |  15 | Kopřivový odvar (`nettle_tea`)       | přesně 2              | Levá karta se zničí; pravá trvale získá její čipy (`cardChips`) jako bonusové čipy.                                     | „Pálí, ale čistí krev.“                              |
 |  16 | Pod slamníkem (`under_mattress`)     | —                     | +50 % tvých peněz (dolů), nejvýš +12 Kč; při záporném zůstatku nic.                                                     | „Banky padají, slamník nikdy.“                       |
 |  17 | Rosnička (`tree_frog`)               | —                     | Vytvoří pranostiku tvé nejčastěji hrané kombinace v runu (při shodě silnější) a 1 náhodnou pranostiku.                  | „Když leze nahoru, bude hezky.“                      |
-|  18 | Zaříkávání (`incantation`)           | —                     | 1 z 3: náhodný tvůj žolík bez edice dostane lesklou nebo holografickou edici (50 : 50); jinak +2 Kč útěchou.            | „Odříkaného chleba největší krajíc.“                 |
+|  18 | Zaklepat na dřevo (`knock_on_wood`)  | —                     | 1 z 3: náhodný tvůj žolík bez edice dostane lesklou nebo holografickou edici (50 : 50); jinak +2 Kč útěchou.            | „Ťuk, ťuk, ťuk. Hlavně to nezakřiknout.“             |
 |  19 | Babiččin recept (`grandmas_recipe`)  | —                     | Vytvoří kopii naposledy použité babské rady nebo pranostiky v tomto runu (ne sebe, ne razítko).                         | „Přesně podle receptu. Od oka.“                      |
 |  20 | Studený obklad (`cold_compress`)     | jen v kole            | +2 zahození v tomto kole.                                                                                               | „Na bouli i na kocovinu.“                            |
 |  21 | Česnek na krk (`garlic`)             | jen v kole, 1–3 karty | Vybraným kartám zruší debuff a otočí je lícem nahoru (do konce kola).                                                   | „Na upíry i na šéfy.“                                |
 |  22 | Kouzelný kotlík (`cauldron`)         | žolík nejvíc vlevo    | Promění ho v náhodného jiného žolíka stejné vzácnosti (edice a nálepka zůstanou; legendárního ani přibitého nepromění). | „Zamíchat, zaklít, neochutnávat.“                    |
 
 Rozložení: vylepšení 9 · barva 1 · hodnota 2 · ničení 2 · kopie 1 · peníze 1 · tvorba spotřebek 2 · žolíci 2 · kolo 2.
-Bez platného cíle (např. Zaříkávání bez žolíka bez edice) je tlačítko Použít neaktivní a ukáže důvod.
+Bez platného cíle (např. Zaklepat na dřevo bez žolíka bez edice) je tlačítko Použít neaktivní a ukáže důvod. Totéž,
+když by rada nic nezměnila: Babiččina barva, když všechny vybrané karty už mají barvu levé; Zrcátko v předsíni na dvě
+karty stejné hodnoty; Kynuté těsto na samá esa.
 
 ### 5.4 Úřední razítka (16, cena 6 Kč)
 
@@ -838,12 +849,12 @@ Vzácná a silná, většinou s cenou. V obchodě jen s kupónem „Babiččina 
 |   5 | Výjimka z vyhlášky (`exemption`)      | —                                 | Vytvoří náhodného **legendárního** žolíka (potřebuje volný slot). V obálce váha 0,25.                                       | „Výjimečně, jen pro vás, a nikomu to neříkejte.“     |
 |   6 | Zpětný odběr (`buyback`)              | ruka                              | Zničí polovinu karet v ruce (nahoru, náhodně) a za každou dá **4 Kč**.                                                      | „Vykupujeme staré karty. Platíme hotově.“            |
 |   7 | Ověřená kopie (`certified_copy`)      | —                                 | Zkopíruje žolíka **nejvíc vlevo** (kopie bez negativní edice); **všichni ostatní** žolíci kromě přibitých se zničí.         | „Kopie souhlasí s originálem. Originály skartovány.“ |
-|   8 | Hromadné vyřízení (`bulk_processing`) | —                                 | Všichni žolíci bez edice dostanou náhodnou edici (lesklá 50 %, holografická 35 %, duhová 15 %); **trvale −1 karta v ruce**. | „Vyřízeno hromadně, stížnosti individuálně.“         |
+|   8 | Hromadné vyřízení (`bulk_processing`) | —                                 | Všichni žolíci bez edice dostanou náhodnou edici (lesklá 55 %, holografická 30 %, duhová 15 %); **trvale −1 karta v ruce**. | „Vyřízeno hromadně, stížnosti individuálně.“         |
 |   9 | Úřední hodiny (`office_hours`)        | —                                 | Všechny kombinace **+2 úrovně**; **trvale −1 ruka** za kolo.                                                                | „Po–St 8–11, Čt zavřeno, Pá dle nálady.“             |
-|  10 | Kontrola totožnosti (`id_check`)      | 1 karta                           | Karta dostane náhodnou edici (lesklá 50 %, holografická 35 %, duhová 15 %).                                                 | „Občanku, prosím. To na té fotce jste vy?“           |
+|  10 | Kontrola totožnosti (`id_check`)      | 1 karta                           | Karta dostane náhodnou edici (lesklá 55 %, holografická 30 %, duhová 15 %).                                                 | „Občanku, prosím. To na té fotce jste vy?“           |
 |  11 | Sloučení spisů (`merge_files`)        | přesně 2                          | Pravá karta se zničí; levá převezme její vylepšení, pečeť a edici (jen to, co levá nemá).                                   | „Dva spisy, jedna složka, nula přehlednosti.“        |
 |  12 | Daňové přiznání (`tax_return`)        | —                                 | Vytvoří náhodného **epického** žolíka (potřebuje slot); **peníze se nastaví na 0 Kč** (dluh zůstane).                       | „Přiznání je polehčující okolnost.“                  |
-|  13 | Kolaudace (`occupancy_permit`)        | —                                 | **Trvale +1 slot žolíka a −1 slot spotřebky** (jen pokud máš aspoň 2 sloty spotřebek).                                      | „Stavba je hotová, chybí jen schody.“                |
+|  13 | Kolaudace (`occupancy_permit`)        | —                                 | **Trvale +1 slot žolíka a −1 slot spotřebky** (jen pokud máš aspoň 2 sloty spotřebek a ostatní spotřebky se pak vejdou).   | „Stavba je hotová, chybí jen schody.“                |
 |  14 | Odvolání (`appeal`)                   | jen v kole se šéfovským pravidlem | Vypne pravidlo šéfa do konce kola; **stojí 5 Kč** (i do dluhu, do limitu).                                                  | „Odvolání má odkladný účinek. Za pět korun.“         |
 |  15 | Vyvlastnění (`expropriation`)         | —                                 | Zničí žolíka **nejvíc vpravo** (ne přibitého) a dá **3× jeho prodejní cenu**.                                               | „Ve veřejném zájmu, samozřejmě.“                     |
 |  16 | Prominutí pokut (`fine_waiver`)       | —                                 | Odstraní všechny nálepky ze všech tvých žolíků (zvětralým vrátí funkci).                                                    | „Amnestie na všechno kromě parkování.“               |
@@ -896,7 +907,7 @@ Nápad po 1.0 (zapsat do `docs/IDEAS.md`): **Stírací losy** — okamžitá lot
 |   7 | Spořicí účet (`savings_account`)     |    9 | Strop úroku 8 Kč.                                                           | Stavební spoření (`building_savings`) |   12 | Strop úroku 12 Kč.                                                                                      |
 |   8 | Úzký věšák (`narrow_rack`)           |   11 | +1 slot žolíka, ale −1 karta v ruce.                                        | Pořádný věšák (`proper_rack`)         |   13 | +1 karta v ruce (ruší postih Úzkého věšáku).                                                            |
 |   9 | Trhací kalendář (`tear_calendar`)    |    8 | Pranostiky a babské rady se ve Večerce objevují častěji (váha každé 3 → 7). | Babiččina spíž (`grandmas_pantry`)    |   11 | +1 slot spotřebky; ve Večerce se objevují i úřední razítka; pranostiky a rady ještě o polovinu častěji. |
-|  10 | Stánek s kartami (`card_stall`)      |    9 | Ve Večerce se objevují hrací karty.                                         | Kartářka (`fortune_teller`)           |   12 | Hrací karty ve Večerce mají 50 % šanci na vylepšení a 20 % na pečeť.                                    |
+|  10 | Stánek s kartami (`card_stall`)      |    9 | Ve Večerce se objevují hrací karty.                                         | Kartářka (`card_reader`)              |   12 | Hrací karty ve Večerce mají 50 % šanci na vylepšení a 20 % na pečeť.                                    |
 |  11 | Leštěnka (`polish`)                  |    9 | Edice (lesklá, holografická, duhová) se objevují 2,5× častěji.              | Hologramová fólie (`holo_foil`)       |   12 | Edice se objevují 3,5× častěji (celkem).                                                                |
 |  12 | Úřední škrt (`official_strike`)      |   12 | −1 patro; cíle všech útrat do konce runu ×1,1.                              | Amnestie (`amnesty`)                  |   14 | −1 patro; ve Večerce stojí do konce runu všechno o 1 Kč víc.                                            |
 
@@ -909,6 +920,8 @@ Implementace (`Modifiers` delta): 1 `shopCardSlots +1` / `shopBoosterSlots +1`; 
 
 **−1 patro:** číslo patra se okamžitě sníží o 1 (min. 1) a pokračuje se další útratou v pořadí s cíli nového patra.
 Výhra stále vyžaduje porazit šéfa patra 8 — hráč tedy dostane víc kol na rozjezd za cenu trvalého postihu.
+Úřední škrt i Amnestie se nabízejí a jdou koupit **až od patra 2** (`VoucherDef.available`) — v patře 1 by zbyl jen
+postih.
 
 Flavor: Druhý regál „Konečně je kam dát chipsy.“ · Regál u pokladny „Impulzivní nákupy na dosah ruky.“ ·
 Věrnostní karta „Sbíráte body? — Ne. — Tak je máte.“ · Zlatá věrnostní „Platinová by byla moc nápadná.“ ·
@@ -941,7 +954,7 @@ Leštěnka „Lesk jako nedělní boty.“ · Hologramová fólie „Duha v kaž
 |   8 | Balík od babičky (`grandma_parcel`)    |        1 | Zdarma Tlustá obálka babských rad.                                                                           | hned           | „Buchty, ponožky a dobré rady.“                     |
 |   9 | Úřední dopis (`official_letter`)       |        2 | Zdarma normální Obálka razítek.                                                                              | hned           | „Do vlastních rukou. Bohužel.“                      |
 |  10 | Mariáš na chalupě (`cottage_marias`)   |        1 | Zdarma Tlustá obálka hracích karet.                                                                          | hned           | „Hraje se do tmy a o drobné.“                       |
-|  11 | Vyleštěné příbory (`polished_cutlery`) |        1 | Příští žolík ve Večerce dostane náhodnou edici (lesklá 50 %, holografická 35 %, duhová 15 %) bez příplatku.  | příští Večerka | „Na návštěvu se vytahuje to nejlepší.“              |
+|  11 | Vyleštěné příbory (`polished_cutlery`) |        1 | Příští žolík ve Večerce dostane náhodnou edici (lesklá 55 %, holografická 30 %, duhová 15 %) bez příplatku.  | příští Večerka | „Na návštěvu se vytahuje to nejlepší.“              |
 |  12 | Fotonegativ (`photo_negative`)         |        2 | Příští žolík ve Večerce bude negativní, bez příplatku.                                                       | příští Večerka | „Z alba, kde všichni vypadají jako duchové.“        |
 |  13 | Doporučení od známého (`referral`)     |        1 | V příští Večerce navíc slot se vzácným žolíkem za poloviční cenu.                                            | příští Večerka | „Řekni, že jdeš ode mě.“                            |
 |  14 | Protekce (`connections`)               |        3 | V příští Večerce navíc slot s epickým žolíkem (plná cena).                                                   | příští Večerka | „Nejde o to, co umíš, ale koho znáš.“               |
@@ -1273,6 +1286,16 @@ a štítků (`JokerTag`), řazení podle vzácnosti/názvu/četnosti použití.
 Boti používají jen veřejné informace (žádné nahlížení do balíčku nad rámec „zbývá v balíčku“) a stejný engine
 jako hra. Simulace je deterministická: run `i` má seed `SIM-<prefix>-<i>`.
 
+**Spotřebky, obálky a kupóny** (od fáze 5, `src/engine/sim/value.ts`): boti je nepoznávají podle id. Akci zkusí na
+kopii hry (sonda s přeseedovaným RNG — skutečné hody nezná) a ocení změnu stavu v Kč: peníze, úrovně kombinací
+(× podíl kombinace na hře bota), modifikátory runu a patro, žolíky, nové a držené spotřebky a balíček (hodnota karty
+= jak často ve hře bota skóruje × co přidá + peníze z vylepšení a pečetí). Pranostiky na hrané kombinace kupují
+a hned používají; babské rady a razítka s cílem míří na karty s největším přínosem (u levé/pravé karty nejdřív
+přeřadí ruku); spotřebku, která dá jen pár korun, nechají na později; kupóny, obálky a spotřebky kupují, když
+hodnota ≥ cena × poměr, a s penězi hluboko nad rezervou na úrok stačí menší poměr (peníze nad stropem úroku nic
+nevydělají). Se žolíkem ×mult za držené spotřebky (Babiččina truhla) spotřebky drží, se žolíkem krmeným spotřebkami
+(Kořenářka) víc kupují babské rady.
+
 ### 12.3 Výstup `npm run simulate`
 
 `npm run simulate -- --runs 500 --stake 1 [--deck pub] [--strategy all] [--seed-prefix A] [--json out.json]`
@@ -1438,6 +1461,7 @@ Obsah v tomto dokumentu počítá s těmito doplňky `src/engine/types.ts` a `sr
 | `EngineApi`                 | `addRoundHandSize(n)`                                                                                   | Velká voda, Rozložené noviny                                                                 |
 | `EngineApi`                 | `setMoney(n)`, `changeAnte(delta)`, `levelUpAll(levels)`, `addPermanentModifier(delta)`, `rerollBoss()` | Daňové přiznání, Úřední škrt/Amnestie, Úřední hodiny, trvalé postihy razítek, Známý na úřadě |
 | `EngineApi`                 | `setJokerEdition`, `removeJokerStickers`, `copyJoker`, `availableJokers`                                | Hromadné vyřízení, Prominutí pokut, Ověřená kopie, Výjimka z vyhlášky, Daňové přiznání       |
+| `VoucherDef`                | `available?(ctx): boolean` (čistá funkce; nabídka i koupě)                                              | Úřední škrt, Amnestie (až od patra 2)                                                        |
 | `RunState`                  | `discoveredHands: HandType[]`                                                                           | objev kombinace v runu (2.2.4) — komentář v `RunState` už s polem počítá                     |
 | `Card` / `RoundState.flags` | dočasné debuffy z efektů (Černá kočka)                                                                  | uloženo v `round.flags`, `isCardDebuffed` je čte                                             |
 

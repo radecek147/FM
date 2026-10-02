@@ -693,6 +693,22 @@ describe('Večerka (DESIGN 2.5)', () => {
     expectRejected(game, { type: 'buyAndUse', slot: 0 }, 'cannotUse');
   });
 
+  it('koupený žolík i spotřebka jsou samostatné objekty — prodaný slot s nimi nesdílí stav (živý = uložený)', () => {
+    const game = shopGame();
+    stock(game, [jokerItem(game, 'noop'), consumableItem(game, 'coin')]);
+    ok(game.dispatch({ type: 'buy', slot: 0 }));
+    ok(game.dispatch({ type: 'buy', slot: 1 }));
+    const s = game._core.state;
+    const [soldJoker, soldConsumable] = s.shop!.items;
+    if (soldJoker?.kind !== 'joker' || soldConsumable?.kind !== 'consumable') throw new Error('nabídka');
+    expect(soldJoker.joker).not.toBe(s.jokers[0]);
+    expect(soldJoker.joker).toEqual(s.jokers[0]);
+    expect(soldConsumable.consumable).not.toBe(s.consumables[0]);
+    // Změna stavu žolíka v řadě se do prodaného slotu nepropíše (po uložení a načtení by se jinak lišil).
+    s.jokers[0]!.state.mult = 2;
+    expect(soldJoker.joker.state.mult).toBeUndefined();
+  });
+
   it('bez peněz nebo bez volného slotu se nekoupí nic; dluhový limit nákup povolí', () => {
     const game = shopGame(3);
     stock(game, [jokerItem(game, 'noop'), jokerItem(game, 'noop', 'negative')]);
@@ -1111,8 +1127,8 @@ describe('výhra v patře 8 a nekonečný režim (DESIGN 1.2, 1.3)', () => {
     ok(game.dispatch({ type: 'leaveShop' }));
     expect(game.registry.bosses[game.state.blinds[2]!.bossId!]!.final).not.toBe(true);
     ok(game.dispatch({ type: 'selectBlind' }));
-    // Cíle nekonečného režimu (DESIGN 2.3.3): patro 9, křivka 1, Malá 175 000.
-    expect(game.state.round!.target).toBe(175_000);
+    // Cíle nekonečného režimu (DESIGN 2.3.3): patro 9, křivka 1, Malá 48 000.
+    expect(game.state.round!.target).toBe(48_000);
   });
 
   it('v nekonečném režimu má patro 16 finálového šéfa, ale jeho porážka už není výhra', () => {
@@ -1124,7 +1140,7 @@ describe('výhra v patře 8 a nekonečný režim (DESIGN 1.2, 1.3)', () => {
     const events = beatBossAt(game, 16);
     expect(game.state.round!.bossId).toBe('final_boss');
     expect(events.target).toBe(blindTarget(16, 'boss', 1));
-    expect(events.target).toBe(2_000_000_000);
+    expect(events.target).toBe(540_000_000);
     expect(game.state.phase).toBe('round_end');
     expect(types(events)).not.toContain('victory');
   });

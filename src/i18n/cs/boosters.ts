@@ -1,17 +1,20 @@
 /**
  * Texty: obálky (boostery) — klíče `boosters.<id>.name|desc` (definice v src/content/boosters.ts).
  * `{picks}` a `{options}` dosadí UI z definice obálky. Název „Velikost · Druh“ podle docs/DESIGN.md kap. 2.9
- * (velikosti: Obálka / Tlustá obálka / Krabice od bot). Genitiv plurálu po „z“ se s počtem nemění.
+ * (velikosti: Obálka / Tlustá obálka / Krabice od bot). Popis „Nabídne N …, vybereš M.“ — tvar slova přes
+ * `|plural:` a bez předložky „z/ze“ před číslem (správně by bylo „1 ze 3“, ale „1 z 5“).
  */
 import type { TextTree } from '../cs';
 
+const PICK = 'vybereš {picks}.';
+const HAND_NOTE = 'Ruka dole slouží jen k výběru cílů, karty se pak vrátí do balíčku.';
+
 const DESC = {
-  pranostika: 'Vyber {picks} z {options} pranostik. Vybranou použij hned, nebo si ji nech do slotu.',
-  rada: 'Vyber {picks} z {options} babských rad. Ruka dole slouží jen k výběru cílů, karty se pak vrátí do balíčku.',
-  razitko:
-    'Vyber {picks} z {options} úředních razítek. Ruka dole slouží jen k výběru cílů, karty se pak vrátí do balíčku.',
-  joker: 'Vyber {picks} z {options} žolíků. Žolík potřebuje volný slot (negativní ne).',
-  card: 'Vyber {picks} z {options} hracích karet. Vybraná karta se přidá do balíčku.',
+  pranostika: `Nabídne {options|plural:pranostiku,pranostiky,pranostik}, ${PICK} Vybranou použij hned, nebo si ji nech do slotu.`,
+  rada: `Nabídne {options|plural:babskou radu,babské rady,babských rad}, ${PICK} ${HAND_NOTE}`,
+  razitko: `Nabídne {options|plural:úřední razítko,úřední razítka,úředních razítek}, ${PICK} ${HAND_NOTE}`,
+  joker: `Nabídne {options|plural:žolíka,žolíky,žolíků}, ${PICK} Žolík potřebuje volný slot (negativní ne).`,
+  card: `Nabídne {options|plural:hrací kartu,hrací karty,hracích karet}, ${PICK} Vybraná karta se přidá do balíčku.`,
 } as const;
 
 export const boosters = {

@@ -93,9 +93,9 @@ describe('edice (docs/DECISIONS.md, docs/DESIGN.md kap. 2.6)', () => {
       reg.editions[id]?.weightCard,
     ]);
     expect(chances).toEqual([
-      [2.5, 4],
-      [1.5, 2.8],
-      [0.4, 1.2],
+      [2.5, 5],
+      [1.5, 2.5],
+      [0.4, 1],
       [0.25, 0],
     ]);
     expect(reg.editions.negative?.separateRoll).toBe(true);

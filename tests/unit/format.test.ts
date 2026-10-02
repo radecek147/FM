@@ -70,6 +70,10 @@ describe('formatNumber', () => {
     [-1.234e16, `${MINUS}1,23e16`],
     [Infinity, '∞'],
     [-Infinity, `${MINUS}∞`],
+    // Přetečení v nekonečném režimu: engine použije Number.MAX_VALUE, UI ukáže „nekonečno“ (DESIGN 1.3).
+    [Number.MAX_VALUE, '∞'],
+    [-Number.MAX_VALUE, `${MINUS}∞`],
+    [1.7e308, '1,7e308'],
     [Number.NaN, '0'],
   ])('formatNumber(%s) → %j', (n, expected) => {
     expect(formatNumber(n)).toBe(expected);

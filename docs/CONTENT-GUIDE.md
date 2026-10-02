@@ -309,6 +309,11 @@ export const goldLoyalty: VoucherDef = {
 Text: **Věrnostní karta** — Všechno ve Večerce je o {pct} % levnější. _Sbíráte body? — Ne. — Tak je máte._
 Test: cena ve Večerce po uplatnění, tier 2 nejde koupit bez tier 1.
 
+Kupón, který má smysl jen za určitých podmínek, dostane `available(ctx)` — čistou funkci (bez RNG a změn stavu),
+kterou engine kontroluje při losování kupónu patra i při koupi (Úřední škrt: `ctx.state.ante >= 2`). `passive` smí
+číst stav (Rozkládací stůl: `ctx.state.round?.blind === 'boss'`); přepočítá se při každém `invalidate()` enginu
+(výběr útraty, výplata, koupě, hooky…).
+
 ## 7. Jak přidat štítek
 
 Štítek se dostane za přeskočení Malé nebo Velké útraty. Každý hook (`onAdded`, `onBlindSelect`,

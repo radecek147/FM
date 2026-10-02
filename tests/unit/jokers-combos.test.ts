@@ -222,7 +222,7 @@ describe('žolíci – vyrenderované popisky (params + počáteční stav)', ()
       lucky_seven: 'Každá skórující 7 skóruje ještě 2×.',
       tab: 'Můžeš jít do mínusu až −15 Kč; dokud máš záporný zůstatek, dává +8 mult.',
       snowman: '×2,5 mult; po každém kole −×0,25, při ×1 roztaje a zničí se (teď ×2,5).',
-      mushroom_picker: '×1 mult a navíc +×0,15 za každou hrací kartu zničenou od jeho koupě (teď ×1).',
+      mushroom_picker: '×1 mult a navíc +×0,25 za každou hrací kartu zničenou od jeho koupě (teď ×1).',
       impersonator:
         'Na začátku každého kola si náhodně vybere jiného tvého žolíka a do konce kola kopíruje jeho schopnost.',
       innkeeper: '×2,5 mult, dokud se v tomto kole nezahazovalo.',

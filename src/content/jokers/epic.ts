@@ -61,7 +61,7 @@ const snowman: JokerDef = {
 // ─────────────────────────── #27 Sběrač hub ───────────────────────────
 
 const MUSHROOM_BASE = 1;
-const MUSHROOM_XMULT_PER_CARD = 0.15;
+const MUSHROOM_XMULT_PER_CARD = 0.25;
 
 const mushroomXmult = (self: JokerInstance): number =>
   MUSHROOM_BASE + MUSHROOM_XMULT_PER_CARD * stateNum(self, 'destroyed');

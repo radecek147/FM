@@ -5,48 +5,49 @@
 
 ## Aktuální stav
 
-_Aktualizováno: 2026-10-01_
+_Aktualizováno: 2026-10-02_
 
-**Fáze 0 (Založení) a Fáze 1 (Engine jádra) jsou hotové** (commity `chore: …` a `feat(engine): complete phase 1 …`).
+**Fáze 0–2 jsou hotové** (commity `chore: …`, `feat(engine): complete phase 1 …`, `feat(engine): complete phase 2 …`).
+Z fáze 2 zůstal jen podúkol „První kalibrace křivky cílů“ — předběžná kalibrace proběhla ve fázi 5
+(`docs/DECISIONS.md`, 2026-10-01 „Fáze 5: boti se spotřebkami a předběžná kalibrace cílů“), konečná až po fázi 6–7.
 
-**Fáze 2 (Run loop v enginu) je hotová** — 13 ze 14 podúkolů odškrtnuto; zbývá jen „První kalibrace křivky cílů“,
-která je vědomě odložená (bez žolíků a pranostik by ladění posunulo křivku špatným směrem; viz `docs/DECISIONS.md`).
+**Fáze 3 (Herní UI v1) je hotová** — všechny podúkoly odškrtnuté, revize proběhla (`docs/DECISIONS.md`,
+2026-10-02 „Revize a uzavření fáze 3“). Čeká jen na commit `feat(ui): …` (pracovní strom sdílí rozpracované
+změny fází 4–5 z paralelních workflow).
 
-- Kontroly zelené: `typecheck`, `lint` (ESLint + Prettier), `npm test` (26 souborů, 916 testů), `build`,
-  `test:e2e` (1 smoke test), `test:coverage` (prahy splněné).
-- Pokrytí `src/engine`: 98,2 % řádků, 95,8 % příkazů, 89,6 % větví, 98,4 % funkcí. Po modulech (řádky / větve):
-  `cards` 100/100, `hands` 99/100, `effects` 100/91, `scoring` 100/97, `shop` 99/92, `rng` 99/92, `run` 100/95
-  (`game.ts` 100/96), `save` 100/100, `sim` 95/81 (`bots.ts` 90/73).
-- Hotové ve fázi 2: `src/engine/run/game.ts` (stavový automat `RunPhase`, validace akcí, rozpis odměn a úrok,
-  přeskočení útrat se štítky, Večerka a obálky, konec runu s příčinou, výhra a nekonečný režim; dotazy pro UI
-  `blindTarget`, `blindReward`, `preview`, `sellValue`, `canUseConsumable`, `modifiers`), `src/engine/save/save.ts`
-  (obálka, kontrola tvaru, migrace, kódy `SaveError`), `src/engine/sim/` (`bots`, `hand-eval`, `runner`, `commands`;
-  6 botů bez stavu mimo `RunState`), `scripts/simulate.ts` (volby `--runs`, `--stake`, `--deck`, `--bot`/`--strategy`,
-  `--seed-prefix`, `--json [soubor|-]`, `--max-actions`; textový režim `--play` a `--script`), obsah
-  `src/content/{stakes,decks}.ts` (8 obtížností „Síla piva“, 8 balíčků), texty `src/i18n/cs/{cli,decks,stakes}.ts`.
-  Nové testy v `tests/unit/`: `game`, `save`, `run-determinism`, `hook-context`, `sim`, `stakes`, `decks`,
-  `review2-rules`, `review2-sim-save`.
-- Engine vyžaduje seed od volajícího (UI generuje `generateSeed(Math.random)`); `Math.random`, `Date.now`
-  a `localeCompare` jsou v `src/engine/**` zakázané ESLintem. Stav runu je JSON-serializovatelný (fuzz test).
-- Simulace (100 runů, Desítka, obsah bez žolíků/šéfů/spotřebek): všichni boti 0 % výher, průměrné patro `max` 1,9,
-  `nojoker` 2, `random` 1 (100 % proher v patře 1); 0 neplatných akcí; ~5,5 s pro 6 botů.
-- Revize pravidel runu a simulace/ukládání/determinismu proběhly (záznamy v `docs/DECISIONS.md`).
+- Run jde v prohlížeči dohrát od menu po pitvu i výhru → Nekonečný režim myší, klávesnicí (1–8, Enter, X, S/B, Esc,
+  mezerník) i dotykem; autosave po každé akci, Pokračovat po reloadu; konzole bez chyb a varování.
+- Kód: `src/main.ts`, `src/ui/{app,controller,present,describe,dom,settings,storage}.ts`, `src/ui/anim/queue.ts`,
+  `src/ui/fx/particles.ts`, `src/ui/art/*` (SVG karty, žolíci z `ArtSpec`, stůl, číslicové písmo),
+  `src/ui/components/*` (karta, žolík, spotřebka, tlačítko, dialog s focus trapem, tooltip, oznámení),
+  `src/ui/screens/{menu,newGame,settings,credits,gallery}.ts`, `src/ui/screens/game/*` (levý panel, horní řada
+  s drag & drop žolíků, ruka a balíček, výběr útraty, konec kola, Večerka, obálka, pitva, výhra, dialogy),
+  `src/ui/styles/*`; texty `src/i18n/cs/{ui,game}.ts`.
+- Kontroly zelené: `typecheck`, `lint`, `npm test` (41 souborů, 1 592 testů), `build` (hlavní chunk 332 kB / 109 kB
+  gzip, ikony samostatně 344 kB / 155 kB gzip), `test:e2e` (26 testů: `smoke`, `menu`, `game`, `a11y`; 60 snímků
+  `visual.spec.ts` jen s `KARBAN_VISUAL=1`).
+- QA nástroj: `npx tsx scripts/ui-walkthrough.ts --seed S --bot flush [--anim]` (proti `vite preview` na portu 4173)
+  — celý run přes UI s porovnáním uloženého stavu s enginem po každé akci.
+
+**Fáze 4–5 (paralelní workflow) jsou rozpracované:** 30 žolíků (commit `eb62685`), pranostiky, babské rady, razítka,
+obálky a kupóny (`wip` commity `e65c934`, `296a99a` a necommitnuté změny v `src/engine/sim`, `src/engine/run/targets.ts`,
+`tests/unit/*`). UI pro ně už existuje a je otestované: Večerka (nákup, Koupit a použít, obálky, kupón, Přehodit,
+prázdný stav), řada žolíků s **drag & drop myší i dotykem** (a přesun klávesnicí v detailu žolíka), detail s prodejem,
+spotřebky (Použít s cíli vybranými v ruce / Prodat), výběr z obálky s dobranou rukou, Info o runu.
 
 **Známé otevřené body (řešit v uvedené fázi):**
 
-- fáze 3: názvy útrat a hlášky pitvy pro Malou/Velkou útratu jsou zatím jen v textech CLI (`cli.blind.*`,
-  `cli.play.gameOver.death.*` v `src/i18n/cs/cli.ts`) — pro UI je přesunout do sdíleného podmodulu;
-  `formatNumber(Number.MAX_VALUE)` má ukázat „nekonečno“ (DESIGN 1.3);
-- fáze 4–5: první kalibrace křivky cílů a čísel kombinací (DESIGN 12.4 krok 1) až s žolíky a pranostikami — dnes
-  `nojoker` končí s mediánem v patře 2 (cíl 3–4);
+- fáze 5: ruku jde přeskládat jen tříděním (S / B) — přidat přesun karet v ruce tažením (myš i dotyk) a klávesovou
+  alternativu (engine `reorderHand` existuje; babské rady „karta nejvíc vlevo“);
 - fáze 6: `TagHooks` nemá obdobu `roundEndMoney` (peníze ze štítků v rozpisu odměn, DESIGN 2.4.2 krok 5); poziční
   pravidlo typu Jednooký hejtman nejde přes `setJokerDebuffed` spolehlivě vyjádřit po přeřazení žolíků;
+- fáze 6–7: konečná kalibrace křivek cílů (patro 8 má podle CLAUDE.md kap. 3 vyžadovat statisíce až miliony);
 - fáze 7: balíčky Úřednický, Babiččin, Vetešnický a Kalendářový (potřebují kupóny, spotřebky a žolíky).
 
-**Další krok:** Fáze 3 — herní UI v1. Základy UI už existují v `src/ui`: `app.ts` (router obrazovek), `controller.ts`
-(`GameController`: most k `Game.dispatch`, autosave, přehrání událostí), `settings.ts`, `storage.ts`, `anim/queue.ts`
-(fronta animací), `dom.ts` (helper `h()`), `styles/base.css`. Navázat herní obrazovkou (levý panel, ruka, Zahrát /
-Zahodit), výběrem útraty, rozpisem odměn a pitvou nad dotazy `Game` (`blindTarget`, `blindReward`, `preview`).
+**Další krok:** commit fáze 3 (`feat(ui): game UI v1 …`), pak **Fáze 4** — projít podúkoly proti hotovému kódu
+a odškrtnout je (engine hooků a edic, registr s validací, 30 žolíků s testy, Večerka v enginu, úrok, UI Večerky
+s drag & drop — hotové, e2e koupě/prodeje — hotové v `tests/e2e/game.spec.ts`), doplnit, co chybí, a fázi uzavřít
+zelenými kontrolami a commitem `feat: jokers v1 and shop`.
 
 ## Jak pokračovat v nové session
 
@@ -139,20 +140,21 @@ projde, hra se pořád spustí; commit `feat(engine): …`; fáze odškrtnutá.
 
 ## Fáze 3 — Herní UI v1
 
-- [ ] `index.html`, `src/main.ts`, `src/ui/dom.ts` (helper `h()`), `src/ui/app.ts` (router obrazovek), `src/ui/controller.ts` (instance `Game`, fronta animací, autosave)
-- [ ] CSS: proměnné a témata na `:root`, font Pixelify Sans (`@fontsource`, latin-ext), rozvržení pro ≥ 1024 px, tablet s dotykem
-- [ ] Vlastní SVG hrací karty (klasický styl, figury stylizované česky, indexy J/Q/K/A, barvy ♠ ♥ ♦ ♣)
-- [ ] Herní obrazovka — levý panel: název útraty/šéfa + pravidlo, „Dosáhni aspoň …“, skóre kola, aktuální kombinace s živými čipy × mult, Ruce, Zahození, peníze, Patro x/8, Kolo, tlačítka „Info o runu“ a „Nastavení“
-- [ ] Horní řada: sloty žolíků (x/5) a spotřebek (x/2) — zatím prázdné
-- [ ] Stůl se zahranými kartami, ruka dole, tlačítka **Zahrát** / **Zahodit**, třídění podle hodnoty/barvy, balíček vpravo dole (zbývá/celkem + náhled zbylých karet)
-- [ ] Výběr karet myší, dotykem a klávesami (1–8, Enter, X, S/B, Esc, mezerník přeskočí animaci)
-- [ ] Animace skórování: přehrávání `ScoreStep`, počítadlo čipů × mult, výsledek
-- [ ] Obrazovka výběru útraty (3 karty: cíl, odměna, Přeskočit)
-- [ ] Konec kola (rozpis odměn s animací), konec runu („pitva“ s hláškou podle příčiny), výhra (zatím jednoduché titulky)
-- [ ] Hlavní menu: Nová hra, Pokračovat (ostatní položky jako „Už brzy“), autosave do `localStorage` po každé akci
-- [ ] Všechny texty v `src/i18n/cs*` (žádné natvrdo), tykání
-- [ ] e2e: spustit, vybrat útratu, zahrát ruku, screenshot, vykreslení „Příliš žluťoučký kůň úpěl ďábelské ódy“
-- [ ] **Napsat uživateli, jak hru spustí** (`npm install` → `npm run dev` → adresa z konzole)
+- [x] `index.html`, `src/main.ts`, `src/ui/dom.ts` (helper `h()`), `src/ui/app.ts` (router obrazovek), `src/ui/controller.ts` (instance `Game`, fronta animací, autosave)
+- [x] CSS: proměnné a témata na `:root`, font Pixelify Sans (`@fontsource`, latin-ext), rozvržení pro ≥ 1024 px, tablet s dotykem
+- [x] Vlastní SVG hrací karty (klasický styl, figury stylizované česky, indexy J/Q/K/A, barvy ♠ ♥ ♦ ♣)
+- [x] Herní obrazovka — levý panel: název útraty/šéfa + pravidlo, „Dosáhni aspoň …“, skóre kola, aktuální kombinace s živými čipy × mult, Ruce, Zahození, peníze, Patro x/8, Kolo, tlačítka „Info o runu“ a „Nastavení“
+- [x] Horní řada: sloty žolíků (x/5) a spotřebek (x/2) — obecně přes registr (funguje i s obsahem fází 4–5)
+- [x] Stůl se zahranými kartami, ruka dole, tlačítka **Zahrát** / **Zahodit**, třídění podle hodnoty/barvy, balíček vpravo dole (zbývá/celkem + náhled zbylých karet)
+- [x] Výběr karet myší, dotykem a klávesami (1–8, Enter, X, S/B, Esc, mezerník přeskočí animaci)
+- [x] Animace skórování: přehrávání `ScoreStep`, počítadlo čipů × mult, výsledek
+- [x] Obrazovka výběru útraty (3 karty: cíl, odměna, Přeskočit)
+- [x] Konec kola (rozpis odměn s animací), konec runu („pitva“ s hláškou podle příčiny), výhra (zatím jednoduché titulky)
+- [x] Hlavní menu: Nová hra, Pokračovat (ostatní položky jako „Už brzy“), autosave do `localStorage` po každé akci
+- [x] Všechny texty v `src/i18n/cs*` (žádné natvrdo), tykání
+- [x] e2e: spustit, vybrat útratu, zahrát ruku, screenshot, vykreslení „Příliš žluťoučký kůň úpěl ďábelské ódy“
+- [x] Revize: přístupnost (`tests/e2e/a11y.spec.ts`), průchod celým runem přes UI (`scripts/ui-walkthrough.ts`), výkon, texty
+- [x] **Napsat uživateli, jak hru spustí** (`npm install` → `npm run dev` → adresa z konzole; text ve shrnutí fáze)
 
 **Hotovo, když:** run jde v prohlížeči dohrát (bez žolíků) od menu po výhru/pitvu myší, klávesnicí i
 dotykem, konzole bez chyb; e2e zelené; commit `feat(ui): …`; fáze odškrtnutá; uživatel dostal návod ke spuštění.

@@ -159,8 +159,13 @@ async function shot(
   page: Page,
   vp: Viewport,
   name: string,
-  opts: { fullPage?: boolean } = {},
+  opts: { fullPage?: boolean; keepHover?: boolean } = {},
 ): Promise<void> {
+  // Kurzor po posledním kliknutí by nad kartou/žolíkem nechal otevřený tooltip (na dotyku by tam nebyl).
+  if (!opts.keepHover) {
+    await page.mouse.move(1, 1);
+    await page.waitForTimeout(200);
+  }
   await page.evaluate(() => document.fonts.ready);
   const dir = `${OUT}/${vp.name}`;
   mkdirSync(dir, { recursive: true });

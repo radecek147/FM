@@ -58,7 +58,7 @@ export const pranostiky = {
   saint_wenceslas: {
     name: 'Svatý Václav',
     desc: `Královská postupka ${PER_LEVEL}`,
-    flavor: 'Kníže sice nebyl král, ale postupku má královskou.',
+    flavor: 'Na svatého Václava sklizeň bývá hotová. I ta královská.',
   },
   candlemas: {
     name: 'Na Hromnice',

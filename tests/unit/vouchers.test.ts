@@ -40,7 +40,7 @@ const PAIRS: [string, number, string, number][] = [
   ['savings_account', 9, 'building_savings', 12],
   ['narrow_rack', 11, 'proper_rack', 13],
   ['tear_calendar', 8, 'grandmas_pantry', 11],
-  ['card_stall', 9, 'fortune_teller', 12],
+  ['card_stall', 9, 'card_reader', 12],
   ['polish', 9, 'holo_foil', 12],
   ['official_strike', 12, 'amnesty', 14],
 ];
@@ -183,9 +183,9 @@ describe('kupóny – definice (DESIGN 6)', () => {
     );
     expect(d('savings_account')).toContain(`na 8${NBSP}Kč`);
     expect(d('building_savings')).toContain(`na 12${NBSP}Kč`);
-    expect(d('tear_calendar')).toContain(`z${NBSP}3${NBSP}na 7`);
+    expect(d('tear_calendar')).toContain('(váha každé 3 → 7, žolíci mají 14)');
     expect(d('grandmas_pantry')).toContain('7 → 8,5');
-    expect(d('fortune_teller')).toContain(`50${NBSP}% šanci na vylepšení a${NBSP}20${NBSP}% šanci na pečeť`);
+    expect(d('card_reader')).toContain(`50${NBSP}% šanci na vylepšení a${NBSP}20${NBSP}% šanci na pečeť`);
     expect(d('polish')).toContain('2,5× častěji');
     expect(d('holo_foil')).toContain('3,5× častěji (místo 2,5×)');
     expect(d('official_strike')).toContain('×1,1');
@@ -226,6 +226,15 @@ describe('kupóny – nabídka a koupě', () => {
     const before = JSON.stringify(g.state);
     expect(g.dispatch({ type: 'buyVoucher', slot: 0 })).toMatchObject({ ok: false, error: 'cannotUse' });
     expect(JSON.stringify(g.state)).toBe(before);
+  });
+
+  it('vlastněný kupón znovu koupit nejde (ani vnucený do nabídky) — hráč nezaplatí za nic', () => {
+    const g = shopWith('late_hours');
+    g._core.state.shop!.vouchers = [{ voucherId: 'late_hours', price: 12, sold: false }];
+    const before = JSON.stringify(g.state);
+    expect(g.dispatch({ type: 'buyVoucher', slot: 0 })).toMatchObject({ ok: false, error: 'cannotUse' });
+    expect(JSON.stringify(g.state)).toBe(before);
+    expect(g.modifiers().hands).toBe(BASE_MODIFIERS.hands + 1);
   });
 
   it('kupón drží celé patro (nekoupený i ve Večerce po Velké útratě), po porážce šéfa nový los', () => {
@@ -505,7 +514,7 @@ describe('10 Stánek s kartami / Kartářka', () => {
   });
 
   it('Kartářka: vylepšení 50 %, pečeť 20 %', () => {
-    const g = shopWith('card_stall', 'fortune_teller');
+    const g = shopWith('card_stall', 'card_reader');
     expect(g.modifiers().playingCardEnhanceChance).toBe(0.5);
     expect(g.modifiers().playingCardSealChance).toBe(0.2);
     const cards = sampleItems(g, 600).flatMap((it) => (it.kind === 'card' ? [it.card] : []));

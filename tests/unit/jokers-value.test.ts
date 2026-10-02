@@ -134,7 +134,8 @@ describe('hodnota žolíků – hodnocení podle pravidel 1–3 a ekonomiky', ()
   });
 });
 
-describe('hodnota žolíků – měření na skutečném obsahu (kouřový test)', () => {
+// Celé runy botů (se spotřebkami a od fáze 5 delší — snazší křivka cílů): víc než výchozích 5 s.
+describe('hodnota žolíků – měření na skutečném obsahu (kouřový test)', { timeout: 60_000 }, () => {
   const cache: BaseCache = new Map();
 
   it('Pivní tácek: každá ruka přesně +10 čipů a +2 mult → R1 +45,8 %, R2 +10,25 %; měření je deterministické', () => {

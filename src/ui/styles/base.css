@@ -106,13 +106,26 @@ body {
   line-height: 1.4;
   color: var(--on-felt);
   background-color: var(--felt);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+/*
+ * Sukno (světlo nad stolem, tmavší okraj, jemná vazba látky) jako pevná vrstva za obsahem: při posouvání
+ * dlouhých obrazovek (nová hra, nastavení, telefon) se nehýbe a neopakuje se po výšce okna. Pseudo-element
+ * místo `background-attachment: fixed`, které mobilní Safari ignoruje.
+ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background-image:
     radial-gradient(ellipse at 50% 35%, var(--felt-light) 0%, transparent 65%),
     radial-gradient(ellipse at 50% 120%, var(--felt-dark) 0%, transparent 60%),
     repeating-linear-gradient(45deg, rgb(255 255 255 / 2%) 0 2px, transparent 2px 6px);
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-  overflow-x: hidden;
 }
 
 img,
@@ -257,9 +270,11 @@ ol[role='list'] {
   transform: translateY(2px);
 }
 
+/* Neaktivní tlačítko: neprůhledné (sukno přes něj neprosvítá do „olivova“), vybledlé a zamáčknuté. */
 .btn:disabled {
-  opacity: 0.55;
-  filter: grayscale(0.4);
+  filter: saturate(0.3) brightness(0.8);
+  box-shadow: 0 2px 0 rgb(0 0 0 / 30%);
+  transform: translateY(2px);
 }
 
 /* ─────────────────────────── Titulní obrazovka (provizorní) ─────────────────────────── */

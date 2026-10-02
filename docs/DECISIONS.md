@@ -991,3 +991,184 @@ a `consumableKind`; volitelné `RoundState.cleansedCards` (starší uložení be
 Kopřivový odvar, Sloučení spisů) nezávisela na pořadí kliknutí. Viz ARCHITECTURE 2.7.
 
 **Proč:** CLAUDE.md kap. 3 (spotřebky, Večerka), 5 a 6; DESIGN 2.7, 2.9, 5.1, 5.3.
+
+## 2026-10-01 — Fáze 5: kupóny (24 = 12 párů)
+
+**Co:** `src/content/vouchers.ts` (12 párů tier 1 → tier 2 podle DESIGN 6, ceny 8–15 Kč přesně z tabulky), texty
+`src/i18n/cs/vouchers.ts`, testy přes skutečný engine `tests/unit/vouchers.test.ts` (koupě `buyVoucher`, přesný efekt
+každého kupónu, nabídka a hraniční případy). Čísla jsou jen v konstantách obsahu, popisky je čtou z `params`.
+Rozhodnutí a upřesnění:
+
+- **Delty se sčítají**, takže tier 2 přidává jen rozdíl proti tier 1: Zlatá věrnostní +20 % (celkem 40 %), Stavební
+  spoření +4 (strop 12 Kč), Hologramová fólie `editionRateMult` ×1,4 (2,5 × 1,4 = 3,5), Kartářka nastaví šance
+  vylepšení/pečeti na 50 %/20 % jako rozdíl proti výchozím 20 %/0 %. Švagr vedoucí `rerollCostStep −1` (výchozí krok
+  1 Kč → 0; clamp na 0 v `modifiers.ts`).
+- **„−1 patro“ (Úřední škrt, Amnestie) se nabízí a jde koupit až od patra 2** (`VoucherDef.available`). Proč:
+  DESIGN 6 říká „min. 1“ — v patře 1 by kupón nic nesnížil a zbyl by jen trvalý postih (×1,1 cíle / +1 Kč), tedy
+  past. Pokračuje se další útratou v pořadí s cíli nového patra; výhra stále až po šéfovi patra 8.
+- **Kupón platí hned:** ceny přepočítá `dispatch` (sleva, Amnestie i na přehození), sloty z Druhého regálu / Regálu
+  u pokladny se v otevřené Večerce hned doplní (`syncShopSlots`), přehození z Kamaráda za pultem / Švagra hned
+  zlevní (s oběma stojí další přehození 3 Kč i po přehozeních už zaplacených v téže Večerce).
+- **Rozkládací stůl** dává +1 kartu navíc jen v kole Šéfa: `passive` čte `round.blind === 'boss'`, modifikátory se
+  přepočítají při výběru útraty a po výplatě.
+- **Popisky váhových kupónů** (Trhací kalendář, Babiččina spíž, Stánek s kartami) uvádějí váhy přímo (3 → 7, 7 → 8,5,
+  váha 5 proti žolíkům 14), Kartářka procenta (ne `…Chance`, aby je UI nenásobilo `probabilityMult`).
+- **Tier 2 má `unlock: { type: 'custom', id: 'voucherTier1TwoRuns' }`** (DESIGN 11.3: koupě tier 1 ve 2 různých
+  runech, nebo vše po 3 výhrách); vyhodnotí ho meta ve fázi 8, do té doby je pool kupónů celý odemčený.
+- Flavor „Sbíráte body? — Ne. — Tak je máte.“ má v textu hry krátkou pomlčku (`–`) podle CONTENT-GUIDE 12.
+- Bez kupónu na přehazování šéfa: DESIGN 6 ho mezi 12 páry nemá (engine to umí přes `flags.bossRerolls`, zůstává
+  pro štítky/razítka).
+
+**Engine (obecně, s testy ve `vouchers.test.ts`):** volitelné `VoucherDef.available?(ctx)` (čistá funkce v `readOnly`;
+`voucherAvailable`, filtr v `eligibleVouchers`), `buyVoucher` odmítne (`cannotUse`, stav beze změny) kupón nedostupný,
+už vlastněný a tier 2 bez tier 1; `syncShopSlots` doplní otevřenou Večerku po uplatnění kupónu (nikdy neubírá).
+Viz ARCHITECTURE 2.8.
+
+**Otevřené pro simulaci:** boti kupují každý dostupný kupón, i Úřední škrt (×1,1 cíle za kolo navíc) — vyhodnotit
+v balanci (fáze 10), případně botům dát hodnocení kupónů.
+
+**Proč:** CLAUDE.md kap. 3 (Večerka, kupóny), 5 a 6; DESIGN 2.5, 6, příloha B.
+
+## 2026-10-01 — Fáze 5: boti se spotřebkami a předběžná kalibrace cílů
+
+**Co — boti** (`src/engine/sim/value.ts` nový, `src/engine/sim/bots.ts`; testy `tests/unit/sim-consumables.test.ts`):
+
+- **Ocenění sondou, ne podle id.** Spotřebky, obálky a kupóny boti nepoznávají podle id (sim zůstává nezávislý na
+  obsahu): akci zkusí na kopii hry s přeseedovaným RNG a ocení změnu stavu v Kč — peníze, úrovně kombinací
+  (`LEVEL_KC` × podíl kombinace na hře bota z `handTypeCounts` + priory stylu), trvalé modifikátory a patro (váhy
+  `MOD_KC`, peníze za kolo × zbývající kola, `targetMult` logaritmicky), žolíky (součet hodnocení bota × 5 Kč), nové
+  spotřebky a balíček. Hodnota karty = afinita (jak často ve hře bota skóruje: hlavní barva, hodnoty do párů, vysoké
+  karty) × (3 Kč + 0,05 Kč × „cena“ karty při skórování) + co dá držená (ocelová) + peníze z vylepšení a pečetí za zbytek
+  runu; balíček = 52 × průměr, takže zničení slabé karty balíček zlepší a slabá kopie ho zředí.
+- **Výběr cílů:** jedna karta → sonda na každou; přesně dvě → každá uspořádaná dvojice; víc karet → když sonda
+  s nejcennějšími kartami a s opačným pořadím dá stejný výsledek a všechny cíle se změnily stejně (vylepšení, pečeť,
+  edice, barva, hodnota +n, bonusové čipy, zničení), spočítá přínos každé karty zvlášť a vezme ty kladné; jinak
+  (Babiččina barva — barva podle první karty) „kotva“ + karty s nejlepším přínosem ve dvojici s ní. Když záleží na
+  pořadí (levá/pravá karta), bot nejdřív pošle `reorderHand`; seed sond nezávisí na pořadí ruky, takže další
+  rozhodnutí akci provede (žádné zacyklení, bot dál bez stavu mimo `RunState`).
+- **Kdy:** pranostiky hned; spotřebky s cílem na začátku kola (dokud se nehrálo ani nezahazovalo) a v obálce s rukou;
+  spotřebka, která dá jen peníze a méně než 6 Kč (Pod slamníkem), počká; destruktivní razítka (Ověřená kopie,
+  Vyvlastnění, Daňové přiznání, Zpětný odběr v kole) bot použije jen při kladné hodnotě — se třemi dobrými žolíky
+  Ověřenou kopii nepoužije, s jediným ano.
+- **Večerka:** žolík, dokud jich je méně než patro + 1; kupóny podle hodnoty ze sondy (hodnota ≥ cena × 0,95);
+  žolíci a výměny; pranostiky (koupit a použít), spotřebky bez cíle s kladnou hodnotou; obálky podle očekávané
+  hodnoty (pranostiková = očekávané maximum z `options` dostupných pranostik, `expectedMaxOfK`); přehození i při
+  plných slotech, je-li ve slotu žolík s hodnocením < 2 k výměně. **Pocit z ceny** (`priceFactor`): peníze nad rezervou
+  na úrok nic nevydělají, takže s 5–30 Kč navíc stačí poměr hodnota/cena klesající z 1 na 0,35 — dřív bot v patře 8
+  vcházel do Večerky s 75–105 Kč.
+- **Žolíci a spotřebky:** se žolíkem ×mult za drženou spotřebku (štítky `consumable` + `xmult`, Babiččina truhla) má
+  každá držená spotřebka cenu 25 Kč × (×mult − 1) — bot spotřebky drží a dokupuje do zásoby; se žolíkem, kterého
+  akce „nakrmí“ (štítek `scaling`, číselný stav po sondě vzroste — Kořenářka po radě, Sběrač hub po zničené kartě),
+  +1,5 Kč za jednotku růstu (nejvýš 3) a víc babských obálek.
+- **`LEVEL_KC = 30`** z pokusu (100 runů, stejné seedy, staré cíle; průměrné patro `max`): 7 → 4,0; 12 → 4,0;
+  20 → 4,4; 30 → 4,6; 45 → 4,5. Nízká cena úrovní nechávala bota s hlavní kombinací na úrovni ~1,7 na konci runu.
+- **Účinek samotných botů** (staré cíle, 100 runů): průměrné patro max 3,5 → 4,7, flush 3,4 → 4,6, pairs 3,3 → 4,5,
+  patra 5 dosáhne 55 % runů `max` (dřív 19 %); výhry pořád ~1 %. Neplatné akce 0. Doba: 300 runů × 6 botů 58 s →
+  211 s (sondy + delší runy se snazší křivkou).
+
+**Co — žolíci** (přeměření `npx tsx scripts/joker-value.ts --runs 100`, R2 úroveň 4; před = boti bez spotřebkové
+logiky a staré cíle, po = konečný stav):
+
+| Žolík                               | Číslo                   | Před: R1 / R2 % | Po: R1 / R2 % | Δ výher po | Hodnocení                                                        |
+| ----------------------------------- | ----------------------- | --------------- | ------------- | ---------: | ---------------------------------------------------------------- |
+| Kořenářka (`herbalist`)             | beze změny (+2 mult)    | 3,3 / 10,2      | 22,9 / 49,8   |  +19 p. b. | v pásmu R2 (vzácný 20–60); dřív bot skoro nepoužíval babské rady |
+| Sběrač hub (`mushroom_picker`)      | `xmult` 0,15 → **0,25** | 0,2 / 16,3      | 3,0 / 69,8    |   +5 p. b. | s 0,15 a novými boty R2 29,5 (epický ≥ 45); špička R2 69 < 220   |
+| Babiččina truhla (`grandmas_chest`) | beze změny (×1,3)       | 0,5 / 3,1       | 41,0 / 62,1   |   +4 p. b. | v pásmu R2 (epický 45–110); dřív bot spotřebky nedržel           |
+| Meteorolog (`meteorologist`)        | beze změny (+2 mult)    | 11,9 / 15,0     | 11,9 / 15,0   |   +3 p. b. | v pásmu R2 (běžný 8–30)                                          |
+| Stará garda (`old_guard`)           | beze změny (×1,5)       | 0,0 / 50,1      | 0,0 / 50,5    |   +4 p. b. | v pásmu R2 (vzácný 20–60); R1 = úrovně 1–2 z definice R1         |
+
+Texty čtou `params`, DESIGN 4.7 a testy (`jokers-epic`, `jokers-combos`) upravené. **Sledovat:** Kořenářka má Δ výher
++19 p. b. (pásmo vzácného v simulaci 4–10; 100 seedů, párový rozdíl má šum ~±6 p. b.) — přeměřit po fázi 6 a 7.
+
+**Co — cíle** (`TARGET_CURVES`, DESIGN 2.3.1 a 2.3.3, testy `targets`, `stakes`, `game`): křivky předběžně podle
+obsahu fáze 5 (30 žolíků, spotřebky, obálky, kupóny, bez šéfů a štítků). Základ patra 1–8 staré → nové:
+
+| Křivka | Staré                                                    | Nové                                                  |
+| -----: | -------------------------------------------------------- | ----------------------------------------------------- |
+|      1 | 250, 650, 1 600, 4 000, 9 500, 20 000, 40 000, 80 000    | 250, 550, 1 100, 2 200, 4 200, 7 500, 13 000, 22 000  |
+|      2 | 250, 750, 2 000, 5 500, 14 000, 32 000, 70 000, 150 000  | 250, 600, 1 200, 2 500, 4 900, 9 000, 16 000, 27 000  |
+|      3 | 250, 850, 2 500, 7 500, 20 000, 50 000, 115 000, 250 000 | 250, 650, 1 300, 2 800, 5 800, 11 000, 20 000, 35 000 |
+
+Postup: medián nejlepší ruky `max` po patrech (200 runů, nové boty, staré cíle) 760 / 1 740 / 3 300 / 5 400 / 8 200 /
+16 000 (přeživší) — skóre bota roste ×1,5–2,3 za patro, staré cíle ×2–2,5. Zkoušky na Desítce (200 runů, SIM-A,
+max / flush / pairs): `…2 600, 4 500, 8 000, 13 000, 22 000` → 32,5 / 25 / 24 % s vrcholem proher v patře 4;
+patra 3–4 snížená (`1 100, 2 200, 4 200, 7 500`) → 39 / 36,5 / 23,5 % s vrcholem v patrech 5–6. Křivky 2 a 3 nejdřív
+se starými poměry ke křivce 1 (až ×1,9 / ×3,1): Dvanáctka 2,5 %, Bock i Imperial 0 % s 20–28 % proher už v patře 2;
+proto mírnější poměry (×1,1–1,25 / ×1,2–1,6).
+
+**Výsledky simulací** (`npm run simulate -- --runs 300 --stake 1|8 --bot all`, seedy SIM-A; % výher, průměrné patro):
+
+| Bot     | Desítka před | Desítka po  | Imperial před | Imperial po |
+| ------- | ------------ | ----------- | ------------- | ----------- |
+| max     | 0 %, 3,5     | 36 %, 6,3   | 0 %, 2,7      | 0,3 %, 3,7  |
+| flush   | 0 %, 3,4     | 37 %, 6,4   | 0 %, 2,7      | 0 %, 3,6    |
+| pairs   | 0,3 %, 3,3   | 23,3 %, 6,1 | 0 %, 2,6      | 0,3 %, 3,6  |
+| econ    | 0 %, 2,6     | 25,3 %, 4,4 | 0 %, 1,9      | 0 %, 2,2    |
+| random  | 0 %, 1       | 0 %, 1      | 0 %, 1        | 0 %, 1      |
+| nojoker | 0 %, 2,4     | 0 %, 3,5    | 0 %, 2,1      | 0 %, 2,6    |
+
+- Desítka, další sady seedů (300 runů, max / flush / pairs): SIM-B 43 / 35,7 / 29,7 %, SIM-C 41 / 31,7 / 27,7 %.
+  Nejlepší rozumná strategie 37–43 % (cíl fáze 5 ~35–45 %; šéfové ve fázi 6 ji mají stáhnout k 25–35 %).
+- Desítka `max`: prohry v patrech 1–2 4 % (cíl < 10 %), vrchol proher v patrech 5–6 (14 / 11 %), patro 8 dosáhne
+  47 % runů. `nojoker`: medián prohry v patře 3 (cíl 3–4), `random` prohraje v patře 1 vždy. Peníze při vstupu do
+  Večerky: patro 1 10,5 Kč, patro 4 27 Kč (cíl 8–14 / 15–30). Neplatné akce 0 u všech botů.
+- Ostatní síly piva (`max`, 200 runů, konečné křivky): Jedenáctka 17 %, Dvanáctka 11 %, Bock 0 %, Imperial 0 %
+  (300 runů 0,3 %).
+
+**Mimo pásmo / otevřené:**
+
+- **Střední síly piva** jsou pod pásmy DESIGN 10 (Jedenáctka 20–30, Dvanáctka 14–22, Bock 4–8 %). Bot je velmi citlivý
+  na ekonomiku: samotné +1 Kč ve Večerce (Jedenáctka, stejná křivka) srazí výhry z ~40 na 17 %, zvětrávání a Ležák
+  přidají prohry už v patře 2. Ladí se křivkami 2/3 a šancemi nálepek ve fázi 10 (DESIGN 12.4 krok 6), až budou šéfové.
+- **CLAUDE.md kap. 3** chce v patře 8 řádově statisíce — dnešní obsah na to nestačí (staré cíle ~1 % výher i s novými
+  boty). Patro 8 se zvedne s fází 7 (100+ žolíků, legendární ×mult); křivky se kalibrují znovu po fázi 6 a 7.
+- `pairs` zaostává za `max`/`flush` (23–30 %); `econ` vyhraje 25 %, ale 36 % runů prohraje v patře 2 (rezerva
+  25 Kč místo žolíků).
+- `docs/ARCHITECTURE.md` (seznam souborů `engine/sim`) nový soubor `value.ts` zatím neuvádí — mimo rozsah tohoto
+  úkolu, doplnit při nejbližší úpravě architektury.
+
+**Proč:** CLAUDE.md kap. 8 (simulace, cílová % výher), DESIGN 4.3 (pásma žolíků), 12.1–12.5 (postup ladění, každá
+změna čísla do DECISIONS a tabulek).
+
+## 2026-10-02 — Revize a uzavření fáze 3 (herní UI v1)
+
+**Co — revize proti CLAUDE.md kap. 4 a 6 a DESIGN 13:**
+
+- **Texty natvrdo:** v `src/ui/**` ani `src/main.ts` není český text mimo i18n. Výjimky jsou vědomé: vlastní jména
+  v Titulcích (písmo, autor, licence, nástroje — data, ne věty; věty jsou v `credits.*`) a vývojářské zprávy do konzole
+  (`console.warn/error`, hráč je nevidí). Všechny statické klíče `t('…')` v UI existují (kontrola skriptem při revizi).
+- **Přístupnost a ovládání:** nový `tests/e2e/a11y.spec.ts` projde menu, novou hru, nastavení, titulky a všechny fáze
+  hry (výběr útraty, kolo, konec kola, Večerka se žolíky, obálka, pitva, výhra) a dialogy (Info o runu, balíček,
+  pauza, detail žolíka): každý ovládací prvek má přístupný název, odkazy `aria-labelledby/-describedby/-controls`
+  vedou na existující id, Tab chodí jen po viditelných prvcích a zaměřený prvek se viditelně změní (`:focus-visible`
+  a jiný vzhled než bez focusu), dialog drží focus (Tab i Shift+Tab) a Esc ho vrátí na tlačítko, které dialog
+  otevřelo. Tlačítka nákupu ve Večerce („Koupit za 4 Kč“) a volby obálky („Vzít“, „Použít“) dostala
+  `aria-describedby` s názvem zboží — čtečka ví, co se kupuje (viditelný popisek zůstává názvem, WCAG 2.5.3).
+- **Funkčnost:** `scripts/ui-walkthrough.ts` (QA nástroj, ne součást `test:e2e` — trvá minuty) projde celý run přes UI:
+  bot z enginu rozhoduje, prohlížeč akce provádí střídavě klávesami a myší a **po každé akci musí být uložený stav
+  bajtově stejný jako výsledek enginu z předchozího uložení**. Ověřeno 8 runy (bez animací i s animacemi 4×, boti
+  max / flush / econ): 4 pitvy v patrech 1–6 a 3 výhry v patře 8 → reload → Nekonečný režim → patro 9–10; v 5 runech
+  dva reloady uprostřed runu (autosave → Pokračovat). 0 rozdílů, konzole čistá.
+- **Výkon:** CSS přechody i `@keyframes` animují jen `transform`, `translate` a `opacity`, Web Animations v presenteru
+  také; presenter měří karty dávkově (FLIP: všechna čtení, pak zápisy). Náklon karty za myší (`bindTilt`) dřív četl
+  `getBoundingClientRect` při každém `pointermove` — teď měří jen při najetí / stisku a zapisuje nejvýš jednou za snímek
+  (`requestAnimationFrame`). Build: hlavní chunk 332 kB (109 kB gzip), ikony samostatný chunk 344 kB (155 kB gzip,
+  dynamický import), CSS 64 kB (14 kB gzip).
+
+**Opravy z revize:**
+
+- **Engine — prodaný slot Večerky sdílel objekt s koupeným žolíkem / spotřebkou.** `buy` vložil do řady tentýž objekt,
+  na který dál ukazoval prodaný slot; změna `state` žolíka (např. +mult po použití spotřebky) se propsala i do slotu,
+  ale po uložení a načtení už ne — živý a načtený stav se rozešly (našel průchod `ui-walkthrough`). Koupě teď vkládá
+  hlubokou kopii (`detached`), test v `tests/unit/game.test.ts`. Obálky problém nemají (vybraná možnost z nabídky
+  zmizí).
+- **`formatNumber(Number.MAX_VALUE)` = „∞“** (DESIGN 1.3: přetečení v nekonečném režimu ukazuje nekonečno; dřív
+  `1,8e308`), test ve `format.test.ts`. Otevřený bod fáze 3 z ROADMAP tím je uzavřený; druhý (názvy útrat a hlášky
+  pitvy jen v CLI) už vyřešil sdílený `DEATH_QUOTES` v `src/i18n/cs/game.ts`.
+
+**Vědomě odloženo:** ruku jde přeskládat jen tříděním (S / B), ne tažením. Engine akci `reorderHand` má a babské rady
+s pravidlem „karta nejvíc vlevo“ ji využijí — přesun karet v ruce (tažení myší i dotykem + klávesová alternativa)
+patří do fáze 5 k výběru cílů spotřebek.
+
+**Proč:** CLAUDE.md kap. 2 (UI jen přes controller, výkon), kap. 4 (ovládání, dotyk), kap. 6 (texty), kap. 8 (konzole
+bez chyb, determinismus „stejný seed = identický run“ včetně uložení); DESIGN 13.1–13.3.

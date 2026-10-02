@@ -132,6 +132,7 @@ export const SEALS: SealDef[] = [
 /**
  * Edice (DESIGN 2.6): `weight` = šance u žolíka v %, `weightCard` = šance u hrací karty v %.
  * Negativní se losuje samostatně (jen žolíci) a nenásobí ji `editionRateMult`.
+ * Šance u hrací karty jsou vlastní (5 / 2,5 / 1 %) — 4 / 2,8 / 1,2 % by byla převzatá čísla (DESIGN příloha A).
  */
 export const EDITIONS: EditionDef[] = [
   {
@@ -141,7 +142,7 @@ export const EDITIONS: EditionDef[] = [
     jokerTiming: 'before',
     priceAdd: 1,
     weight: 2.5,
-    weightCard: 4,
+    weightCard: 5,
   },
   {
     id: 'holo',
@@ -150,7 +151,7 @@ export const EDITIONS: EditionDef[] = [
     jokerTiming: 'before',
     priceAdd: 2,
     weight: 1.5,
-    weightCard: 2.8,
+    weightCard: 2.5,
   },
   {
     id: 'poly',
@@ -159,7 +160,7 @@ export const EDITIONS: EditionDef[] = [
     jokerTiming: 'after',
     priceAdd: 4,
     weight: 0.4,
-    weightCard: 1.2,
+    weightCard: 1,
   },
   {
     id: 'negative',

@@ -11,10 +11,13 @@ import { EDITIONS, SEALS } from './modifiers';
 /** Cena razítka ve Večerce (DESIGN 5.4). */
 export const RAZITKO_COST = 6;
 
-/** Šance edic u Hromadného vyřízení a Kontroly totožnosti (v %): lesklá / holografická / duhová. */
+/**
+ * Šance edic u Hromadného vyřízení a Kontroly totožnosti (v %): lesklá / holografická / duhová. Vlastní rozdělení —
+ * 50 / 35 / 15 by bylo 1:1 převzaté číslo (CONTENT-GUIDE 13, DESIGN příloha A).
+ */
 const EDITION_ROLL: readonly { item: EditionId; weight: number }[] = [
-  { item: 'foil', weight: 50 },
-  { item: 'holo', weight: 35 },
+  { item: 'foil', weight: 55 },
+  { item: 'holo', weight: 30 },
   { item: 'poly', weight: 15 },
 ];
 const EDITION_PARAMS = Object.fromEntries(EDITION_ROLL.map((e) => [e.item, e.weight]));
@@ -330,7 +333,15 @@ export const RAZITKA: ConsumableDef[] = [
       consumableSlots: PERMIT_CONSUMABLE_SLOTS,
       minSlots: PERMIT_MIN_CONSUMABLE_SLOTS,
     },
-    canUse: (ctx) => ctx.mods.consumableSlots >= PERMIT_MIN_CONSUMABLE_SLOTS,
+    // Aspoň 2 sloty spotřebek a ostatní spotřebky se po ubrání slotu vejdou (sloty se nesmí přeplnit, např. při
+    // „Koupit a použít“ s plnými sloty). Razítko použité ze slotu svůj slot uvolní, i s případnou negativní edicí.
+    canUse: (ctx) => {
+      const slots = ctx.mods.consumableSlots;
+      const inSlots = ctx.state.consumables.some((c) => c.uid === ctx.self.uid);
+      const others = ctx.state.consumables.length - (inSlots ? 1 : 0);
+      const after = slots - (inSlots ? editionSlots(ctx.self.edition) : 0) - PERMIT_CONSUMABLE_SLOTS;
+      return slots >= PERMIT_MIN_CONSUMABLE_SLOTS && others <= after;
+    },
     use: (ctx) => {
       ctx.api.addPermanentModifier({
         jokerSlots: PERMIT_JOKER_SLOTS,

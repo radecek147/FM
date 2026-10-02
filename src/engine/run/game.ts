@@ -64,6 +64,11 @@ function fail(code: ActionErrorCode): never {
   throw new ActionError(code);
 }
 
+/** Hluboká kopie JSON-serializovatelné instance (žolík, spotřebka) — žádné sdílené objekty ve stavu runu. */
+function detached<T>(x: T): T {
+  return JSON.parse(JSON.stringify(x)) as T;
+}
+
 export class Game {
   private readonly core: GameCore;
 
@@ -856,7 +861,9 @@ export class Game {
       if (!jokerHasRoom(core, item.joker.edition)) fail('slotsFull');
       this.pay(item.price);
       item.sold = true;
-      addJokerInstance(core, item.joker, { ignoreSlots: true, acquire: true });
+      // Vlastní kopie: prodaný slot nesmí sdílet objekt (a tím `state`) s žolíkem v řadě — po uložení a načtení
+      // by se jinak živý a načtený stav rozešly.
+      addJokerInstance(core, detached(item.joker), { ignoreSlots: true, acquire: true });
       s.stats.jokersBought++;
       core.emit({ type: 'itemBought', kind: 'joker', defId: item.joker.defId, price: item.price });
     } else if (item.kind === 'consumable') {
@@ -875,7 +882,7 @@ export class Game {
         if (!consumableHasRoom(core, item.consumable.edition)) fail('slotsFull');
         this.pay(item.price);
         item.sold = true;
-        addConsumableInstance(core, item.consumable, true);
+        addConsumableInstance(core, detached(item.consumable), true);
         core.emit({
           type: 'itemBought',
           kind: 'consumable',
@@ -931,7 +938,9 @@ export class Game {
     const v = this.shop().vouchers[slot];
     if (!v) fail('unknownItem');
     if (v.sold) fail('soldOut');
-    // Tier 2 bez vlastněného tier 1 a kupón, který teď nemá smysl (Úřední škrt v patře 1), koupit nejde.
+    // Vlastněný kupón (jednou za run), tier 2 bez vlastněného tier 1 a kupón, který teď nemá smysl (Úřední škrt
+    // v patře 1), koupit nejde — hráč by jinak zaplatil za nic.
+    if (core.state.vouchers.includes(v.voucherId)) fail('cannotUse');
     const requires = core.registry.vouchers[v.voucherId]?.requires;
     if (requires && !core.state.vouchers.includes(requires)) fail('cannotUse');
     if (!voucherAvailable(core, v.voucherId)) fail('cannotUse');

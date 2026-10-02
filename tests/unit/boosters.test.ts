@@ -122,9 +122,18 @@ describe('obálky – definice (DESIGN 2.9)', () => {
       expect(t(`boosters.${b.id}.name`)).toBe(`${sizes[b.size]} · ${kinds[b.kind]}`);
       const desc = t(`boosters.${b.id}.desc`, { picks: b.picks, options: b.options });
       expect(desc, b.id).not.toMatch(/[{}]/);
-      expect(desc, b.id).toMatch(new RegExp(`^Vyber ${b.picks}\u00a0z\u00a0${b.options}`));
+      // „Nabídne N …, vybereš M.“ — bez „1 z 3“ (správně „ze 3“); tvar slova podle počtu.
+      expect(desc, b.id).toMatch(new RegExp(`^Nabídne ${b.options}\u00a0\\S.*, vybereš ${b.picks}\\.`));
     }
-    expect(t('boosters.rada_mega.desc', { picks: 2, options: 6 })).toContain('babských rad');
+    expect(t('boosters.rada_mega.desc', { picks: 2, options: 6 })).toMatch(
+      /^Nabídne 6\u00a0babských rad, vybereš 2\./,
+    );
+    expect(t('boosters.razitko_normal.desc', { picks: 1, options: 2 })).toMatch(
+      /^Nabídne 2\u00a0úřední razítka, vybereš 1\./,
+    );
+    expect(t('boosters.joker_mega.desc', { picks: 2, options: 5 })).toMatch(
+      /^Nabídne 5\u00a0žolíků, vybereš 2\./,
+    );
   });
 
   it('ikony z ICON_NAMES; velikosti se liší vzorem, druhy ikonou', () => {
@@ -419,10 +428,10 @@ describe('karetní obálka bere složení startovního balíčku', () => {
     );
   });
 
-  it('vylepšení ≈ 40 %, pečeť ≈ 15 %', () => {
+  it('vylepšení ≈ 35 %, pečeť ≈ 15 %', () => {
     const opts = cardsFrom('pub', 200);
     const share = (f: (o: BoosterOption) => boolean) => opts.filter(f).length / opts.length;
-    expect(share((o) => o.kind === 'card' && o.card.enhancement !== null)).toBeCloseTo(0.4, 1);
+    expect(share((o) => o.kind === 'card' && o.card.enhancement !== null)).toBeCloseTo(0.35, 1);
     expect(share((o) => o.kind === 'card' && o.card.seal !== null)).toBeCloseTo(0.15, 1);
   });
 });

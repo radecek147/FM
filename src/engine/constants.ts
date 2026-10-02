@@ -51,8 +51,11 @@ export const PLAYING_CARD_ENHANCEMENT_PRICE = 1;
 /** Příplatek za pečeť hrací karty (Kč). */
 export const PLAYING_CARD_SEAL_PRICE = 2;
 
-/** Karetní obálka: šance na vylepšení a pečeť nabízené karty (2.9; obchod má své v `Modifiers`). */
-export const BOOSTER_CARD_ENHANCE_CHANCE = 0.4;
+/**
+ * Karetní obálka: šance na vylepšení a pečeť nabízené karty (2.9; obchod má své v `Modifiers`). Vylepšení 35 %,
+ * ne 40 % — to by spolu s šancemi edic bylo 1:1 převzaté číslo (DESIGN příloha A).
+ */
+export const BOOSTER_CARD_ENHANCE_CHANCE = 0.35;
 export const BOOSTER_CARD_SEAL_CHANCE = 0.15;
 
 /** Žolík, který se nabídne, když je pool žolíků vyčerpaný (smí se opakovat). */

@@ -1,19 +1,19 @@
 /**
  * Texty: kupóny — klíče `vouchers.<id>.name|desc|flavor` (definice v src/content/vouchers.ts, docs/DESIGN.md kap. 6).
- * Čísla jen přes `{param}` z `VoucherDef.params`; flavor bez uvozovek. Pevná čísla (1 slot, 1 ruka…) mají tvar
- * slova napsaný rovnou — při změně čísla v obsahu zkontroluj i tvar.
+ * Čísla jen přes `{param}` z `VoucherDef.params`, u čísla se slovem s `|plural:` (tvar sedí i po změně čísla);
+ * flavor bez uvozovek.
  */
 import type { TextTree } from '../cs';
 
 export const vouchers = {
   second_shelf: {
     name: 'Druhý regál',
-    desc: '+{slots} kartový slot ve Večerce (žolíci, spotřebky, hrací karty).',
+    desc: '+{slots|plural:kartový slot,kartové sloty,kartových slotů} ve Večerce (žolíci, spotřebky, hrací karty).',
     flavor: 'Konečně je kam dát chipsy.',
   },
   checkout_shelf: {
     name: 'Regál u pokladny',
-    desc: '+{slots} slot na obálku ve Večerce.',
+    desc: '+{slots|plural:slot,sloty,slotů} na obálky ve Večerce.',
     flavor: 'Impulzivní nákupy na dosah ruky.',
   },
   loyalty_card: {
@@ -38,12 +38,12 @@ export const vouchers = {
   },
   late_hours: {
     name: 'Prodloužená otvíračka',
-    desc: '+{hands} ruka v každém kole.',
+    desc: '+{hands|plural:ruka,ruce,rukou} v každém kole.',
     flavor: 'Otevřeno do posledního hosta.',
   },
   nonstop: {
     name: 'Nonstop',
-    desc: '+{hands} ruka v každém kole a +{money|money} navíc za každou nevyužitou ruku.',
+    desc: '+{hands|plural:ruka,ruce,rukou} v každém kole a +{money|money} navíc za každou nevyužitou ruku.',
     flavor: 'Zavíráme? To slovo neznáme.',
   },
   dumpster: {
@@ -58,12 +58,12 @@ export const vouchers = {
   },
   bigger_table: {
     name: 'Větší stůl',
-    desc: '+{cards} karta v ruce.',
+    desc: '+{cards|plural:karta,karty,karet} v ruce.',
     flavor: 'Ze sklepa, po dědovi.',
   },
   folding_table: {
     name: 'Rozkládací stůl',
-    desc: '+{cards} karta v ruce; v kole Šéfa ještě +{bossCards} navíc.',
+    desc: '+{cards|plural:karta,karty,karet} v ruce; v kole Šéfa ještě +{bossCards} navíc.',
     flavor: 'Když přijde šéf, rozkládá se až do předsíně.',
   },
   savings_account: {
@@ -78,22 +78,22 @@ export const vouchers = {
   },
   narrow_rack: {
     name: 'Úzký věšák',
-    desc: '+{slots} slot žolíka, ale −{cards} karta v ruce.',
+    desc: '+{slots|plural:slot,sloty,slotů} žolíka, ale −{cards|plural:karta,karty,karet} v ruce.',
     flavor: 'Vejde se tam ještě jeden žolík. Kabát ne.',
   },
   proper_rack: {
     name: 'Pořádný věšák',
-    desc: '+{cards} karta v ruce (vyrovná postih Úzkého věšáku).',
+    desc: '+{cards|plural:karta,karty,karet} v ruce (vyrovná postih Úzkého věšáku).',
     flavor: 'Konečně i na bundu.',
   },
   tear_calendar: {
     name: 'Trhací kalendář',
-    desc: 'Pranostiky a babské rady se ve Večerce objevují častěji: váha každé stoupne z {from} na {to} (žolíci mají {joker}).',
+    desc: 'Pranostiky a babské rady se ve Večerce objevují častěji (váha každé {from} → {to}, žolíci mají {joker}).',
     flavor: 'Každý den jedna moudrost.',
   },
   grandmas_pantry: {
     name: 'Babiččina spíž',
-    desc: '+{slots} slot spotřebky; ve Večerce se objevují i úřední razítka (váha {stamps}) a pranostiky s babskými radami ještě častěji (váha {from} → {to}).',
+    desc: '+{slots|plural:slot,sloty,slotů} spotřebky; ve Večerce se objevují i úřední razítka (váha {stamps}) a pranostiky s babskými radami ještě častěji (váha {from} → {to}).',
     flavor: 'Zavařeniny na příštích dvacet let.',
   },
   card_stall: {
@@ -101,7 +101,7 @@ export const vouchers = {
     desc: 'Ve Večerce se objevují i hrací karty (váha {weight}, žolíci mají {joker}).',
     flavor: 'Z druhé ruky, jako nové.',
   },
-  fortune_teller: {
+  card_reader: {
     name: 'Kartářka',
     desc: 'Hrací karty ve Večerce mají {enhancePct} % šanci na vylepšení a {sealPct} % šanci na pečeť.',
     flavor: 'Vyložila mi budoucnost. Je v ní Barva.',

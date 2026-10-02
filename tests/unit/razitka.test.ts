@@ -21,6 +21,7 @@ import {
   play,
   selectBoss,
   setupRound,
+  winNextHand,
 } from './fixtures/registry';
 
 // ─────────────────────────── Pomocníci ───────────────────────────
@@ -160,7 +161,7 @@ describe('razítka — definice (DESIGN 5.4)', () => {
     }
     expect(t('consumables.notarized.desc', def('notarized').params)).toContain('+2 Kč');
     expect(t('consumables.bulk_processing.desc', def('bulk_processing').params)).toContain(
-      'lesklá 50 %, holografická 35 %, duhová 15 %',
+      'lesklá 55\u00a0%, holografická 30\u00a0%, duhová 15\u00a0%',
     );
     expect(t('consumables.office_hours.desc', def('office_hours').params)).toBe(
       'Všechny kombinace +2 úrovně; trvale −1 ruka v každém kole.',
@@ -439,7 +440,7 @@ describe('Hromadné vyřízení', () => {
     expect(reload(g).modifiers().handSize).toBe(7);
   });
 
-  it('rozložení edic odpovídá 50 / 35 / 15 %', () => {
+  it('rozložení edic odpovídá 55 / 30 / 15 % (vlastní čísla, ne převzatých 50 / 35 / 15)', () => {
     const g = game({ jokers: ['noop', 'coaster', 'plus_mult', 'times_mult', 'counter'] });
     const core = g._core;
     const counts: Record<string, number> = { foil: 0, holo: 0, poly: 0 };
@@ -451,8 +452,8 @@ describe('Hromadné vyřízení', () => {
       for (const j of core.state.jokers) counts[j.edition!]! += 1;
     }
     const total = 1500;
-    expect(counts.foil! / total).toBeCloseTo(0.5, 1);
-    expect(counts.holo! / total).toBeCloseTo(0.35, 1);
+    expect(counts.foil! / total).toBeCloseTo(0.55, 1);
+    expect(counts.holo! / total).toBeCloseTo(0.3, 1);
     expect(counts.poly! / total).toBeCloseTo(0.15, 1);
   });
 
@@ -593,6 +594,39 @@ describe('Kolaudace', () => {
     const g = game();
     g._core.api.addPermanentModifier({ consumableSlots: -1 });
     expectCannotUse(g, 'occupancy_permit');
+  });
+
+  it('nepřeplní sloty: s plnými sloty jinými spotřebkami nejde ani „Koupit a použít“ ve Večerce', () => {
+    // Ze slotu: razítko svůj slot uvolní, druhá spotřebka se do 1 slotu vejde (test výše). Se 2 dalšími ne.
+    const g = game();
+    give(g, 'fine_waiver');
+    give(g, 'expropriation');
+    expectCannotUse(g, 'occupancy_permit');
+    expect(g.modifiers().consumableSlots).toBe(2);
+
+    // Večerka: Kolaudace v nabídce, sloty plné → Koupit a použít nejde; s jednou spotřebkou ano.
+    const shop = game({ round: true, money: 50 });
+    winNextHand(shop);
+    ok(shop.dispatch({ type: 'play', cardIds: [shop.state.round!.hand[0]!] }));
+    ok(shop.dispatch({ type: 'cashOut' }));
+    shop._core.state.shop!.items[0] = {
+      kind: 'consumable',
+      consumable: newConsumableInstance(shop._core, 'occupancy_permit'),
+      consumableKind: 'razitko',
+      price: 6,
+      sold: false,
+    };
+    give(shop, 'fine_waiver');
+    give(shop, 'expropriation');
+    const before = JSON.stringify(shop.state);
+    expect(shop.dispatch({ type: 'buyAndUse', slot: 0 })).toEqual({ ok: false, error: 'cannotUse' });
+    expect(JSON.stringify(shop.state)).toBe(before);
+    // Neúspěšná akce vrátí stav ze zálohy (nový objekt) — sahat jen přes `_core.state`.
+    shop._core.state.consumables.pop();
+    shop._core.invalidate();
+    ok(shop.dispatch({ type: 'buyAndUse', slot: 0 }));
+    expect(shop.modifiers()).toMatchObject({ jokerSlots: 6, consumableSlots: 1 });
+    expect(shop.state.consumables).toHaveLength(1);
   });
 });
 

@@ -5,12 +5,14 @@
  * - kolo: zahraje kandidáta s nejvyšším odhadem skóre (náhled enginu + příspěvky karet; se žolíky nebo pravidlem
  *   šéfa přesně na kopii hry), a když ruka nestačí na zbytek cíle, zahazuje — vybírá z několika „honiček“
  *   (držet jádro kombinace, barvu, postupku, páry) tu s nejlepším Monte Carlo odhadem po dobrání;
- * - Večerka: kupóny, žolíci podle `JokerDef.tags`, nečíselných `params` (`suit`, `hand`, `level`), vzácnosti, edice
- *   a stylu (při plných slotech prodá nejslabšího; s dluhovým limitem i na dluh), pranostiky na své kombinace (koupit
- *   a hned použít), obálky, přehození jen s penězi nad rezervou na úrok;
+ * - Večerka: žolíci podle `JokerDef.tags`, nečíselných `params` (`suit`, `hand`, `level`), vzácnosti, edice a stylu
+ *   (při plných slotech prodá nejslabšího; s dluhovým limitem i na dluh); kupóny, spotřebky a obálky podle hodnoty
+ *   v Kč proti ceně (src/engine/sim/value.ts — sonda na kopii hry); přehození s penězi nad rezervou na úrok, i kvůli
+ *   výměně slabého žolíka;
  * - kolo podle vlastních žolíků: honí barvu a kombinace, které chtějí (`params.suit`, `params.hand`), a zahazuje
  *   jen tehdy, když zahození nevezme víc, než přinese (žolíci se štítkem `discard`, např. Hostinský);
- * - spotřebky ve slotech použije (pranostiky jen na své kombinace), žolíky řadí +čipy/+mult vlevo, ×mult vpravo,
+ * - spotřebky ve slotech i z obálek oceňuje sondou (pranostiky hned, spotřebky s cílem na karty s největším přínosem,
+ *   u levé/pravé karty nejdřív přeřadí ruku; „jen pár korun“ počká), žolíky řadí +čipy/+mult vlevo, ×mult vpravo,
  *   kopírujícího žolíka k jeho cíli.
  *
  * Boti používají jen veřejné informace: ruku, složení (ne pořadí) dobíracího balíčku, nabídku a pravidla.
@@ -20,10 +22,20 @@
  * ve Večerce, zahrané ruce) bot čte ze stavu. Simulace je proto deterministická i při sdílení instance bota mezi
  * prokládanými runy a po uložení a načtení uprostřed runu pokračuje stejně.
  */
-import type { BoosterDef, ConsumableDef, JokerRarity, JokerTag, Rng } from '../content-types';
+import { FINAL_ANTE } from '../constants';
+import type { BoosterDef, JokerRarity, JokerTag, Rng } from '../content-types';
 import { cyrb128, rngFromState } from '../rng/rng';
 import type { Game } from '../run/game';
-import type { Action, Card, HandType, JokerInstance, RoundState, RunState } from '../types';
+import type {
+  Action,
+  Card,
+  ConsumableInstance,
+  HandType,
+  JokerInstance,
+  RoundState,
+  RunState,
+  ShopItem,
+} from '../types';
 import { HAND_TYPES, SUITS } from '../types';
 import {
   analyzeCards,
@@ -38,6 +50,19 @@ import {
   type PlayCandidate,
 } from './hand-eval';
 import type { Bot, BotName } from './types';
+import {
+  cardWorth,
+  clamp,
+  expectedMaxOfK,
+  JOKER_KC,
+  levelWorth,
+  makeView,
+  planTargets,
+  sampledDelta,
+  type Delta,
+  type TargetPlan,
+  type ValueView,
+} from './value';
 
 export const BOT_NAMES: readonly BotName[] = ['max', 'flush', 'pairs', 'econ', 'random', 'nojoker'];
 
@@ -208,6 +233,44 @@ const SUIT_FAVOR_PER_JOKER = 1.5;
 /** Nejvýš tolik přehození v jedné Večerce (rozumný bot / náhodný bot) — počítadlo je ve stavu Večerky. */
 const MAX_SHOP_REROLLS = 3;
 const RANDOM_MAX_SHOP_REROLLS = 10;
+/** S penězi nad rezervou aspoň `REROLL_RICH_KC` smí přehodit až `MAX_SHOP_REROLLS_RICH`×. */
+const MAX_SHOP_REROLLS_RICH = 5;
+const REROLL_RICH_KC = 20;
+/** Přehazovat kvůli výměně žolíka jen s penězi nad rezervou aspoň cena + tolik a se žolíkem horším než tolik. */
+const REROLL_UPGRADE_KC = 6;
+const UPGRADE_WORST_MAX = 2;
+/** Výměna žolíka: nový musí být aspoň o tolik lepší (násobek hodnocení). */
+const UPGRADE_RATIO = 1.3;
+
+// ─────────────────────────── Spotřebky, obálky, kupóny (Kč, src/engine/sim/value.ts) ───────────────────────────
+
+/** Spotřebku použít, když ji sondy ocení aspoň na tolik Kč. */
+const USE_MIN = 0.2;
+/** Spotřebka, která dá jen peníze, počká, dokud nedá aspoň tolik. */
+const MONEY_USE_MIN = 6;
+/** Sond na spotřebku s náhodným efektem. */
+const PROBE_SAMPLES = 3;
+/** Koupit, když hodnota ≥ cena × poměr × pocit z ceny (`priceFactor`). */
+const VOUCHER_RATIO = 0.95;
+const PRANOSTIKA_RATIO = 0.8;
+const BOOSTER_RATIO = 0.85;
+/** Pocit z ceny klesá od `FREE_MONEY_FROM` Kč nad rezervou až na `MIN_PRICE_FACTOR` (o `FREE_MONEY_SPAN` Kč výš). */
+const MIN_PRICE_FACTOR = 0.35;
+const FREE_MONEY_FROM = 5;
+const FREE_MONEY_SPAN = 25;
+/** Spotřebku s cílem koupí do slotu, jen když po nákupu zbyde nad rezervou aspoň tolik Kč. */
+const SURPLUS_TARGET_KC = 8;
+/** Odhad nejlepší babské rady / razítka z obálky (Kč) a Žolíkové obálky při plných slotech. */
+const BOOSTER_RADA_KC = 2.2;
+const BOOSTER_RAZITKO_KC = 2.6;
+const BOOSTER_JOKER_FULL_KC = 1;
+/** Babská obálka má pro bota se žolíkem krmeným spotřebkami (Kořenářka) takový násobek hodnoty. */
+const FEED_BOOSTER_MULT = 1.6;
+/** Uložit spotřebku z obálky na později: hodnota, když teď nejde použít, a podíl hodnoty, když jen čeká. */
+const KEEP_KC = 0.4;
+const KEEP_FACTOR = 0.8;
+/** Z obálky vybrat, jen když nejlepší možnost má aspoň tolik Kč. */
+const PICK_MIN = 0.3;
 /** Přeskakovat útraty až po tolika zahraných rukách runu (`RunStats.handsPlayed`). */
 const SKIP_MIN_HANDS = 4;
 /** Vzorků ruky pro odhad síly buildu před přeskočením útraty. */
@@ -381,7 +444,7 @@ class StrategyBot implements Bot {
       case 'shop':
         return this.maintenance(game) ?? this.shopAction(game, rng);
       case 'booster':
-        return this.boosterAction(game, rng);
+        return this.maintenance(game) ?? this.boosterAction(game);
       case 'victory':
         return { type: 'continueEndless' };
       default:
@@ -393,7 +456,6 @@ class StrategyBot implements Bot {
 
   private maintenance(game: Game): Action | null {
     const s = game.state;
-    const reg = game.registry;
     // Pořadí: +čipy/+mult vlevo, ×mult vpravo (stabilně podle dosavadního pořadí).
     if (s.jokers.length > 1) {
       const order = s.jokers
@@ -401,24 +463,62 @@ class StrategyBot implements Bot {
         .sort((a, b) => a.key - b.key || a.i - b.i);
       if (order.some((o, i) => o.i !== i)) return { type: 'reorderJokers', uids: order.map((o) => o.uid) };
     }
+    if (s.consumables.length === 0) return null;
+    const view = this.view(game);
+    const snapshot = JSON.stringify(s);
     for (const c of s.consumables) {
-      const def = reg.consumables[c.defId];
-      if (!def) continue;
-      if (def.hand) {
-        // Pranostiku na „cizí“ kombinaci si nechá, dokud nepotřebuje místo (vyšší úroveň čehokoli je lepší než nic).
-        const wanted = this.wantsHand(game, def.hand) || !consumableRoom(game);
-        if (wanted && game.canUseConsumable(c.uid)) return { type: 'useConsumable', uid: c.uid };
-        continue;
-      }
-      if (!def.target) {
-        if (game.canUseConsumable(c.uid)) return { type: 'useConsumable', uid: c.uid };
-      } else if (s.phase === 'round' && s.round) {
-        const targets = this.pickTargets(game, def, s.round.hand);
-        if (targets && game.canUseConsumable(c.uid, targets))
-          return { type: 'useConsumable', uid: c.uid, targetIds: targets };
-      }
+      const action = this.consumableUse(game, view, c, snapshot);
+      if (action) return action;
     }
     return null;
+  }
+
+  /** Ocenění stavu pro toto rozhodnutí (src/engine/sim/value.ts). */
+  private view(game: Game): ValueView {
+    return makeView(game, this.style, makeEnv(game, this.handPref(game)), mainDeckSuit(game), (g, j) =>
+      this.jokerRating(g, j),
+    );
+  }
+
+  /**
+   * Spotřebka ve slotu: pranostiku použije hned (vyšší úroveň čehokoli je lepší než nic — leda je držená spotřebka
+   * cennější, Babiččina truhla), spotřebku bez cíle, když ji sondy ocení kladně (a nedá „jen pár korun“), spotřebku
+   * s cílem na nejlepší cíle — v kole jen na jeho začátku (dokud se nehrálo ani nezahazovalo) a v obálce s rukou.
+   * Když záleží na pořadí cílů (levá/pravá karta), nejdřív přeřadí ruku.
+   */
+  private consumableUse(game: Game, view: ValueView, c: ConsumableInstance, snapshot: string): Action | null {
+    const def = game.registry.consumables[c.defId];
+    if (!def) return null;
+    const use: Action = { type: 'useConsumable', uid: c.uid };
+    if (def.hand)
+      return levelWorth(view, def.hand) > view.holdWorth && game.canUseConsumable(c.uid) ? use : null;
+    if (!def.target) {
+      if (!game.canUseConsumable(c.uid)) return null;
+      const d = sampledDelta(view, use, `use:${c.uid}`, PROBE_SAMPLES, snapshot);
+      return d && this.worthUsing(game, d) ? use : null;
+    }
+    const pool = targetPoolOf(game.state);
+    if (!pool || !targetMoment(game.state)) return null;
+    const plan = planTargets(
+      view,
+      def,
+      pool,
+      (targets) => ({ type: 'useConsumable', uid: c.uid, targetIds: targets }),
+      `use:${c.uid}`,
+      snapshot,
+    );
+    if (!plan || plan.value < USE_MIN) return null;
+    return withOrder(pool, plan, { type: 'useConsumable', uid: c.uid, targetIds: plan.targets });
+  }
+
+  /**
+   * Použít teď? Kladná hodnota; spotřebka, která dá jen peníze a málo (Pod slamníkem roste s penězi), počká —
+   * leda jsou sloty plné nebo je poslední patro.
+   */
+  private worthUsing(game: Game, d: Delta): boolean {
+    if (d.total < USE_MIN) return false;
+    const onlyMoney = Math.abs(d.total - d.money) < 0.05;
+    return !onlyMoney || d.money >= MONEY_USE_MIN || game.state.ante >= FINAL_ANTE || !consumableRoom(game);
   }
 
   /**
@@ -442,19 +542,6 @@ class StrategyBot implements Bot {
     if (this.style.favorHands.includes(hand)) return true;
     const played = mostPlayed(game, 2);
     return played.length === 0 ? hand === 'pair' || hand === 'two_pair' : played.includes(hand);
-  }
-
-  /** Cíle spotřebky: nejcennější karty (vylepšení/pečeti dávají smysl na kartách, které bot hraje). */
-  private pickTargets(game: Game, def: ConsumableDef, pool: readonly number[]): number[] | null {
-    if (!def.target) return [];
-    const env = makeEnv(game, this.handPref(game));
-    const cards = cardsOf(game, pool)
-      .filter((c) => !c.faceDown)
-      .map((c) => cardValue(c, env))
-      .sort((a, b) => b.worth - a.worth || a.id - b.id);
-    const n = Math.max(1, def.target.min);
-    if (cards.length < n || n > def.target.max) return null;
-    return cards.slice(0, n).map((c) => c.id);
   }
 
   // ── výběr útraty ──
@@ -787,93 +874,190 @@ class StrategyBot implements Bot {
     return worst;
   }
 
-  /** Stojí obálka za koupi? Vrací příplatek k rezervě (kolik peněz má bot mít navíc), nebo null. */
-  private boosterWant(game: Game, def: BoosterDef | undefined): number | null {
-    if (!def) return null;
+  /** Peníze navíc nad rezervu na úrok (po zaplacení `price` zbyde aspoň `extra`). */
+  private surplus(game: Game, price: number, extra: number): boolean {
+    return this.affordable(game, price, extra);
+  }
+
+  /**
+   * Kolik bot „cítí“ z ceny (0,35–1): peníze hluboko nad rezervou na úrok nic nevydělají, takže s nimi stačí
+   * menší hodnota za korunu (bot jinak v pozdních patrech jen hromadí).
+   */
+  private priceFactor(game: Game): number {
+    const free = game.state.money - this.reserve(game);
+    return 1 - (1 - MIN_PRICE_FACTOR) * clamp((free - FREE_MONEY_FROM) / FREE_MONEY_SPAN, 0, 1);
+  }
+
+  /** Stojí položka za `price` s hodnotou `worth` (Kč) za koupi? Poměr × pocit z ceny a peníze nad rezervou. */
+  private worthBuying(game: Game, worth: number, price: number, ratio: number): boolean {
+    return worth >= price * ratio * this.priceFactor(game) && this.affordable(game, price);
+  }
+
+  /**
+   * Nákup nebo výměna žolíka: nejlépe hodnocená nabídka nad `minJokerRating`, do volného slotu (i na dluh, když to
+   * dluhový limit dovolí), při plných slotech prodá nejslabšího, je-li nabídka o 30 % lepší.
+   */
+  private jokerPurchase(game: Game): Action | null {
+    const shop = game.state.shop;
+    if (!shop || !this.style.buysJokers) return null;
+    const offers = shop.items
+      .map((it, i) => ({ it, i }))
+      .filter(
+        (x): x is { it: ShopItem & { kind: 'joker' }; i: number } => x.it.kind === 'joker' && !x.it.sold,
+      )
+      .map((x) => ({ ...x, rating: this.jokerRating(game, x.it.joker) }))
+      .sort((a, b) => b.rating - a.rating || a.i - b.i);
+    for (const o of offers) {
+      if (o.rating < this.style.minJokerRating) continue;
+      if (jokerRoom(game, o.it.joker)) {
+        if (this.affordable(game, o.it.price) || this.debtAffordable(game, o.it.price))
+          return { type: 'buy', slot: o.i };
+        continue;
+      }
+      const worst = this.worstJoker(game);
+      if (worst && o.rating > worst.rating * UPGRADE_RATIO) {
+        const net = o.it.price - game.sellValue(worst.uid);
+        if (this.affordable(game, net)) return { type: 'sellJoker', uid: worst.uid };
+      }
+    }
+    return null;
+  }
+
+  /** Pranostiky, které teď může nabídnout obchod nebo obálka (tajné až po objevu). */
+  private offeredHands(game: Game): HandType[] {
+    const reg = game.registry;
+    const hands = new Set<HandType>();
+    for (const def of Object.values(reg.consumables)) {
+      if (!def.hand || def.noShop || (def.weight ?? 1) <= 0) continue;
+      if (reg.handTypes[def.hand]?.secret && !game.state.discoveredHands.includes(def.hand)) continue;
+      hands.add(def.hand);
+    }
+    return [...hands];
+  }
+
+  /** Odhad hodnoty obálky před otevřením (Kč): nejlepší z `options` možností, × počet výběrů. */
+  private boosterWorth(game: Game, view: ValueView, def: BoosterDef | undefined): number {
+    if (!def) return 0;
+    const picks = Math.max(1, def.picks);
     switch (def.kind) {
-      case 'joker':
-        return this.style.buysJokers && jokerRoom(game) ? 0 : null;
-      case 'pranostika':
-        return 0;
+      case 'joker': {
+        if (!this.style.buysJokers) return 0;
+        const free = game.modifiers().jokerSlots - game.state.jokers.length;
+        if (free <= 0) return BOOSTER_JOKER_FULL_KC;
+        return (1.2 + 0.12 * (def.options - 2)) * JOKER_KC * Math.min(picks, free);
+      }
+      case 'pranostika': {
+        const values = this.offeredHands(game).map((h) => levelWorth(view, h));
+        return expectedMaxOfK(values, def.options) * (picks > 1 ? 1.7 : 1);
+      }
+      case 'rada':
+        return (
+          ((BOOSTER_RADA_KC + 0.25 * (def.options - 3)) * (feedsOnConsumables(game) ? FEED_BOOSTER_MULT : 1) +
+            view.holdWorth) *
+          picks
+        );
+      case 'razitko':
+        return (BOOSTER_RAZITKO_KC + 0.3 * (def.options - 2) + view.holdWorth) * picks;
       case 'card':
-        return this.style.suitFocus || this.style.rankFocus ? 2 : 4;
+        return (this.style.suitFocus || this.style.rankFocus ? 1.2 : 0.6) * picks;
       default:
-        return 4;
+        return 0;
     }
   }
 
+  /**
+   * Večerka (v tomto pořadí): žolík, dokud jich je málo (síla hned); kupóny podle hodnoty ze sondy (změna
+   * modifikátorů a patra proti ceně); žolíci a výměny; pranostiky na hrané kombinace a spotřebky bez cíle, které
+   * se hned vyplatí (koupit a použít); spotřebky s cílem a obálky podle odhadu hodnoty, s penězi navíc i slabší;
+   * přehození, když je místo nebo slabý žolík k výměně a peníze nad rezervou.
+   */
   private shopAction(game: Game, rng: Rng): Action {
     const s = game.state;
     const shop = s.shop;
     const leave: Action = { type: 'leaveShop' };
     if (!shop) return leave;
     const reg = game.registry;
+    const view = this.view(game);
+    const snapshot = JSON.stringify(s);
 
-    // 1) kupóny (trvalé vylepšení runu)
+    // 1) žolík, dokud jich je málo
+    const jokerBuy = this.jokerPurchase(game);
+    const few = s.jokers.length < Math.min(game.modifiers().jokerSlots, s.ante + 1);
+    if (few && jokerBuy) return jokerBuy;
+
+    // 2) kupóny podle hodnoty
     for (let i = 0; i < shop.vouchers.length; i++) {
       const v = shop.vouchers[i]!;
-      if (!v.sold && this.affordable(game, v.price)) return { type: 'buyVoucher', slot: i };
+      if (v.sold || !this.affordable(game, v.price)) continue;
+      const action: Action = { type: 'buyVoucher', slot: i };
+      const d = sampledDelta(view, action, `voucher:${v.voucherId}`, 1, snapshot);
+      if (d && this.worthBuying(game, d.total + v.price, v.price, VOUCHER_RATIO)) return action;
     }
 
-    // 2) žolíci podle hodnocení; při plných slotech prodej nejslabšího
-    if (this.style.buysJokers) {
-      const offers = shop.items
-        .map((it, i) => ({ it, i }))
-        .filter((x) => x.it.kind === 'joker' && !x.it.sold)
-        .map((x) => ({
-          ...x,
-          joker: (x.it as { joker: JokerInstance }).joker,
-          rating: this.jokerRating(game, (x.it as { joker: JokerInstance }).joker),
-        }))
-        .sort((a, b) => b.rating - a.rating || a.i - b.i);
-      for (const o of offers) {
-        if (o.rating < this.style.minJokerRating) continue;
-        if (jokerRoom(game, o.joker)) {
-          if (this.affordable(game, o.it.price) || this.debtAffordable(game, o.it.price))
-            return { type: 'buy', slot: o.i };
-          continue;
-        }
-        const worst = this.worstJoker(game);
-        if (worst && o.rating > worst.rating * 1.3) {
-          const net = o.it.price - game.sellValue(worst.uid);
-          if (this.affordable(game, net)) return { type: 'sellJoker', uid: worst.uid };
-        }
-      }
-    }
+    // 3) žolíci (nákup, výměna)
+    if (jokerBuy) return jokerBuy;
 
-    // 3) spotřebky: pranostiky na své kombinace hned použít, ostatní bez cíle jen s penězi navíc
+    // 4) spotřebky (s žolíkem ×mult za držené spotřebky i „do zásoby“ do slotu)
+    const hold = view.holdWorth;
+    const feeds = feedsOnConsumables(game);
     for (let i = 0; i < shop.items.length; i++) {
       const it = shop.items[i]!;
       if (it.kind !== 'consumable' || it.sold) continue;
       const def = reg.consumables[it.consumable.defId];
-      if (!def || def.target) continue;
-      const wanted = def.hand ? this.wantsHand(game, def.hand) : true;
-      if (wanted && this.affordable(game, it.price, def.hand ? 0 : 4)) {
-        const action: Action = { type: 'buyAndUse', slot: i };
-        if (this.validOnClone(game, rng, action)) return action;
+      if (!def) continue;
+      const buyUse: Action = { type: 'buyAndUse', slot: i };
+      const buy: Action = { type: 'buy', slot: i };
+      const room = consumableRoom(game);
+      if (def.hand) {
+        const worth = levelWorth(view, def.hand);
+        if (
+          worth > hold &&
+          this.worthBuying(game, worth, it.price, PRANOSTIKA_RATIO) &&
+          this.validOnClone(game, rng, buyUse)
+        )
+          return buyUse;
+        if (hold > 0 && room && this.worthBuying(game, hold, it.price, 1)) return buy;
+      } else if (!def.target) {
+        if (!this.affordable(game, it.price)) continue;
+        const d = sampledDelta(view, buyUse, `buy:${it.consumable.uid}`, PROBE_SAMPLES, snapshot);
+        if (
+          d &&
+          this.worthBuying(game, d.total + it.price, it.price, 1) &&
+          this.worthUsing(game, { total: d.total + it.price, money: d.money + it.price })
+        )
+          return buyUse;
+        if (hold > 0 && room && this.worthBuying(game, hold, it.price, 1)) return buy;
+      } else if (
+        room &&
+        (this.surplus(game, it.price, SURPLUS_TARGET_KC) ||
+          ((feeds || hold > 0) && this.affordable(game, it.price)))
+      ) {
+        return buy;
       }
     }
 
-    // 4) obálky
+    // 5) obálky
     for (let i = 0; i < shop.boosters.length; i++) {
       const b = shop.boosters[i]!;
       if (b.sold) continue;
-      const extra = this.boosterWant(game, reg.boosters[b.boosterId]);
-      if (extra !== null && this.affordable(game, b.price, extra)) return { type: 'buyBooster', slot: i };
+      const worth = this.boosterWorth(game, view, reg.boosters[b.boosterId]);
+      if (this.worthBuying(game, worth, b.price, BOOSTER_RATIO)) return { type: 'buyBooster', slot: i };
     }
 
-    // 5) přehození: jen s místem pro žolíka a s penězi ≥ 2× cena přehození nad rezervou (DESIGN 12.2)
+    // 6) přehození: s místem pro žolíka (peníze ≥ 2× cena nad rezervou, DESIGN 12.2), nebo se slabým žolíkem
+    // k výměně (peníze navíc)
     const hasJokers = Object.keys(reg.jokers).length > 0;
-    if (
-      this.style.rerolls &&
-      this.style.buysJokers &&
-      hasJokers &&
-      jokerRoom(game) &&
-      shop.rerollsThisShop < MAX_SHOP_REROLLS &&
-      canPay(game, shop.rerollCost) &&
-      s.money - this.reserve(game) >= 2 * shop.rerollCost
-    ) {
-      return { type: 'reroll' };
+    if (this.style.rerolls && this.style.buysJokers && hasJokers && canPay(game, shop.rerollCost)) {
+      const free = s.money - this.reserve(game);
+      const room = jokerRoom(game);
+      const worst = room ? null : this.worstJoker(game);
+      const upgrade = Boolean(worst && worst.rating < UPGRADE_WORST_MAX);
+      const limit = free >= REROLL_RICH_KC ? MAX_SHOP_REROLLS_RICH : MAX_SHOP_REROLLS;
+      if (
+        shop.rerollsThisShop < limit &&
+        ((room && free >= 2 * shop.rerollCost) || (upgrade && free >= shop.rerollCost + REROLL_UPGRADE_KC))
+      )
+        return { type: 'reroll' };
     }
     return leave;
   }
@@ -885,46 +1069,103 @@ class StrategyBot implements Bot {
 
   // ── obálky ──
 
-  private boosterAction(game: Game, rng: Rng): Action {
+  /**
+   * Výběr z obálky: každou možnost ocení — žolíka hodnocením (při plných slotech nejdřív prodá nejslabšího, je-li
+   * nový o 30 % lepší), hrací kartu přínosem pro balíček, spotřebku sondou (pranostika, spotřebka bez cíle použitá
+   * hned nebo uložená na později, spotřebka s cílem na nejlepší karty z ruky obálky). Nic kladného → přeskočit.
+   */
+  private boosterAction(game: Game): Action {
     const s = game.state;
     const b = s.booster;
     const skip: Action = { type: 'skipBooster' };
     if (!b) return skip;
     const reg = game.registry;
-    const env = makeEnv(game, this.handPref(game));
-    const mainSuit = this.style.suitFocus ? mainDeckSuit(game) : -1;
+    const view = this.view(game);
+    const snapshot = JSON.stringify(s);
+    const n = Math.max(1, s.deck.length);
+    const avg = view.deckWorth / 52;
     let best: { score: number; action: Action } | null = null;
     const offer = (score: number, action: Action): void => {
       if (!best || score > best.score) best = { score, action };
     };
     b.options.forEach((opt, index) => {
+      const pick: Action = { type: 'pickBooster', index };
       if (opt.kind === 'joker') {
-        if (this.style.buysJokers && jokerRoom(game, opt.joker))
-          offer(1 + this.jokerRating(game, opt.joker), { type: 'pickBooster', index });
+        if (!this.style.buysJokers) return;
+        const rating = this.jokerRating(game, opt.joker);
+        if (jokerRoom(game, opt.joker)) {
+          offer(rating * JOKER_KC, pick);
+          return;
+        }
+        const worst = this.worstJoker(game);
+        if (worst && rating > worst.rating * UPGRADE_RATIO)
+          offer((rating - worst.rating) * JOKER_KC - 0.5, { type: 'sellJoker', uid: worst.uid });
       } else if (opt.kind === 'card') {
-        const v = cardValue(opt.card, env);
-        let score = 0.3;
-        if (opt.card.enhancement || opt.card.seal || opt.card.edition) score += 0.7;
-        if (mainSuit >= 0 && v.suitMask & (1 << mainSuit)) score += 0.8;
-        if (score >= 0.8) offer(score, { type: 'pickBooster', index });
+        offer(((cardWorth(view, opt.card) - avg) * 52) / (n + 1), pick);
       } else {
         const def = reg.consumables[opt.consumable.defId];
         if (!def) return;
-        if (def.hand) {
-          const action: Action = { type: 'pickBooster', index };
-          if (this.validOnClone(game, rng, action)) offer(this.wantsHand(game, def.hand) ? 3 : 1, action);
-        } else if (!def.target && consumableRoom(game)) {
-          offer(1.5, { type: 'pickBooster', index, keep: true });
-        } else {
-          const targets = this.pickTargets(game, def, b.hand);
-          if (!targets) return;
-          const action: Action = { type: 'pickBooster', index, targetIds: targets };
-          if (this.validOnClone(game, rng, action)) offer(1.2, action);
+        const key = `pick:${opt.consumable.uid}`;
+        const keep: Action = { type: 'pickBooster', index, keep: true };
+        const room = consumableRoom(game);
+        if (def.hand || !def.target) {
+          const d = sampledDelta(view, pick, key, def.hand ? 1 : PROBE_SAMPLES, snapshot);
+          if (d && (def.hand || this.worthUsing(game, d))) offer(d.total, pick);
+          if (room && (!d || !this.worthUsing(game, d) || view.holdWorth > 0))
+            offer((d ? Math.max(0, d.total) * KEEP_FACTOR : KEEP_KC) + view.holdWorth, keep);
+          return;
         }
+        const plan = planTargets(
+          view,
+          def,
+          b.hand,
+          (targets) => ({ type: 'pickBooster', index, targetIds: targets }),
+          key,
+          snapshot,
+        );
+        if (plan)
+          offer(plan.value, withOrder(b.hand, plan, { type: 'pickBooster', index, targetIds: plan.targets }));
+        if (room && (!plan || view.holdWorth > 0)) offer(KEEP_KC + view.holdWorth, keep);
       }
     });
-    return (best as { action: Action } | null)?.action ?? skip;
+    const chosen = best as { score: number; action: Action } | null;
+    return chosen && chosen.score >= PICK_MIN ? chosen.action : skip;
   }
+}
+
+/** Má bot žolíka, kterého použité spotřebky „krmí“ (štítky `consumable` a `scaling` — Kořenářka)? */
+function feedsOnConsumables(game: Game): boolean {
+  return game.state.jokers.some((j) => {
+    const tags = game.registry.jokers[j.defId]?.tags ?? [];
+    return !j.debuffed && tags.includes('consumable') && tags.includes('scaling');
+  });
+}
+
+/** Ruka, na kterou teď míří spotřebky (ruka kola nebo obálky), nebo null. */
+function targetPoolOf(s: Readonly<RunState>): readonly number[] | null {
+  if (s.phase === 'booster' && s.booster && s.booster.hand.length > 0) return s.booster.hand;
+  if (s.phase === 'round' && s.round) return s.round.hand;
+  return null;
+}
+
+/** Spotřebky s cílem bot zkouší v obálce a v kole jen na začátku (dokud se nehrálo ani nezahazovalo). */
+function targetMoment(s: Readonly<RunState>): boolean {
+  if (s.phase === 'booster') return true;
+  return s.phase === 'round' && !!s.round && s.round.handsPlayed === 0 && s.round.discardsUsed === 0;
+}
+
+/**
+ * Akce s cíli, nebo nejdřív přeřazení ruky, když na pořadí cílů záleží (levá/pravá karta) a ruka ho nemá —
+ * cíle dá doleva v pořadí plánu. Plán nezávisí na pořadí ruky, takže další rozhodnutí akci provede.
+ */
+function withOrder(pool: readonly number[], plan: TargetPlan, action: Action): Action {
+  if (!plan.ordered || plan.targets.length < 2) return action;
+  const pos = plan.targets.map((id) => pool.indexOf(id));
+  if (pos.every((p, i) => i === 0 || p > pos[i - 1]!)) return action;
+  return {
+    type: 'reorderHand',
+    cardIds: [...plan.targets, ...pool.filter((id) => !plan.targets.includes(id))],
+  };
 }
 
 // ─────────────────────────── Náhodný bot ───────────────────────────

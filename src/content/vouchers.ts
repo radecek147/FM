@@ -336,7 +336,7 @@ export const VOUCHERS: VoucherDef[] = [
     },
   ),
   tier2(
-    'fortune_teller',
+    'card_reader',
     'card_stall',
     12,
     { icon: 'crystal-ball', bg: '#2e1a47', fg: '#f3e8ff', accent: '#a78bfa', pattern: 'waves' },

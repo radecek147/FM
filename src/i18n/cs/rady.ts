@@ -61,7 +61,7 @@ export const rady = {
   },
   hall_mirror: {
     name: 'Zrcátko v předsíni',
-    desc: 'Vyber {cards} karty: levá převezme hodnotu pravé (barva, vylepšení, pečeť i edice levé zůstanou).',
+    desc: 'Vyber {cards|plural:kartu,karty,karet}: levá převezme hodnotu pravé (barva, vylepšení, pečeť i edice levé zůstanou).',
     flavor: 'Zrcadlo, zrcadlo, kdo je v ruce nejvyšší?',
   },
   risen_dough: {
@@ -73,7 +73,7 @@ export const rady = {
   // ── ničení a kopie ──
   spring_cleaning: {
     name: 'Generální úklid',
-    desc: 'Zničí až {cards} vybrané karty a za každou dá +{money|money}.',
+    desc: 'Zničí až {cards|plural:vybranou kartu,vybrané karty,vybraných karet} a za každou dá +{money|money}.',
     flavor: 'Co tři roky nepoužiješ, vyhodíš.',
   },
   apple_tree: {
@@ -83,7 +83,7 @@ export const rady = {
   },
   nettle_tea: {
     name: 'Kopřivový odvar',
-    desc: 'Vyber {cards} karty: levá se zničí a pravá od ní trvale převezme její čipy jako bonusové.',
+    desc: 'Vyber {cards|plural:kartu,karty,karet}: levá se zničí a pravá od ní trvale převezme její čipy jako bonusové.',
     flavor: 'Pálí, ale čistí krev.',
   },
 
@@ -95,20 +95,20 @@ export const rady = {
   },
   tree_frog: {
     name: 'Rosnička',
-    desc: 'Vytvoří pranostiku tvé nejčastěji hrané kombinace (při shodě silnější, bez zahraných rukou Vysoká karta) a k ní {random} náhodnou. Potřebuje volný slot.',
+    desc: 'Vytvoří pranostiku tvé nejčastěji hrané kombinace (při shodě silnější, bez zahraných rukou Vysoká karta) a k ní {random} náhodnou; potřebuje volný slot.',
     flavor: 'Když leze nahoru, bude hezky.',
   },
   grandmas_recipe: {
     name: 'Babiččin recept',
-    desc: 'Vytvoří kopii naposledy použité spotřebky, pokud to byla babská rada nebo pranostika (sebe ani razítko nezopakuje).',
+    desc: 'Vytvoří kopii naposledy použité spotřebky, pokud to byla babská rada nebo pranostika (sebe ani razítko nezopakuje); potřebuje volný slot.',
     flavor: 'Přesně podle receptu. Od oka.',
   },
 
   // ── žolíci ──
-  incantation: {
-    name: 'Zaříkávání',
+  knock_on_wood: {
+    name: 'Zaklepat na dřevo',
     desc: '{chance} z {odds}: náhodný z tvých žolíků bez edice se stane lesklým, nebo holografickým (napůl); jinak dostaneš +{money|money} útěchou.',
-    flavor: 'Odříkaného chleba největší krajíc.',
+    flavor: 'Ťuk, ťuk, ťuk. Hlavně to nezakřiknout.',
   },
   cauldron: {
     name: 'Kouzelný kotlík',
@@ -124,7 +124,7 @@ export const rady = {
   },
   garlic: {
     name: 'Česnek na krk',
-    desc: 'Jen v kole: až {cards} vybrané karty vrátí do provozu a otočí lícem nahoru; šéf je do konce kola znovu nevyřadí.',
+    desc: 'Jen v kole: vrátí do provozu až {cards|plural:vybranou kartu,vybrané karty,vybraných karet} a otočí je lícem nahoru; šéf je do konce kola znovu nevyřadí.',
     flavor: 'Na upíry i na šéfy.',
   },
 } satisfies TextTree;

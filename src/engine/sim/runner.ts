@@ -14,8 +14,8 @@ export const DEFAULT_MAX_ACTIONS = 5000;
 export const MAX_CONSECUTIVE_INVALID = 3;
 
 /**
- * Cílové pásmo % výher rozumné strategie podle síly piva (DESIGN 10 a 12.1) — [min, max] v procentech.
- * Kalibrace křivky cílů je odložená, až budou žolíci (fáze 4+, ladění ve fázi 10).
+ * Cílové pásmo % výher rozumné strategie podle síly piva (DESIGN 10 a 12.1) — [min, max] v procentech, pro hotovou
+ * hru se šéfy. Předběžná kalibrace křivek ve fázi 5 (bez šéfů) míří na Desítce výš (~35–45 %); ladění ve fázi 10.
  */
 export const WIN_RATE_TARGETS: Readonly<Record<number, readonly [number, number]>> = Object.freeze({
   1: [25, 35],

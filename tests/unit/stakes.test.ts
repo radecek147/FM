@@ -86,7 +86,7 @@ describe('obtížnosti – seznam (DESIGN kap. 10)', () => {
     expect(t('stakes.jedenactka.desc', STAKES[1]!.params)).toContain('o 1 Kč víc');
     expect(t('stakes.special.desc', STAKES[3]!.params)).toContain('25 %');
     expect(t('stakes.special.desc', STAKES[3]!.params)).toContain('6 kolech');
-    expect(t('stakes.dvanactka.desc', STAKES[2]!.params)).toContain('150 000');
+    expect(t('stakes.dvanactka.desc', STAKES[2]!.params)).toContain('27 000');
   });
 });
 
@@ -94,7 +94,7 @@ describe('obtížnosti – každá úroveň přidává právě své ztížení',
   it('1 Desítka: základní pravidla, křivka cílů 1', () => {
     expect(modsDiff(1)).toEqual({});
     expect(newGame(1).targetCurve()).toBe(1);
-    expect(finalSmallTarget(1)).toBe(80_000);
+    expect(finalSmallTarget(1)).toBe(22_000);
     const g = newGame(1);
     expect([g.blindTarget('small'), g.blindTarget('big'), g.blindTarget('boss')]).toEqual([250, 380, 500]);
     expect(stakeStickerChance(g._core)).toEqual({});
@@ -114,8 +114,8 @@ describe('obtížnosti – každá úroveň přidává právě své ztížení',
   it('3 Dvanáctka: křivka cílů 2', () => {
     expect(modsDiff(3)).toEqual({ shopPriceAdd: 1 });
     expect(newGame(3).targetCurve()).toBe(2);
-    expect(finalSmallTarget(3)).toBe(150_000);
-    expect(finalSmallTarget(2)).toBe(80_000);
+    expect(finalSmallTarget(3)).toBe(27_000);
+    expect(finalSmallTarget(2)).toBe(22_000);
   });
 
   it('4 Speciál: 25 % žolíků zvětrávajících', () => {
@@ -136,7 +136,7 @@ describe('obtížnosti – každá úroveň přidává právě své ztížení',
   it('6 Bock: křivka cílů 3', () => {
     expect(newGame(5).targetCurve()).toBe(2);
     expect(newGame(6).targetCurve()).toBe(3);
-    expect(finalSmallTarget(6)).toBe(250_000);
+    expect(finalSmallTarget(6)).toBe(35_000);
     expect(modsDiff(6)).toEqual(modsDiff(5));
   });
 

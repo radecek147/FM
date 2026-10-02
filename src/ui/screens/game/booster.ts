@@ -40,6 +40,7 @@ function actionButton(
   disabledReason: string | null,
   onClick: () => void,
   variant: 'primary' | 'paper' = 'primary',
+  describedBy?: string,
 ): HTMLButtonElement {
   const b = button({
     label,
@@ -48,6 +49,8 @@ function actionButton(
     testId,
     disabled: disabledReason !== null,
     title: disabledReason ?? undefined,
+    // Čtečka k „Vzít“ / „Použít“ přečte i název možnosti.
+    describedBy,
     onClick,
   });
   b.dataset.focusKey = testId;
@@ -66,6 +69,7 @@ export function renderBooster(ctx: GameCtx): HTMLElement {
   const targets = c.selectedInHandOrder();
 
   const options = (b?.options ?? []).map((opt, index) => {
+    const nameId = `booster-option-${index}-name`;
     const actions: HTMLButtonElement[] = [];
     if (opt.kind === 'joker') {
       actions.push(
@@ -74,6 +78,8 @@ export function renderBooster(ctx: GameCtx): HTMLElement {
           `booster-take-${index}`,
           hasJokerRoom(ctx, opt.joker.edition) ? null : t('game.booster.noRoom'),
           () => void ctx.act({ type: 'pickBooster', index }),
+          'primary',
+          nameId,
         ),
       );
     } else if (opt.kind === 'card') {
@@ -83,6 +89,8 @@ export function renderBooster(ctx: GameCtx): HTMLElement {
           `booster-take-${index}`,
           null,
           () => void ctx.act({ type: 'pickBooster', index }),
+          'primary',
+          nameId,
         ),
       );
     } else {
@@ -105,6 +113,8 @@ export function renderBooster(ctx: GameCtx): HTMLElement {
             void (async () => {
               if (await ctx.act({ type: 'pickBooster', index, targetIds: targets })) c.clearSelection();
             })(),
+          'primary',
+          nameId,
         ),
         actionButton(
           t('game.booster.keep'),
@@ -112,6 +122,7 @@ export function renderBooster(ctx: GameCtx): HTMLElement {
           hasConsumableRoom(ctx, opt.consumable.edition) ? null : t('game.booster.noRoom'),
           () => void ctx.act({ type: 'pickBooster', index, keep: true }),
           'paper',
+          nameId,
         ),
       );
     }
@@ -119,7 +130,7 @@ export function renderBooster(ctx: GameCtx): HTMLElement {
       'li',
       { class: ['booster-option', `booster-option--${opt.kind}`], 'data-testid': `booster-option-${index}` },
       h('div', { class: 'booster-option__card' }, optionVisual(ctx, opt)),
-      h('p', { class: 'booster-option__name' }, optionName(ctx, opt)),
+      h('p', { class: 'booster-option__name', id: nameId }, optionName(ctx, opt)),
       h('div', { class: 'booster-option__actions' }, actions),
     );
   });

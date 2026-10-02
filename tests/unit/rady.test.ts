@@ -100,7 +100,7 @@ describe('babské rady – obsah', () => {
       'under_mattress',
       'tree_frog',
       'grandmas_recipe',
-      'incantation',
+      'knock_on_wood',
       'cauldron',
       'cold_compress',
       'garlic',
@@ -130,7 +130,7 @@ describe('babské rady – obsah', () => {
       under_mattress: null,
       tree_frog: null,
       grandmas_recipe: null,
-      incantation: null,
+      knock_on_wood: null,
       cauldron: null,
       cold_compress: null,
       garlic: { min: 1, max: 3 },
@@ -159,7 +159,7 @@ describe('babské rady – obsah', () => {
     expect(desc('glass_cabinet')).toContain('1\u00a0z\u00a05');
     expect(desc('under_mattress')).toContain('50\u00a0%');
     expect(desc('under_mattress')).toContain('12\u00a0Kč');
-    expect(desc('incantation')).toMatch(/^1\u00a0z\u00a03/);
+    expect(desc('knock_on_wood')).toMatch(/^1\u00a0z\u00a03/);
     expect(desc('cold_compress')).toContain('+2\u00a0zahození');
   });
 
@@ -246,6 +246,14 @@ describe('Babiččina barva', () => {
     useOk(game, uid, cards.slice(0, 4));
     expect(cards.slice(0, 4).map((c) => card(game, c.id).suit)).toEqual(['H', 'H', 'H', 'H']);
   });
+
+  it('bez platného cíle (všechny už mají barvu levé karty) Použít nejde', () => {
+    const { game, cards } = roundGame('2H 7H KH 5S');
+    const uid = give(game, 'grandmas_dye');
+    expectCannot(game, uid, cards.slice(0, 3));
+    useOk(game, uid, cards.slice(0, 4));
+    expect(card(game, cards[3]!.id).suit).toBe('H');
+  });
 });
 
 describe('Zrcátko v předsíni', () => {
@@ -270,6 +278,14 @@ describe('Zrcátko v předsíni', () => {
     expectCannot(game, uid, [cards[0]!]);
     expectCannot(game, uid, cards.slice(0, 3));
   });
+
+  it('dvě karty stejné hodnoty nic nezmění — Použít nejde', () => {
+    const { game, cards } = roundGame('9H 9S KD');
+    const uid = give(game, 'hall_mirror');
+    expectCannot(game, uid, [cards[0]!, cards[1]!]);
+    useOk(game, uid, [cards[0]!, cards[2]!]);
+    expect(card(game, cards[0]!.id).rank).toBe(13);
+  });
 });
 
 describe('Kynuté těsto', () => {
@@ -282,6 +298,14 @@ describe('Kynuté těsto', () => {
   it('nejvýš 3 karty', () => {
     const { game, cards } = roundGame();
     expectCannot(game, give(game, 'risen_dough'), cards.slice(0, 4));
+  });
+
+  it('samá esa (strop) nic nezmění — Použít nejde', () => {
+    const { game, cards } = roundGame('AH AS 4C');
+    const uid = give(game, 'risen_dough');
+    expectCannot(game, uid, cards.slice(0, 2));
+    useOk(game, uid, cards.slice(0, 3));
+    expect(cards.map((c) => card(game, c.id).rank)).toEqual([14, 14, 5]);
   });
 });
 
@@ -481,7 +505,7 @@ describe('Babiččin recept', () => {
 
 // ─────────────────────────── Žolíci ───────────────────────────
 
-describe('Zaříkávání', () => {
+describe('Zaklepat na dřevo', () => {
   it('při úspěchu dá náhodnému žolíkovi bez edice lesklou nebo holografickou edici', () => {
     const editions = new Set<string>();
     for (let i = 0; i < 30; i++) {
@@ -492,7 +516,7 @@ describe('Zaříkávání', () => {
       });
       game.ctx().api.addPermanentModifier({ probabilityMult: 3 }); // „3 z 3“ – jistota
       const money = game.state.money;
-      useOk(game, give(game, 'incantation'));
+      useOk(game, give(game, 'knock_on_wood'));
       expect(game.state.jokers[0]!.edition).toBe('poly');
       const e = game.state.jokers[1]!.edition;
       expect(['foil', 'holo']).toContain(e);
@@ -506,7 +530,7 @@ describe('Zaříkávání', () => {
     const game = makeGame({ registry: reg, jokers: ['noop'] });
     game.ctx().api.addPermanentModifier({ probabilityMult: 0 });
     const money = game.state.money;
-    useOk(game, give(game, 'incantation'));
+    useOk(game, give(game, 'knock_on_wood'));
     expect(game.state.jokers[0]!.edition).toBeNull();
     expect(game.state.money).toBe(money + 2);
   });
@@ -516,7 +540,7 @@ describe('Zaříkávání', () => {
     const n = 300;
     for (let i = 0; i < n; i++) {
       const game = makeGame({ registry: reg, seed: `ODDS${i}`, jokers: ['noop'] });
-      useOk(game, give(game, 'incantation'));
+      useOk(game, give(game, 'knock_on_wood'));
       if (game.state.jokers[0]!.edition) hits++;
     }
     expect(hits / n).toBeGreaterThan(0.25);
@@ -525,9 +549,9 @@ describe('Zaříkávání', () => {
 
   it('bez žolíka bez edice nejde použít', () => {
     const none = makeGame({ registry: reg });
-    expectCannot(none, give(none, 'incantation'));
+    expectCannot(none, give(none, 'knock_on_wood'));
     const allEdition = makeGame({ registry: reg, jokers: [{ id: 'noop', edition: 'foil' }] });
-    expectCannot(allEdition, give(allEdition, 'incantation'));
+    expectCannot(allEdition, give(allEdition, 'knock_on_wood'));
   });
 });
 

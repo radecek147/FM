@@ -82,20 +82,42 @@ function renderArt(el: CardEl, card: Readonly<Card>, opts: CardViewOptions): voi
   el.dataset.visual = visualKey(card);
 }
 
-/** Jemný 3D náklon za ukazatelem (jen transform přes CSS proměnné). */
+/**
+ * Jemný 3D náklon za ukazatelem (jen transform přes CSS proměnné). Nejvýš jeden zápis za snímek
+ * (requestAnimationFrame) a rozměry karty se měří jen při najetí — pohyb myši nevynucuje přepočet layoutu.
+ */
 function bindTilt(el: HTMLElement): void {
   const inner = el.querySelector<HTMLElement>('.pcard__inner');
   if (!inner) return;
-  el.addEventListener('pointermove', (e) => {
-    if (e.pointerType === 'touch') return;
-    const r = el.getBoundingClientRect();
-    if (r.width === 0 || r.height === 0) return;
-    const dx = (e.clientX - r.left) / r.width - 0.5;
-    const dy = (e.clientY - r.top) / r.height - 0.5;
+  let rect: DOMRect | null = null;
+  let last: { x: number; y: number } | null = null;
+  let frame = 0;
+  const apply = (): void => {
+    frame = 0;
+    if (!last) return;
+    rect ??= el.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    const dx = (last.x - rect.left) / rect.width - 0.5;
+    const dy = (last.y - rect.top) / rect.height - 0.5;
     inner.style.setProperty('--tilt-x', `${(-dy * 10).toFixed(2)}deg`);
     inner.style.setProperty('--tilt-y', `${(dx * 12).toFixed(2)}deg`);
+  };
+  // Najetí a klik (výběr kartu povytáhne) = změřit znovu.
+  const remeasure = (): void => {
+    rect = null;
+  };
+  el.addEventListener('pointerenter', remeasure);
+  el.addEventListener('pointerdown', remeasure);
+  el.addEventListener('pointermove', (e) => {
+    if (e.pointerType === 'touch') return;
+    last = { x: e.clientX, y: e.clientY };
+    if (!frame) frame = requestAnimationFrame(apply);
   });
   el.addEventListener('pointerleave', () => {
+    if (frame) cancelAnimationFrame(frame);
+    frame = 0;
+    last = null;
+    rect = null;
     inner.style.removeProperty('--tilt-x');
     inner.style.removeProperty('--tilt-y');
   });

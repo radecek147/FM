@@ -48,7 +48,7 @@ function soldSlot(testId: string): HTMLElement {
   return h(
     'li',
     { class: 'shop-slot is-sold', 'data-testid': testId },
-    h('div', { class: 'shop-slot__sold' }, t('game.shop.sold')),
+    h('div', { class: 'shop-slot__sold' }, h('span', { class: 'shop-slot__stamp' }, t('game.shop.sold'))),
   );
 }
 
@@ -59,6 +59,8 @@ function buyButton(opts: {
   testId: string;
   focusKey: string;
   variant?: 'primary' | 'paper';
+  /** Id názvu zboží — čtečka k „Koupit za 4 Kč“ přečte, co se kupuje (aria-describedby). */
+  describedBy?: string;
   onClick: () => void;
 }): HTMLButtonElement {
   const b = button({
@@ -68,6 +70,7 @@ function buyButton(opts: {
     testId: opts.testId,
     disabled: opts.disabledReason !== null,
     title: opts.disabledReason ?? undefined,
+    describedBy: opts.describedBy,
     onClick: opts.onClick,
   });
   b.dataset.focusKey = opts.focusKey;
@@ -96,6 +99,7 @@ export function renderShop(ctx: GameCtx): HTMLElement {
         disabledReason: reason,
         testId: `shop-buy-${slot}`,
         focusKey: `buy-${slot}`,
+        describedBy: `${testId}-name`,
         onClick: () => void ctx.act({ type: 'buy', slot }),
       }),
     ];
@@ -107,6 +111,7 @@ export function renderShop(ctx: GameCtx): HTMLElement {
           disabledReason: afford ? null : t('game.shop.cantAfford'),
           testId: `shop-use-${slot}`,
           focusKey: `use-${slot}`,
+          describedBy: `${testId}-name`,
           variant: 'paper',
           onClick: () => void ctx.act({ type: 'buyAndUse', slot }),
         }),
@@ -116,7 +121,7 @@ export function renderShop(ctx: GameCtx): HTMLElement {
       'li',
       { class: ['shop-slot', `shop-slot--${item.kind}`], 'data-testid': testId },
       h('div', { class: 'shop-slot__card' }, itemVisual(ctx, item)),
-      h('p', { class: 'shop-slot__name' }, itemName(ctx, item)),
+      h('p', { class: 'shop-slot__name', id: `${testId}-name` }, itemName(ctx, item)),
       h('div', { class: 'shop-slot__actions' }, actions),
     );
   });
@@ -133,7 +138,7 @@ export function renderShop(ctx: GameCtx): HTMLElement {
         { class: 'shop-slot__card' },
         createContentCard('booster', b.boosterId, { price: b.price, registry: ctx.registry }),
       ),
-      h('p', { class: 'shop-slot__name' }, name),
+      h('p', { class: 'shop-slot__name', id: `${testId}-name` }, name),
       h(
         'div',
         { class: 'shop-slot__actions' },
@@ -142,6 +147,7 @@ export function renderShop(ctx: GameCtx): HTMLElement {
           disabledReason: canAfford(ctx, b.price) ? null : t('game.shop.cantAfford'),
           testId: `shop-open-${slot}`,
           focusKey: `open-${slot}`,
+          describedBy: `${testId}-name`,
           onClick: () => void ctx.act({ type: 'buyBooster', slot }),
         }),
       ),
@@ -160,7 +166,7 @@ export function renderShop(ctx: GameCtx): HTMLElement {
         { class: 'shop-slot__card' },
         createContentCard('voucher', v.voucherId, { price: v.price, registry: ctx.registry }),
       ),
-      h('p', { class: 'shop-slot__name' }, name),
+      h('p', { class: 'shop-slot__name', id: `${testId}-name` }, name),
       h(
         'div',
         { class: 'shop-slot__actions' },
@@ -169,6 +175,7 @@ export function renderShop(ctx: GameCtx): HTMLElement {
           disabledReason: canAfford(ctx, v.price) ? null : t('game.shop.cantAfford'),
           testId: `shop-redeem-${slot}`,
           focusKey: `redeem-${slot}`,
+          describedBy: `${testId}-name`,
           onClick: () => void ctx.act({ type: 'buyVoucher', slot }),
         }),
       ),
@@ -185,7 +192,8 @@ export function renderShop(ctx: GameCtx): HTMLElement {
       ? null
       : h(
           'section',
-          { class: ['shop-section', cls] },
+          // --slots: šířka sekce v jedné řadě podle počtu slotů (zboží 2, obálky 2, kupón 1…).
+          { class: ['shop-section', cls], style: { '--slots': list.length } },
           h('h3', { class: 'shop-section__title' }, title),
           h('ul', { class: 'shop-section__slots', role: 'list' }, list),
         );

@@ -84,12 +84,13 @@ function formatScientific(a: number): string {
 
 /**
  * Česky formátované číslo: `1 340 000`, `1,5`, `−5`, `1,23e16`, `∞`.
- * NaN se zobrazí jako `0` (raději nula než „NaN“ v UI).
+ * NaN se zobrazí jako `0` (raději nula než „NaN“ v UI). `Number.MAX_VALUE` je strop přetečení v nekonečném
+ * režimu (DESIGN 1.3) a zobrazí se jako nekonečno.
  */
 export function formatNumber(n: number): string {
   if (Number.isNaN(n)) return '0';
-  if (n === Infinity) return '∞';
-  if (n === -Infinity) return `${MINUS}∞`;
+  if (n >= Number.MAX_VALUE) return '∞';
+  if (n <= -Number.MAX_VALUE) return `${MINUS}∞`;
   const a = Math.abs(n);
   const body = a >= SCIENTIFIC_THRESHOLD ? formatScientific(a) : formatFixed(a);
   // Zaokrouhlení na nulu (např. −0,001) se zobrazí bez znaménka.
