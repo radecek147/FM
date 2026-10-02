@@ -8,7 +8,15 @@
  */
 import { version as appVersion } from '../../../package.json';
 import type { ContentRegistry } from '../../engine';
-import { Game, SAVE_FORMAT, SaveError, deserializeRun, serializeRun } from '../../engine';
+import {
+  Game,
+  SAVE_FORMAT,
+  SaveError,
+  deserializeProfile,
+  deserializeRun,
+  serializeProfile,
+  serializeRun,
+} from '../../engine';
 import { t } from '../../i18n/cs';
 import type { App, ScreenFactory } from '../app';
 import { backButton, button } from '../components/button';
@@ -17,7 +25,7 @@ import { confirmModal, openModal } from '../components/modal';
 import { toast } from '../components/toast';
 import { h } from '../dom';
 import type { Settings } from '../settings';
-import { DEFAULT_SETTINGS, sanitizeSettings } from '../settings';
+import { DEFAULT_SETTINGS, PROFILE_BACKUP_PREFIX, sanitizeSettings } from '../settings';
 import type { KeyValueStore } from '../storage';
 import { STORAGE_KEYS } from '../storage';
 
@@ -34,10 +42,15 @@ export interface ExportPayload {
   exportedAt: string;
   appVersion: string;
   settings: Settings;
-  /** Profil (zatím volný JSON; od fáze 8 obálka `karban-save` kind `profile`). */
+  /** Profil (obálka `karban-save` kind `profile`), nebo null. */
   profile: unknown;
   /** Rozehraný run (obálka `karban-save` kind `run`), nebo null. */
   run: unknown;
+  /**
+   * Zálohy poškozeného profilu (`karban.profile.backup.<ms>` → surová data), aby se daly vytáhnout i mimo
+   * prohlížeč (profil se nikdy nesmí ztratit). Import je ignoruje.
+   */
+  profileBackups?: Record<string, string>;
 }
 
 function parseStored(raw: string | null): unknown {
@@ -50,9 +63,9 @@ function parseStored(raw: string | null): unknown {
   }
 }
 
-/** Obsah exportu: profil, nastavení a rozehraný run z úložiště. */
+/** Obsah exportu: profil, nastavení, rozehraný run a zálohy poškozeného profilu z úložiště. */
 export function buildExport(store: KeyValueStore, settings: Settings, now: Date): ExportPayload {
-  return {
+  const payload: ExportPayload = {
     format: EXPORT_FORMAT,
     version: EXPORT_VERSION,
     exportedAt: now.toISOString(),
@@ -61,6 +74,14 @@ export function buildExport(store: KeyValueStore, settings: Settings, now: Date)
     profile: parseStored(store.get(STORAGE_KEYS.profile)),
     run: parseStored(store.get(STORAGE_KEYS.run)),
   };
+  const backups: Record<string, string> = {};
+  for (const key of store.keys().sort()) {
+    if (!key.startsWith(PROFILE_BACKUP_PREFIX)) continue;
+    const raw = store.get(key);
+    if (raw !== null) backups[key] = raw;
+  }
+  if (Object.keys(backups).length > 0) payload.profileBackups = backups;
+  return payload;
 }
 
 export type ImportErrorCode = SaveError['code'] | 'unknownContent' | 'readFailed';
@@ -81,6 +102,18 @@ export interface ImportPlan {
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return typeof x === 'object' && x !== null && !Array.isArray(x);
+}
+
+/**
+ * Ověří uložený profil (obálka, verze, migrace) a vrátí ho serializovaný v aktuální verzi. Neplatný profil import
+ * odmítne — jinak by ho po nahrání čekala jen záloha a čistý profil.
+ */
+function validateProfile(raw: unknown, now: Date): string {
+  try {
+    return serializeProfile(deserializeProfile(raw), now.toISOString());
+  } catch (e) {
+    throw new ImportError(e instanceof SaveError ? e.code : 'invalidFormat');
+  }
 }
 
 /** Ověří uložený run (obálka, migrace, tvar, známý obsah, jde načíst) a vrátí ho serializovaný. */
@@ -121,8 +154,7 @@ export function parseImport(text: string, registry: ContentRegistry, now = new D
     if (v > EXPORT_VERSION) throw new ImportError('tooNew');
     let profile: string | null = null;
     if (obj.profile !== null && obj.profile !== undefined) {
-      if (isRecord(obj.profile)) profile = JSON.stringify(obj.profile);
-      else if (typeof obj.profile === 'string') profile = obj.profile;
+      if (isRecord(obj.profile) || typeof obj.profile === 'string') profile = validateProfile(obj.profile, now);
       else throw new ImportError('invalidFormat');
     }
     const run = obj.run === null || obj.run === undefined ? null : validateRun(obj.run, registry, now);
@@ -134,15 +166,18 @@ export function parseImport(text: string, registry: ContentRegistry, now = new D
   }
 
   if (obj.format === SAVE_FORMAT) {
+    if (obj.kind === 'profile') return { profile: validateProfile(obj, now) };
     if (obj.kind !== 'run') throw new ImportError('wrongKind');
     return { run: validateRun(obj, registry, now) };
   }
   throw new ImportError('invalidFormat');
 }
 
-/** Zapíše import do úložiště. Rozehraný controller zahodí (stav se změnil pod ním). */
+/**
+ * Zapíše import do úložiště a profil v paměti načte znovu (nastavení z exportu má přednost před nastavením
+ * v profilu). Rozehraný controller zahodí (stav se změnil pod ním).
+ */
 export function applyImport(app: App, plan: ImportPlan): void {
-  if (plan.settings) app.updateSettings(plan.settings);
   const write = (key: string, value: string | null | undefined): void => {
     if (value === undefined) return;
     if (value === null) app.store.remove(key);
@@ -151,12 +186,15 @@ export function applyImport(app: App, plan: ImportPlan): void {
   write(STORAGE_KEYS.profile, plan.profile);
   write(STORAGE_KEYS.run, plan.run);
   app.controller = null;
+  if (plan.profile !== undefined) app.profiles.reload();
+  if (plan.settings) app.updateSettings(plan.settings);
 }
 
-/** Smaže všechno, co hra uložila, a vrátí výchozí nastavení. */
+/** Smaže všechno, co hra uložila (i zálohy profilu), a začne s čistým profilem a výchozím nastavením. */
 export function resetProfile(app: App): void {
   for (const key of app.store.keys()) if (key.startsWith(STORAGE_PREFIX)) app.store.remove(key);
   app.controller = null;
+  app.profiles.reset({ ...DEFAULT_SETTINGS });
   app.updateSettings({ ...DEFAULT_SETTINGS });
 }
 
@@ -169,6 +207,7 @@ function exportFilename(now: Date): string {
 /** Stáhne export jako soubor JSON (Blob + odkaz s atributem download — žádná síť). */
 export function downloadExport(app: App): void {
   if (app.controller && app.controller.state.phase !== 'game_over') app.controller.save();
+  app.profiles.save();
   const now = new Date();
   const json = JSON.stringify(buildExport(app.store, app.settings, now), null, 2);
   const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));

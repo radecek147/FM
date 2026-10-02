@@ -122,7 +122,8 @@ Velká čísla: počítáme v `number` (double); nad 1e15 formátujeme vědecky 
 ### 2.6 Modifikátory
 
 `Modifiers` = `BASE_MODIFIERS` + delty ze zdrojů v tomto pořadí: obtížnost (všechny úrovně ≤ zvolená),
-balíček, výzva a trvalé efekty (`extraModifiers`, doplňuje `api.addPermanentModifier` přes `mergeDelta`), kupóny,
+balíček, výzva a trvalé efekty (`extraModifiers`, doplňuje `api.addPermanentModifier` přes `mergeDelta`), `passive`
+výzvy, kupóny,
 štítky, žolíci (`passive`), šéf (`passive`, pokud není vypnutý), dočasná velikost ruky kola
 (`RoundState.handSizeDelta`). Čísla se sčítají, pole končící na `Mult` se násobí, booleany se ORují; výsledek se
 ořízne na rozumné meze (`clampModifiers`). Neplatná čísla v deltě (NaN, ±∞) i přetečení se ignorují.
@@ -261,6 +262,28 @@ kupónu `syncShopSlots` doplní otevřenou Večerku na aktuální `shopCardSlots
 u pokladny platí hned): chybějící sloty vylosuje streamem `shop` jako při vstupu, vystavené ani prodané zboží nemění
 a sloty nikdy neubírá. Kupón, jehož `passive` čte stav (Rozkládací stůl: `round.blind === 'boss'`), se přepočítá při
 každém `invalidate()` — výběr útraty, výplata.
+
+### 2.9 Výzvy (`ChallengeDef`)
+
+Výzva je obsah jako ostatní: `RunState.challengeId` + definice v registru. `createRunState` vezme z výzvy balíček,
+sílu piva (`stake`, výchozí 1 — volba hráče se u výzvy ignoruje), vlastní balíček karet, peníze a startovní úrovně
+kombinací; `Game.initRun` přidá startovní žolíky (pevné i `startingRandomJokers` — stream `joker`, celý registr bez
+ohledu na `unlockedPool`, bez `onAcquire`), spotřebky a kupóny a zavolá `onRunStart`. Pravidla jsou dvojího druhu:
+
+- **čísla a přepínače** v `extraModifiers` → `RunState.extraModifiers` (stejné skládání jako ostatní delty, viz 2.6):
+  `noJokers`, `noSkip`, `autoSkip`, `noReroll`, `flatShopPrice`, `flatSellPrice`, `handCost`, `discardCost`,
+  `glassBreakOdds`, `finalAnte` (+ běžné `hands`, `targetMult`, `interestMult`…). Může je použít i jiný obsah.
+- **ostatní data a hooky** čte engine živě z definice (`GameCore.challenge()`): `maxScoringHand` (skórování a náhled:
+  zakázaná ruka, krok `source: 'challenge'`), `jokerSticker` (`rollStickers`, `createJoker`; pool vyřadí žolíky, kteří
+  nálepku nesmí nést — `jokerInRun`), `banned*` (`jokerInRun`, `consumableInRun`, `boosterInRun`, losování štítků
+  v `setupAnte`, `eligibleVouchers`), `consumableCost` (`consumableBasePrice`), `passive` (v pořadí delt hned za
+  `extraModifiers`), `onAnteStart` (začátek `setupAnte`: start runu a každá porážka šéfa), `isCardDebuffed`
+  a `isJokerDebuffed` (spolu s pravidlem šéfa v `run/draw.ts`: `bossDebuffs` a `refreshBossJokerDebuffs`; platí
+  v každé útratě, vypnutí šéfa je neruší, `cleanseCard` výjimku dává).
+
+`Game.settle()` po každé akci (a na konci `newRun`) otevře čekající obálku zdarma a při `autoSkip` přeskočí aktuální
+Malou/Velkou útratu i se štítkem, dokud není na řadě šéf nebo se neotevře obálka. Výhra = porážka šéfa patra
+`Modifiers.finalAnte`; `isFinalAnte(ante, finalAnte)` dává finálového šéfa v patře 8, jeho násobcích i v patře výhry.
 
 ## 3. Obsah (`src/content`)
 

@@ -152,24 +152,22 @@ const DEFS: Omit<ChallengeDef, 'unlock'>[] = [
       pattern: 'grid',
     },
   },
-  // 2 — Minimalista: nejvýš 3 karty; Vysoká karta, Dvojice a Trojice od úrovně 3.
+  // 2 — Vánoční kapr: žádné zahazování, ruce a karta v ruce navíc.
   {
-    id: 'minimalist',
+    id: 'christmas_carp',
     deckId: 'pub',
     startingMoney: DEFAULT_MONEY,
-    extraModifiers: { maxSelect: MINIMALIST_CARDS - BASE_MODIFIERS.maxSelect },
-    // Ze 3 karet jde složit jen Vysoká karta, Dvojice a Trojice; pranostiky ostatních kombinací se nabízejí dál
-    // (jako ve Švejkově anabázi — jejich zákaz by výzvu zlehčil).
-    startingHandLevels: { high_card: MINIMALIST_LEVEL, pair: MINIMALIST_LEVEL, three: MINIMALIST_LEVEL },
-    ruleKeys: ['maxSelect', 'levels'],
-    params: { cards: MINIMALIST_CARDS, level: MINIMALIST_LEVEL },
+    extraModifiers: { discards: -BASE_MODIFIERS.discards, hands: CARP_HANDS, handSize: CARP_HAND_SIZE },
+    bannedVouchers: ['dumpster', 'recycling_yard'],
+    ruleKeys: ['noDiscards', 'hands', 'handSize'],
+    params: { hands: CARP_HANDS, cards: CARP_HAND_SIZE },
     art: {
-      icon: 'poker-hand',
-      prop: 'magnifying-glass',
-      bg: '#e7e5e4',
-      fg: '#1c1917',
-      accent: '#78716c',
-      pattern: 'none',
+      icon: 'tropical-fish',
+      prop: 'bathtub',
+      bg: '#1d4ed8',
+      fg: '#eff6ff',
+      accent: '#93c5fd',
+      pattern: 'waves',
     },
   },
   // 3 — Jednotná cena: vše za 5 Kč, prodej za 2 Kč.
@@ -252,22 +250,24 @@ const DEFS: Omit<ChallengeDef, 'unlock'>[] = [
       pattern: 'checker',
     },
   },
-  // 7 — Vánoční kapr: žádné zahazování, ruce a karta v ruce navíc.
+  // 7 — Minimalista: nejvýš 3 karty; Vysoká karta, Dvojice a Trojice od úrovně 3.
   {
-    id: 'christmas_carp',
+    id: 'minimalist',
     deckId: 'pub',
     startingMoney: DEFAULT_MONEY,
-    extraModifiers: { discards: -BASE_MODIFIERS.discards, hands: CARP_HANDS, handSize: CARP_HAND_SIZE },
-    bannedVouchers: ['dumpster', 'recycling_yard'],
-    ruleKeys: ['noDiscards', 'hands', 'handSize'],
-    params: { hands: CARP_HANDS, cards: CARP_HAND_SIZE },
+    extraModifiers: { maxSelect: MINIMALIST_CARDS - BASE_MODIFIERS.maxSelect },
+    // Ze 3 karet jde složit jen Vysoká karta, Dvojice a Trojice; pranostiky ostatních kombinací se nabízejí dál
+    // (jako ve Švejkově anabázi — jejich zákaz by výzvu zlehčil).
+    startingHandLevels: { high_card: MINIMALIST_LEVEL, pair: MINIMALIST_LEVEL, three: MINIMALIST_LEVEL },
+    ruleKeys: ['maxSelect', 'levels'],
+    params: { cards: MINIMALIST_CARDS, level: MINIMALIST_LEVEL },
     art: {
-      icon: 'tropical-fish',
-      prop: 'bathtub',
-      bg: '#1d4ed8',
-      fg: '#eff6ff',
-      accent: '#93c5fd',
-      pattern: 'waves',
+      icon: 'poker-hand',
+      prop: 'magnifying-glass',
+      bg: '#e7e5e4',
+      fg: '#1c1917',
+      accent: '#78716c',
+      pattern: 'none',
     },
   },
   // 8 — Velký třesk: cíle ×3, ale 2 náhodní legendární žolíci (přibití).
@@ -312,26 +312,7 @@ const DEFS: Omit<ChallengeDef, 'unlock'>[] = [
       pattern: 'dots',
     },
   },
-  // 10 — Večer při svíčkách: žolíci nefungují v první ruce kola, ruka navíc.
-  {
-    id: 'candlelight',
-    deckId: 'pub',
-    startingMoney: DEFAULT_MONEY,
-    extraModifiers: { hands: CANDLELIGHT_HANDS },
-    isJokerDebuffed: (ctx) => ctx.round.handsPlayed === 0,
-    ruleKeys: ['dark', 'hands'],
-    params: { hands: CANDLELIGHT_HANDS },
-    art: {
-      icon: 'candle-light',
-      prop: 'moon',
-      bg: '#1f1a2e',
-      fg: '#fde68a',
-      accent: '#f59e0b',
-      pattern: 'none',
-    },
-  },
-  // ── 3. skupina: odemkne se po 6 výhrách ──
-  // 11 — Malometrážní byt: ruka 6 karet, +1 ruka, +2 sloty žolíků.
+  // 10 — Malometrážní byt: ruka 6 karet, +1 ruka, +2 sloty žolíků.
   {
     id: 'micro_flat',
     deckId: 'pub',
@@ -350,6 +331,25 @@ const DEFS: Omit<ChallengeDef, 'unlock'>[] = [
       fg: '#fff7ed',
       accent: '#fed7aa',
       pattern: 'checker',
+    },
+  },
+  // ── 3. skupina: odemkne se po 6 výhrách ──
+  // 11 — Večer při svíčkách: žolíci nefungují v první ruce kola, ruka navíc.
+  {
+    id: 'candlelight',
+    deckId: 'pub',
+    startingMoney: DEFAULT_MONEY,
+    extraModifiers: { hands: CANDLELIGHT_HANDS },
+    isJokerDebuffed: (ctx) => ctx.round.handsPlayed === 0,
+    ruleKeys: ['dark', 'hands'],
+    params: { hands: CANDLELIGHT_HANDS },
+    art: {
+      icon: 'candle-light',
+      prop: 'moon',
+      bg: '#1f1a2e',
+      fg: '#fde68a',
+      accent: '#f59e0b',
+      pattern: 'none',
     },
   },
   // 12 — Čtyři roční období: v každém patře je jedna barva mimo provoz.

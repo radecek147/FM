@@ -1,17 +1,21 @@
 /**
- * Aplikace: router obrazovek a sdílené služby (úložiště, nastavení, registr obsahu, rozehraný run).
+ * Aplikace: router obrazovek a sdílené služby (úložiště, profil hráče s nastavením, registr obsahu, rozehraný
+ * run).
  *
  * Obrazovka = funkce `(app, params) => Screen`. Router ji vloží do #app, předá jí klávesy
  * a při odchodu zavolá `dispose()`.
  */
 import type { ContentRegistry } from '../engine';
+import type { Profile } from '../engine/meta';
 import { AnimQueue } from './anim/queue';
 import { installDigitFont } from './art/digitFont';
 import { isModalOpen } from './components/modal';
 import type { GameController } from './controller';
 import { mount } from './dom';
+import type { ProfileControllerOptions } from './profile';
+import { ProfileController } from './profile';
 import type { Settings } from './settings';
-import { applySettingsToDocument, loadSettings, saveSettings } from './settings';
+import { applySettingsToDocument } from './settings';
 import type { KeyValueStore } from './storage';
 
 export type ScreenId =
@@ -28,7 +32,8 @@ export type ScreenFactory = (app: App, params?: Record<string, unknown>) => Scre
 
 export class App {
   readonly anim: AnimQueue;
-  settings: Settings;
+  /** Profil hráče (nastavení, odemčení, sbírka, statistiky, historie) — src/ui/profile.ts. */
+  readonly profiles: ProfileController;
   /** Rozehraný run (pokud existuje). */
   controller: GameController | null = null;
   private current: { id: ScreenId; screen: Screen } | null = null;
@@ -38,8 +43,10 @@ export class App {
     readonly root: HTMLElement,
     readonly store: KeyValueStore,
     readonly registry: ContentRegistry,
+    profileOptions: ProfileControllerOptions = {},
   ) {
-    this.settings = loadSettings(store);
+    // Profil se načte (a případně zazálohuje / zmigruje) jako první — nastavení je jeho součást.
+    this.profiles = new ProfileController(store, registry, profileOptions);
     this.anim = new AnimQueue(() => ({ speed: this.settings.speed, enabled: this.settings.animations }));
     applySettingsToDocument(this.settings);
     // Číslice s čitelnou „5“ a „2“ (písmo se skládá za běhu, bez sítě).
@@ -74,9 +81,18 @@ export class App {
     focusable?.focus({ preventScroll: true });
   }
 
+  /** Nastavení hráče (součást profilu, DESIGN 13.4). Měň ho jen přes `updateSettings`. */
+  get settings(): Settings {
+    return this.profiles.settings;
+  }
+
+  /** Profil hráče (jediná instance; meta funkce ji mutují, ukládá `profiles.save()`). */
+  get profile(): Profile {
+    return this.profiles.profile;
+  }
+
   updateSettings(patch: Partial<Settings>): void {
-    this.settings = { ...this.settings, ...patch };
-    saveSettings(this.store, this.settings);
+    this.profiles.updateSettings(patch);
     applySettingsToDocument(this.settings);
   }
 

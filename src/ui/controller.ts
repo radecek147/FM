@@ -1,24 +1,48 @@
 /**
  * GameController — most mezi UI a enginem.
  *  - drží instanci `Game` a stav UI, který do enginu nepatří (výběr karet),
- *  - akce posílá do `game.dispatch`, po úspěchu autosave a přehrání událostí přes `present`,
+ *  - akce posílá do `game.dispatch`, po úspěchu autosave, ohlášení událostí pozorovateli (profil — meta vrstva)
+ *    a přehrání událostí přes `present`,
  *  - během animací blokuje další akce (kromě přeskočení),
  *  - obrazovky se přihlásí přes `subscribe` a po každé změně se překreslí.
  * UI nikdy nemění stav enginu přímo.
  */
-import type { Action, ActionResult, ContentRegistry, GameEvent, HandPreview, RunState } from '../engine';
+import type {
+  Action,
+  ActionResult,
+  ContentRegistry,
+  GameEvent,
+  HandPreview,
+  NewRunOptions,
+  RunState,
+} from '../engine';
 import { Game, deserializeRun, serializeRun } from '../engine';
 import type { KeyValueStore } from './storage';
 import { STORAGE_KEYS } from './storage';
 
 export type Presenter = (events: readonly GameEvent[], controller: GameController) => Promise<void>;
 
+/**
+ * Pozorovatel runu (profil hráče, src/ui/profile.ts): dostane události každé úspěšné akce hned po uložení runu
+ * (stav enginu je už po celé akci) a znovu se ozve, až doběhnou animace (oznámení „Odemčeno: …“ nepřeskočí
+ * skórování). Chyba pozorovatele hru nezastaví.
+ */
+export interface RunObserver {
+  onEvents(events: readonly GameEvent[], controller: GameController): void;
+  onSettled?(controller: GameController): void;
+}
+
 export interface ControllerDeps {
   registry: ContentRegistry;
   store: KeyValueStore;
   /** Přehraje události (animace, zvuky). Výchozí: nic. */
   present?: Presenter;
+  /** Pozorovatel událostí (profil). Jde nastavit i později (`setObserver`). */
+  observer?: RunObserver;
 }
+
+/** Volby nového runu pro controller: jako `NewRunOptions`, seed je povinný (generuje ho UI). */
+export type ControllerRunOptions = Omit<NewRunOptions, 'seed'> & { seed: string };
 
 type Listener = () => void;
 
@@ -28,18 +52,17 @@ export class GameController {
   private listeners = new Set<Listener>();
   private animating = false;
   private presenter: Presenter;
+  private observer: RunObserver | null;
 
   private constructor(
     private game: Game,
     private readonly deps: ControllerDeps,
   ) {
     this.presenter = deps.present ?? (async () => undefined);
+    this.observer = deps.observer ?? null;
   }
 
-  static newRun(
-    opts: { deckId: string; stake: number; seed: string; challengeId?: string | null; daily?: boolean },
-    deps: ControllerDeps,
-  ): GameController {
+  static newRun(opts: ControllerRunOptions, deps: ControllerDeps): GameController {
     const game = Game.newRun(opts, deps.registry);
     const c = new GameController(game, deps);
     c.save();
@@ -66,6 +89,15 @@ export class GameController {
 
   setPresenter(p: Presenter): void {
     this.presenter = p;
+  }
+
+  /** Nastaví pozorovatele událostí (null = žádný). */
+  setObserver(o: RunObserver | null): void {
+    this.observer = o;
+  }
+
+  get hasObserver(): boolean {
+    return this.observer !== null;
   }
 
   get state(): Readonly<RunState> {
@@ -136,6 +168,7 @@ export class GameController {
       return res;
     }
     this.save();
+    this.observe(() => this.observer?.onEvents(res.events, this));
     const hand = this.handIds();
     this.selected = this.selected.filter((id) => hand.includes(id));
     this.animating = true;
@@ -145,7 +178,17 @@ export class GameController {
       this.animating = false;
     }
     this.notify();
+    this.observe(() => this.observer?.onSettled?.(this));
     return res;
+  }
+
+  /** Zavolá pozorovatele; jeho chyba (meta vrstva) nesmí shodit rozehranou hru. */
+  private observe(fn: () => void): void {
+    try {
+      fn();
+    } catch (e) {
+      console.error('[profile] Zpracování události runu selhalo', e);
+    }
   }
 
   /**

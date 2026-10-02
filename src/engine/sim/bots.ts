@@ -1198,7 +1198,14 @@ class StrategyBot implements Bot {
     // 6) přehození: s místem pro žolíka (peníze ≥ 2× cena nad rezervou, DESIGN 12.2), nebo se slabým žolíkem
     // k výměně (peníze navíc)
     const hasJokers = Object.keys(reg.jokers).length > 0;
-    if (this.style.rerolls && this.style.buysJokers && hasJokers && canPay(game, shop.rerollCost)) {
+    // Výzva bez přehození (`Modifiers.noReroll`, Rychlík bez zastávky) — engine by přehození odmítl.
+    if (
+      this.style.rerolls &&
+      this.style.buysJokers &&
+      hasJokers &&
+      !game.modifiers().noReroll &&
+      canPay(game, shop.rerollCost)
+    ) {
       const free = s.money - this.reserve(game);
       const room = jokerRoom(game);
       const worst = room ? null : this.worstJoker(game);
@@ -1429,7 +1436,8 @@ class RandomBot implements Bot {
     switch (s.phase) {
       case 'blind_select': {
         const blind = s.blinds[s.blindIndex];
-        if (blind && blind.kind !== 'boss' && rng.next() < 0.2) return { type: 'skipBlind' };
+        // `noSkip` (výzva) se kontroluje před hodem — mimo výzvy se spotřeba RNG nemění.
+        if (blind && blind.kind !== 'boss' && !mods.noSkip && rng.next() < 0.2) return { type: 'skipBlind' };
         return { type: 'selectBlind' };
       }
       case 'round': {
@@ -1459,7 +1467,7 @@ class RandomBot implements Bot {
         shop.vouchers.forEach((v, slot) => {
           if (!v.sold && canPay(game, v.price)) acts.push({ type: 'buyVoucher', slot });
         });
-        if (shop.rerollsThisShop < RANDOM_MAX_SHOP_REROLLS && canPay(game, shop.rerollCost))
+        if (!mods.noReroll && shop.rerollsThisShop < RANDOM_MAX_SHOP_REROLLS && canPay(game, shop.rerollCost))
           acts.push({ type: 'reroll' });
         return rng.pick(acts);
       }

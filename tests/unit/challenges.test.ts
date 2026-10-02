@@ -27,16 +27,16 @@ const REG = buildRegistry();
 /** Pořadí výzev = DESIGN 11.1 (po pěticích podle obtížnosti). */
 const ORDER = [
   'greenhouse',
-  'minimalist',
+  'christmas_carp',
   'flat_price',
   'svejk_anabasis',
   'express',
   'marias_party',
-  'christmas_carp',
+  'minimalist',
   'big_bang',
   'border_casino',
-  'candlelight',
   'micro_flat',
+  'candlelight',
   'four_seasons',
   'quarry',
   'short_memory',
@@ -549,6 +549,23 @@ describe('výzvy – dohratelnost botem', () => {
       expect(r.invalidActions, `${r.seed}: ${JSON.stringify(r.invalidByCode)}`).toBe(0);
       expect(r.cause, r.seed).not.toBe('actionLimit');
       expect([r.deckId, r.stake]).toEqual([REG.challenges[id]!.deckId, 1]);
+    }
+  });
+
+  it('boti respektují zákaz přeskakování a přehazování (Rychlík bez zastávky)', () => {
+    for (const name of ['random', 'econ', 'flush', 'pairs'] as const) {
+      const bot = createBot(name);
+      for (let i = 1; i <= 2; i++) {
+        const r = simulateRun(REG, {
+          seed: simSeed(`EXP-${name}`, i),
+          deckId: 'pub',
+          stake: 1,
+          bot,
+          challengeId: 'express',
+        });
+        expect(r.invalidActions, `${name} ${r.seed}: ${JSON.stringify(r.invalidByCode)}`).toBe(0);
+        expect([r.rerolls, r.blindsSkipped]).toEqual([0, 0]);
+      }
     }
   });
 });

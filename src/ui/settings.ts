@@ -1,12 +1,15 @@
 /**
  * Nastavení hráče (výchozí hodnoty viz docs/DESIGN.md 13.4). Nastavení je součást profilu (`karban.profile`,
- * `Profile.settings` v src/engine/meta); tady je jen úložiště a promítnutí do stránky.
+ * `Profile.settings` v src/engine/meta); tady je jen úložiště a promítnutí do stránky. Za běhu aplikace drží
+ * profil v paměti `ProfileController` (src/ui/profile.ts) — `loadSettings` / `saveSettings` jsou pro nástroje
+ * a testy, které pracují přímo s úložištěm.
  *
  * `loadStoredProfile` obnoví profil z úložiště a nikdy ho neztratí: poškozená data nejdřív zazálohuje do
  * `karban.profile.backup.<timestamp>` a teprve pak zapíše nový profil; starý klíč `karban.settings` (doba před
  * profilem) zmigruje do profilu a smaže.
  */
-import type { Profile, Settings } from '../engine/meta';
+import type { SaveErrorCode } from '../engine/save/save';
+import type { Profile, ProfileRestoreResult, Settings } from '../engine/meta';
 import { restoreProfile, sanitizeSettings, serializeProfile } from '../engine/meta';
 import type { KeyValueStore } from './storage';
 import { STORAGE_KEYS } from './storage';
@@ -22,28 +25,52 @@ export function saveStoredProfile(store: KeyValueStore, profile: Profile, now: D
   return store.set(STORAGE_KEYS.profile, serializeProfile(profile, now.toISOString()));
 }
 
+/** Výsledek obnovy profilu z úložiště (`restoreStoredProfile`). */
+export interface StoredProfileResult {
+  profile: Profile;
+  /**
+   * Profil smí přepsat uložená data — false jen u poškozeného profilu, jehož zálohu se nepodařilo zapsat (pak se
+   * nesmí přepsat, aby se data neztratila; hra jede s profilem jen v paměti).
+   */
+  writable: boolean;
+  status: ProfileRestoreResult['status'];
+  /** Klíč zálohy poškozeného profilu (`karban.profile.backup.<ms>`), nebo null. */
+  backupKey: string | null;
+  error?: SaveErrorCode;
+}
+
 /**
- * Obnoví profil z úložiště. `writable` = profil smí přepsat uložená data (false jen u poškozeného profilu, jehož
- * zálohu se nepodařilo zapsat — pak se nesmí přepsat, aby se data neztratila).
+ * Obnoví profil z úložiště a nikdy ho neztratí: poškozená data nejdřív zazálohuje do
+ * `karban.profile.backup.<ms>` a nový profil zapíše jen po úspěšné záloze; starý klíč `karban.settings`
+ * zmigruje do nového profilu a smaže (při existujícím profilu ho jen uklidí).
  */
-function restoreFromStore(store: KeyValueStore, now: Date): { profile: Profile; writable: boolean } {
+export function restoreStoredProfile(store: KeyValueStore, now: Date = new Date()): StoredProfileResult {
   const legacy = store.get(STORAGE_KEYS.settings);
   const res = restoreProfile({
     raw: store.get(STORAGE_KEYS.profile),
     legacySettings: legacy,
     nowIso: now.toISOString(),
   });
+  const out = (writable: boolean, backupKey: string | null = null): StoredProfileResult => ({
+    profile: res.profile,
+    writable,
+    status: res.status,
+    backupKey,
+    ...(res.error ? { error: res.error } : {}),
+  });
   if (res.status === 'loaded') {
     if (legacy !== null) store.remove(STORAGE_KEYS.settings);
-    return { profile: res.profile, writable: true };
+    return out(true);
   }
+  let backupKey: string | null = null;
   if (res.status === 'corrupt') {
-    const backedUp =
-      res.backup !== undefined && store.set(`${PROFILE_BACKUP_PREFIX}${now.getTime()}`, res.backup);
-    if (!backedUp) return { profile: res.profile, writable: false };
+    const key = `${PROFILE_BACKUP_PREFIX}${now.getTime()}`;
+    const backedUp = res.backup !== undefined && store.set(key, res.backup);
+    if (!backedUp) return out(false);
+    backupKey = key;
   }
   if (saveStoredProfile(store, res.profile, now) && legacy !== null) store.remove(STORAGE_KEYS.settings);
-  return { profile: res.profile, writable: true };
+  return out(true, backupKey);
 }
 
 /**
@@ -51,7 +78,7 @@ function restoreFromStore(store: KeyValueStore, now: Date): { profile: Profile; 
  * povedla — jinak nechá původní data na místě a vrátí nový profil jen v paměti.
  */
 export function loadStoredProfile(store: KeyValueStore, now: Date = new Date()): Profile {
-  return restoreFromStore(store, now).profile;
+  return restoreStoredProfile(store, now).profile;
 }
 
 export function loadSettings(store: KeyValueStore): Settings {
@@ -61,7 +88,7 @@ export function loadSettings(store: KeyValueStore): Settings {
 /** Zapíše nastavení do profilu v úložišti (načte → změní → uloží; nezazálohovaný poškozený profil nepřepíše). */
 export function saveSettings(store: KeyValueStore, s: Settings): void {
   const now = new Date();
-  const { profile, writable } = restoreFromStore(store, now);
+  const { profile, writable } = restoreStoredProfile(store, now);
   if (!writable) return;
   profile.settings = sanitizeSettings(s);
   saveStoredProfile(store, profile, now);

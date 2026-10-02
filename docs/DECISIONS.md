@@ -2583,3 +2583,53 @@ v patrech 4–20), `game.test.ts` (cíl šéfa patra 16 v nekonečném režimu 5
 
 **Proč:** CLAUDE.md kap. 1 a 7 (žádné převzaté názvy ani čísla), kap. 3 (patro 8 řádově statisíce — zatím plán),
 kap. 8 (Desítka 25–35 %, Imperial < 3 %, žádné auto-win), DESIGN 10, 12.1 a 12.4.
+
+## 2026-10-02 — Fáze 8 (M2): 20 výzev — pravidla v enginu, pořadí a ladění
+
+**Co:** `src/content/challenges.ts` (20 výzev DESIGN 11.1 s `unlock: winsTotal` 1/3/6/10 po pěticích), texty
+`src/i18n/cs/challenges.ts` (`name`, `desc`, `flavor`, `rules.<klíč>`; čísla přes `ChallengeDef.params`), testy
+`tests/unit/challenges.test.ts` (obsah, start, pravidla každé výzvy, bot) a `tests/unit/challenge-rules.test.ts`
+(obecná pravidla enginu na testovacím registru).
+
+**Pravidla v enginu obecně, ne podle id výzvy:**
+
+- **`Modifiers`** (skládají se jako ostatní, ukládají se v `extraModifiers`, mohou je použít i balíčky/kupóny):
+  `noJokers` (pool, Večerka, Žolíková obálka, `createJoker`, `addShopJoker`, `openBooster`), `noSkip` (útraty bez
+  štítků, `skipBlind` → `cannotSkip`), `autoSkip` (Malá a Velká se ve výběru útraty přeskočí samy se štítky —
+  `Game.settle()` po každé akci a na konci `newRun`; obálka zdarma ze štítku řadu přeruší a po jejím zavření se
+  pokračuje), `noReroll` (`reroll` → `cannotUse`, i bezplatné), `flatShopPrice` / `flatSellPrice` (pevná cena přebije
+  slevy i `shopPriceAdd`; zdarma zůstává zdarma), `handCost` / `discardCost` (srážka přes `addMoney`, tedy jen do
+  dluhového limitu — ruku jde zahrát vždy, jinak by se kolo zaseklo), `glassBreakOdds` (0 = výchozí 1 z 5; čte ho
+  skleněné vylepšení a jeho popisek přes nové `EnhancementDef.describe(mods)`), `finalAnte` (výchozí 8; Konec světa
+  +4 → 12; finálový šéf v patře 8 a jeho násobcích **i** v patře výhry — `isFinalAnte(ante, finalAnte)`).
+- **`ChallengeDef`** (data jiného typu než číslo/přepínač, engine je čte živě přes `GameCore.challenge()`): `stake`
+  (výchozí 1 — výzva přebije `NewRunOptions.stake` i `deckId`; dřívější test pořadí `onRunStart` dostal `stake: 2`
+  ve výzvě), `startingHandLevels`, `startingRandomJokers` (stream `joker`, celý registr bez ohledu na odemčení —
+  stejné podmínky pro všechny), `maxScoringHand` (silnější kombinace = zakázaná ruka jako u šéfa: krok
+  `source: 'challenge'`, `blockedReason` = `MSG.challengeHandTooStrong`, i v náhledu; nový `ScoreSourceKind`
+  `'challenge'`), `jokerSticker` (vynucená nálepka každého získaného žolíka; kdo ji nesmí nést, je z poolu venku),
+  `bannedConsumables`, `bannedConsumableKinds`, `bannedBoosterKinds`, `bannedTags`, `consumableCost` (pevná základní
+  cena podle druhu), `params` (čísla do textů), hooky `passive`, `onAnteStart` (start runu po `onRunStart` a každá
+  porážka šéfa; ne `changeAnte`), `isCardDebuffed` a `isJokerDebuffed` (platí ve všech útratách, vypnutí šéfa je neruší,
+  sdílí přepočet s pravidlem šéfa v `run/draw.ts`).
+- Uložení: `RunState` se nemění (pravidla jsou v `extraModifiers` a v definici podle `challengeId`) — bez migrace.
+- **UI:** výběr útraty bez tlačítka Přeskočit při `noSkip` (hláška „Tady se nepřeskakuje…“), Přehodit zakázané
+  s vysvětlením při `noReroll`, levý panel ukazuje patro `x/finalAnte`, Info o runu má sekci Výzva (název + pravidla).
+  Obrazovka výběru výzev patří UI úkolu fáze 8.
+
+**Pořadí a ladění (bot `max`, Desítka, 20–30 runů na výzvu):** původní pořadí DESIGN nemělo s obtížností nic
+společného (Suchý únor jako první výzva: 0 % výher; Švejkova anabáze 90 %). Výzvy jsou teď po pěticích seřazené podle
+obtížnosti a pět čísel je doladěných (DESIGN 11.1 „Upřesnění“): Skleník sklo 1 z 2, Švejk úroveň 4 (a pranostiky
+silnějších kombinací se nabízejí dál — jejich zákaz Dvojici krmil z každé pranostiky), Malometrážní byt ruka 6 + 1 ruka
+(s pěti kartami ~88 % proher hned v první útratě), Kasino bez odměn za útraty a dýška, Suchý únor cíle ×0,5. Výsledek
+(% výher, 30 runů, po uzavření fáze 7): 1. skupina Skleník 63, Vánoční kapr 57, Jednotná cena 43, Švejk 43, Rychlík
+53; 2. skupina Mariáš u Vaňků 33, Minimalista 23, Velký třesk 37, Kasino 33, Malometrážní byt 47 (třetina runů padne
+v patře 1); 3. skupina Svíčky 23, Roční období 33, Kamenolom 17, Krátká paměť 13, Byrokracie 17; 4. skupina Rovnou za
+ředitelem 3, Svatba 7, Půjčovna 0, Suchý únor 0, Konec světa 7. Boti hrají výzvy hůř než člověk (neumí honit sklo,
+zakázané ruce, dluh, držet málo zapůjčených žolíků), takže čísla berou jen jako pořadí.
+
+**Bot:** Rychlík vyžadoval, aby boti respektovali `noReroll` (a náhodný bot `noSkip`) — úprava `src/engine/sim/bots.ts`
+beze změny chování mimo výzvy (bez spotřeby RNG navíc).
+
+**Proč:** CLAUDE.md kap. 3 (20 výzev se zvláštními pravidly a vlastním vtipným názvem), kap. 2 (engine
+deterministický, data + hooky, stav serializovatelný), kap. 8 (balanc simulací, žádné auto-win); DESIGN 11.1.

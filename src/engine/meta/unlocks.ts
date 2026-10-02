@@ -5,6 +5,7 @@
  */
 import type { ContentRegistry, UnlockCondition, UnlockRecordStat, UnlockStat } from '../content-types';
 import type { RunState } from '../types';
+import { HAND_TYPES } from '../types';
 import type { MetaNotice, Profile, UnlockCategory } from './types';
 
 /** Výsledek vyhodnocení podmínky: splněno + průběh (`progress` ≤ `target`) pro sbírku. */
@@ -96,21 +97,47 @@ export function statValue(profile: Readonly<Profile>, stat: UnlockStat): number 
   return s.totals[stat as keyof typeof s.totals] ?? 0;
 }
 
+/** Počet různých kombinací, které hráč kdy zahrál (napříč započítanými runy). */
+export function distinctHandsPlayed(profile: Readonly<Profile>): number {
+  return HAND_TYPES.filter((t) => (profile.stats.handTypes[t] ?? 0) > 0).length;
+}
+
 // ─────────────────────────── Vlastní podmínky ───────────────────────────
+
+/**
+ * Čísla vestavěných vlastních podmínek — sdílí je vyhodnocovač i text podmínky ve sbírce (`unlockText` dosadí
+ * `count` / `level` do `meta.unlock.custom.<id>`), takže text a pravidlo nemůžou odjet od sebe.
+ */
+export const CUSTOM_UNLOCK_PARAMS: Readonly<Record<string, Readonly<Record<string, number>>>> = {
+  vouchersBought5: { count: 5 },
+  sealedCardsInRun: { count: 5 },
+  roundEndInDebt: {},
+  radyUsed30: { count: 30 },
+  jokersSold25: { count: 25 },
+  handLevel6: { level: 6 },
+  voucherTier1TwoRuns: { runs: VOUCHER_TIER2_RUNS, wins: VOUCHER_TIER2_WINS },
+  distinctHands8: { count: 8 },
+};
+
+function customParam(id: string, key: string): number {
+  return CUSTOM_UNLOCK_PARAMS[id]?.[key] ?? 1;
+}
 
 const BUILTIN_CUSTOM_UNLOCKS: Record<string, CustomUnlockFn> = {
   /** Úřednický: kup celkem 5 kupónů. */
-  vouchersBought5: (p) => progress(p.stats.totals.vouchersBought, 5),
+  vouchersBought5: (p) => progress(p.stats.totals.vouchersBought, customParam('vouchersBought5', 'count')),
   /** Notářský: měj v jednom runu 5 karet s pečetí. */
-  sealedCardsInRun: (p) => progress(p.stats.records.maxSealedCards, 5),
+  sealedCardsInRun: (p) => progress(p.stats.records.maxSealedCards, customParam('sealedCardsInRun', 'count')),
   /** Dlužník: dokonči kolo se záporným zůstatkem. */
   roundEndInDebt: (p) => flag((p.stats.records.minRoundEndMoney ?? 0) < 0),
   /** Babiččin: použij celkem 30 babských rad. */
-  radyUsed30: (p) => progress(p.stats.totals.radyUsed, 30),
+  radyUsed30: (p) => progress(p.stats.totals.radyUsed, customParam('radyUsed30', 'count')),
   /** Vetešnický: prodej celkem 25 žolíků. */
-  jokersSold25: (p) => progress(p.stats.totals.jokersSold, 25),
+  jokersSold25: (p) => progress(p.stats.totals.jokersSold, customParam('jokersSold25', 'count')),
   /** Kalendářový: zvyš libovolnou kombinaci na úroveň 6. */
-  handLevel6: (p) => progress(maxHandLevel(p), 6),
+  handLevel6: (p) => progress(maxHandLevel(p), customParam('handLevel6', 'level')),
+  /** Pivní sommelier: zahraj 8 různých kombinací (napříč runy — ochutnávka se nemusí stihnout za jeden večer). */
+  distinctHands8: (p) => progress(distinctHandsPlayed(p), customParam('distinctHands8', 'count')),
   /**
    * Tier 2 kupónu: jeho tier 1 (`requires`) koupený ve 2 různých runech, nebo 3 výhry. Bez známého subjektu
    * (kupón v registru) jen podle výher.
