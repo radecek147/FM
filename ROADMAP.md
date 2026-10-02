@@ -7,13 +7,13 @@
 
 _Aktualizováno: 2026-10-02 (fáze 10: vydání 1.0)_
 
-**Shrnutí:** fáze 0–10 jsou hotové, **verze 1.0.0** je otagovaná (`v1.0.0`). Fáze 10 (DECISIONS „Fáze 10 (výkon,
+**Shrnutí:** fáze 0–10 jsou hotové, **verze 1.0.0** je hotová (tag `v1.0.0` zatím jen lokálně). Fáze 10 (DECISIONS „Fáze 10 (výkon,
 offline, přístupnost, bugfix)“, „Fáze 10: README, snímky a GIF, licence MIT“, „Fáze 10: balanc (silnější boti, cíle
 patra 8, žolíci, balíčky)“ a „Fáze 10: korektura textů, předložka z/ze, vydání 1.0“): code splitting a offline
 (service worker), Lighthouse > 90, README se snímky a GIFem, balanc (Desítka 31,2 %, Imperial 2,0 %, všech
 8 sil piva i 12 balíčků v pásmu), jazyková korektura (35 oprav, filtr `{n|z}` pro „z / ze“ před číslem), pokrytí
 enginu 97,6 % příkazů / 93 % větví, test minimálních počtů obsahu, `ASSETS.md` i s odvozeným písmem.
-**Zbývá jen deploy na GitHub Pages:** vlastník repozitáře musí jednorázově zapnout Pages (Settings → Pages →
+**Zbývá deploy na GitHub Pages a tag na GitHubu:** workflow „Deploy to GitHub Pages“ (2026-10-02, ručně) prošel testy i buildem a spadl na `configure-pages`, protože Pages nejsou zapnuté — vlastník repozitáře musí jednorázově zapnout Pages (Settings → Pages →
 Source = GitHub Actions), pak stačí znovu spustit workflow „Deploy to GitHub Pages“ (ručně nebo pushem tagu);
 adresa bude https://radecek147.github.io/FM/.
 **Další krok:** po zapnutí Pages ověřit nasazení a odškrtnout ho; pak obsahové patche (sekce „Obsahové patche
@@ -353,7 +353,7 @@ průměrném notebooku; kontroly zelené; commit `feat(ui): juice and audio`; f�
 - [ ] Deploy na GitHub Pages (`base`)
 - [x] Testy a e2e zelené, pokrytí enginu ≥ 80 % (příkazy 97,6 %, větve 93,0 %, funkce 99,1 %, řádky 99,2 %; 79 souborů a 3 803 unit testů, 71 e2e zelených)
 - [x] Kontrola definice hotovo v1.0 (`CLAUDE.md` kap. 10): dohratelnost na všech balíčcích (simulace + `ui-walkthrough`), minimální počty obsahu hlídá `tests/unit/content-minimums.test.ts`, texty jen v `src/i18n` (test `index.html` a `t()`), offline (`offline.spec.ts`), konzole bez chyb (e2e), `ASSETS.md`, žádný převzatý obsah (audity názvů ve fázích 7 a 10)
-- [x] Tag `v1.0.0` (verze 1.0.0 v `package.json`)
+- [ ] Tag `v1.0.0` na GitHubu — verze 1.0.0 je v `package.json`, tag je vytvořený lokálně na commitu vydání, ale push tagů z vývojového prostředí je zakázaný (HTTP 403); vytvoří ho vlastník (GitHub → Releases → Draft a new release → tag `v1.0.0`)
 
 **Hotovo, když:** splněna definice hotovo v1.0, hra běží z GitHub Pages, tag `v1.0.0` existuje; fáze odškrtnutá.
 
