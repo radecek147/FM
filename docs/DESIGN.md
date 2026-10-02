@@ -144,8 +144,8 @@ Poznámky k designu tabulky:
 - **Přírůstky za úroveň jsou od fáze 10 dvojnásobné** proti návrhu z fáze 0 (dřív např. Barva +18 / +2, Dvojice
   +14 / +1): pozdní hra škáluje hlavně úrovněmi hlavní kombinace a s původními přírůstky nejlepší rozumný bot
   na cílech se základem patra 8 100 000 vyhrál jen ~12 % runů (×1,5 od Trojice 17 %, ×1,5 u všech 19 %, ×2 u všech
-  ~29 %; po přeměření žolíků je základ patra 8 na Desítce 95 000). Rozjezd (patra 1–3) se mění málo — úrovně tam ještě skoro nejsou (`docs/DECISIONS.md` „Fáze 10: silnější
-  boti, úrovně ×2 a cíle patra 8“).
+  ~29 %; po přeměření žolíků je základ patra 8 na Desítce 95 000). Rozjezd (patra 1–3) se mění málo — úrovně tam ještě skoro nejsou (`docs/DECISIONS.md` „Fáze 10: balanc
+  (silnější boti, cíle patra 8, žolíci, balíčky)“).
 
 - Postupka roste po úrovních rychleji než Barva — je těžší ji poskládat, ale za investici do pranostik se odmění.
 - Čtveřice je první „velký skok“ (mult 6). Tajné kombinace jsou nejsilnější, ale vyžadují upravený balíček.
@@ -810,8 +810,8 @@ v `src/content/jokers/*.ts` a přesné znění hlídá `tests/unit/jokers-combos
 pro rozložení 4.9 (štítky `tags` mohou být širší). Hodnoty podle 4.3 (`scripts/joker-value.ts`) jsou u jednotlivých
 skupin v `docs/DECISIONS.md`.
 
-**Přeměření po fázi 10** (silnější boti, přírůstky úrovní ×2; 30 seedů `JV10`, `docs/DECISIONS.md` „Fáze 10: silnější
-boti, úrovně ×2 a cíle patra 8“): nad pásmem byli Kořenářka (R2 86 %), Sběrač hub (123 %), Lázeňský host (127 %)
+**Přeměření po fázi 10** (silnější boti, přírůstky úrovní ×2; 30 seedů `JV10`, `docs/DECISIONS.md` „Fáze 10: balanc
+(silnější boti, cíle patra 8, žolíci, balíčky)“): nad pásmem byli Kořenářka (R2 86 %), Sběrač hub (123 %), Lázeňský host (127 %)
 a Směnárna (122 %), špičku nad 2× horní hranicí měl Pan farář (228 %) a pod pásmem Tramvaják (R1 32 %). Upravená
 čísla: Kořenářka +2 → **+1 mult**, Sběrač hub +×0,25 → **+×0,22**, Lázeňský host +×0,15 → **+×0,13**, Směnárna strop
 ×2,5 → **×2,1**, Pan farář +5 → **+2,5 mult**, Tramvaják +15 → **+18 mult** (po úpravě R2 43 / 88 / 92 / 97 %, Pan farář
@@ -1187,7 +1187,7 @@ pravidla — změna cíle = změna textu v `src/i18n/cs/bosses/`.
 Cíle finálových šéfů jsou laděné simulací na letalitu 20–40 % (kap. 12.1): Bílá paní (hráč po každé akci vidí jen
 nově dobrané karty) má 1,25× (do fáze 10 1,5×), Pan starosta a Velká voda 2,5×, Krajský úřad 2,25×, Fronta na banány
 3,5× (do fáze 10 4,5×). Fáze 10: s cíli patra 8 fáze 10 a silnějšími boty měly Fronta na banány a Bílá paní letalitu
-55 % a 54 % (Desítka, 1 800 runů), proto nižší cíle (`docs/DECISIONS.md` „Fáze 10: silnější boti…“).
+55 % a 54 % (Desítka, 1 800 runů), proto nižší cíle (`docs/DECISIONS.md` „Fáze 10: balanc…“).
 
 ## 9. Startovní balíčky (12)
 
