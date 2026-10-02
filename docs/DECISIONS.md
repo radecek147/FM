@@ -3017,3 +3017,34 @@ animací a shaku), kap. 9 bod 9; DESIGN 13.4 a 13.6.
 
 **Proč:** CLAUDE.md kap. 2 (výkon, offline), kap. 8 (konzole bez chyb a varování, Lighthouse > 90), kap. 10
 (běží z GitHub Pages i offline).
+
+## 2026-10-02 — Fáze 10: README, snímky a GIF, licence MIT
+
+**Co:**
+
+- **README.md česky** (tykání, tón hry): popis, „inspirováno hrou Balatro“, odkaz na
+  <https://radecek147.github.io/FM/> (funguje po zapnutí Pages), GIF a 11 snímků, pravidla v kostce, ovládání,
+  počty obsahu, spuštění (Node 20+, Mac / Windows / Linux), vývojové skripty a struktura, nasazení, licence
+  a atribuce, poděkování. Počty obsahu jsou spočítané z registru (`registry()`), ne opsané z dokumentace:
+  101 žolíků (44 / 32 / 17 / 8), 30 šéfů (25 + 5), 20 štítků, 51 spotřebek (13 / 22 / 16), 15 obálek
+  (5 druhů × 3 velikosti), 24 kupónů, 12 balíčků, 8 sil piva, 20 výzev, 78 achievementů, 13 kombinací,
+  9 vylepšení, 4 pečetě, 4 edice. Konkrétní čísla obtížností README záměrně neuvádí (ladí se simulací).
+- **Média do README generuje `scripts/readme-media.ts`** (`npx tsx scripts/readme-media.ts`, volby `--no-build`,
+  `--only`, `--no-gif`): build, `vite preview` na portu 4180, Chromium z Playwrightu 1366×768, stavy připravené
+  enginem v Node a vložené do localStorage jako v e2e testech (run ve 3. patře s pěti žolíky a připravenou rukou
+  na Full house, Večerka, obálka babských rad, šéf Kontrola z finančáku na pitvu, ohraný profil pro menu,
+  sbírku, statistiky a achievementy, barvoslepý režim). Skript importuje moduly enginu přímo, ne přes
+  `src/engine/index.ts`, aby nezávisel na simulaci a botech. PNG se zmenší na paletu 256 barev
+  (ffmpeg `palettegen`/`paletteuse`, okem nerozeznatelné, ~⅓ velikosti); GIF vzniká z CDP screencastu
+  (JPEG snímky s časovými značkami → převzorkování na 12 fps → ffmpeg s paletou a rozdílovými snímky, šířka
+  900 px). Headless Chromium kurzor nekreslí, proto skript pro GIF vkládá vlastní kurzor (jen ve skriptu, ne ve
+  hře). Bez `ffmpeg` (PATH nebo proměnná `FFMPEG`) zůstanou plnobarevná PNG a GIF se přeskočí — žádná nová
+  závislost projektu.
+- **Licence kódu: MIT** (`LICENSE`). Assety třetích stran si drží své licence: Pixelify Sans (OFL 1.1),
+  ikony game-icons.net (CC BY 3.0, autoři v ASSETS.md a v Titulcích). Grafika karet, zvuk a hudba jsou
+  generované v kódu a spadají pod licenci projektu.
+
+**Proč:** CLAUDE.md kap. 9 bod 10 (README česky se screenshoty a GIFem) a kap. 0 (smí zmínit inspiraci
+Balatrem). Snímky ze skriptu jdou kdykoli přefotit po změně UI a stavy z enginu jsou deterministické (pevný
+seed, žádné klikání přes celý run). MIT je nejjednodušší permisivní licence, nekoliduje s OFL ani CC BY
+(ty platí jen pro své soubory) a nebrání komukoli hru forknout a přidat vlastní žolíky.

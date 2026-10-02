@@ -351,7 +351,7 @@ průměrném notebooku; kontroly zelené; commit `feat(ui): juice and audio`; f�
 - [x] Lighthouse: výkon a přístupnost > 90 na herní obrazovce (desktop: menu výkon 99–100 / přístupnost 100, přechod do hry 100, herní obrazovka přístupnost 100; mobil: menu 97–98; přístupnost 100 na všech obrazovkách a fázích hry)
 - [ ] Jazyková korektura všech textů (pravopis, typografie, `plural()`, tykání)
 - [ ] `ASSETS.md` kompletní s licencemi, atribuce (game-icons.net, Pixelify Sans) i v Titulcích
-- [ ] README česky: popis, screenshoty, GIF, jak spustit, „inspirováno hrou Balatro“, licence
+- [x] README česky: popis, screenshoty, GIF, jak spustit, „inspirováno hrou Balatro“, licence (`README.md`, `LICENSE` = MIT, snímky a GIF v `docs/media/` ze skriptu `scripts/readme-media.ts`; DECISIONS „Fáze 10: README, snímky a GIF, licence MIT“)
 - [x] Hra funguje offline po prvním načtení: ručně psaný service worker s precache buildu (`src/sw/sw.ts`, plugin `scripts/sw-plugin.ts`), bezpečná aktualizace; e2e `offline.spec.ts` i pod `BASE_PATH=/FM/` (ARCHITECTURE 8.2)
 - [ ] Deploy na GitHub Pages (`base`)
 - [ ] Testy a e2e zelené, pokrytí enginu ≥ 80 %
