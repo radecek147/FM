@@ -23,8 +23,11 @@
  * (`jokers.<id>.name|desc|flavor`, `bosses.<id>.name|rule|intro|defeat|death` …).
  */
 import { art } from './cs/art';
+import { achievements } from './cs/achievements';
 import { boosters } from './cs/boosters';
 import { bosses } from './cs/bosses';
+import { challenges } from './cs/challenges';
+import { meta } from './cs/meta';
 import { cli } from './cs/cli';
 import { consumables } from './cs/consumables';
 import { decks } from './cs/decks';
@@ -165,6 +168,9 @@ export const cs = {
   boosters,
   bosses,
   tags,
+  challenges,
+  achievements,
+  meta,
   /** Grafika, názvy karet, vzácnosti, tooltipy a galerie (src/ui/art, src/ui/describe.ts). */
   art,
   /** Texty skriptu `npm run simulate` (výstup simulace a textový režim `--play`). */
