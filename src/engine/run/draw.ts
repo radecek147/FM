@@ -2,12 +2,19 @@
 import type { GameCore } from '../effects/core';
 import type { Card } from '../types';
 
-/** Je karta debuffnutá aktivním šéfem? Karty vrácené do provozu (`cleanseCard`) do konce kola ne. */
+/**
+ * Je karta debuffnutá pravidlem kola — aktivním šéfem nebo pravidlem výzvy (`ChallengeDef.isCardDebuffed`, platí
+ * ve všech útratách a vypnutí šéfa ho neruší)? Karty vrácené do provozu (`cleanseCard`) do konce kola ne.
+ */
 export function bossDebuffs(core: GameCore, card: Card): boolean {
+  const round = core.state.round;
+  if (!round) return false;
   const boss = core.activeBoss();
-  if (!boss?.hooks.isCardDebuffed) return false;
-  if (core.state.round?.cleansedCards?.includes(card.id)) return false;
-  return boss.hooks.isCardDebuffed(core.bossCtx(), card);
+  const challengeRule = core.challenge()?.isCardDebuffed;
+  if (!boss?.hooks.isCardDebuffed && !challengeRule) return false;
+  if (round.cleansedCards?.includes(card.id)) return false;
+  if (challengeRule?.(core.challengeCtx(), card)) return true;
+  return boss?.hooks.isCardDebuffed?.(core.bossCtx(), card) ?? false;
 }
 
 /** Přepočítá debuffy všech karet balíčku (začátek kola, vypnutí šéfa). */
@@ -22,11 +29,12 @@ export function refreshDebuffs(core: GameCore): void {
  * karty líznuté až potom, ne pro karty, které už jsou v ruce.
  */
 export function refreshBossDebuffs(core: GameCore): void {
-  if (core.activeBoss()?.hooks.isCardDebuffed) refreshDebuffs(core);
+  if (core.activeBoss()?.hooks.isCardDebuffed || core.challenge()?.isCardDebuffed) refreshDebuffs(core);
 }
 
 /**
- * Debuffy žolíků podle pravidla šéfa (`BossHooks.isJokerDebuffed`; Jednooký hejtman, Výpadek proudu): přepočítá, kteří
+ * Debuffy žolíků podle pravidla šéfa (`BossHooks.isJokerDebuffed`; Jednooký hejtman, Výpadek proudu) nebo výzvy
+ * (`ChallengeDef.isJokerDebuffed`; Večer při svíčkách — platí i po vypnutí šéfa): přepočítá, kteří
  * žolíci mají být mimo provoz, a rozdíl promítne přes `api.setJokerDebuffed`. Žolíky vypnuté pravidlem eviduje
  * `RoundState.ruleJokerDebuffs` (podmnožina `jokerDebuffs`): žolíka, kterého už vypnulo něco jiného (Krajský úřad),
  * si pravidlo nepřivlastní, a jiné dočasné debuffy přepočet nezruší. Bez aktivního šéfa s pravidlem (vypnutý šéf,
@@ -38,13 +46,15 @@ export function refreshBossJokerDebuffs(core: GameCore): void {
   const round = s.round;
   if (!round) return;
   const rule = core.activeBoss()?.hooks.isJokerDebuffed;
+  const challengeRule = core.challenge()?.isJokerDebuffed;
   const owned = round.ruleJokerDebuffs ?? [];
-  if (!rule && owned.length === 0) return;
+  if (!rule && !challengeRule && owned.length === 0) return;
   const want = new Set<number>();
-  if (rule) {
-    const ctx = core.bossCtx();
+  if (rule || challengeRule) {
+    const ctx = rule ? core.bossCtx() : null;
+    const cctx = challengeRule ? core.challengeCtx() : null;
     s.jokers.forEach((j, index) => {
-      if (rule(ctx, j, index)) want.add(j.uid);
+      if ((cctx && challengeRule?.(cctx, j, index)) || (ctx && rule?.(ctx, j, index))) want.add(j.uid);
     });
   }
   const live = new Set(s.jokers.map((j) => j.uid));

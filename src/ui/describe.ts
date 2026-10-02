@@ -38,8 +38,11 @@ import type { I18nParams } from '../i18n/cs';
 
 export interface DescribeOptions {
   registry?: ContentRegistry;
-  /** Aktuální modifikátory runu — kvůli `probabilityMult` v popiscích „{chance} z {odds}“. */
-  mods?: Partial<Pick<Modifiers, 'probabilityMult'>>;
+  /**
+   * Aktuální modifikátory runu — kvůli `probabilityMult` v popiscích „{chance} z {odds}“ a pravidlům runu
+   * v popiscích vylepšení (`EnhancementDef.describe`, např. `glassBreakOdds`).
+   */
+  mods?: Partial<Modifiers>;
 }
 
 /** Společné texty položky obsahu. */
@@ -380,20 +383,20 @@ export function stakeTexts(defOrId: StakeDef | string, opts?: DescribeOptions): 
 
 export function challengeTexts(defOrId: ChallengeDef | string, opts?: DescribeOptions): ChallengeTexts {
   const { id, def } = resolve(reg(opts).challenges, defOrId);
+  // `{param}` v popisku i v pravidlech dosadí `ChallengeDef.params` (stejná čísla jako mechanika).
+  const params = describeParams(def?.params, undefined, opts?.mods);
   const rules = (def?.ruleKeys ?? []).map((key) =>
-    hasKey(key) ? t(key) : t(`challenges.${id}.rules.${key}`),
+    hasKey(key) ? t(key, params) : t(`challenges.${id}.rules.${key}`, params),
   );
-  return { ...baseTexts('challenges', id, {}), rules };
+  return { ...baseTexts('challenges', id, params), rules };
 }
 
 // ─────────────────────────── Úpravy karet, kombinace ───────────────────────────
 
 export function enhancementTexts(id: string, opts?: DescribeOptions): ContentTexts {
-  return baseTexts(
-    'enhancements',
-    id,
-    describeParams(reg(opts).enhancements[id]?.params, undefined, opts?.mods),
-  );
+  const def = reg(opts).enhancements[id];
+  const live = opts?.mods && def?.describe ? def.describe(opts.mods) : undefined;
+  return baseTexts('enhancements', id, describeParams(def?.params, live, opts?.mods));
 }
 
 export function sealTexts(id: string, opts?: DescribeOptions): ContentTexts {

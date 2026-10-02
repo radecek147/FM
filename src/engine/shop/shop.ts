@@ -1,5 +1,5 @@
 /** Večerka: generování nabídky, nálepky, kupóny, obálky (boostery). Ceny viz shop/prices.ts. */
-import type { CardSpec, JokerRarity, Rng } from '../content-types';
+import type { BoosterDef, CardSpec, JokerRarity, Rng } from '../content-types';
 import { BOOSTER_CARD_ENHANCE_CHANCE, BOOSTER_CARD_SEAL_CHANCE } from '../constants';
 import { createCard } from '../cards/cards';
 import { newConsumableInstance, newJokerInstance } from '../effects/api';
@@ -16,7 +16,14 @@ import type {
   ShopState,
   StickerId,
 } from '../types';
-import { compareIds, pickConsumableDefId, pickJokerDefId, rollEdition } from './pool';
+import {
+  compareIds,
+  consumableKindInRun,
+  pickConsumableDefId,
+  pickJokerDefId,
+  rollEdition,
+  stickerAllowed,
+} from './pool';
 import {
   boosterPrice,
   cardPrice,
@@ -46,11 +53,14 @@ const STICKER_ORDER: readonly StickerId[] = ['eternal', 'rental', 'perishable'];
 
 /**
  * Vylosuje nálepku pro žolíka z obchodu/obálky: přibitý → zapůjčený → zvětrávající, každý vlastním hodem
- * se šancí podle síly piva; nálepky zakázané v definici žolíka (`noEternal`…) se přeskočí bez hodu.
+ * se šancí podle síly piva; nálepky zakázané v definici žolíka (`noEternal`…) se přeskočí bez hodu. Výzva
+ * s vynucenou nálepkou (`ChallengeDef.jokerSticker`) ji dá každému žolíkovi, který ji smí nést, bez hodu.
  */
 export function rollStickers(core: GameCore, rng: Rng, defId?: string): StickerId[] {
-  const ch = stakeStickerChance(core);
   const def = defId ? core.registry.jokers[defId] : undefined;
+  const forced = core.challenge()?.jokerSticker;
+  if (forced && stickerAllowed(def, forced)) return [forced];
+  const ch = stakeStickerChance(core);
   const blocked: Record<StickerId, boolean> = {
     eternal: def?.noEternal === true,
     rental: def?.noRental === true,
@@ -98,10 +108,11 @@ type SlotKind = 'joker' | ConsumableKind | 'card';
 function generateItem(core: GameCore, rng: Rng, takenJokers: string[]): ShopItem | null {
   const m = core.mods();
   const reg = core.registry;
-  const hasConsumable = (k: ConsumableKind) =>
-    Object.values(reg.consumables).some((c) => c.kind === k && !c.noShop);
+  // Druh spotřebky, který se v runu neobjevuje (žádná v registru, nebo ji vyřadila výzva), slot nedostane.
+  const hasConsumable = (k: ConsumableKind) => consumableKindInRun(core, k);
+  const hasJokers = Object.keys(reg.jokers).length > 0 && !m.noJokers;
   const weights: { item: SlotKind; weight: number }[] = [
-    { item: 'joker' as const, weight: Object.keys(reg.jokers).length ? m.shopWeightJoker : 0 },
+    { item: 'joker' as const, weight: hasJokers ? m.shopWeightJoker : 0 },
     { item: 'pranostika' as const, weight: hasConsumable('pranostika') ? m.shopWeightPranostika : 0 },
     { item: 'rada' as const, weight: hasConsumable('rada') ? m.shopWeightRada : 0 },
     { item: 'razitko' as const, weight: hasConsumable('razitko') ? m.shopWeightRazitko : 0 },
@@ -156,7 +167,22 @@ export function generateShopItems(core: GameCore, exclude: readonly string[] = [
   return items;
 }
 
+/**
+ * Objevuje se druh obálky v tomto runu? Ne Žolíková při `Modifiers.noJokers`, ne druh vyřazený výzvou
+ * (`ChallengeDef.bannedBoosterKinds`) a ne obálka spotřebek, jejichž druh výzva vyřadila (`bannedConsumableKinds`).
+ * Platí pro Večerku i obálky zdarma ze štítků (`EngineApi.openBooster`).
+ */
+export function boosterInRun(core: GameCore, def: Pick<BoosterDef, 'kind'>): boolean {
+  const ch = core.challenge();
+  if (ch?.bannedBoosterKinds?.includes(def.kind)) return false;
+  if (def.kind === 'joker') return !core.mods().noJokers;
+  if (def.kind === 'card') return true;
+  return !ch?.bannedConsumableKinds?.includes(def.kind);
+}
+
 function boosterAllowed(core: GameCore, id: string): boolean {
+  const def = core.registry.boosters[id];
+  if (def && !boosterInRun(core, def)) return false;
   const pool = core.state.unlockedPool.boosters;
   return !pool || pool.includes(id);
 }

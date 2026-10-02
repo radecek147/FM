@@ -1,61 +1,70 @@
-/** Nastavení hráče (výchozí hodnoty viz docs/DESIGN.md 13.4). */
+/**
+ * Nastavení hráče (výchozí hodnoty viz docs/DESIGN.md 13.4). Nastavení je součást profilu (`karban.profile`,
+ * `Profile.settings` v src/engine/meta); tady je jen úložiště a promítnutí do stránky.
+ *
+ * `loadStoredProfile` obnoví profil z úložiště a nikdy ho neztratí: poškozená data nejdřív zazálohuje do
+ * `karban.profile.backup.<timestamp>` a teprve pak zapíše nový profil; starý klíč `karban.settings` (doba před
+ * profilem) zmigruje do profilu a smaže.
+ */
+import type { Profile, Settings } from '../engine/meta';
+import { restoreProfile, sanitizeSettings, serializeProfile } from '../engine/meta';
 import type { KeyValueStore } from './storage';
 import { STORAGE_KEYS } from './storage';
 
-export interface Settings {
-  sfxVolume: number; // 0–1
-  musicVolume: number; // 0–1
-  speed: number; // 1–4
-  animations: boolean;
-  screenShake: boolean;
-  colorblind: boolean;
-  uiScale: number; // 0.8–1.4
-  tutorial: boolean;
+export type { Settings };
+export { DEFAULT_SETTINGS, sanitizeSettings } from '../engine/meta';
+
+/** Předpona klíčů záloh poškozeného profilu (`karban.profile.backup.<timestamp>`). */
+export const PROFILE_BACKUP_PREFIX = `${STORAGE_KEYS.profile}.backup.`;
+
+/** Uloží profil (obálka `karban-save`, kind `profile`). Vrací false, když úložiště zápis odmítlo. */
+export function saveStoredProfile(store: KeyValueStore, profile: Profile, now: Date = new Date()): boolean {
+  return store.set(STORAGE_KEYS.profile, serializeProfile(profile, now.toISOString()));
 }
 
-export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
-  sfxVolume: 0.7,
-  musicVolume: 0.5,
-  speed: 1,
-  animations: true,
-  screenShake: true,
-  colorblind: false,
-  uiScale: 1,
-  tutorial: true,
-});
-
-function clamp(n: unknown, min: number, max: number, fallback: number): number {
-  return typeof n === 'number' && Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+/**
+ * Obnoví profil z úložiště. `writable` = profil smí přepsat uložená data (false jen u poškozeného profilu, jehož
+ * zálohu se nepodařilo zapsat — pak se nesmí přepsat, aby se data neztratila).
+ */
+function restoreFromStore(store: KeyValueStore, now: Date): { profile: Profile; writable: boolean } {
+  const legacy = store.get(STORAGE_KEYS.settings);
+  const res = restoreProfile({
+    raw: store.get(STORAGE_KEYS.profile),
+    legacySettings: legacy,
+    nowIso: now.toISOString(),
+  });
+  if (res.status === 'loaded') {
+    if (legacy !== null) store.remove(STORAGE_KEYS.settings);
+    return { profile: res.profile, writable: true };
+  }
+  if (res.status === 'corrupt') {
+    const backedUp =
+      res.backup !== undefined && store.set(`${PROFILE_BACKUP_PREFIX}${now.getTime()}`, res.backup);
+    if (!backedUp) return { profile: res.profile, writable: false };
+  }
+  if (saveStoredProfile(store, res.profile, now) && legacy !== null) store.remove(STORAGE_KEYS.settings);
+  return { profile: res.profile, writable: true };
 }
 
-export function sanitizeSettings(raw: unknown): Settings {
-  const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<Record<keyof Settings, unknown>>;
-  const d = DEFAULT_SETTINGS;
-  const bool = (v: unknown, f: boolean) => (typeof v === 'boolean' ? v : f);
-  return {
-    sfxVolume: clamp(r.sfxVolume, 0, 1, d.sfxVolume),
-    musicVolume: clamp(r.musicVolume, 0, 1, d.musicVolume),
-    speed: clamp(r.speed, 1, 4, d.speed),
-    animations: bool(r.animations, d.animations),
-    screenShake: bool(r.screenShake, d.screenShake),
-    colorblind: bool(r.colorblind, d.colorblind),
-    uiScale: clamp(r.uiScale, 0.8, 1.4, d.uiScale),
-    tutorial: bool(r.tutorial, d.tutorial),
-  };
+/**
+ * Načte profil z úložiště (nebo založí nový). Poškozený profil zazálohuje a nový zapíše jen tehdy, když se záloha
+ * povedla — jinak nechá původní data na místě a vrátí nový profil jen v paměti.
+ */
+export function loadStoredProfile(store: KeyValueStore, now: Date = new Date()): Profile {
+  return restoreFromStore(store, now).profile;
 }
 
 export function loadSettings(store: KeyValueStore): Settings {
-  const raw = store.get(STORAGE_KEYS.settings);
-  if (!raw) return { ...DEFAULT_SETTINGS };
-  try {
-    return sanitizeSettings(JSON.parse(raw));
-  } catch {
-    return { ...DEFAULT_SETTINGS };
-  }
+  return { ...loadStoredProfile(store).settings };
 }
 
+/** Zapíše nastavení do profilu v úložišti (načte → změní → uloží; nezazálohovaný poškozený profil nepřepíše). */
 export function saveSettings(store: KeyValueStore, s: Settings): void {
-  store.set(STORAGE_KEYS.settings, JSON.stringify(s));
+  const now = new Date();
+  const { profile, writable } = restoreFromStore(store, now);
+  if (!writable) return;
+  profile.settings = sanitizeSettings(s);
+  saveStoredProfile(store, profile, now);
 }
 
 /** Promítne nastavení do CSS proměnných a tříd na <html>. */

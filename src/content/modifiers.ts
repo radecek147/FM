@@ -19,6 +19,11 @@ const LUCKY_MONEY = 15;
 const LUCKY_MONEY_ODDS = 12;
 const WORN_CHIPS = 3;
 
+/** „1 z N“ prasknutí skla: `Modifiers.glassBreakOdds` (> 0), jinak výchozí `GLASS_BREAK_ODDS`. */
+function glassBreakOdds(override: number): number {
+  return override > 0 ? override : GLASS_BREAK_ODDS;
+}
+
 export const ENHANCEMENTS: EnhancementDef[] = [
   {
     id: 'bonus',
@@ -35,10 +40,14 @@ export const ENHANCEMENTS: EnhancementDef[] = [
   {
     id: 'glass',
     params: { xmult: GLASS_XMULT, chance: 1, odds: GLASS_BREAK_ODDS },
+    describe: (mods) => ({ odds: glassBreakOdds(mods.glassBreakOdds ?? 0) }),
     onScored: () => ({ xmult: GLASS_XMULT }),
-    // Hod na prasknutí jednou za ruku (afterScored), karta se zničí až po sečtení skóre.
+    // Hod na prasknutí jednou za ruku (afterScored), karta se zničí až po sečtení skóre. Výzva může šanci změnit
+    // (`Modifiers.glassBreakOdds`, Skleník: 1 z 3).
     afterScored: (ctx) =>
-      ctx.chance(1, GLASS_BREAK_ODDS) ? { destroyCard: true, message: MSG.glassBreak } : undefined,
+      ctx.chance(1, glassBreakOdds(ctx.mods.glassBreakOdds))
+        ? { destroyCard: true, message: MSG.glassBreak }
+        : undefined,
     art: { icon: 'glass-celebration', bg: '#7fb8c9', fg: '#ffffff', pattern: 'grid' },
   },
   {

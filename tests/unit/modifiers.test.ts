@@ -54,6 +54,17 @@ describe('BASE_MODIFIERS', () => {
       allFaces: false,
       mergedSuits: false,
       allCardsScore: false,
+      // pravidla runu pro výzvy (DESIGN 11.1, docs/DECISIONS.md „Výzvy: pravidla v enginu“) — výchozí vypnuto
+      noJokers: false,
+      noSkip: false,
+      autoSkip: false,
+      noReroll: false,
+      flatShopPrice: 0,
+      flatSellPrice: 0,
+      handCost: 0,
+      discardCost: 0,
+      glassBreakOdds: 0,
+      finalAnte: 8,
     };
     expect({ ...BASE_MODIFIERS }).toEqual(expected);
   });

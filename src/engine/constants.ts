@@ -119,6 +119,8 @@ export const MSG = Object.freeze({
   rentalReturned: 'joker.rentalReturned',
   /** Štítek zachránil prohrané kolo (`TagHooks.onRoundLost`). */
   tagSaved: 'tag.saved',
+  /** Výzva zakázala ruku — kombinace je silnější než `ChallengeDef.maxScoringHand` (Švejkova anabáze). */
+  challengeHandTooStrong: 'score.challengeHandTooStrong',
 } as const);
 
 export type MessageKey = (typeof MSG)[keyof typeof MSG];

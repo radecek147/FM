@@ -2,7 +2,7 @@
 import type { ConsumableDef, EditionDef, JokerDef, JokerRarity, Rng } from '../content-types';
 import { FALLBACK_JOKER_ID, RARITY_WEIGHTS } from '../constants';
 import type { GameCore } from '../effects/core';
-import type { ConsumableKind, EditionId } from '../types';
+import type { ConsumableKind, EditionId, StickerId } from '../types';
 
 export { RARITY_WEIGHTS };
 
@@ -14,18 +14,34 @@ export function compareIds(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
+/** Smí žolík nést nálepku? (`JokerDef.noEternal`, `noRental`, `noPerishable`) */
+export function stickerAllowed(def: JokerDef | undefined, sticker: StickerId): boolean {
+  if (sticker === 'eternal') return def?.noEternal !== true;
+  if (sticker === 'rental') return def?.noRental !== true;
+  return def?.noPerishable !== true;
+}
+
+/**
+ * Smí se žolík v tomto runu vůbec objevit (bez ohledu na odemčení)? Ne při `Modifiers.noJokers` (Suchý únor), ne
+ * zakázaný výzvou a ne žolík, který nesmí nést vynucenou nálepku výzvy (`ChallengeDef.jokerSticker`).
+ */
+export function jokerInRun(core: GameCore, def: JokerDef): boolean {
+  if (core.mods().noJokers || core.state.bannedJokers.includes(def.id)) return false;
+  const sticker = core.challenge()?.jokerSticker;
+  return !sticker || stickerAllowed(def, sticker);
+}
+
 function jokerAllowed(core: GameCore, def: JokerDef): boolean {
-  const s = core.state;
-  if (s.bannedJokers.includes(def.id)) return false;
-  const pool = s.unlockedPool.jokers;
+  if (!jokerInRun(core, def)) return false;
+  const pool = core.state.unlockedPool.jokers;
   if (pool && !pool.includes(def.id)) return false;
   return true;
 }
 
-/** Pivní tácek — náhradní žolík pro vyčerpaný pool (jen pokud je v registru a není v runu zakázaný). */
+/** Pivní tácek — náhradní žolík pro vyčerpaný pool (jen pokud je v registru a smí se v runu objevit). */
 function fallbackJoker(core: GameCore): string | null {
   const def = core.registry.jokers[FALLBACK_JOKER_ID];
-  return def && !core.state.bannedJokers.includes(def.id) ? def.id : null;
+  return def && jokerInRun(core, def) ? def.id : null;
 }
 
 /**
@@ -78,6 +94,37 @@ function jokerCandidates(
 }
 
 /**
+ * Náhodní startovní žolíci výzvy (`ChallengeDef.startingRandomJokers`, Velký třesk): stream `joker`, z celého registru
+ * dané vzácnosti **bez ohledu na odemčení** (výzva má pro všechny stejné podmínky), bez zakázaných, bez vlastněných,
+ * bez opakování a bez žolíků, kteří nesmí nést zadané nálepky. `noShop` (legendární) nevadí — jsou vyžádaní výslovně.
+ */
+export function pickStartingJokers(
+  core: GameCore,
+  spec: { rarity: JokerRarity; count: number; stickers?: readonly StickerId[] },
+): string[] {
+  const owned = new Set(core.state.jokers.map((j) => j.defId));
+  const pool = Object.values(core.registry.jokers)
+    .filter(
+      (d) =>
+        d.rarity === spec.rarity &&
+        jokerInRun(core, d) &&
+        !owned.has(d.id) &&
+        (spec.stickers ?? []).every((st) => stickerAllowed(d, st)),
+    )
+    .map((d) => d.id)
+    .sort(compareIds);
+  const rng = core.rng('joker');
+  const out: string[] = [];
+  const count = Number.isFinite(spec.count) ? Math.max(0, Math.trunc(spec.count)) : 0;
+  for (let i = 0; i < count && pool.length > 0; i++) {
+    const id = rng.pick(pool);
+    out.push(id);
+    pool.splice(pool.indexOf(id), 1);
+  }
+  return out;
+}
+
+/**
  * Id žolíků, ze kterých by teď losoval `pickJokerDefId` (a tedy `EngineApi.createJoker`) se stejnou `rarity` —
  * bez náhradního žolíka pro vyčerpaný pool. Bez `rarity` sjednocení vzácností, které se v obchodě losují.
  */
@@ -90,8 +137,25 @@ export function availableJokerIds(core: GameCore, opts: { rarity?: JokerRarity }
     .sort();
 }
 
+/**
+ * Smí se spotřebka v tomto runu objevit? Ne zakázaná výzvou (`ChallengeDef.bannedConsumables`) a ne druh, který výzva
+ * vyřadila (`bannedConsumableKinds`, Kamenolom: babské rady) — platí pro Večerku, obálky i efekty.
+ */
+export function consumableInRun(core: GameCore, def: Pick<ConsumableDef, 'id' | 'kind'>): boolean {
+  const ch = core.challenge();
+  if (!ch) return true;
+  return !ch.bannedConsumableKinds?.includes(def.kind) && !ch.bannedConsumables?.includes(def.id);
+}
+
+/** Objevuje se v runu aspoň jedna spotřebka daného druhu (Večerka, obálky)? */
+export function consumableKindInRun(core: GameCore, kind: ConsumableKind): boolean {
+  return Object.values(core.registry.consumables).some(
+    (c) => c.kind === kind && !c.noShop && (c.weight ?? 1) > 0 && consumableInRun(core, c),
+  );
+}
+
 function consumableAllowed(core: GameCore, def: ConsumableDef): boolean {
-  if (def.noShop) return false;
+  if (def.noShop || !consumableInRun(core, def)) return false;
   // Pranostiky tajných kombinací až po jejich objevení v tomto runu (DESIGN 2.2.4).
   if (def.hand) {
     const ht = core.registry.handTypes[def.hand];

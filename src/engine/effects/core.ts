@@ -8,6 +8,8 @@ import type {
   BossCtx,
   BossDef,
   CardCtx,
+  ChallengeDef,
+  ChallengeRoundCtx,
   ContentRegistry,
   EngineApi,
   HookResult,
@@ -220,6 +222,8 @@ export class GameCore {
     const deck = r.decks[s.deckId];
     if (deck?.passive) deltas.push(deck.passive(ctx));
     deltas.push(s.extraModifiers);
+    const challenge = this.challenge();
+    if (challenge?.passive) deltas.push(challenge.passive(ctx));
     for (const v of s.vouchers) {
       const vd = r.vouchers[v];
       if (vd?.passive) deltas.push(vd.passive(ctx));
@@ -312,6 +316,13 @@ export class GameCore {
     return Object.assign(this.baseCtx('tag'), { self: tag });
   }
 
+  /** Kontext pravidla výzvy během kola (`ChallengeDef.isCardDebuffed`, `isJokerDebuffed`; stream `misc`). */
+  challengeCtx(): ChallengeRoundCtx {
+    const round = this.state.round;
+    if (!round) throw new Error('challengeCtx: no active round');
+    return Object.assign(this.baseCtx('misc'), { round });
+  }
+
   bossCtx(layer?: CtxLayer): BossCtx {
     const round = this.state.round;
     if (!round) throw new Error('bossCtx: no active round');
@@ -329,6 +340,12 @@ export class GameCore {
     const def = this.registry.jokers[joker.defId];
     if (!def) throw new Error(`Unknown joker: ${joker.defId}`);
     return def;
+  }
+
+  /** Definice výzvy runu; null = běžný run (nebo výzva, kterou registr nezná — obsah odebraný od uložení). */
+  challenge(): ChallengeDef | null {
+    const id = this.state.challengeId;
+    return id ? (this.registry.challenges[id] ?? null) : null;
   }
 
   /** Šéf aktuálního kola, pokud je aktivní (kolo běží a šéf není vypnutý). */

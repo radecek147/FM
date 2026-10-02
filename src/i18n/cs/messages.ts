@@ -14,6 +14,7 @@ export const score = {
   luckyMoney: 'Výhra v loterii!',
   worn: 'Zase o kus ohmatanější.',
   bossAdjusted: 'Šéf to přepočítal po svém.',
+  challengeHandTooStrong: 'Moc vysoká hra. V téhle výzvě se tak silná kombinace nepočítá.',
 };
 
 /** Obecné hlášky šéfů. */

@@ -5,8 +5,14 @@ import { cardChips, cardHasSuit, createCard, hasNoRankSuit, isFaceCard } from '.
 import { handValueAtLevel } from '../hands/levels';
 import { rerollBossSlot, revalidateBoss } from '../run/bosses';
 import { drawCards, bossDebuffs, refreshDebuffs } from '../run/draw';
-import { availableJokerIds, pickConsumableDefId, pickJokerDefId } from '../shop/pool';
-import { addShopJoker, addShopVoucher, setShopJokerEdition } from '../shop/shop';
+import {
+  availableJokerIds,
+  consumableInRun,
+  pickConsumableDefId,
+  pickJokerDefId,
+  stickerAllowed,
+} from '../shop/pool';
+import { addShopJoker, addShopVoucher, boosterInRun, setShopJokerEdition } from '../shop/shop';
 import { jokerSellValue } from '../shop/prices';
 import type {
   Card,
@@ -202,11 +208,17 @@ export function createApi(core: GameCore): EngineApi {
 
     createJoker(opts: CreateJokerOptions = {}) {
       const edition = opts.edition ?? null;
+      // Suchý únor (`Modifiers.noJokers`): žolíci nevznikají ani efekty.
+      if (core.mods().noJokers) return null;
       if (!opts.ignoreSlots && !jokerHasRoom(core, edition)) return null;
       const rng = core.rng('joker');
       const defId = opts.defId ?? pickJokerDefId(core, rng, opts.rarity ? { rarity: opts.rarity } : {});
       if (!defId) return null;
-      const j = newJokerInstance(core, defId, edition, opts.stickers ?? []);
+      // Vynucená nálepka výzvy (Půjčovna kostýmů, Svatba na doživotí) platí i pro žolíky z efektů.
+      const forced = core.challenge()?.jokerSticker;
+      const stickers =
+        forced && stickerAllowed(core.registry.jokers[defId], forced) ? [forced] : (opts.stickers ?? []);
+      const j = newJokerInstance(core, defId, edition, stickers);
       addJokerInstance(core, j, { ignoreSlots: true, acquire: true });
       return j;
     },
@@ -262,6 +274,9 @@ export function createApi(core: GameCore): EngineApi {
         defId = pickConsumableDefId(core, core.rng('consumable'), opts.kind);
       }
       if (!defId) return null;
+      // Spotřebka, kterou výzva vyřadila (Kamenolom: babské rady), nevznikne ani efektem (pečeť, balíček).
+      const def = core.registry.consumables[defId];
+      if (def && !consumableInRun(core, def)) return null;
       const c = newConsumableInstance(core, defId, edition);
       addConsumableInstance(core, c, true);
       return c;
@@ -472,7 +487,9 @@ export function createApi(core: GameCore): EngineApi {
     },
 
     openBooster(boosterId) {
-      if (!core.registry.boosters[boosterId]) return false;
+      const def = core.registry.boosters[boosterId];
+      // Obálka druhu, který se v runu neobjevuje (Suchý únor: žolíci), se neotevře.
+      if (!def || !boosterInRun(core, def)) return false;
       const s = core.state;
       s.flags.pendingBoosters = [...pendingBoosterIds(s.flags), boosterId];
       return true;

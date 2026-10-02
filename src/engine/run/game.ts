@@ -17,6 +17,7 @@ import {
 import { GameCore, extend } from '../effects/core';
 import type { EventBus } from '../events';
 import { afterScoredCards, previewHand, safe, scoreHand } from '../scoring/score';
+import { pickStartingJokers } from '../shop/pool';
 import { consumableSellValue, jokerSellValue, refreshShopPrices } from '../shop/prices';
 import {
   generateShop,
@@ -114,6 +115,12 @@ export class Game {
         const joker = newJokerInstance(core, j.defId, j.edition ?? null, j.stickers ?? []);
         addJokerInstance(core, joker, { ignoreSlots: true });
       }
+      for (const spec of ch.startingRandomJokers ?? []) {
+        for (const defId of pickStartingJokers(core, spec)) {
+          const joker = newJokerInstance(core, defId, spec.edition ?? null, spec.stickers ?? []);
+          addJokerInstance(core, joker, { ignoreSlots: true });
+        }
+      }
       for (const c of ch.startingConsumables ?? [])
         addConsumableInstance(core, newConsumableInstance(core, c), true);
       for (const v of ch.startingVouchers ?? []) this.redeemVoucher(v);
@@ -124,8 +131,8 @@ export class Game {
     s.stats.maxMoney = Math.max(s.stats.maxMoney, s.money);
     this.setupAnte();
     core.emit({ type: 'runStarted', seed: s.seed });
-    // Obálka zdarma ze štítku přidaného na startu (výzva) se otevře hned.
-    this.openPendingBooster();
+    // Obálka zdarma ze štítku přidaného na startu (výzva) se otevře hned; Rovnou za ředitelem přeskočí útraty.
+    this.settle();
   }
 
   // ─────────────────────────── Veřejné API ───────────────────────────
@@ -218,8 +225,9 @@ export class Game {
       this.apply(action);
       // Pravidlo šéfa o žolících (Jednooký hejtman) platí i po přeřazení, prodeji nebo novém žolíkovi během kola.
       if (core.state.phase === 'round') refreshBossJokerDebuffs(core);
-      // Obálky zdarma ze štítků (`api.openBooster`) se otevřou, jakmile je výběr útraty nebo Večerka.
-      this.openPendingBooster();
+      // Obálky zdarma ze štítků (`api.openBooster`) se otevřou, jakmile je výběr útraty nebo Večerka; pak případné
+      // automatické přeskočení útrat (`Modifiers.autoSkip`).
+      this.settle();
       this.ensureRoundPlayable();
       core.invalidate();
       // Ceny ve Večerce sledují aktuální modifikátory (kupón se slevou, Amnestie…).
@@ -307,12 +315,19 @@ export class Game {
   private setupAnte(): void {
     const core = this.core;
     const s = core.state;
+    const challenge = core.challenge();
+    // Začátek patra pro pravidlo výzvy (Krátká paměť: úrovně kombinací zpět na 1) — před losováním útrat.
+    if (challenge?.onAnteStart) {
+      challenge.onAnteStart(extend(core.baseCtx('misc'), { ante: s.ante }));
+      core.invalidate();
+    }
     const bossId = pickBossId(core);
     // Imperial: Velká útrata má navíc pravidlo jiného běžného šéfa.
     const bigBossId = stakeBigBlindBoss(core) ? pickBigBlindBossId(core, bossId) : null;
     const tagRng = core.rng('tag');
+    const bannedTags = challenge?.bannedTags ?? [];
     const tags = Object.values(core.registry.tags)
-      .filter((t) => (t.minAnte ?? 1) <= s.ante)
+      .filter((t) => (t.minAnte ?? 1) <= s.ante && !bannedTags.includes(t.id))
       .map((t) => t.id)
       .sort();
     // Malá a Velká mají různé štítky (DESIGN 7); stejný jen tehdy, když je v poolu jediný.
@@ -321,8 +336,10 @@ export class Game {
       if (pool.length > 0) return tagRng.pick(pool);
       return tags.length > 0 ? tagRng.pick(tags) : null;
     };
-    const smallTag = pickTag(null);
-    const bigTag = pickTag(smallTag);
+    // Útraty, které nejde přeskočit (`Modifiers.noSkip`), štítek nemají.
+    const noSkip = core.mods().noSkip;
+    const smallTag = noSkip ? null : pickTag(null);
+    const bigTag = noSkip ? null : pickTag(smallTag);
     s.blinds = BLIND_KINDS.map((kind): BlindSlot => ({
       kind,
       bossId: kind === 'boss' ? bossId : kind === 'big' ? bigBossId : null,
@@ -405,6 +422,12 @@ export class Game {
 
   private skipBlind(): void {
     this.requirePhase('blind_select');
+    if (this.core.mods().noSkip) fail('cannotSkip');
+    this.skipCurrentBlind();
+  }
+
+  /** Přeskočí aktuální Malou/Velkou útratu a dá její štítek (akce hráče i automatické přeskočení). */
+  private skipCurrentBlind(): void {
     const core = this.core;
     const s = core.state;
     const blind = this.currentBlind();
@@ -483,6 +506,9 @@ export class Game {
     s.stats.handsPlayed++;
     s.stats.cardsPlayed += cardIds.length;
     s.stats.handTypeCounts[type] = (s.stats.handTypeCounts[type] ?? 0) + 1;
+    // Byrokracie: poplatek za zahranou ruku (jen do dluhového limitu — ruku jde zahrát vždy).
+    const handCost = core.mods().handCost;
+    if (handCost > 0) core.api.addMoney(-handCost, 'handCost');
 
     const boss = core.activeBoss();
     if (boss?.hooks.afterHandPlayed) {
@@ -614,6 +640,9 @@ export class Game {
     s.stats.discardsUsed++;
     s.stats.cardsDiscarded += cardIds.length;
     core.emit({ type: 'cardsDiscarded', cardIds: [...cardIds] });
+    // Byrokracie: poplatek za zahození (jen do dluhového limitu).
+    const discardCost = core.mods().discardCost;
+    if (discardCost > 0) core.api.addMoney(-discardCost, 'discardCost');
 
     core.eachJoker('onDiscard', { discarded: cards, firstDiscard }, (results, owner) => {
       for (const r of results) {
@@ -799,7 +828,8 @@ export class Game {
       c.faceDown = false;
     }
     core.invalidate();
-    if (round.blind === 'boss' && s.ante >= FINAL_ANTE && !s.endless) {
+    // Výhra = porážka šéfa patra `Modifiers.finalAnte` (výchozí 8; Konec světa 12).
+    if (round.blind === 'boss' && s.ante >= core.mods().finalAnte && !s.endless) {
       s.phase = 'victory';
       core.emit({ type: 'victory', ante: s.ante });
     } else {
@@ -967,6 +997,25 @@ export class Game {
   }
 
   /**
+   * Dorovnání stavu po akci: otevře čekající obálku zdarma a při `Modifiers.autoSkip` (Rovnou za ředitelem) přeskočí
+   * aktuální Malou nebo Velkou útratu i se štítkem — opakovaně, dokud není na řadě šéf nebo se neotevře obálka
+   * (po jejím zavření se pokračuje v další akci).
+   */
+  private settle(): void {
+    const core = this.core;
+    const s = core.state;
+    // Pojistka: v jednom patře jsou nejvýš dvě útraty k přeskočení.
+    for (let i = 0; i < 4; i++) {
+      this.openPendingBooster();
+      if (s.phase !== 'blind_select' || !core.mods().autoSkip) return;
+      const blind = s.blinds[s.blindIndex];
+      if (!blind || blind.kind === 'boss' || blind.status !== 'current') return;
+      this.skipCurrentBlind();
+      core.invalidate();
+    }
+  }
+
+  /**
    * Otevře první obálku zdarma z fronty `flags.pendingBoosters` (`api.openBooster`), je-li fáze výběr útraty nebo
    * Večerka — zavřením se vrátí tam a další z fronty se otevře po té akci. Neznámá obálka se z fronty zahodí.
    */
@@ -1028,6 +1077,8 @@ export class Game {
     const core = this.core;
     const s = core.state;
     const shop = this.shop();
+    // Rychlík bez zastávky: Večerka nemá přehození (ani bezplatná).
+    if (core.mods().noReroll) fail('cannotUse');
     // Zaplacená cena (0 = bezplatné přehození ze štítku); cena dalšího přehození je v `shop.rerollCost`.
     let cost = 0;
     if (shop.freeRerolls > 0) {

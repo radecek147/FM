@@ -14,7 +14,7 @@ import { cardChips } from '../cards/cards';
 import { MAX_ACTIVATIONS_PER_CARD, MSG } from '../constants';
 import type { CtxLayer, GameCore } from '../effects/core';
 import { toResults } from '../effects/core';
-import { detectHand } from '../hands/detect';
+import { compareHandTypes, detectHand } from '../hands/detect';
 import { handValueAtLevel } from '../hands/levels';
 import type { Card, DetectedHand, HandPreview, ScoreResult, ScoreStep } from '../types';
 
@@ -125,6 +125,15 @@ export function detectFor(core: GameCore, cards: readonly Card[]): DetectedHand 
 }
 
 /**
+ * Pravidlo výzvy „silnější kombinace neskórují“ (`ChallengeDef.maxScoringHand`, Švejkova anabáze): i18n klíč důvodu,
+ * když je kombinace silnější než povolená, jinak null. Čistá funkce (náhled i skórování).
+ */
+export function challengeBlockedReason(core: GameCore, hand: DetectedHand): string | null {
+  const max = core.challenge()?.maxScoringHand;
+  return max && compareHandTypes(hand.type, max) > 0 ? MSG.challengeHandTooStrong : null;
+}
+
+/**
  * Živý náhled „čipy × mult“ pro vybrané karty (bez náhody a bez efektů). Obsahuje-li výběr kartu lícem
  * dolů, náhled se nepočítá (`hidden`).
  */
@@ -139,12 +148,14 @@ export function previewHand(core: GameCore, cardIds: readonly number[]): HandPre
   const boss = core.activeBoss();
   const modifyBase = boss?.hooks.modifyBase;
   const validateHand = boss?.hooks.validateHand;
-  let blockedReason: string | null = null;
+  // Pravidlo výzvy má přednost před šéfem (ruka by se zakázala dřív, než se šéf zeptá).
+  let blockedReason: string | null = challengeBlockedReason(core, hand);
   if ((modifyBase || validateHand) && core.state.round) {
     const layer = core.ctxLayer(makeInfo(core, hand, cards, { chips, mult }));
     const base = { chips, mult };
     // Náhled je dotaz UI: šéf v něm nesmí posunout RNG (jinak by run závisel na tom, kolikrát se UI zeptá).
-    if (validateHand) blockedReason = core.readOnly(() => validateHand(bossScoringCtx(core, layer))) ?? null;
+    if (validateHand && !blockedReason)
+      blockedReason = core.readOnly(() => validateHand(bossScoringCtx(core, layer))) ?? null;
     if (modifyBase)
       ({ chips, mult } = core.readOnly(() => bossBase(modifyBase(bossScoringCtx(core, layer), base), base)));
   }
@@ -206,6 +217,20 @@ export function scoreHand(core: GameCore, playedIds: readonly number[]): ScoreRe
     destroyedCardIds: [...acc.destroy],
     moneyEarned: acc.money,
   });
+
+  // Výzva může ruku zakázat (Švejkova anabáze) — ruka se spotřebuje a neskóruje, stejně jako u šéfa.
+  const challengeReason = challengeBlockedReason(core, hand);
+  if (challengeReason) {
+    const challengeId = core.state.challengeId ?? undefined;
+    acc.steps.push({
+      source: 'challenge',
+      ...(challengeId ? { defId: challengeId } : {}),
+      message: challengeReason,
+      chipsAfter: 0,
+      multAfter: 0,
+    });
+    return result(challengeReason, 0);
+  }
 
   // Šéf může ruku zakázat (ruka se spotřebuje, neskóruje).
   const boss = core.activeBoss();

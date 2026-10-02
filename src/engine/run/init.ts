@@ -4,7 +4,7 @@ import { createCard, standardDeckSpecs } from '../cards/cards';
 import { MAX_STAKE, STARTING_MONEY } from '../constants';
 import { initialHandLevels } from '../hands/levels';
 import { createRngStates, rngFromState } from '../rng/rng';
-import type { RunState, RunStats } from '../types';
+import type { HandType, RunState, RunStats } from '../types';
 
 /** Aktuální verze formátu uloženého runu (viz engine/save/migrations.ts). */
 export const RUN_STATE_VERSION = 1;
@@ -57,19 +57,28 @@ export function emptyStats(money: number): RunStats {
  */
 export function createRunState(opts: NewRunOptions & { seed: string }, registry: ContentRegistry): RunState {
   const rng = createRngStates(opts.seed);
-  const deckDef = registry.decks[opts.deckId];
   const challenge = opts.challengeId ? registry.challenges[opts.challengeId] : undefined;
-  const specs = startingDeckSpecs(registry, opts.deckId, opts.challengeId, rngFromState(rng.deck));
+  // Výzva určuje balíček i sílu piva sama (DESIGN 11.1: hraje se na Desítce, pokud výzva neříká jinak).
+  const deckId = challenge?.deckId ?? opts.deckId;
+  const stake = challenge ? (challenge.stake ?? 1) : opts.stake;
+  const deckDef = registry.decks[deckId];
+  const specs = startingDeckSpecs(registry, deckId, opts.challengeId, rngFromState(rng.deck));
   let nextUid = 1;
   const deck = specs.map((spec) => createCard(nextUid++, spec));
   const money = challenge?.startingMoney ?? deckDef?.startingMoney ?? STARTING_MONEY;
+  const handLevels = initialHandLevels();
+  // Startovní úrovně kombinací výzvy (Švejkova anabáze, Minimalista, Mariáš u Vaňků) — celé číslo ≥ 1.
+  for (const [hand, level] of Object.entries(challenge?.startingHandLevels ?? {}) as [HandType, number][]) {
+    const hl = handLevels[hand];
+    if (hl && Number.isFinite(level)) hl.level = Math.max(1, Math.trunc(level));
+  }
 
   return {
     version: RUN_STATE_VERSION,
     seed: opts.seed,
     rng,
-    deckId: opts.deckId,
-    stake: Number.isFinite(opts.stake) ? Math.max(1, Math.min(MAX_STAKE, Math.trunc(opts.stake))) : 1,
+    deckId,
+    stake: Number.isFinite(stake) ? Math.max(1, Math.min(MAX_STAKE, Math.trunc(stake))) : 1,
     challengeId: opts.challengeId ?? null,
     daily: opts.daily ?? false,
     ante: 1,
@@ -82,7 +91,7 @@ export function createRunState(opts: NewRunOptions & { seed: string }, registry:
     round: null,
     jokers: [],
     consumables: [],
-    handLevels: initialHandLevels(),
+    handLevels,
     discoveredHands: [],
     vouchers: [],
     tags: [],

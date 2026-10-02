@@ -32,24 +32,27 @@ export function roundHalfUp(x: number): number {
 
 /**
  * Výsledná cena položky ve Večerce ze základní ceny (vč. příplatků). `free` = zdarma (cena 0).
- * Základ ≤ 0 se bere jako zdarma.
+ * Základ ≤ 0 se bere jako zdarma. Pevná cena (`Modifiers.flatShopPrice`, Jednotná cena) přebíjí slevy i příplatky.
  */
 export function shopPrice(
-  mods: Pick<Modifiers, 'shopDiscountPct' | 'shopPriceAdd'>,
+  mods: Pick<Modifiers, 'shopDiscountPct' | 'shopPriceAdd'> & Partial<Pick<Modifiers, 'flatShopPrice'>>,
   base: number,
   free = false,
 ): number {
   if (free || base <= 0) return 0;
+  if (mods.flatShopPrice && mods.flatShopPrice > 0) return mods.flatShopPrice;
   // round(base × (100 − sleva) / 100) polovinou nahoru — v celých číslech (bez chyb doublu u x,5).
   const discounted = Math.floor((base * (100 - mods.shopDiscountPct) + 50) / 100);
   return Math.max(1, discounted) + mods.shopPriceAdd;
 }
 
-/** Cena příštího placeného přehození (sleva neplatí, `shopPriceAdd` ano). */
+/** Cena příštího placeného přehození (sleva neplatí, `shopPriceAdd` ano; pevná cena `flatShopPrice` přebíjí vše). */
 export function rerollPrice(
-  mods: Pick<Modifiers, 'rerollBaseCost' | 'rerollCostStep' | 'shopPriceAdd'>,
+  mods: Pick<Modifiers, 'rerollBaseCost' | 'rerollCostStep' | 'shopPriceAdd'> &
+    Partial<Pick<Modifiers, 'flatShopPrice'>>,
   paidRerolls: number,
 ): number {
+  if (mods.flatShopPrice && mods.flatShopPrice > 0) return mods.flatShopPrice;
   return Math.max(0, mods.rerollBaseCost + mods.rerollCostStep * paidRerolls) + mods.shopPriceAdd;
 }
 
@@ -68,12 +71,18 @@ export function jokerBasePrice(core: GameCore, joker: JokerInstance, noEditionSu
   return (core.registry.jokers[joker.defId]?.cost ?? 0) + edition;
 }
 
-/** Základní cena spotřebky: cena z definice + edice. */
+/**
+ * Základní cena spotřebky: cena z definice (nebo pevná cena druhu z výzvy, `ChallengeDef.consumableCost` — Krátká
+ * paměť: pranostiky 1 Kč) + edice.
+ */
 export function consumableBasePrice(
   core: GameCore,
   c: Pick<ConsumableInstance, 'defId' | 'edition'>,
 ): number {
-  return (core.registry.consumables[c.defId]?.cost ?? 0) + editionPriceAdd(core, c.edition);
+  const def = core.registry.consumables[c.defId];
+  const override = def ? core.challenge()?.consumableCost?.[def.kind] : undefined;
+  const cost = typeof override === 'number' && Number.isFinite(override) ? Math.max(0, override) : def?.cost;
+  return (cost ?? 0) + editionPriceAdd(core, c.edition);
 }
 
 /** Základní cena hrací karty: 2 Kč + vylepšení 1 Kč + pečeť 2 Kč + edice. */
@@ -123,18 +132,25 @@ export function voucherPrice(core: GameCore, voucherId: string, free = false): n
   return shopPrice(core.mods(), core.registry.vouchers[voucherId]?.cost ?? 0, free);
 }
 
-/** Prodejní cena žolíka (zapůjčený `RENTAL_SELL_PRICE`). Přibitého prodat nejde — to hlídá `Game`. */
+/**
+ * Prodejní cena žolíka (zapůjčený `RENTAL_SELL_PRICE`; pevná `Modifiers.flatSellPrice` přebíjí vše). Přibitého
+ * prodat nejde — to hlídá `Game`.
+ */
 export function jokerSellValue(core: GameCore, joker: JokerInstance): number {
+  const flat = core.mods().flatSellPrice;
+  if (flat > 0) return flat;
   if (joker.stickers.includes('rental')) return RENTAL_SELL_PRICE;
   const base = (core.registry.jokers[joker.defId]?.cost ?? 0) + editionPriceAdd(core, joker.edition);
   return Math.max(1, Math.floor(base / 2)) + joker.sellBonus;
 }
 
-/** Prodejní cena spotřebky (pranostika 1 Kč, babská rada 2 Kč, razítko 3 Kč; + edice). */
+/** Prodejní cena spotřebky (pranostika 1 Kč, babská rada 2 Kč, razítko 3 Kč; + edice; nebo `flatSellPrice`). */
 export function consumableSellValue(
   core: GameCore,
   c: Pick<ConsumableInstance, 'defId' | 'edition'>,
 ): number {
+  const flat = core.mods().flatSellPrice;
+  if (flat > 0) return flat;
   return Math.max(1, Math.floor(consumableBasePrice(core, c) / 2));
 }
 

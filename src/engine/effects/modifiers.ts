@@ -3,6 +3,7 @@
  * Čísla se sčítají, pole končící na `Mult` se násobí, booleany se ORují.
  * Výchozí hodnoty = docs/DESIGN.md kap. 2.10 (`BASE_MODIFIERS`) + příloha B.
  */
+import { FINAL_ANTE } from '../constants';
 import type { ModifierDelta, Modifiers } from '../types';
 
 export const BASE_MODIFIERS: Readonly<Modifiers> = Object.freeze({
@@ -49,6 +50,17 @@ export const BASE_MODIFIERS: Readonly<Modifiers> = Object.freeze({
   allCardsScore: false,
   disableEnhancements: false,
   fixedCardChips: 0,
+
+  noJokers: false,
+  noSkip: false,
+  autoSkip: false,
+  noReroll: false,
+  flatShopPrice: 0,
+  flatSellPrice: 0,
+  handCost: 0,
+  discardCost: 0,
+  glassBreakOdds: 0,
+  finalAnte: FINAL_ANTE,
 });
 
 const MODIFIER_KEYS = Object.keys(BASE_MODIFIERS) as (keyof Modifiers)[];
@@ -140,6 +152,13 @@ export function clampModifiers(m: Modifiers): Modifiers {
   m.bossTargetMult = Math.max(0, m.bossTargetMult);
   m.fixedCardChips = Math.max(0, m.fixedCardChips);
   m.debtLimit = Math.max(0, m.debtLimit);
+  m.flatShopPrice = Math.max(0, m.flatShopPrice);
+  m.flatSellPrice = Math.max(0, m.flatSellPrice);
+  m.handCost = Math.max(0, m.handCost);
+  m.discardCost = Math.max(0, m.discardCost);
+  m.glassBreakOdds = Math.max(0, m.glassBreakOdds);
+  // Patro výhry je celé číslo ≥ 1 (porovnává se s `RunState.ante`).
+  m.finalAnte = Math.max(1, Math.round(m.finalAnte));
   return m;
 }
 

@@ -183,6 +183,37 @@ export interface Modifiers {
    * Vylepšení a edice fungují normálně (kamenná tedy dá pevné čipy + svých +50).
    */
   fixedCardChips: number;
+
+  // ── pravidla runu (hlavně výzvy, DESIGN 11.1) ──
+  /**
+   * Žolíci se v runu neobjevují (Suchý únor): Večerka, obálky ani efekty (`createJoker`, `addShopJoker`) žádného
+   * nenabídnou a Žolíkové obálky se neprodávají ani neotevírají.
+   */
+  noJokers: boolean;
+  /** Malou ani Velkou útratu nejde přeskočit (Rychlík bez zastávky); útraty pak nemají štítek. */
+  noSkip: boolean;
+  /** Malá a Velká útrata se ve výběru útraty přeskočí samy a štítky hráč dostane (Rovnou za ředitelem). */
+  autoSkip: boolean;
+  /** Večerka nemá přehození — ani placená, ani bezplatná (Rychlík bez zastávky). */
+  noReroll: boolean;
+  /**
+   * Pevná cena všeho ve Večerce v Kč (Jednotná cena: 5) — žolíci, spotřebky, karty, obálky, kupóny i přehození;
+   * slevy ani `shopPriceAdd` se nepočítají, položky zdarma zůstávají zdarma. 0 = vypnuto.
+   */
+  flatShopPrice: number;
+  /** Pevná prodejní cena žolíků i spotřebek v Kč (Jednotná cena: 2); přibitý se prodat nedá dál. 0 = vypnuto. */
+  flatSellPrice: number;
+  /** Kč za každou zahranou ruku (Byrokracie); srážka jen do dluhového limitu. */
+  handCost: number;
+  /** Kč za každé zahození (Byrokracie); srážka jen do dluhového limitu. */
+  discardCost: number;
+  /** Skleněná karta praská 1 z `glassBreakOdds` (Skleník: 3). 0 = výchozí šance vylepšení (1 z 5). */
+  glassBreakOdds: number;
+  /**
+   * Patro, jehož šéfa je třeba porazit pro výhru (výchozí `FINAL_ANTE` = 8; Konec světa +4 = 12). Finálový šéf
+   * přijde v patře 8 a jeho násobcích **i** v tomto patře (`isFinalAnte`).
+   */
+  finalAnte: number;
 }
 
 export type ModifierDelta = Partial<Modifiers>;
@@ -497,7 +528,17 @@ export type ActionResult = { ok: true; events: GameEvent[] } | { ok: false; erro
 // ─────────────────────────── Skórování ───────────────────────────
 
 export type ScoreSourceKind =
-  'hand' | 'card' | 'held' | 'joker' | 'boss' | 'deck' | 'consumable' | 'tag' | 'voucher' | 'stake';
+  | 'hand'
+  | 'card'
+  | 'held'
+  | 'joker'
+  | 'boss'
+  | 'deck'
+  | 'consumable'
+  | 'tag'
+  | 'voucher'
+  | 'stake'
+  | 'challenge';
 
 export interface ScoreStep {
   source: ScoreSourceKind;

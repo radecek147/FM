@@ -30,6 +30,7 @@ import type {
   Suit,
   TagInstance,
 } from './types';
+import type { AchievementDef } from './meta/types';
 
 // ─────────────────────────── RNG ───────────────────────────
 
@@ -377,15 +378,86 @@ export interface ArtSpec {
   prop?: string;
 }
 
+/**
+ * Celoživotní počítadla profilu — součty ze všech započítaných runů (hlavní hra, oficiální denní run, výzvy;
+ * ne seedované runy). Vyhodnocuje meta (`src/engine/meta`), DESIGN 11.3 a 11.5.
+ */
+export type UnlockTotalStat =
+  | 'handsPlayed'
+  | 'cardsPlayed'
+  | 'discards'
+  | 'cardsDiscarded'
+  | 'moneyEarned'
+  | 'moneySpent'
+  | 'jokersBought'
+  | 'jokersSold'
+  | 'vouchersBought'
+  | 'consumablesUsed'
+  | 'pranostikyUsed'
+  | 'radyUsed'
+  | 'razitkaUsed'
+  | 'rerolls'
+  | 'blindsSkipped'
+  | 'roundsWon'
+  | 'bossesDefeated'
+  | 'glassBroken'
+  | 'boostersOpened'
+  | 'cardsAdded'
+  | 'cardsDestroyed'
+  /** Kola vyhraná hned první rukou. */
+  | 'firstHandRoundWins'
+  | 'shopsEntered';
+
+/** Rekordy profilu — maximum dosažené v jednom okamžiku některého započítaného runu. */
+export type UnlockRecordStat =
+  | 'maxMoney'
+  | 'maxJokers'
+  /** Karty s pečetí v balíčku najednou. */
+  | 'maxSealedCards'
+  | 'maxVouchers'
+  /** Nejvyšší úroveň libovolné kombinace. */
+  | 'maxHandLevel'
+  | 'highestAnte'
+  | 'bestHandScore'
+  | 'bestRoundScore';
+
+export type UnlockStat = UnlockTotalStat | UnlockRecordStat;
+
+/** Kategorie, ve kterých meta sleduje objevené položky a které umí podmínka `discover`. */
+export type UnlockDiscoverCategory = 'jokers' | 'consumables' | 'vouchers' | 'tags' | 'bosses' | 'boosters';
+
+/**
+ * Podmínka odemčení (vyhodnocuje `evaluateUnlock` v `src/engine/meta/unlocks.ts` jen ze stavu profilu, takže jde
+ * ukázat i průběh ve sbírce). Výhry počítají hlavní hru a oficiální denní run (ne výzvy ani seedované runy).
+ */
 export type UnlockCondition =
+  /** Vyhraj run (volitelně s balíčkem a na síle piva aspoň `stake`). */
   | { type: 'winRun'; deck?: string; stake?: number }
+  /** Dosáhni patra (rekord profilu, i v nekonečném režimu). */
   | { type: 'reachAnte'; ante: number }
+  /** Zahraj kombinaci celkem `count`× (výchozí 1). */
   | { type: 'playHand'; hand: HandType; count?: number }
   | { type: 'scoreInHand'; atLeast: number }
+  /** Měj najednou aspoň tolik Kč. */
   | { type: 'haveMoney'; atLeast: number }
   | { type: 'winsTotal'; count: number }
   | { type: 'runsTotal'; count: number }
-  | { type: 'discover'; category: 'jokers' | 'consumables' | 'vouchers'; count: number }
+  | { type: 'discover'; category: UnlockDiscoverCategory; count: number }
+  /** Celoživotní počítadlo nebo rekord profilu ≥ `atLeast`. */
+  | { type: 'stat'; stat: UnlockStat; atLeast: number }
+  /** Dokonči kolo s nejvýš `atMost` Kč (Sekera: 0; Dlužník: −1 = v mínusu). */
+  | { type: 'roundEndMoney'; atMost: number }
+  /** Zvyš kombinaci (libovolnou, nebo `hand`) aspoň na úroveň `level`. */
+  | { type: 'handLevel'; level: number; hand?: HandType }
+  /** Poraz šéfa (`boss`, nebo libovolného) celkem `count`× (výchozí 1). */
+  | { type: 'beatBoss'; boss?: string; count?: number }
+  /** Použij spotřebku (druhu `kind`, konkrétní `id`, nebo libovolnou) celkem `count`× (výchozí 1). */
+  | { type: 'useConsumable'; kind?: ConsumableKind; id?: string; count?: number }
+  /** Dokonči výzvu (`challenge`, nebo libovolnou různou) — `count` různých výzev (výchozí 1). */
+  | { type: 'winChallenge'; challenge?: string; count?: number }
+  /** Získej achievement. */
+  | { type: 'achievement'; id: string }
+  /** Vlastní vyhodnocovač z registru `CUSTOM_UNLOCKS` v `src/engine/meta/unlocks.ts`. */
   | { type: 'custom'; id: string };
 
 export interface JokerDef {
@@ -424,6 +496,11 @@ export interface EnhancementDef {
   /** Divoká: patří do všech barev. */
   allSuits?: boolean;
   params?: Record<string, number | string>;
+  /**
+   * Hodnoty do popisku podle pravidel runu, přepíšou `params` (Skleněná: `odds` z `Modifiers.glassBreakOdds`).
+   * Čistá funkce; UI ji volá s modifikátory runu, pokud je má.
+   */
+  describe?(mods: Readonly<Partial<Modifiers>>): Record<string, number | string>;
   onScored?(ctx: CardCtx): HookResult;
   /**
    * Jednou za zahranou ruku, ve které karta skórovala (i když se aktivovala vícekrát), až po sečtení skóre
@@ -686,20 +763,84 @@ export interface StakeDef {
   art: ArtSpec;
 }
 
+/** Kontext pravidla výzvy během kola (stejný tvar jako u šéfa; RNG stream `misc`). */
+export type ChallengeRoundCtx = BaseCtx & { readonly round: Readonly<RoundState> };
+
+/**
+ * Výzva (DESIGN 11.1): předpřipravený run se zvláštními pravidly. Číselná a přepínací pravidla jdou přes
+ * `extraModifiers` (zkopírují se do `RunState.extraModifiers`, např. `noJokers`, `noSkip`, `flatShopPrice`,
+ * `finalAnte`); pravidla s jinými daty (kombinace, nálepky, druhy obsahu) čte engine živě z definice podle
+ * `RunState.challengeId` (`GameCore.challenge()`).
+ */
 export interface ChallengeDef {
   id: string;
   deckId: string;
+  /** Síla piva výzvy (výchozí 1 = Desítka). `NewRunOptions.stake` se u výzvy ignoruje. */
+  stake?: number;
   extraModifiers?: ModifierDelta;
   startingMoney?: number;
+  /** Startovní žolíci — nejsou „získaní“ (`onAcquire` se nevolá) a nálepky mají přesně podle zadání. */
   startingJokers?: { defId: string; edition?: EditionId | null; stickers?: StickerId[] }[];
+  /**
+   * Náhodní startovní žolíci (Velký třesk: 2 legendární přibití) — stream `joker`, z celého registru bez ohledu
+   * na odemčení (`unlockedPool`), bez zakázaných, bez opakování a bez žolíků, kteří zadanou nálepku nesmí mít.
+   * Jako u `startingJokers` se `onAcquire` nevolá.
+   */
+  startingRandomJokers?: {
+    rarity: JokerRarity;
+    count: number;
+    edition?: EditionId | null;
+    stickers?: StickerId[];
+  }[];
   startingConsumables?: string[];
   startingVouchers?: string[];
+  /** Startovní úrovně kombinací (Švejkova anabáze: Vysoká karta a Dvojice na úrovni 6). */
+  startingHandLevels?: Partial<Record<HandType, number>>;
   bannedJokers?: string[];
   bannedVouchers?: string[];
+  /** Spotřebky, které se v runu neobjevují (Večerka, obálky, efekty). */
+  bannedConsumables?: string[];
+  /** Druhy spotřebek, které se v runu neobjevují — Večerka, obálky ani efekty (Kamenolom: babské rady). */
+  bannedConsumableKinds?: ConsumableKind[];
+  /** Druhy obálek, které se ve Večerce neprodávají a štítky je neotevřou (Mariáš u Vaňků: hrací karty). */
+  bannedBoosterKinds?: BoosterKind[];
+  /** Štítky, které se za přeskočení útrat nenabízejí (pravidla výzvy by je udělala bezcennými). */
+  bannedTags?: string[];
+  /**
+   * Nálepka všech žolíků, které hráč v runu získá — Večerka, obálky i efekty (Půjčovna kostýmů: zapůjčený,
+   * Svatba na doživotí: přibitý). Žolíci, kteří ji nesmí mít (`noRental`, `noEternal`…), se v runu neobjevují.
+   */
+  jokerSticker?: StickerId;
+  /**
+   * Nejsilnější kombinace, která skóruje (Švejkova anabáze: Dvojice). Silnější ruka se spotřebuje a dá 0 bodů
+   * (`ScoreResult.blockedReason` = `MSG.challengeHandTooStrong`), stejně jako ruka zakázaná šéfem.
+   */
+  maxScoringHand?: HandType;
+  /** Pevná základní cena spotřebek podle druhu (Krátká paměť: pranostiky 1 Kč); prodej = polovina jako jinak. */
+  consumableCost?: Partial<Record<ConsumableKind, number>>;
   customDeck?: CardSpec[];
   /** Další pravidla (i18n klíče pod `challenges.<id>.rules`). */
   ruleKeys?: string[];
+  /** Čísla do textů výzvy (`desc`, `flavor` i `rules.<klíč>` s `{param}`) — texty a pravidla mají stejná čísla. */
+  params?: Record<string, number | string>;
   onRunStart?(ctx: BaseCtx): void;
+  /** Trvalá změna pravidel podle stavu runu (čistá funkce, jako `StakeDef.passive`). */
+  passive?(ctx: BaseCtx): ModifierDelta;
+  /**
+   * Začátek každého patra — na startu runu (patro 1, po `onRunStart`) a po každé porážce šéfa (před losováním
+   * útrat nového patra). Ne při posunu patra efektem (`changeAnte`). Krátká paměť: úrovně kombinací zpět na 1.
+   */
+  onAnteStart?(ctx: BaseCtx & { readonly ante: number }): void;
+  /**
+   * Je karta podle pravidla výzvy debuffnutá? Platí ve všech útratách (ne jen u šéfa) a nezávisle na šéfovi
+   * (vypnutí šéfa ho neruší); karty vrácené do provozu (`cleanseCard`) ne. Čtyři roční období.
+   */
+  isCardDebuffed?(ctx: ChallengeRoundCtx, card: Card): boolean;
+  /**
+   * Má být žolík na pozici `index` podle pravidla výzvy mimo provoz? Přepočítává se stejně jako
+   * `BossHooks.isJokerDebuffed` (sdílí `RoundState.ruleJokerDebuffs`). Večer při svíčkách.
+   */
+  isJokerDebuffed?(ctx: ChallengeRoundCtx, joker: JokerInstance, index: number): boolean;
   art: ArtSpec;
   unlock?: UnlockCondition;
 }
@@ -720,11 +861,17 @@ export interface ContentRegistry {
   decks: Record<string, DeckDef>;
   stakes: Record<string, StakeDef>;
   challenges: Record<string, ChallengeDef>;
+  /**
+   * Achievementy (DESIGN 11.2) — čte je jen meta (`src/engine/meta`), run je nepoužívá. Volitelné, aby testovací
+   * registry enginu nemusely nic doplňovat (chybí = žádné achievementy).
+   */
+  achievements?: Record<string, AchievementDef>;
 }
 
 export interface NewRunOptions {
   seed?: string;
   deckId: string;
+  /** Síla piva 1–8; u výzvy se ignoruje (platí `ChallengeDef.stake`, výchozí 1). */
   stake: number;
   challengeId?: string | null;
   daily?: boolean;

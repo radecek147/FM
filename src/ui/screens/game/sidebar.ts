@@ -7,7 +7,6 @@
  * Presenter si během skórování převezme kombinaci a počítadla (`showScoring`, `setChipsMult`…).
  */
 import type { BlindKind, HandType } from '../../../engine';
-import { FINAL_ANTE } from '../../../engine';
 import { hasKey, t } from '../../../i18n/cs';
 import { formatMoney, formatNumber } from '../../../i18n/format';
 import { blindArt } from '../../art/art';
@@ -333,7 +332,8 @@ export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
     moneyEl.classList.toggle('is-negative', s.money < 0);
     setText(
       anteEl,
-      s.endless ? formatNumber(s.ante) : t('game.sidebar.anteValue', { ante: s.ante, final: FINAL_ANTE }),
+      // Patro výhry podle pravidel runu (výzva Konec světa: 12).
+      s.endless ? formatNumber(s.ante) : t('game.sidebar.anteValue', { ante: s.ante, final: m.finalAnte }),
     );
     setText(anteNote, s.endless ? t('game.sidebar.endless') : '');
     anteNote.hidden = !s.endless;

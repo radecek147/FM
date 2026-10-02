@@ -89,7 +89,7 @@ Denní run: `dailySeed(date)` = `DEN-YYYYMMDD` (UTC).
 | `engine/run/`             | `Game` — stavový automat runu (útraty, kola, odměny, konec, nekonečný režim), cíle, losování šéfů (`bosses.ts`)                   |
 | `engine/shop/`            | generování obchodu a boosterů (`shop.ts`), pooly a edice (`pool.ts`), ceny a prodej (`prices.ts`)                                 |
 | `engine/save/`            | serializace, verze formátu, migrace                                                                                               |
-| `engine/meta/`            | profil hráče: odemykání, statistiky, achievementy, historie (fáze 8)                                                              |
+| `engine/meta/`            | profil hráče: nastavení, odemykání, objevy (sbírka), statistiky, historie, denní run, achievementy, tutoriál (kap. 5.1)           |
 | `engine/sim/`             | boti (`bots.ts`), hodnocení tahů (`hand-eval.ts`), runner a souhrn metrik (`runner.ts`), příkazy textového režimu (`commands.ts`) |
 
 ### 2.5 Skórování (pořadí je závazné a otestované)
@@ -301,6 +301,32 @@ flavor a že texty dodržují typografii.
   `migrationFailed` (`tests/unit/save.test.ts`). Profil se nikdy nesmí ztratit: při chybě načtení se poškozená data
   zálohují do `karban.profile.backup.<timestamp>`.
 - Export/import JSON z nastavení.
+
+### 5.1 Profil a meta vrstva (`src/engine/meta`)
+
+Čistý TypeScript bez DOM a bez hodin — čas dodává volající jako `nowIso`, achievementy přicházejí přes
+`ContentRegistry.achievements` (obsah `src/content/achievements.ts`). Funkce **mutují** předaný profil (jediná instance
+u volajícího, jako engine mutuje `RunState`) a vracejí oznámení `MetaNotice[]` (`unlock` / `stake` / `achievement`)
+pro toasty. Pravidla započítání a další rozhodnutí: `docs/DECISIONS.md` „Fáze 8 (M1): meta engine“.
+
+| Soubor            | Obsah                                                                                                                                                                      |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `types.ts`        | `Profile` (settings, unlocks, discovered, unseen, stats, history, daily, achievements, tutorial, current), `MetaCtx`, `MetaNotice`, `AchievementDef`, `AchievementCtx`     |
+| `settings.ts`     | `Settings`, `DEFAULT_SETTINGS`, `sanitizeSettings` (UI je reexportuje ze `src/ui/settings.ts`)                                                                             |
+| `profile.ts`      | `createProfile`, `PROFILE_VERSION` + `PROFILE_MIGRATIONS`, `migrateProfile`, `normalizeProfile` (oprava polí), `serializeProfile` / `deserializeProfile`, `restoreProfile` |
+| `runs.ts`         | `startRun`, `resumeRun`, `applyRunEvent(s)`, `finishRun`, `refreshMeta` — statistiky, objevy, rekordy, odemčení a achievementy po každé události                           |
+| `unlocks.ts`      | `evaluateUnlock` (všechny typy `UnlockCondition`, registr vlastních podmínek), `is*Unlocked`, `maxStakeFor`, `unlockedPoolFor`, `refreshUnlocks`                           |
+| `achievements.ts` | `evaluateAchievements` (výjimka v `check` = nesplněno, průběh = maximum), `achievementProgress`, líně počítané modifikátory runu                                           |
+| `daily.ts`        | `dailyRunSetup` / `dailySetupFromSeed` (balíček a síla 1–5 z kopie streamu `misc`), `parseSeedInput`, `isDailyAvailable`, `dailyStreak`                                    |
+| `tutorial.ts`     | `TUTORIAL_STEPS`, `nextTutorialStep`, `markTutorialStep`, `skipTutorial`, `restartTutorial`                                                                                |
+| `collection.ts`   | `collectionState` (`locked` / `unknown` / `discovered`), štítek „Nové“ (`isUnseen`, `markSeen`), `topEntry`, `winRate`                                                     |
+
+Tok v UI: start aplikace `loadStoredProfile` (`src/ui/settings.ts`: obnova, záloha poškozeného profilu
+`karban.profile.backup.<ms>`, migrace `karban.settings`) + `refreshMeta`; nový run `Game.newRun({ …, unlockedPool:
+unlockedPoolFor(profile, registry, mode) })` → `startRun(profile, run, { registry, nowIso, seeded })`; pokračování
+`resumeRun`; po každé akci `applyRunEvents(profile, result.events, game.state, { registry, nowIso, mods: () =>
+game.modifiers() })` a uložit profil i run; po pitvě / výhře / opuštění `finishRun`. Profil v úložišti ukládá
+`saveStoredProfile` (obálka `karban-save`, kind `profile`).
 
 ## 6. Testy
 

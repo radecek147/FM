@@ -3,6 +3,9 @@
  * Engine obsah nikdy neimportuje přímo — dostává ho přes `ContentRegistry`.
  */
 import type { ContentRegistry } from '../engine/content-types';
+import { knownCustomUnlocks } from '../engine/meta/unlocks';
+import type { HandType } from '../engine/types';
+import { ACHIEVEMENTS } from './achievements';
 import { BOOSTERS } from './boosters';
 import { BOSSES } from './bosses';
 import { CHALLENGES } from './challenges';
@@ -39,6 +42,7 @@ export function buildRegistry(): ContentRegistry {
     decks: byId('deck', DECKS),
     stakes: byId('stake', STAKES),
     challenges: byId('challenge', CHALLENGES),
+    achievements: byId('achievement', ACHIEVEMENTS),
   };
 }
 
@@ -60,10 +64,35 @@ export function validateRegistry(reg: ContentRegistry): string[] {
       if (!reg.vouchers[v]) problems.push(`challenge ${c.id}: unknown voucher ${v}`);
     for (const v of c.startingConsumables ?? [])
       if (!reg.consumables[v]) problems.push(`challenge ${c.id}: unknown consumable ${v}`);
+    for (const v of c.bannedVouchers ?? [])
+      if (!reg.vouchers[v]) problems.push(`challenge ${c.id}: unknown banned voucher ${v}`);
+    for (const v of c.bannedConsumables ?? [])
+      if (!reg.consumables[v]) problems.push(`challenge ${c.id}: unknown banned consumable ${v}`);
+    for (const v of c.bannedTags ?? [])
+      if (!reg.tags[v]) problems.push(`challenge ${c.id}: unknown banned tag ${v}`);
+    for (const hand of Object.keys(c.startingHandLevels ?? {}))
+      if (!reg.handTypes[hand as HandType]) problems.push(`challenge ${c.id}: unknown hand ${hand}`);
+    if (c.maxScoringHand && !reg.handTypes[c.maxScoringHand])
+      problems.push(`challenge ${c.id}: unknown max hand ${c.maxScoringHand}`);
   }
   for (const c of Object.values(reg.consumables)) {
     if (c.kind === 'pranostika' && !c.hand) problems.push(`pranostika ${c.id} has no hand`);
     if (c.hand && !reg.handTypes[c.hand]) problems.push(`consumable ${c.id}: unknown hand ${c.hand}`);
+  }
+  // Podmínky odemčení typu `custom` musí mít vyhodnocovač v meta (`CUSTOM_UNLOCKS`).
+  const custom = new Set(knownCustomUnlocks());
+  const unlockSources: [string, { id: string; unlock?: { type: string; id?: string } }[]][] = [
+    ['joker', Object.values(reg.jokers)],
+    ['deck', Object.values(reg.decks)],
+    ['voucher', Object.values(reg.vouchers)],
+    ['challenge', Object.values(reg.challenges)],
+    ['consumable', Object.values(reg.consumables)],
+  ];
+  for (const [kind, defs] of unlockSources) {
+    for (const d of defs) {
+      if (d.unlock?.type === 'custom' && !custom.has(d.unlock.id ?? ''))
+        problems.push(`${kind} ${d.id}: unknown custom unlock ${d.unlock.id}`);
+    }
   }
   const levels = Object.values(reg.stakes)
     .map((s) => s.level)

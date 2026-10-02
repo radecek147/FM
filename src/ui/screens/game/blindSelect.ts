@@ -32,11 +32,9 @@ function tagBlock(ctx: GameCtx, slot: BlindSlot): HTMLElement | null {
   if (slot.kind === 'boss') return null;
   const id = slot.skipTagId;
   if (!id || !ctx.registry.tags[id]) {
-    return h(
-      'div',
-      { class: 'blind-card__tag blind-card__tag--none' },
-      h('p', null, t('game.blinds.skipNoTag')),
-    );
+    // Výzva bez přeskakování (`Modifiers.noSkip`) má vlastní hlášku.
+    const key = ctx.controller.engine.modifiers().noSkip ? 'game.blinds.noSkip' : 'game.blinds.skipNoTag';
+    return h('div', { class: 'blind-card__tag blind-card__tag--none' }, h('p', null, t(key)));
   }
   const tx = tagTexts(id, { registry: ctx.registry });
   return h(
@@ -93,7 +91,7 @@ export function renderBlindSelect(ctx: GameCtx): HTMLElement {
           onClick: () => void ctx.act({ type: 'selectBlind' }),
         }),
       );
-      if (slot.kind !== 'boss') {
+      if (slot.kind !== 'boss' && !c.engine.modifiers().noSkip) {
         actions.push(
           button({
             label: t('game.blinds.skip'),

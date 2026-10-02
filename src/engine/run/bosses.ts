@@ -4,9 +4,12 @@ import { FINAL_ANTE } from '../constants';
 import type { GameCore } from '../effects/core';
 import type { BlindSlot } from '../types';
 
-/** Má patro finálového šéfa? (patro 8 a každé další 8. patro nekonečného režimu) */
-export function isFinalAnte(ante: number): boolean {
-  return ante >= FINAL_ANTE && ante % FINAL_ANTE === 0;
+/**
+ * Má patro finálového šéfa? Patro 8 a každé další 8. patro nekonečného režimu, a navíc patro výhry `finalAnte`
+ * (`Modifiers.finalAnte`; Konec světa: finálový šéf v patře 8 i 12).
+ */
+export function isFinalAnte(ante: number, finalAnte: number = FINAL_ANTE): boolean {
+  return ante === finalAnte || (ante >= FINAL_ANTE && ante % FINAL_ANTE === 0);
 }
 
 /** Má šéf nějaké pravidlo (hook)? Šéfové, kteří jen zvyšují cíl, se do Velké útraty nelosují. */
@@ -15,8 +18,8 @@ export function bossHasRule(boss: BossDef): boolean {
 }
 
 /** Platí šéf pro dané patro? (finálový jen ve finálovém patře, běžný od `minAnte`) */
-export function bossFitsAnte(boss: BossDef, ante: number): boolean {
-  return isFinalAnte(ante) ? boss.final === true : !boss.final && (boss.minAnte ?? 1) <= ante;
+export function bossFitsAnte(boss: BossDef, ante: number, finalAnte: number = FINAL_ANTE): boolean {
+  return isFinalAnte(ante, finalAnte) ? boss.final === true : !boss.final && (boss.minAnte ?? 1) <= ante;
 }
 
 /** Má aktuální obtížnost pravidlo „Šéf i ve Velké“? (`StakeDef.bigBlindBoss` na kterékoli úrovni ≤ zvolené) */
@@ -33,7 +36,8 @@ export function stakeBigBlindBoss(core: GameCore): boolean {
 export function pickBossId(core: GameCore, exclude: readonly string[] = []): string | null {
   const s = core.state;
   const all = Object.values(core.registry.bosses);
-  let pool = all.filter((b) => bossFitsAnte(b, s.ante));
+  const finalAnte = core.mods().finalAnte;
+  let pool = all.filter((b) => bossFitsAnte(b, s.ante, finalAnte));
   if (pool.length === 0) pool = all.filter((b) => !b.final);
   if (pool.length === 0) return null;
   const notExcluded = pool.filter((b) => !exclude.includes(b.id));
@@ -98,7 +102,7 @@ export function revalidateBoss(core: GameCore): void {
   const slot = changeableBossSlot(core);
   if (!slot) return;
   const current = slot.bossId ? core.registry.bosses[slot.bossId] : undefined;
-  if (current && bossFitsAnte(current, core.state.ante)) return;
+  if (current && bossFitsAnte(current, core.state.ante, core.mods().finalAnte)) return;
   if (!current && Object.keys(core.registry.bosses).length === 0) return;
   rerollBossSlot(core);
 }

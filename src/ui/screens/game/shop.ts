@@ -304,7 +304,12 @@ export function renderShop(ctx: GameCtx): HTMLElement {
   const rerollCost = shop?.freeRerolls ? 0 : (shop?.rerollCost ?? 0);
   const reroll = buyButton({
     label: rerollCost === 0 ? t('game.shop.rerollFree') : t('game.shop.reroll', { price: rerollCost }),
-    disabledReason: canAfford(ctx, rerollCost) ? null : t('game.shop.cantAfford'),
+    // Výzva bez přehození (`Modifiers.noReroll`, Rychlík bez zastávky) — tlačítko zůstane s vysvětlením.
+    disabledReason: ctx.controller.engine.modifiers().noReroll
+      ? t('game.shop.noReroll')
+      : canAfford(ctx, rerollCost)
+        ? null
+        : t('game.shop.cantAfford'),
     testId: 'shop-reroll',
     focusKey: 'reroll',
     variant: 'paper',

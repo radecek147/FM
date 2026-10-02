@@ -16,6 +16,7 @@ import { openModal } from '../../components/modal';
 import { hideTooltip, richText } from '../../components/tooltip';
 import {
   bossTexts,
+  challengeTexts,
   consumableTexts,
   copiedByText,
   copyStatusText,
@@ -246,6 +247,9 @@ export function openRunInfo(ctx: GameCtx): void {
       return t('game.runInfo.item', { name: tx.name, desc: tx.desc });
     });
   const deck = ctx.registry.decks[s.deckId] ? deckTexts(s.deckId, opts) : null;
+  // Výzva: název a přesná pravidla (DESIGN 11.1).
+  const challenge =
+    s.challengeId && ctx.registry.challenges[s.challengeId] ? challengeTexts(s.challengeId, opts) : null;
   const copy = button({
     label: t('game.gameOver.copySeed'),
     variant: 'paper',
@@ -287,6 +291,17 @@ export function openRunInfo(ctx: GameCtx): void {
             }),
           ),
         ),
+        challenge
+          ? infoSection(
+              t('game.runInfo.sections.challenge'),
+              h(
+                'p',
+                { 'data-testid': 'run-info-challenge' },
+                t('game.runInfo.challengeName', { name: challenge.name }),
+              ),
+              textList(challenge.rules),
+            )
+          : null,
         infoSection(
           t('game.runInfo.sections.stake'),
           stake
