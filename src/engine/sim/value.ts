@@ -17,7 +17,7 @@
  * nad veřejným stavem; sondy hru nemění.
  */
 import { FINAL_ANTE } from '../constants';
-import type { Rng } from '../content-types';
+import type { Rng, VoucherDef } from '../content-types';
 import { cyrb128, rngFromState } from '../rng/rng';
 import type { Game } from '../run/game';
 import type { Action, Card, HandType, JokerInstance, Modifiers, Rank, RunState } from '../types';
@@ -84,6 +84,25 @@ const PER_ROUND_KC = {
 } as const;
 /** Kč za Kč stropu úroku za kolo zbývajícího runu (bot, který drží plnou rezervu / ostatní). */
 const INTEREST_CAP_KC = { full: 0.2, other: 0.06 } as const;
+/**
+ * Mechaniky kupónů 1.0.1 (Kč za kolo zbývajícího runu, s diskontem jako ostatní `PER_ROUND_KC`):
+ * - „každý N-tý nákup zdarma“ (`freePurchaseEvery`): bot utratí ve Večerce ~2 položky po ~5 Kč, za kolo tedy
+ *   `SHOP_SPEND_KC` × 1/N;
+ * - přelosování šéfa za patro (`bossRerollsPerAnte`) — bot přelosuje šéfa, který jeho buildu vezme víc než
+ *   průměrný šéf (`bots.ts` `bossReroll`);
+ * - prodej za plnou cenu (`jokerSellFull`, `consumableSellFull`) — bot prodává při výměnách;
+ * - nižší cíl šéfa (`bossTargetMult`): Kč × ln(po / před) — šéf je třetina kol, ale nejtěžší z nich.
+ */
+const SHOP_SPEND_KC = 4.5;
+const BOSS_REROLL_KC = 0.8;
+const SELL_FULL_KC = { joker: 0.25, consumable: 0.08 } as const;
+const BOSS_TARGET_LOG_KC = -22;
+/**
+ * Kupón, jehož účinek sonda nevidí (jen hooky — Kniha stížností, Jarní úklid — nebo vylepšení takového kupónu):
+ * apriorní Kč za kolo zbývajícího runu (tier 2 × `HOOK_VOUCHER_TIER2`). Hráč ho koupí, když na něj má.
+ */
+export const HOOK_VOUCHER_KC = 0.7;
+export const HOOK_VOUCHER_TIER2 = 0.6;
 /** Přepínače pravidel kombinací. */
 const FLAG_KC: Partial<Record<keyof Modifiers, number>> = {
   fourCardStraightFlush: 4,
@@ -344,6 +363,14 @@ export function modsWorth(view: ValueView, before: Readonly<Modifiers>, after: R
   const cap = num(after.interestCap) - num(before.interestCap);
   if (cap !== 0)
     v += cap * (view.style.fullReserve ? INTEREST_CAP_KC.full : INTEREST_CAP_KC.other) * view.roundsLeft;
+  const freeRate = (m: Readonly<Modifiers>): number =>
+    num(m.freePurchaseEvery) >= 2 ? 1 / num(m.freePurchaseEvery) : 0;
+  v += (freeRate(after) - freeRate(before)) * SHOP_SPEND_KC * view.roundsLeft;
+  v += (num(after.bossRerollsPerAnte) - num(before.bossRerollsPerAnte)) * BOSS_REROLL_KC * view.roundsLeft;
+  if (Boolean(after.jokerSellFull) !== Boolean(before.jokerSellFull))
+    v += (after.jokerSellFull ? 1 : -1) * SELL_FULL_KC.joker * view.roundsLeft;
+  if (Boolean(after.consumableSellFull) !== Boolean(before.consumableSellFull))
+    v += (after.consumableSellFull ? 1 : -1) * SELL_FULL_KC.consumable * view.roundsLeft;
   for (const [key, kc] of Object.entries(FLAG_KC) as [keyof Modifiers, number][])
     if (Boolean(after[key]) !== Boolean(before[key])) v += after[key] ? kc : -kc;
   for (const [key, kc] of Object.entries(LOG_KC) as [keyof Modifiers, number][]) {
@@ -423,6 +450,54 @@ function feedWorth(view: ValueView, after: Game): number {
     v += FEED_KC * Math.min(FEED_MAX, grow);
   }
   return v;
+}
+
+/**
+ * Hodnota kupónu (Kč, bez ceny): změna stavu po koupi (`stateDelta`) + trvale nižší cíl šéfa (`bossTargetMult`;
+ * ve `stateDelta` není, protože dočasné snížení ze štítku Šéf má chřipku oceňuje `bots.ts` zvlášť) + apriorní
+ * hodnota kupónu, jehož účinek sonda nevidí (jen hooky, nebo tier 2 bez vlastního `passive` a hooků).
+ */
+export function voucherWorth(view: ValueView, after: Game, def: VoucherDef | undefined): number {
+  let v = stateDelta(view, after).total + (view.game.state.money - after.state.money);
+  const bb = num(view.game.modifiers().bossTargetMult);
+  const ba = num(after.modifiers().bossTargetMult);
+  if (ba > 0 && bb > 0 && ba !== bb) v += BOSS_TARGET_LOG_KC * Math.log(ba / bb);
+  const hidden = def && (Object.keys(def.hooks ?? {}).length > 0 || (!def.passive && !def.onRedeem));
+  if (hidden && Math.abs(v) < 0.5)
+    v += HOOK_VOUCHER_KC * view.roundsLeft * (def.tier === 2 ? HOOK_VOUCHER_TIER2 : 1);
+  return v;
+}
+
+/**
+ * Peníze, které štítky `uids` (právě získané, ještě držené) vyplatí nebo strhnou v rozpisu odměn (`roundEndMoney`:
+ * Brigáda na chmelu +6 Kč za 2 kola, splátka Půjčky od tchána po šéfovi). Sonda dohraje kopii `clone` (už po akci
+ * — hru mění!) přes nejvýš `maxRounds` kol: každé kolo vyhraje „načisto“ (skóre kola = cíl, pak jedna karta),
+ * Večerku a obálky přeskočí. Skončí, jakmile štítky zmizí. Bot štítky nepoznává podle id — vidí jen rozpis.
+ */
+export function heldTagMoney(clone: Game, uids: ReadonlySet<number>, maxRounds = 3): number {
+  const defIds = new Set(clone.state.tags.filter((t) => uids.has(t.uid)).map((t) => `tag:${t.defId}`));
+  let sum = 0;
+  let rounds = 0;
+  for (let step = 0; step < 12 * maxRounds && rounds < maxRounds; step++) {
+    const s = clone.state as RunState;
+    let action: Action;
+    if (s.phase === 'booster') action = { type: 'skipBooster' };
+    else if (s.phase === 'blind_select') {
+      // Další kolo jen, dokud štítky drží (spotřebují se v rozpisu kola, který se už započítal).
+      if (!s.tags.some((t) => uids.has(t.uid))) break;
+      action = { type: 'selectBlind' };
+    } else if (s.phase === 'shop') action = { type: 'leaveShop' };
+    else if (s.phase === 'round' && s.round && s.round.hand.length > 0) {
+      s.round.score = Math.max(s.round.score, s.round.target);
+      action = { type: 'play', cardIds: s.round.hand.slice(0, 1) };
+    } else if (s.phase === 'round_end') {
+      rounds++;
+      for (const e of s.rewards?.extra ?? []) if (defIds.has(e.source)) sum += e.amount;
+      action = { type: 'cashOut' };
+    } else break;
+    if (!clone.dispatch(action).ok) break;
+  }
+  return sum;
 }
 
 // ─────────────────────────── Sondy ───────────────────────────
