@@ -37,9 +37,10 @@ export const COURT_TARGET_MULT = 2.1;
 /**
  * Notářský: šance na náhodnou pečeť u každé karty; −1 slot spotřebky. Fáze 10: s 25 % 59 % výher (Hospodský 29 %;
  * silnější boti pečetě i karty s úpravami — Pan farář — využijí naplno), s 12 % 42 %, se 6 % 37 %. Kalibrace 1.0.1:
- * 6 → 4 % (6 %: +8 p. b. nad Hospodským v průměru botů, 4 %: +6 p. b.).
+ * 6 → 2,5 % — pečetě dávají botům ~+12 p. b. (hlavně modrá: pranostika každé kolo), −1 slot spotřebky ~−3 p. b.;
+ * nad Hospodským v průměru botů 6 %: +8, 4 %: +9, 3 %: +8, 2,5 %: +5 p. b. (DECISIONS 2026-10-03 „Kalibrace 1.0.1“).
  */
-export const NOTARY_SEAL_CHANCE = 0.04;
+export const NOTARY_SEAL_CHANCE = 0.025;
 export const NOTARY_CONSUMABLE_SLOTS = -1;
 /**
  * Zbohatlík: odměny za útraty ×2, −2 ruce. Fáze 10: s úrokem ×2 48 % výher (Hospodský 29 %), s ×1,5 35 %; odměny i úrok
@@ -102,7 +103,8 @@ function notaryDeck(rng: Rng): CardSpec[] {
   );
 }
 
-const pct = (p: number): number => Math.round(p * 100);
+/** Pravděpodobnost v procentech pro popisek, na desetiny (0,025 → 2,5). */
+const pct = (p: number): number => Math.round(p * 1000) / 10;
 
 /**
  * Babiččin: vytvoří `GRANDMAS_RADY` **různých** babských rad (vážený los podle `ConsumableDef.weight` jako v obchodě,

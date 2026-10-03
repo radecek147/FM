@@ -81,6 +81,7 @@ describe('balíčky – seznam a texty', () => {
     }
     expect(t('decks.debtor.desc', DECKS.find((d) => d.id === 'debtor')!.params)).toContain('−10 Kč');
     expect(t('decks.court.desc', DECKS.find((d) => d.id === 'court')!.params)).toContain('×2,1');
+    expect(t('decks.notary.desc', DECKS.find((d) => d.id === 'notary')!.params)).toContain('2,5%');
     expect(t('decks.marias.desc', DECKS.find((d) => d.id === 'marias')!.params)).toContain(
       'cíle všech útrat jsou ×1,2',
     );
@@ -184,7 +185,7 @@ describe('balíčky – pravidla', () => {
     expect(g.state.round!.hand).toHaveLength(7);
   });
 
-  it('Notářský: −1 slot spotřebky, ~4 % karet s náhodnou pečetí, deterministicky podle seedu', () => {
+  it('Notářský: −1 slot spotřebky, ~2,5 % karet s náhodnou pečetí (kalibrace 1.0.1), deterministicky podle seedu', () => {
     expect(modsDiff('notary')).toEqual({ consumableSlots: 1 });
     const a = newGame('notary', 'NOTARY1');
     const b = newGame('notary', 'NOTARY1');
@@ -202,8 +203,8 @@ describe('balíčky – pravidla', () => {
           kinds.add(c.seal);
         }
     }
-    expect(sealed / total).toBeGreaterThan(0.025);
-    expect(sealed / total).toBeLessThan(0.055);
+    expect(sealed / total).toBeGreaterThan(0.015);
+    expect(sealed / total).toBeLessThan(0.035);
     expect([...kinds].sort()).toEqual(Object.keys(reg.seals).sort());
   });
 
