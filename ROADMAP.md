@@ -18,6 +18,9 @@ proher v patrech 6–8 (patro 8 ztratí 37 % runů, které ho dosáhnou, dřív 
 Hospodského v průměru botů (Notářský pečeť 2,5 %), šéfové normovaně 0,64–1,26×, nekonečný režim s mediánem pádu
 vítězů v patře 11. Body „→ kalibrace“ v sekci „Opravy po testu 1.0 (1.0.1)“ jsou odškrtnuté; co zůstává mimo pásmo
 (šéfové s `minAnte 1` pod 4 %, Bílá paní a Velká voda pro bota `flush`, ekonomika, Kořenářka), je v DECISIONS.
+**Verze na GitHubu:** `release/1.0.0` (commit `47a2f64`) a `release/1.0.1` (commit `75cedfd`) jsou pevné větve
+vydání; vývoj pokračuje v `claude/clever-ride-anbk0m`. Tagy `v1.0.0` / `v1.0.1` jsou jen lokálně (push tagů
+z vývojového prostředí je zakázaný) — vytvoří je vlastník přes Releases.
 **Další krok:** deploy na GitHub Pages (níže, čeká na zapnutí Pages vlastníkem), pak obsahové patche.
 
 **Shrnutí (1.0):** fáze 0–10 jsou hotové, **verze 1.0.0** je hotová (tag `v1.0.0` zatím jen lokálně). Fáze 10 (DECISIONS „Fáze 10 (výkon,
