@@ -470,8 +470,8 @@ describe('hlášky (toast)', () => {
     toast('Bez místa');
     expect(region.classList.contains('toast-region--anchored')).toBe(false);
     expect(region.style.left).toBe('');
-    // Bublina Štamgasta (data-toast-avoid) přes roh → sloupec se posune pod ni.
-    const bubble = h('div', { 'data-toast-avoid': '' });
+    // Bublina Štamgasta (data-overlay-avoid) přes roh → sloupec se posune pod ni.
+    const bubble = h('div', { 'data-overlay-avoid': '' });
     document.body.appendChild(bubble);
     bubble.getBoundingClientRect = () => new DOMRect(900, 0, 400, 200);
     bubble.getClientRects = () => [new DOMRect(900, 0, 400, 200)] as unknown as DOMRectList;

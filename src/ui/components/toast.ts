@@ -11,7 +11,7 @@
  *   dialog otevřený; hláška, kterou vyvolala akce v dialogu (export, prodej z detailu žolíka), se ukáže v rohu okna
  *   nad zatemněním, ale mimo dialog (`toast-region--over-modal`).
  * - Umístění: bez kotvy vpravo dole; s kotvou (herní obrazovka) v rohu, který dodá kotva — mimo stůl, ruku,
- *   zboží a panely fází (src/ui/screens/game/index.ts). Prvky s `data-toast-avoid` (bublina Štamgasta) sloupec
+ *   zboží a panely fází (src/ui/screens/game/index.ts). Prvky s `data-overlay-avoid` (bublina Štamgasta) sloupec
  *   obchází. Poloha se změří při každém novém oznámení, při změně velikosti okna a na vyžádání
  *   (`refreshToastPlacement`) — žádné čtení layoutu v animaci.
  * - Pozdržení (`holdToasts`): dokud trvá (animace skórování a dalších akcí), nová oznámení kromě chyb čekají ve
@@ -84,6 +84,8 @@ const MIN_DURATION: Record<ToastKind, number> = { info: 2000, success: 2000, war
 const ICONS: Record<ToastKind, string> = { info: 'i', success: '✓', warning: '!', error: '✕' };
 /** Odstup sloupce od okraje okna / kotvy (px). */
 export const TOAST_ANCHOR_GAP = 8;
+/** Nejužší sloupec, když ustupuje bublině Štamgasta do strany (px). */
+const MIN_SIDE_WIDTH = 240;
 
 interface ToastState {
   key: string;
@@ -184,7 +186,7 @@ function intersects(a: Box, b: Box): boolean {
 
 /** Obdélníky prvků, které sloupec nemá zakrýt (bublina Štamgasta…). */
 function avoidBoxes(): Box[] {
-  return Array.from(document.querySelectorAll<HTMLElement>('[data-toast-avoid]'))
+  return Array.from(document.querySelectorAll<HTMLElement>('[data-overlay-avoid]'))
     .filter((el) => !el.hidden && el.getClientRects().length > 0)
     .map((el) => el.getBoundingClientRect())
     .filter((r) => r.width > 0 && r.height > 0);
@@ -206,15 +208,27 @@ function placeRegion(): void {
   }
   const vw = window.innerWidth || document.documentElement.clientWidth;
   const vh = window.innerHeight || document.documentElement.clientHeight;
-  const width = Math.round(Math.min(spot.width, vw - 2 * TOAST_ANCHOR_GAP));
+  const fullWidth = Math.round(Math.min(spot.width, vw - 2 * TOAST_ANCHOR_GAP));
   const height = r.childElementCount > 0 ? r.offsetHeight : 0;
-  let left = spot.left ?? vw - (spot.right ?? TOAST_ANCHOR_GAP) - width;
+  let left = spot.left ?? vw - (spot.right ?? TOAST_ANCHOR_GAP) - fullWidth;
   let top = spot.top ?? vh - (spot.bottom ?? TOAST_ANCHOR_GAP) - height;
-  // Bublina Štamgasta: sloupec se posune pod ni, a když se tam nevejde, nad ni.
+  // Bublina Štamgasta: sloupec ustoupí do strany (i za cenu užšího sloupce), jinak pod ni, nad ni, nebo k druhému
+  // okraji okna.
+  let width = fullWidth;
   const box = (): Box => ({ left, top, right: left + width, bottom: top + Math.max(height, 1) });
   for (const a of avoidBoxes()) {
     if (!intersects(box(), a)) continue;
-    if (a.bottom + TOAST_ANCHOR_GAP + height <= vh - TOAST_ANCHOR_GAP) top = a.bottom + TOAST_ANCHOR_GAP;
+    const roomRight = vw - TOAST_ANCHOR_GAP - (a.right + TOAST_ANCHOR_GAP);
+    const roomLeft = a.left - TOAST_ANCHOR_GAP - TOAST_ANCHOR_GAP;
+    const rightOfIt = left + width / 2 >= a.left + (a.right - a.left) / 2;
+    if (rightOfIt && roomRight >= MIN_SIDE_WIDTH) {
+      width = Math.round(Math.min(width, roomRight));
+      left = a.right + TOAST_ANCHOR_GAP;
+    } else if (!rightOfIt && roomLeft >= MIN_SIDE_WIDTH) {
+      width = Math.round(Math.min(width, roomLeft));
+      left = Math.min(left, a.left - TOAST_ANCHOR_GAP - width);
+    } else if (a.bottom + TOAST_ANCHOR_GAP + height <= vh - TOAST_ANCHOR_GAP)
+      top = a.bottom + TOAST_ANCHOR_GAP;
     else if (a.top - TOAST_ANCHOR_GAP - height >= TOAST_ANCHOR_GAP) top = a.top - TOAST_ANCHOR_GAP - height;
     else left = a.left >= vw - a.right ? TOAST_ANCHOR_GAP : vw - TOAST_ANCHOR_GAP - width;
   }
