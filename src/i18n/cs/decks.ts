@@ -15,8 +15,8 @@ export const decks = {
   },
   clerk: {
     name: 'Úřednický',
-    // Názvy kupónů musí odpovídat `vouchers.tear_calendar|counter_buddy.name` (hlídá tests/unit/decks.test.ts).
-    desc: 'Start s kupóny Trhací kalendář a Kamarád za pultem.',
+    // Názvy kupónů musí odpovídat `vouchers.complaints_book|village_newsletter.name` (hlídá tests/unit/decks.test.ts).
+    desc: 'Start s kupóny Kniha stížností a Zpravodaj obce.',
     flavor: 'Všechno vyřízeno předem. Na razítko.',
   },
   tourist: {

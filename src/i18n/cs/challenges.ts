@@ -15,7 +15,7 @@ export const challenges = {
         'Žolíci se neobjevují nikde – ve Večerce, v obálkách ani z efektů. Kupóny, spotřebky a štítky, které pracují se žolíky, se taky nenabízejí.',
       slots: '+{slots|plural:slot,sloty,slotů} spotřebky.',
       targets: 'Cíle všech útrat jsou {mult|x} – v únoru se šetří všude.',
-      start: 'Start: kupón Trhací kalendář a {money|money}.',
+      start: 'Start: kupón Kniha stížností a {money|money}.',
     },
   },
   greenhouse: {

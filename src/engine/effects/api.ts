@@ -388,6 +388,13 @@ export function createApi(core: GameCore): EngineApi {
       core.invalidate();
     },
 
+    addBossRerolls(n) {
+      if (!Number.isFinite(n) || n <= 0) return;
+      const flags = core.state.flags;
+      const left = typeof flags.bossRerolls === 'number' ? flags.bossRerolls : 0;
+      flags.bossRerolls = left + Math.floor(n);
+    },
+
     rerollBoss() {
       return rerollBossSlot(core);
     },

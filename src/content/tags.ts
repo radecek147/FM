@@ -10,26 +10,43 @@
  *  - „po šéfovi / v kole šéfa“ = podle `ctx.state.round.blind`.
  * Štítky se hromadí (i stejné) — každý působí sám za sebe. Čísla jsou jen v konstantách níže; mechanika i popisek
  * (`params`) čtou stejné hodnoty. Náhoda jen přes `ctx.rng` (stream `tag`).
+ *
+ * 1.0.1 (docs/DECISIONS.md 2026-10-03): sedm štítků s vlastní mechanikou místo převzaté — Pouťová tombola
+ * (legendární žolík), Půjčka od tchána, Sběr papíru, Brigáda na chmelu (výplata za další kola), Dožínky, Stěhování
+ * a Houbaření; peněžní štítky dávají zhruba dvojnásobek (Drobné v kabátě 12 Kč).
  */
 import type { TagCtx, TagDef } from '../engine/content-types';
-import type { EditionId, HandType, RunState } from '../engine/types';
+import type { Card, EditionId, HandType, RunState } from '../engine/types';
 import { HAND_TYPES } from '../engine/types';
 import { boosterId } from './boosters';
 
 // ─────────────────────────── Čísla (DESIGN 7) ───────────────────────────
 
-/** 1 Drobné v kabátě: Kč hned. */
-const COAT_CHANGE_MONEY = 6;
-/** 2 Termínovaný vklad: Kč v rozpisu odměn po porážce šéfa. */
-const TERM_DEPOSIT_MONEY = 15;
-/** 3 Zálohy: Kč za každou přeskočenou útratu v runu (včetně této). */
-const ADVANCE_PAYMENT_PER_SKIP = 3;
-/** 4 Brigáda na chmelu: Kč za každých N zahraných rukou v runu, nejvýš strop. */
-const HOP_MONEY = 1;
-const HOP_HANDS = 2;
-const HOP_CAP = 15;
+/** 1 Drobné v kabátě: Kč hned (1.0.1: 6 → 12 — přeskočení se má vyplatit). */
+const COAT_CHANGE_MONEY = 12;
+/** 2 Pouťová tombola: od patra, Kč útěchy, když legendární žolík nejde vytvořit (plné sloty, prázdný pool). */
+const RAFFLE_MIN_ANTE = 4;
+const RAFFLE_MONEY = 12;
+/** 3 Půjčka od tchána: Kč hned a kolik se strhne z odměny po porážce šéfa tohoto patra. */
+const LOAN_MONEY = 20;
+const LOAN_REPAY = 15;
+/** 4 Sběr papíru: kolik karet s nejnižší hodnotou (bez vylepšení, pečeti a edice) zničí, Kč za každou. */
+const PAPER_CARDS = 3;
+const PAPER_MONEY = 3;
 /** 5 Otevřené dveře: přehození zdarma v příští Večerce. */
 const OPEN_DOORS_REROLLS = 3;
+/** 7 Dožínky: úrovně navíc a kolikrát se kombinace v runu musela hrát. */
+const HARVEST_LEVELS = 1;
+const HARVEST_PLAYS = 3;
+/** 9 Stěhování: od patra; slot žolíka navíc, slot spotřebky méně (do konce runu). */
+const MOVING_MIN_ANTE = 2;
+const MOVING_JOKER_SLOTS = 1;
+const MOVING_CONSUMABLE_SLOTS = 1;
+/** 10 Houbaření: kolik kopií náhodné karty z balíčku přidá. */
+const MUSHROOM_COPIES = 2;
+/** 12 Brigáda na chmelu: Kč v rozpisu odměn za každé z příštích vyhraných kol (2 kola — po přeskočení Malé do konce patra). */
+const HOP_MONEY = 6;
+const HOP_ROUNDS = 2;
 /** 11 Vyleštěné příbory: šance edicí v % (součet 100). */
 const CUTLERY_EDITIONS: readonly { edition: EditionId; pct: number }[] = [
   { edition: 'foil', pct: 55 },
@@ -50,8 +67,8 @@ const FORECAST_LEVELS = 2;
 const FORECAST_DEFAULT_HAND: HandType = 'high_card';
 /** 19 Lékařské potvrzení: kolik % cíle stačí k záchraně kola. */
 const SICK_NOTE_PCT = 50;
-/** 20 Bazar u silnice: Kč místo žolíka, když není volný slot. */
-const BAZAAR_MONEY = 4;
+/** 20 Bazar u silnice: Kč místo žolíka, když není volný slot (1.0.1: 4 → 8). */
+const BAZAAR_MONEY = 8;
 
 // ─────────────────────────── Pomocníci ───────────────────────────
 
@@ -98,12 +115,34 @@ function editionForNextShopJoker(ctx: TagCtx, edition: EditionId): void {
 
 /** Lékařské potvrzení: platí až od začátku příštího kola (štítek získaný uprostřed kola čeká na další). */
 const ARMED = 'armed';
+/** Brigáda na chmelu: kolik vyhraných kol s výplatou zbývá. */
+const LEFT = 'left';
+
+/** Hlášky štítků (i18n klíče). */
+const MSG_RAFFLE = 'tags.fair_raffle.won';
+
+/**
+ * Sběr papíru: karty balíčku bez vylepšení, pečeti a edice, od nejnižší hodnoty (při shodě nižší id) — nejvýš
+ * `PAPER_CARDS`.
+ */
+function scrapCards(state: Readonly<RunState>): Card[] {
+  return state.deck
+    .filter((c) => c.enhancement === null && c.seal === null && c.edition === null)
+    .sort((x, y) => x.rank - y.rank || x.id - y.id)
+    .slice(0, PAPER_CARDS);
+}
+
+/** Číslo ze stavu štítku (chybí-li, `fallback`). */
+function tagNum(ctx: TagCtx, key: string, fallback: number): number {
+  const v = ctx.self.state[key];
+  return typeof v === 'number' && Number.isFinite(v) ? v : fallback;
+}
 
 // ─────────────────────────── Štítky ───────────────────────────
 
 export const TAGS: TagDef[] = [
   {
-    // 1 — +6 Kč, hned.
+    // 1 — +12 Kč, hned.
     id: 'coat_change',
     params: { money: COAT_CHANGE_MONEY },
     hooks: {
@@ -115,35 +154,46 @@ export const TAGS: TagDef[] = [
     art: { icon: 'wallet', prop: 'coins', bg: '#3a2a14', fg: '#f7e7c3', accent: '#e0b84f', pattern: 'waves' },
   },
   {
-    // 2 — Po porážce šéfa tohoto patra +15 Kč (v rozpisu odměn), pak se spotřebuje.
-    id: 'term_deposit',
-    params: { money: TERM_DEPOSIT_MONEY },
-    hooks: {
-      roundEndMoney: (ctx) => (ctx.state.round?.blind === 'boss' ? TERM_DEPOSIT_MONEY : 0),
-      onRoundEnd: (ctx) => ctx.state.round?.blind === 'boss',
-    },
-    art: {
-      icon: 'piggy-bank',
-      prop: 'hourglass',
-      bg: '#203a2c',
-      fg: '#e6f5e9',
-      accent: '#f2c14e',
-      pattern: 'grid',
-    },
-  },
-  {
-    // 3 — +3 Kč za každou přeskočenou útratu v runu (přeskočení se započítá dřív, než štítek přijde).
-    id: 'advance_payment',
-    params: { money: ADVANCE_PAYMENT_PER_SKIP },
+    // 2 — Pouťová tombola (od patra 4): legendární žolík do volného slotu, jinak 12 Kč útěchy. Hlavní zdroj
+    // legendárních žolíků vedle razítka Výjimka z vyhlášky (DECISIONS 1.0.1: legendárka zhruba v každém 3.–4. runu).
+    id: 'fair_raffle',
+    minAnte: RAFFLE_MIN_ANTE,
+    params: { money: RAFFLE_MONEY },
     hooks: {
       onAdded: (ctx) => {
-        ctx.api.addMoney(ADVANCE_PAYMENT_PER_SKIP * ctx.state.stats.blindsSkipped, 'tag');
+        const won =
+          ctx.api.availableJokers({ rarity: 'legendary' }).length > 0 &&
+          ctx.api.createJoker({ rarity: 'legendary' }) !== null;
+        if (won) ctx.api.message(MSG_RAFFLE);
+        else ctx.api.addMoney(RAFFLE_MONEY, 'tag');
         return true;
       },
     },
     art: {
+      icon: 'ticket',
+      prop: 'crown',
+      bg: '#5b1f3a',
+      fg: '#ffe8f2',
+      accent: '#f9c74f',
+      pattern: 'rays',
+    },
+  },
+  {
+    // 3 — Půjčka od tchána: +20 Kč hned; po porážce šéfa tohoto patra −15 Kč v rozpisu odměn (jen do dluhového
+    // limitu — co nejde strhnout, tchán odpustí), pak se spotřebuje.
+    id: 'in_law_loan',
+    params: { money: LOAN_MONEY, repay: LOAN_REPAY },
+    hooks: {
+      onAdded: (ctx) => {
+        ctx.api.addMoney(LOAN_MONEY, 'tag');
+        return false;
+      },
+      roundEndMoney: (ctx) => (ctx.state.round?.blind === 'boss' ? -LOAN_REPAY : 0),
+      onRoundEnd: (ctx) => ctx.state.round?.blind === 'boss',
+    },
+    art: {
       icon: 'receive-money',
-      prop: 'contract',
+      prop: 'mustache',
       bg: '#2b2f45',
       fg: '#eef0ff',
       accent: '#9fb4ff',
@@ -151,23 +201,24 @@ export const TAGS: TagDef[] = [
     },
   },
   {
-    // 4 — +1 Kč za každé 2 zahrané ruce v runu, nejvýš +15 Kč.
-    id: 'hop_picking',
-    params: { money: HOP_MONEY, hands: HOP_HANDS, cap: HOP_CAP },
+    // 4 — Sběr papíru: zničí z balíčku 3 karty s nejnižší hodnotou bez vylepšení, pečeti a edice, za každou 3 Kč.
+    id: 'paper_drive',
+    params: { cards: PAPER_CARDS, money: PAPER_MONEY },
     hooks: {
       onAdded: (ctx) => {
-        const pay = Math.min(HOP_CAP, Math.floor(ctx.state.stats.handsPlayed / HOP_HANDS) * HOP_MONEY);
-        ctx.api.addMoney(pay, 'tag');
+        const cards = scrapCards(ctx.state);
+        for (const c of cards) ctx.api.destroyCard(c.id, 'tag');
+        if (cards.length > 0) ctx.api.addMoney(PAPER_MONEY * cards.length, 'tag');
         return true;
       },
     },
     art: {
-      icon: 'linden-leaf',
-      prop: 'beer-stein',
-      bg: '#2f4a1f',
-      fg: '#eef8d8',
-      accent: '#c5e86c',
-      pattern: 'zigzag',
+      icon: 'scroll-unfurled',
+      prop: 'wheelbarrow',
+      bg: '#3b3a2a',
+      fg: '#f5f1dc',
+      accent: '#c5b358',
+      pattern: 'grid',
     },
   },
   {
@@ -203,10 +254,26 @@ export const TAGS: TagDef[] = [
     },
   },
   {
-    // 7 — Zdarma Tlustá obálka pranostik.
-    id: 'kiosk_calendar',
-    hooks: freeBooster(boosterId('pranostika', 'jumbo')),
-    art: { icon: 'calendar', prop: 'fire', bg: '#1f3f66', fg: '#e8f2ff', accent: '#ef4444', pattern: 'grid' },
+    // 7 — Dožínky: +1 úroveň každé kombinaci zahrané v runu aspoň 3×; když žádná, nejhranější (bez zahraných rukou
+    // Vysoká karta — stejně jako Předpověď počasí).
+    id: 'harvest_festival',
+    params: { levels: HARVEST_LEVELS, plays: HARVEST_PLAYS },
+    hooks: {
+      onAdded: (ctx) => {
+        const ripe = HAND_TYPES.filter((h) => (ctx.state.handLevels[h]?.played ?? 0) >= HARVEST_PLAYS);
+        for (const h of ripe.length > 0 ? ripe : [forecastHand(ctx.state)])
+          ctx.api.levelUpHand(h, HARVEST_LEVELS);
+        return true;
+      },
+    },
+    art: {
+      icon: 'wheat',
+      prop: 'beer-stein',
+      bg: '#5a4a1a',
+      fg: '#fff6d5',
+      accent: '#e9c46a',
+      pattern: 'zigzag',
+    },
   },
   {
     // 8 — Zdarma Tlustá obálka babských rad.
@@ -222,30 +289,48 @@ export const TAGS: TagDef[] = [
     },
   },
   {
-    // 9 — Zdarma normální Obálka razítek (od patra 2).
-    id: 'official_letter',
-    minAnte: 2,
-    hooks: freeBooster(boosterId('razitko', 'normal')),
+    // 9 — Stěhování (od patra 2): +1 slot žolíka a −1 slot spotřebky do konce runu (spotřebky nad limit zůstanou).
+    id: 'moving_day',
+    minAnte: MOVING_MIN_ANTE,
+    params: { joker: MOVING_JOKER_SLOTS, consumable: MOVING_CONSUMABLE_SLOTS },
+    hooks: {
+      onAdded: (ctx) => {
+        ctx.api.addPermanentModifier({
+          jokerSlots: MOVING_JOKER_SLOTS,
+          consumableSlots: -MOVING_CONSUMABLE_SLOTS,
+        });
+        return true;
+      },
+    },
     art: {
-      icon: 'post-stamp',
-      prop: 'stamper',
-      bg: '#5a1f2b',
-      fg: '#ffe8ec',
-      accent: '#fb7185',
+      icon: 'house',
+      prop: 'old-wagon',
+      bg: '#3d2b1f',
+      fg: '#f8ead8',
+      accent: '#d4a373',
       pattern: 'stripes',
     },
   },
   {
-    // 10 — Zdarma Tlustá obálka hracích karet.
-    id: 'cottage_marias',
-    hooks: freeBooster(boosterId('card', 'jumbo')),
+    // 10 — Houbaření: 2 kopie náhodné karty z balíčku (stream `tag`), i s vylepšením, pečetí a edicí.
+    id: 'mushroom_hunt',
+    params: { copies: MUSHROOM_COPIES },
+    hooks: {
+      onAdded: (ctx) => {
+        const deck = [...ctx.state.deck].sort((x, y) => x.id - y.id);
+        if (deck.length === 0) return true;
+        const found = ctx.rng.pick(deck);
+        for (let i = 0; i < MUSHROOM_COPIES; i++) ctx.api.copyCard(found.id);
+        return true;
+      },
+    },
     art: {
-      icon: 'wood-cabin',
-      prop: 'poker-hand',
-      bg: '#14532d',
-      fg: '#ecfdf5',
-      accent: '#fde68a',
-      pattern: 'waves',
+      icon: 'mushroom',
+      prop: 'pine-tree',
+      bg: '#2d3b22',
+      fg: '#f1f7e0',
+      accent: '#d97706',
+      pattern: 'dots',
     },
   },
   {
@@ -268,22 +353,28 @@ export const TAGS: TagDef[] = [
     },
   },
   {
-    // 12 — Příští žolík ve Večerce bude negativní, bez příplatku (od patra 2).
-    id: 'dental_xray',
-    minAnte: 2,
+    // 12 — Brigáda na chmelu (1.0.1 nová mechanika): další 2 vyhraná kola +6 Kč v rozpisu odměn, pak se spotřebuje.
+    id: 'hop_picking',
+    params: { money: HOP_MONEY, rounds: HOP_ROUNDS },
     hooks: {
-      onShopEnter: (ctx) => {
-        editionForNextShopJoker(ctx, 'negative');
-        return true;
+      onAdded: (ctx) => {
+        ctx.self.state[LEFT] = HOP_ROUNDS;
+        return false;
+      },
+      roundEndMoney: (ctx) => (tagNum(ctx, LEFT, HOP_ROUNDS) > 0 ? HOP_MONEY : 0),
+      onRoundEnd: (ctx) => {
+        const left = tagNum(ctx, LEFT, HOP_ROUNDS) - 1;
+        ctx.self.state[LEFT] = left;
+        return left <= 0;
       },
     },
     art: {
-      icon: 'tooth',
-      prop: 'ghost',
-      bg: '#101418',
-      fg: '#e5e7eb',
-      accent: '#a78bfa',
-      pattern: 'checker',
+      icon: 'linden-leaf',
+      prop: 'beer-stein',
+      bg: '#2f4a1f',
+      fg: '#eef8d8',
+      accent: '#c5e86c',
+      pattern: 'zigzag',
     },
   },
   {

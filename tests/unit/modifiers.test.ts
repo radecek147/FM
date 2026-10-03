@@ -45,6 +45,10 @@ describe('BASE_MODIFIERS', () => {
       shopPriceAdd: 0,
       playingCardEnhanceChance: 0.2,
       playingCardSealChance: 0,
+      freePurchaseEvery: 0,
+      consumableSellFull: false,
+      jokerSellFull: false,
+      bossRerollsPerAnte: 0,
       disableEnhancements: false,
       fixedCardChips: 0,
       // booleany false

@@ -100,7 +100,7 @@ describe('balíčky – seznam a texty', () => {
 
   it('Úřednický: popisek jmenuje přesně startovní kupóny (názvy z textů kupónů)', () => {
     const clerk = DECKS.find((d) => d.id === 'clerk')!;
-    expect(clerk.startingVouchers).toEqual(['tear_calendar', 'counter_buddy']);
+    expect(clerk.startingVouchers).toEqual(['complaints_book', 'village_newsletter']);
     const desc = t('decks.clerk.desc');
     for (const v of clerk.startingVouchers!) {
       expect(reg.vouchers[v], v).toBeDefined();
@@ -267,21 +267,23 @@ function beatBoss(g: Game): GameEvent[] {
 const pranostikaHand = (defId: string): HandType | undefined => reg.consumables[defId]?.hand;
 
 describe('balíčky fáze 7 – pravidla', () => {
-  it('Úřednický: start s kupóny Trhací kalendář a Kamarád za pultem (zdarma, s jejich efekty)', () => {
+  it('Úřednický: start s kupóny Kniha stížností a Zpravodaj obce (zdarma, s jejich efekty)', () => {
     const g = newGame('clerk');
-    expect(g.state.vouchers).toEqual(['tear_calendar', 'counter_buddy']);
+    expect(g.state.vouchers).toEqual(['complaints_book', 'village_newsletter']);
     expect(g.state.money).toBe(5);
     expect(g.state.deck).toHaveLength(52);
-    expect(modsDiff('clerk')).toEqual({ rerollBaseCost: 3, shopWeightPranostika: 7, shopWeightRada: 7 });
+    expect(modsDiff('clerk')).toEqual({ bossRerollsPerAnte: 1 });
+    // Přelosování šéfa zdarma je k dispozici hned v patře 1 (jednou, ne dvakrát).
+    expect(g.state.flags.bossRerolls).toBe(1);
     // Kupón patra nikdy nenabídne to, co už balíček dal.
     for (let i = 0; i < 30; i++) {
       const offered = newGame('clerk', `CLERK${i}`).state.anteVouchers;
-      expect(offered).not.toContain('counter_buddy');
-      expect(offered).not.toContain('tear_calendar');
+      expect(offered).not.toContain('village_newsletter');
+      expect(offered).not.toContain('complaints_book');
     }
     // Uložení a načtení: kupóny zůstanou, pravidla také.
     const loaded = Game.fromState(deserializeRun(serializeRun(g.state as RunState)), reg);
-    expect(loaded.state.vouchers).toEqual(['tear_calendar', 'counter_buddy']);
+    expect(loaded.state.vouchers).toEqual(['complaints_book', 'village_newsletter']);
     expect(loaded.modifiers()).toEqual(g.modifiers());
   });
 

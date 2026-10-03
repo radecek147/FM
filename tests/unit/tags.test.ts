@@ -16,6 +16,7 @@ import { editionPriceAdd, shopPrice } from '../../src/engine/shop/prices';
 import type { ActionResult, GameEvent, ShopItem } from '../../src/engine/types';
 import { HAND_TYPES } from '../../src/engine/types';
 import { hasKey, t } from '../../src/i18n/cs';
+import { NBSP } from '../../src/i18n/format';
 import { joker, makeGame, makeRegistry, setupRound, type JokerSpec } from './fixtures/registry';
 
 // ─────────────────────────── Testovací obsah ───────────────────────────
@@ -35,6 +36,8 @@ const HELPER_JOKERS: JokerDef[] = [
   joker('sick_seller', {
     hooks: { onSell: (ctx) => void (ctx.isSelf ? ctx.api.addTag('sick_note') : undefined) },
   }),
+  // Legendární žolík pro Pouťovou tombolu (jen ze speciálních efektů).
+  joker('legend', { rarity: 'legendary', cost: 16, noShop: true }),
 ];
 
 /** Testovací registr + skutečné štítky, obálky a kupóny. */
@@ -100,17 +103,17 @@ function reload(game: Game): Game {
 describe('štítky — obsah (DESIGN 7)', () => {
   const EXPECTED: [string, number][] = [
     ['coat_change', 1],
-    ['term_deposit', 1],
-    ['advance_payment', 1],
-    ['hop_picking', 1],
+    ['fair_raffle', 4],
+    ['in_law_loan', 1],
+    ['paper_drive', 1],
     ['open_doors', 1],
     ['uncle_envelope', 1],
-    ['kiosk_calendar', 1],
+    ['harvest_festival', 1],
     ['grandma_parcel', 1],
-    ['official_letter', 2],
-    ['cottage_marias', 1],
+    ['moving_day', 2],
+    ['mushroom_hunt', 1],
     ['polished_cutlery', 1],
-    ['dental_xray', 2],
+    ['hop_picking', 1],
     ['referral', 1],
     ['connections', 3],
     ['mailbox_flyer', 1],
@@ -140,20 +143,28 @@ describe('štítky — obsah (DESIGN 7)', () => {
   });
 
   it('popisky ukazují čísla z params česky', () => {
-    const desc = (id: string) => t(`tags.${id}.desc`, def(id).params ?? {});
-    expect(desc('coat_change')).toBe('Dostaneš 6 Kč.');
-    expect(desc('term_deposit')).toContain('15 Kč');
-    expect(desc('advance_payment')).toContain('+3 Kč za každou útratu');
-    expect(desc('hop_picking')).toBe('+1 Kč za každé 2 zahrané ruce v tomto runu (nejvýš +15 Kč).');
-    expect(desc('open_doors')).toContain('3 přehození zdarma');
-    expect(desc('polished_cutlery')).toContain('lesklá 55 %, holografická 30 %, duhová 15 %');
-    expect(desc('referral')).toContain('o 50 % levněji');
-    expect(desc('mailbox_flyer')).toContain('1 kupón');
-    expect(desc('boss_flu')).toContain('o 25 % nižší');
-    expect(desc('spread_newspaper')).toBe('V příštím kole +2 karty v ruce a +1 zahození.');
-    expect(desc('forecast')).toContain('+2 úrovně');
-    expect(desc('sick_note')).toContain('aspoň 50 %');
-    expect(desc('roadside_bazaar')).toContain('4 Kč');
+    const desc = (id: string) => t(`tags.${id}.desc`, def(id).params ?? {}).replaceAll(NBSP, ' ');
+    expect(desc('coat_change')).toBe('Dostaneš 12 Kč.');
+    expect(desc('fair_raffle')).toContain('cena útěchy 12 Kč');
+    expect(desc('in_law_loan')).toBe(
+      'Hned dostaneš 20 Kč; po porážce šéfa tohoto patra se z odměny strhne 15 Kč.',
+    );
+    expect(desc('paper_drive')).toContain('3 karty s nejnižší hodnotou');
+    expect(desc('hop_picking')).toBe('Další 2 vyhraná kola dostaneš v odměnách navíc 6 Kč (za každé).');
+    expect(desc('harvest_festival')).toContain(
+      '+1 úroveň každé kombinaci, která se v tomto runu hrála aspoň 3×',
+    );
+    expect(desc('moving_day')).toBe('+1 slot žolíka, ale −1 slot spotřebky do konce runu.');
+    expect(desc('mushroom_hunt')).toContain('2 kopie náhodné karty');
+    expect(desc('open_doors')).toContain('3 přehození zdarma');
+    expect(desc('polished_cutlery')).toContain('lesklá 55 %, holografická 30 %, duhová 15 %');
+    expect(desc('referral')).toContain('o 50 % levněji');
+    expect(desc('mailbox_flyer')).toContain('1 kupón');
+    expect(desc('boss_flu')).toContain('o 25 % nižší');
+    expect(desc('spread_newspaper')).toBe('V příštím kole +2 karty v ruce a +1 zahození.');
+    expect(desc('forecast')).toContain('+2 úrovně');
+    expect(desc('sick_note')).toContain('aspoň 50 %');
+    expect(desc('roadside_bazaar')).toContain('8 Kč');
   });
 
   it('ArtSpec: ikony z ICON_NAMES a každý štítek jinou kombinací ikony a rekvizity', () => {
@@ -189,7 +200,7 @@ describe('štítky útrat — losování (DESIGN 7)', () => {
     expect(seen.size).toBe(TAGS.length - late.size);
   });
 
-  it('od patra 3 se nabízejí i štítky s vyšším minAnte (Úřední dopis, Rentgen od zubaře, Protekce, Lékařské potvrzení)', () => {
+  it('od patra 3 se nabízejí i štítky s vyšším minAnte (Stěhování, Protekce, Lékařské potvrzení)', () => {
     const seen = new Set<string>();
     for (let i = 0; i < 40; i++) {
       const game = Game.newRun({ seed: `TAGANTE${i}`, deckId: 'pub', stake: 1 }, real);
@@ -207,25 +218,25 @@ describe('štítky útrat — losování (DESIGN 7)', () => {
     expect([...late].filter((id) => seen.has(id)).length).toBeGreaterThan(0);
   });
 
-  it('štítky se hromadí, i stejné: dva Termínované vklady vyplatí po šéfovi 2× 15 Kč', () => {
+  it('štítky se hromadí, i stejné: dvě Brigády na chmelu vyplatí po kole 2× 6 Kč', () => {
     const game = newGame();
-    skipWith(game, 'term_deposit');
-    skipWith(game, 'term_deposit');
-    expect(tagIds(game)).toEqual(['term_deposit', 'term_deposit']);
+    skipWith(game, 'hop_picking');
+    skipWith(game, 'hop_picking');
+    expect(tagIds(game)).toEqual(['hop_picking', 'hop_picking']);
     winCurrent(game);
-    const extra = game.state.rewards!.extra.filter((e) => e.source === 'tag:term_deposit');
-    expect(extra.map((e) => e.amount)).toEqual([15, 15]);
-    expect(tagIds(game)).toEqual([]);
+    const extra = game.state.rewards!.extra.filter((e) => e.source === 'tag:hop_picking');
+    expect(extra.map((e) => e.amount)).toEqual([6, 6]);
+    expect(tagIds(game)).toEqual(['hop_picking', 'hop_picking']);
   });
 });
 
 // ─────────────────────────── Peníze hned ───────────────────────────
 
 describe('štítky „hned“ — peníze', () => {
-  it('Drobné v kabátě: +6 Kč a štítek se hned spotřebuje', () => {
+  it('Drobné v kabátě: +12 Kč a štítek se hned spotřebuje', () => {
     const game = newGame({ money: 5 });
     const events = skipWith(game, 'coat_change');
-    expect(game.state.money).toBe(11);
+    expect(game.state.money).toBe(17);
     expect(tagIds(game)).toEqual([]);
     expect(events.map((e) => e.type)).toEqual(
       expect.arrayContaining(['blindSkipped', 'tagAdded', 'moneyChanged', 'tagTriggered']),
@@ -235,34 +246,126 @@ describe('štítky „hned“ — peníze', () => {
     expect(game.state.phase).toBe('blind_select');
   });
 
-  it('Zálohy: +3 Kč za každou přeskočenou útratu v runu včetně této', () => {
+  it('Pouťová tombola: legendární žolík do volného slotu; s plnými sloty 12 Kč útěchy', () => {
     const game = newGame({ money: 0 });
-    skipWith(game, 'advance_payment');
-    expect(game.state.money).toBe(3);
-    skipWith(game, 'advance_payment');
-    expect(game.state.money).toBe(3 + 6);
-    expect(game.state.stats.blindsSkipped).toBe(2);
+    const events = skipWith(game, 'fair_raffle');
+    expect(game.state.jokers.map((j) => j.defId)).toEqual(['legend']);
+    expect(events).toContainEqual({ type: 'message', key: 'tags.fair_raffle.won' });
+    expect(game.state.money).toBe(0);
+    expect(tagIds(game)).toEqual([]);
+
+    const full = newGame({ money: 0, jokers: ['noop', 'noop', 'noop', 'noop', 'noop'] });
+    skipWith(full, 'fair_raffle');
+    expect(full.state.jokers).toHaveLength(5);
+    expect(full.state.money).toBe(12);
+    // Legendárka už ve slotu → pool prázdný → taky útěcha (ne Pivní tácek).
+    const owned = newGame({ money: 0, jokers: ['legend'] });
+    skipWith(owned, 'fair_raffle');
+    expect(owned.state.jokers.map((j) => j.defId)).toEqual(['legend']);
+    expect(owned.state.money).toBe(12);
   });
 
-  it('Brigáda na chmelu: +1 Kč za každé 2 zahrané ruce v runu, nejvýš +15 Kč', () => {
-    const cases: [number, number][] = [
-      [0, 0],
-      [1, 0],
-      [7, 3],
-      [30, 15],
-      [31, 15],
-      [100, 15],
-    ];
-    for (const [hands, pay] of cases) {
-      const game = newGame({ money: 0 });
-      game._core.state.stats.handsPlayed = hands;
-      skipWith(game, 'hop_picking');
-      expect(game.state.money, `${hands} rukou`).toBe(pay);
-      expect(tagIds(game)).toEqual([]);
+  it('Půjčka od tchána: +20 Kč hned, po porážce šéfa −15 Kč v rozpisu odměn, pak zmizí', () => {
+    const game = newGame({ money: 0 });
+    skipWith(game, 'in_law_loan');
+    expect(game.state.money).toBe(20);
+    expect(tagIds(game)).toEqual(['in_law_loan']);
+    winCurrent(game); // Velká — nic
+    expect(game.state.rewards!.extra.some((e) => e.source.startsWith('tag:'))).toBe(false);
+    ok(game.dispatch({ type: 'cashOut' }));
+    ok(game.dispatch({ type: 'leaveShop' }));
+    winCurrent(game); // šéf
+    const r = game.state.rewards!;
+    expect(r.extra).toContainEqual({ source: 'tag:in_law_loan', amount: -15 });
+    expect(r.total).toBe(r.blindReward + r.unusedHands + r.unusedDiscards + r.interest - 15);
+    expect(tagIds(game)).toEqual([]);
+  });
+
+  it('Sběr papíru: zničí 3 nejnižší karty bez vylepšení, pečeti a edice a dá 3 Kč za každou', () => {
+    const game = newGame({ money: 0 });
+    const deck = game._core.state.deck;
+    const size = deck.length;
+    // Nejnižší dvojka dostane vylepšení — přeskočí se.
+    const twos = deck.filter((c) => c.rank === 2).sort((a, b) => a.id - b.id);
+    twos[0]!.enhancement = 'bonus';
+    const expected = deck
+      .filter((c) => c.enhancement === null && c.seal === null && c.edition === null)
+      .sort((a, b) => a.rank - b.rank || a.id - b.id)
+      .slice(0, 3)
+      .map((c) => c.id);
+    skipWith(game, 'paper_drive');
+    expect(game.state.deck).toHaveLength(size - 3);
+    for (const id of expected) expect(game.card(id)).toBeUndefined();
+    expect(game.card(twos[0]!.id)).toBeDefined();
+    expect(game.state.money).toBe(9);
+    expect(tagIds(game)).toEqual([]);
+  });
+
+  it('Brigáda na chmelu: další 2 vyhraná kola +6 Kč v rozpisu, pak zmizí; stav přežije uložení', () => {
+    let game = newGame({ money: 0 });
+    skipWith(game, 'hop_picking');
+    expect(game.state.money).toBe(0);
+    for (let round = 1; round <= 2; round++) {
+      winCurrent(game);
+      expect(game.state.rewards!.extra, `kolo ${round}`).toContainEqual({
+        source: 'tag:hop_picking',
+        amount: 6,
+      });
+      ok(game.dispatch({ type: 'cashOut' }));
+      game = reload(game);
+      ok(game.dispatch({ type: 'leaveShop' }));
     }
+    expect(tagIds(game)).toEqual([]);
+    winCurrent(game);
+    expect(game.state.rewards!.extra.some((e) => e.source === 'tag:hop_picking')).toBe(false);
   });
 
-  it('Bazar u silnice: náhodný běžný žolík; bez volného slotu +4 Kč', () => {
+  it('Dožínky: +1 úroveň kombinacím hraným aspoň 3×; když žádná, nejhranější (bez rukou Vysoká karta)', () => {
+    const game = newGame();
+    const hl = game._core.state.handLevels;
+    hl.pair.played = 3;
+    hl.flush.played = 5;
+    hl.three.played = 2;
+    skipWith(game, 'harvest_festival');
+    expect([game.state.handLevels.pair.level, game.state.handLevels.flush.level]).toEqual([2, 2]);
+    expect(game.state.handLevels.three.level).toBe(1);
+    expect(tagIds(game)).toEqual([]);
+    const few = newGame();
+    few._core.state.handLevels.three.played = 2;
+    skipWith(few, 'harvest_festival');
+    expect(few.state.handLevels.three.level).toBe(2);
+    const fresh = newGame();
+    skipWith(fresh, 'harvest_festival');
+    expect(fresh.state.handLevels.high_card.level).toBe(2);
+  });
+
+  it('Stěhování: +1 slot žolíka a −1 slot spotřebky do konce runu (i po uložení)', () => {
+    const game = newGame();
+    const before = game.modifiers();
+    skipWith(game, 'moving_day');
+    expect(game.modifiers().jokerSlots).toBe(before.jokerSlots + 1);
+    expect(game.modifiers().consumableSlots).toBe(before.consumableSlots - 1);
+    expect(reload(game).modifiers().jokerSlots).toBe(before.jokerSlots + 1);
+    expect(tagIds(game)).toEqual([]);
+  });
+
+  it('Houbaření: 2 kopie náhodné karty z balíčku i s vylepšením (deterministicky podle seedu)', () => {
+    const game = newGame({ seed: 'HOUBY' });
+    for (const c of game._core.state.deck) c.enhancement = 'mult';
+    const size = game.state.deck.length;
+    skipWith(game, 'mushroom_hunt');
+    const deck = game.state.deck;
+    expect(deck).toHaveLength(size + 2);
+    const [a, b] = deck.slice(-2);
+    expect(a).toMatchObject({ rank: b!.rank, suit: b!.suit, enhancement: 'mult' });
+    expect(deck.filter((c) => c.rank === a!.rank && c.suit === a!.suit)).toHaveLength(3);
+    const twin = newGame({ seed: 'HOUBY' });
+    for (const c of twin._core.state.deck) c.enhancement = 'mult';
+    skipWith(twin, 'mushroom_hunt');
+    expect(twin.state.deck.slice(-1)[0]).toMatchObject({ rank: a!.rank, suit: a!.suit });
+  });
+
+  it('Bazar u silnice: náhodný běžný žolík; bez volného slotu +8 Kč', () => {
     const game = newGame({ money: 0 });
     skipWith(game, 'roadside_bazaar');
     expect(game.state.jokers).toHaveLength(1);
@@ -272,7 +375,7 @@ describe('štítky „hned“ — peníze', () => {
     const full = newGame({ money: 0, jokers: ['noop', 'noop', 'noop', 'noop', 'noop'] });
     skipWith(full, 'roadside_bazaar');
     expect(full.state.jokers).toHaveLength(5);
-    expect(full.state.money).toBe(4);
+    expect(full.state.money).toBe(8);
     expect(tagIds(full)).toEqual([]);
   });
 
@@ -300,10 +403,7 @@ describe('štítky „hned“ — peníze', () => {
 describe('štítky „hned“ — obálky zdarma (otevřou se hned, zavřením zpět na výběr útraty)', () => {
   const CASES: [string, string, number][] = [
     ['uncle_envelope', 'joker_jumbo', 3],
-    ['kiosk_calendar', 'pranostika_jumbo', 4],
     ['grandma_parcel', 'rada_jumbo', 4],
-    ['official_letter', 'razitko_normal', 2],
-    ['cottage_marias', 'card_jumbo', 4],
   ];
 
   it.each(CASES)('%s otevře %s zdarma', (tagId, boosterId, options) => {
@@ -439,18 +539,6 @@ describe('štítky „příští Večerka“', () => {
     expect(items[0]!.price).toBe(reg.jokers[items[0]!.joker.defId]!.cost);
   });
 
-  it('Rentgen od zubaře: příští žolík ve Večerce je negativní bez příplatku a jde koupit i do plných slotů', () => {
-    const game = newGame({ jokers: ['jokers_only', 'noop', 'noop', 'noop', 'noop'], money: 50 });
-    skipWith(game, 'dental_xray');
-    winToShop(game);
-    const items = jokerItems(game);
-    const neg = items.find((it) => it.joker.edition === 'negative');
-    expect(neg).toMatchObject({ noEditionSurcharge: true });
-    expect(neg!.price).toBe(reg.jokers[neg!.joker.defId]!.cost);
-    ok(game.dispatch({ type: 'buy', slot: game.state.shop!.items.indexOf(neg!) }));
-    expect(game.state.jokers).toHaveLength(6);
-  });
-
   it('Doporučení od známého: navíc vzácný žolík za poloviční cenu; přehození ho nemění', () => {
     const game = newGame({ jokers: ['no_jokers'], money: 50 });
     skipWith(game, 'referral');
@@ -571,24 +659,6 @@ describe('štítky kola a šéfa', () => {
     ok(game.dispatch({ type: 'selectBlind' }));
     expect(game.state.round!.hand).toHaveLength(8);
     expect(game.state.round!.discardsLeft).toBe(3);
-  });
-
-  it('Termínovaný vklad: Velká nic, po šéfovi +15 Kč v rozpisu odměn (zdroj tag:term_deposit), pak zmizí', () => {
-    const game = newGame({ money: 0 });
-    skipWith(game, 'term_deposit');
-    winCurrent(game);
-    expect(game.state.rewards!.extra.some((e) => e.source.startsWith('tag:'))).toBe(false);
-    expect(tagIds(game)).toEqual(['term_deposit']);
-    ok(game.dispatch({ type: 'cashOut' }));
-    ok(game.dispatch({ type: 'leaveShop' }));
-    winCurrent(game);
-    const r = game.state.rewards!;
-    expect(r.extra).toContainEqual({ source: 'tag:term_deposit', amount: 15 });
-    expect(r.total).toBe(r.blindReward + r.unusedHands + r.unusedDiscards + r.interest + 15);
-    expect(tagIds(game)).toEqual([]);
-    const before = game.state.money;
-    ok(game.dispatch({ type: 'cashOut' }));
-    expect(game.state.money).toBe(before + r.total);
   });
 
   describe('Lékařské potvrzení', () => {

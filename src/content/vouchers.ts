@@ -3,24 +3,32 @@
  * Texty v src/i18n/cs/vouchers.ts (`vouchers.<id>.name|desc|flavor`). Návod: docs/CONTENT-GUIDE.md kap. 6.
  *
  * Efekty platí do konce runu. `passive` vrací deltu `Modifiers` — delty se sčítají (pole `*Mult` násobí), takže
- * tier 2 přidává jen rozdíl proti tier 1 (sleva 20 + 20 = 40 %, edice ×2,5 × 1,4 = ×3,5). Jednorázové věci
- * (−1 patro) jsou v `onRedeem`. Engine kupón uplatní hned: ceny ve Večerce se přepočítají a sloty, které kupón
- * přidal, se v otevřené Večerce doplní (`syncShopSlots`). Čísla jsou jen v konstantách níže — mechanika i popisek
- * (`params`) čtou stejné hodnoty.
+ * tier 2 přidává jen rozdíl proti tier 1 (věrnostní kartička 5 − 2 = každý 3. nákup). Jednorázové věci (−1 patro,
+ * přelosování šéfa v rozehraném patře) jsou v `onRedeem`, reakce na události runu v `hooks`. Engine kupón uplatní
+ * hned: ceny ve Večerce se přepočítají a sloty, které kupón přidal, se v otevřené Večerce doplní (`syncShopSlots`).
+ * Čísla jsou jen v konstantách níže — mechanika i popisek (`params`) čtou stejné hodnoty.
+ *
+ * 1.0.1 (docs/DECISIONS.md 2026-10-03): pět párů s vlastní mechanikou místo převzaté — Věrnostní kartička (každý N-tý
+ * nákup zdarma), Zpravodaj obce (přelosování šéfa za patro), Zálohovaná lahev (prodej za plnou cenu), Kniha stížností
+ * (úrovně za nové a opakované kombinace) a Jarní úklid (edice žolíkům po šéfovi).
  */
-import type { ArtSpec, BaseCtx, UnlockCondition, VoucherDef } from '../engine/content-types';
+import type { ArtSpec, BaseCtx, UnlockCondition, VoucherCtx, VoucherDef } from '../engine/content-types';
+import { RENTAL_SELL_PRICE } from '../engine/constants';
 import { BASE_MODIFIERS } from '../engine/effects/modifiers';
+import { EDITIONS } from './modifiers';
 
 // ─────────────────────────── Čísla (DESIGN 6) ───────────────────────────
 
 /** 1 Druhý regál / Regál u pokladny: sloty Večerky navíc. */
 const SHELF_CARD_SLOTS = 1;
 const CHECKOUT_BOOSTER_SLOTS = 1;
-/** 2 Žlutá cenovka / Přelepená cenovka: sleva ve Večerce v % (celkem). */
-const YELLOW_PRICE_PCT = 20;
-const RELABELED_PRICE_PCT = 40;
-/** 3 Kamarád za pultem: přehození o tolik Kč levnější. Švagr vedoucí: cena v téže Večerce neroste. */
-const BUDDY_REROLL_DISCOUNT = 1;
+/** 2 Věrnostní kartička / Kmenový zákazník: zdarma každý N-tý nákup ve Večerce. */
+const LOYALTY_EVERY = 5;
+const REGULAR_EVERY = 3;
+/** 3 Zpravodaj obce / Obecní rozhlas: přelosování šéfa zdarma za patro (celkem), o kolik % nižší cíl šéfa. */
+const NEWSLETTER_REROLLS = 1;
+const RADIO_REROLLS = 2;
+const RADIO_BOSS_PCT = 10;
 /** 4 Prodloužená otvíračka / Nonstop: ruce navíc, Kč navíc za nevyužitou ruku. */
 const LATE_HOURS_HANDS = 1;
 const NONSTOP_HANDS = 1;
@@ -33,25 +41,34 @@ const YARD_MONEY_PER_DISCARD = 1;
 const TABLE_HAND_SIZE = 1;
 const FOLDING_HAND_SIZE = 1;
 const FOLDING_BOSS_HAND_SIZE = 1;
-/** 7 Spořicí účet / Stavební spoření: strop úroku v Kč (celkem). */
-const SAVINGS_INTEREST_CAP = 8;
-const BUILDING_INTEREST_CAP = 12;
+/** 7 Zálohovaná lahev / Výkupna: prodej spotřebek / žolíků za plnou cenu (jen přepínače `Modifiers`). */
 /** 8 Úzký věšák / Pořádný věšák. */
 const NARROW_JOKER_SLOTS = 1;
 const NARROW_HAND_SIZE_LOSS = 1;
 const PROPER_HAND_SIZE = 1;
-/** 9 Trhací kalendář / Babiččina spíž: váhy typů kartových slotů navíc (DESIGN 2.5.3), sloty spotřebek. */
-const CALENDAR_WEIGHT = 4;
-const PANTRY_WEIGHT = 1.5;
-const PANTRY_RAZITKO_WEIGHT = 2;
-const PANTRY_CONSUMABLE_SLOTS = 1;
+/** 9 Kniha stížností / Vyřízená stížnost: úrovně za první zahrání kombinace v runu, za každé N-té zahrání. */
+const COMPLAINT_LEVELS = 1;
+const SETTLED_EVERY = 6;
+const SETTLED_LEVELS = 1;
 /** 10 Stánek s kartami / Sběratelská burza: váha hracích karet, šance na vylepšení a pečeť v % (celkem). */
 const STALL_CARD_WEIGHT = 5;
 const FAIR_ENHANCE_PCT = 50;
 const FAIR_SEAL_PCT = 20;
-/** 11 Leštěnka / Hologramová fólie: násobič šance na lesklou, holografickou a duhovou edici (celkem). */
-const POLISH_EDITION_MULT = 2.5;
-const HOLO_FOIL_EDITION_MULT = 3.5;
+/** 11 Jarní úklid / Generální úklid: edice, kterou po porážce šéfa dostane náhodný žolík bez edice. */
+const SPRING_EDITION = 'foil';
+const DEEP_EDITION = 'holo';
+const SPRING_ID = 'spring_cleaning';
+const DEEP_ID = 'deep_cleaning';
+/** Hodnoty edic do popisků (jediný zdroj čísel je `EDITIONS`). */
+const editionParam = (id: string, key: string): number => {
+  const v = EDITIONS.find((e) => e.id === id)?.params?.[key];
+  return typeof v === 'number' ? v : 0;
+};
+
+/** Hlášky kupónů (i18n klíče). */
+const MSG_COMPLAINT = 'vouchers.complaints_book.leveled';
+const MSG_SETTLED = 'vouchers.complaint_settled.leveled';
+const MSG_CLEANING = 'vouchers.spring_cleaning.cleaned';
 /** 12 Úřední škrt / Amnestie: o kolik pater zpět, postih, od kterého patra má kupón smysl. */
 const STRIKE_ANTES = 1;
 const STRIKE_TARGET_MULT = 1.1;
@@ -68,6 +85,18 @@ const TIER2_UNLOCK: UnlockCondition = { type: 'custom', id: 'voucherTier1TwoRuns
 
 /** „−1 patro“ jde koupit/nabídnout jen tam, kde se patro opravdu sníží (v patře 1 by zbyl jen postih). */
 const anteCanDrop = (ctx: BaseCtx): boolean => ctx.state.ante >= STRIKE_MIN_ANTE;
+
+/**
+ * Jarní úklid po porážce šéfa: náhodný žolík bez edice (stream `misc`) dostane lesklou edici, s Generálním úklidem
+ * holografickou. Bez žolíka bez edice nic.
+ */
+function springCleaning(ctx: VoucherCtx): void {
+  const bare = ctx.state.jokers.filter((j) => j.edition === null);
+  if (bare.length === 0) return;
+  const edition = ctx.state.vouchers.includes(DEEP_ID) ? DEEP_EDITION : SPRING_EDITION;
+  ctx.api.setJokerEdition(ctx.rng.pick(bare).uid, edition);
+  ctx.api.message(MSG_CLEANING);
+}
 
 /** Tier 1 (bez `requires`). */
 function tier1(
@@ -114,49 +143,73 @@ export const VOUCHERS: VoucherDef[] = [
     },
   ),
 
-  // 2 — sleva
+  // 2 — věrnostní kartička (každý N-tý nákup zdarma)
   tier1(
-    'yellow_price',
+    'loyalty_card',
     10,
-    { icon: 'ticket', bg: '#1f3b3a', fg: '#fff7c2', accent: '#facc15', pattern: 'dots' },
     {
-      params: { pct: YELLOW_PRICE_PCT },
-      passive: () => ({ shopDiscountPct: YELLOW_PRICE_PCT }),
+      icon: 'post-stamp',
+      prop: 'shopping-cart',
+      bg: '#1f3b3a',
+      fg: '#fff7c2',
+      accent: '#facc15',
+      pattern: 'dots',
+    },
+    {
+      params: { every: LOYALTY_EVERY },
+      passive: () => ({ freePurchaseEvery: LOYALTY_EVERY }),
     },
   ),
   tier2(
-    'relabeled_price',
-    'yellow_price',
+    'regular_customer',
+    'loyalty_card',
     13,
-    { icon: 'papers', bg: '#3b2f12', fg: '#ffe9a8', accent: '#f4c430', pattern: 'rays' },
     {
-      params: { pct: RELABELED_PRICE_PCT },
-      // Modifikátory se sčítají: 20 + 20 = 40 %.
-      passive: () => ({ shopDiscountPct: RELABELED_PRICE_PCT - YELLOW_PRICE_PCT }),
+      icon: 'crown-coin',
+      prop: 'shopping-cart',
+      bg: '#3b2f12',
+      fg: '#ffe9a8',
+      accent: '#f4c430',
+      pattern: 'rays',
+    },
+    {
+      params: { every: REGULAR_EVERY, from: LOYALTY_EVERY },
+      // Modifikátory se sčítají: 5 − 2 = každý 3. nákup.
+      passive: () => ({ freePurchaseEvery: REGULAR_EVERY - LOYALTY_EVERY }),
     },
   ),
 
-  // 3 — přehození
+  // 3 — zpravodaj obce (přelosování šéfa za patro)
   tier1(
-    'counter_buddy',
+    'village_newsletter',
     9,
-    { icon: 'anticlockwise-rotation', bg: '#4a3b5c', fg: '#f3ecff', accent: '#c3a6ff', pattern: 'waves' },
+    { icon: 'newspaper', prop: 'house', bg: '#4a3b5c', fg: '#f3ecff', accent: '#c3a6ff', pattern: 'waves' },
     {
-      params: {
-        discount: BUDDY_REROLL_DISCOUNT,
-        cost: BASE_MODIFIERS.rerollBaseCost - BUDDY_REROLL_DISCOUNT,
-      },
-      passive: () => ({ rerollBaseCost: -BUDDY_REROLL_DISCOUNT }),
+      params: { rerolls: NEWSLETTER_REROLLS },
+      passive: () => ({ bossRerollsPerAnte: NEWSLETTER_REROLLS }),
+      // Přelosování platí už v rozehraném patře (další patra je dostanou na začátku).
+      onRedeem: (ctx) => ctx.api.addBossRerolls(NEWSLETTER_REROLLS),
     },
   ),
   tier2(
-    'manager_inlaw',
-    'counter_buddy',
-    11,
-    { icon: 'mustache', bg: '#5c3b4a', fg: '#ffeef3', accent: '#ff9fb2', pattern: 'checker' },
+    'village_radio',
+    'village_newsletter',
+    12,
     {
-      // Přírůstek ceny přehození se vynuluje (výchozí krok 1 Kč → 0 Kč).
-      passive: () => ({ rerollCostStep: -BASE_MODIFIERS.rerollCostStep }),
+      icon: 'megaphone',
+      prop: 'church',
+      bg: '#5c3b4a',
+      fg: '#ffeef3',
+      accent: '#ff9fb2',
+      pattern: 'checker',
+    },
+    {
+      params: { rerolls: RADIO_REROLLS, pct: RADIO_BOSS_PCT },
+      passive: () => ({
+        bossRerollsPerAnte: RADIO_REROLLS - NEWSLETTER_REROLLS,
+        bossTargetMult: 1 - RADIO_BOSS_PCT / 100,
+      }),
+      onRedeem: (ctx) => ctx.api.addBossRerolls(RADIO_REROLLS - NEWSLETTER_REROLLS),
     },
   ),
 
@@ -240,25 +293,37 @@ export const VOUCHERS: VoucherDef[] = [
     },
   ),
 
-  // 7 — úrok
+  // 7 — zálohovaná lahev (prodej za plnou cenu)
   tier1(
-    'savings_account',
-    9,
-    { icon: 'piggy-bank', bg: '#2b4162', fg: '#eaf2ff', accent: '#9ad1d4', pattern: 'stripes' },
+    'deposit_bottle',
+    8,
     {
-      params: { cap: SAVINGS_INTEREST_CAP },
-      passive: () => ({ interestCap: SAVINGS_INTEREST_CAP - BASE_MODIFIERS.interestCap }),
+      icon: 'beer-bottle',
+      prop: 'coins',
+      bg: '#2b4162',
+      fg: '#eaf2ff',
+      accent: '#9ad1d4',
+      pattern: 'stripes',
+    },
+    {
+      passive: () => ({ consumableSellFull: true }),
     },
   ),
   tier2(
-    'building_savings',
-    'savings_account',
+    'bottle_return',
+    'deposit_bottle',
     12,
-    { icon: 'house', bg: '#1d3557', fg: '#f1faee', accent: '#a8dadc', pattern: 'grid', prop: 'coins' },
     {
-      params: { cap: BUILDING_INTEREST_CAP },
-      // Rozdíl proti Spořicímu účtu (8 → 12 Kč).
-      passive: () => ({ interestCap: BUILDING_INTEREST_CAP - SAVINGS_INTEREST_CAP }),
+      icon: 'wheelbarrow',
+      bg: '#1d3557',
+      fg: '#f1faee',
+      accent: '#a8dadc',
+      pattern: 'grid',
+      prop: 'beer-bottle',
+    },
+    {
+      params: { rental: RENTAL_SELL_PRICE },
+      passive: () => ({ jokerSellFull: true }),
     },
   ),
 
@@ -283,45 +348,50 @@ export const VOUCHERS: VoucherDef[] = [
     },
   ),
 
-  // 9 — spotřebky ve Večerce
+  // 9 — kniha stížností (úrovně za nové a opakované kombinace)
   tier1(
-    'tear_calendar',
+    'complaints_book',
     8,
-    { icon: 'calendar', bg: '#7a2e2e', fg: '#fff1e6', accent: '#ffb4a2', pattern: 'grid' },
     {
-      params: {
-        from: BASE_MODIFIERS.shopWeightPranostika,
-        to: BASE_MODIFIERS.shopWeightPranostika + CALENDAR_WEIGHT,
-        joker: BASE_MODIFIERS.shopWeightJoker,
+      icon: 'open-book',
+      prop: 'quill-ink',
+      bg: '#7a2e2e',
+      fg: '#fff1e6',
+      accent: '#ffb4a2',
+      pattern: 'grid',
+    },
+    {
+      params: { levels: COMPLAINT_LEVELS },
+      hooks: {
+        afterHandPlayed: (ctx) => {
+          if (ctx.played !== 1) return;
+          ctx.api.levelUpHand(ctx.hand, COMPLAINT_LEVELS);
+          ctx.api.message(MSG_COMPLAINT);
+        },
       },
-      passive: () => ({ shopWeightPranostika: CALENDAR_WEIGHT, shopWeightRada: CALENDAR_WEIGHT }),
     },
   ),
   tier2(
-    'grandmas_pantry',
-    'tear_calendar',
-    11,
+    'complaint_settled',
+    'complaints_book',
+    12,
     {
-      icon: 'honey-jar',
+      icon: 'stamper',
       bg: '#6b3e1f',
       fg: '#fff4e0',
       accent: '#f9c74f',
       pattern: 'checker',
-      prop: 'post-stamp',
+      prop: 'thumb-up',
     },
     {
-      params: {
-        slots: PANTRY_CONSUMABLE_SLOTS,
-        stamps: PANTRY_RAZITKO_WEIGHT,
-        from: BASE_MODIFIERS.shopWeightPranostika + CALENDAR_WEIGHT,
-        to: BASE_MODIFIERS.shopWeightPranostika + CALENDAR_WEIGHT + PANTRY_WEIGHT,
+      params: { every: SETTLED_EVERY, levels: SETTLED_LEVELS },
+      hooks: {
+        afterHandPlayed: (ctx) => {
+          if (ctx.played <= 0 || ctx.played % SETTLED_EVERY !== 0) return;
+          ctx.api.levelUpHand(ctx.hand, SETTLED_LEVELS);
+          ctx.api.message(MSG_SETTLED);
+        },
       },
-      passive: () => ({
-        consumableSlots: PANTRY_CONSUMABLE_SLOTS,
-        shopWeightRazitko: PANTRY_RAZITKO_WEIGHT,
-        shopWeightPranostika: PANTRY_WEIGHT,
-        shopWeightRada: PANTRY_WEIGHT,
-      }),
     },
   ),
 
@@ -350,25 +420,31 @@ export const VOUCHERS: VoucherDef[] = [
     },
   ),
 
-  // 11 — edice
+  // 11 — jarní úklid (edice žolíkům po porážce šéfa)
   tier1(
-    'polish',
+    SPRING_ID,
     9,
-    { icon: 'sparkles', bg: '#264653', fg: '#e9f5f2', accent: '#e9c46a', pattern: 'rays' },
+    { icon: 'window', prop: 'sparkles', bg: '#264653', fg: '#e9f5f2', accent: '#e9c46a', pattern: 'rays' },
     {
-      params: { mult: POLISH_EDITION_MULT },
-      passive: () => ({ editionRateMult: POLISH_EDITION_MULT }),
+      params: { chips: editionParam(SPRING_EDITION, 'chips') },
+      hooks: { onBossDefeated: springCleaning },
     },
   ),
   tier2(
-    'holo_foil',
-    'polish',
+    DEEP_ID,
+    SPRING_ID,
     12,
-    { icon: 'stars-stack', bg: '#3d2c5e', fg: '#f4ecff', accent: '#7ee8fa', pattern: 'waves' },
     {
-      params: { mult: HOLO_FOIL_EDITION_MULT, base: POLISH_EDITION_MULT },
-      // Násobiče se násobí: 2,5 × 1,4 = 3,5.
-      passive: () => ({ editionRateMult: HOLO_FOIL_EDITION_MULT / POLISH_EDITION_MULT }),
+      icon: 'toolbox',
+      prop: 'stars-stack',
+      bg: '#3d2c5e',
+      fg: '#f4ecff',
+      accent: '#7ee8fa',
+      pattern: 'waves',
+    },
+    {
+      // Mechaniku nese Jarní úklid (`springCleaning` čte, jestli je Generální úklid uplatněný) — bez hooku tady.
+      params: { mult: editionParam(DEEP_EDITION, 'mult') },
     },
   ),
 

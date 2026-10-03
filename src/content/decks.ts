@@ -53,11 +53,12 @@ export const DEBTOR_STARTING_MONEY = -10;
 export const DEBTOR_DEBT_LIMIT = 20;
 export const DEBTOR_INTEREST_MULT = 2;
 /**
- * Úřednický: startovní kupóny (Trhací kalendář, Kamarád za pultem). Dřív Žlutá cenovka (sleva 20 %) + Trhací
+ * Úřednický: startovní kupóny (1.0.1: Kniha stížností, Zpravodaj obce; před 1.0.1 Trhací kalendář a Kamarád za
+ * pultem). Ještě dřív Žlutá cenovka (sleva 20 %) + Trhací
  * kalendář — bot s nimi vyhrával 66,5 % proti 34 % Hospodského (sleva od prvního nákupu je nejsilnější ekonomika);
  * s Kamarádem za pultem 34,5 %, v rozmezí ostatních balíčků (DECISIONS 2026-10-02 „Balanc po fázi 7“).
  */
-export const CLERK_VOUCHERS: readonly string[] = ['tear_calendar', 'counter_buddy'];
+export const CLERK_VOUCHERS: readonly string[] = ['complaints_book', 'village_newsletter'];
 /**
  * Babiččin: +1 slot spotřebky, start s 1 náhodnou babskou radou. Fáze 10: se 2 radami 41 % výher (Hospodský 29 %),
  * s 1 radou 36–38 %; bez slotu navíc (2 rady) 39 % — slot navíc sílu nedělá, takže zůstává.

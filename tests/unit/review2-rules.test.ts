@@ -110,7 +110,7 @@ describe('Doppelbock: popisek ceny zapůjčeného žolíka sedí s cenou ve Več
       const rental = newJokerInstance(game._core, 'epic_one', null, ['rental']);
       const price = jokerPrice(game._core, rental);
       expect(price).toBe(doppelbock.params!.price);
-      expect(t('stakes.doppelbock.desc', doppelbock.params)).toContain(`stojí jen ${formatMoney(price)}`);
+      expect(t('stakes.doppelbock.desc', doppelbock.params)).toContain(`akontace ${formatMoney(price)}`);
       game._core.state.ante = Number(jedenactka.params!.fromAnte);
       game._core.invalidate();
       expect(jokerPrice(game._core, rental)).toBe(price);

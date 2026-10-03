@@ -357,6 +357,17 @@ export class Game {
     }));
     s.blindIndex = 0;
     s.anteVouchers = rollAnteVouchers(core);
+    // Přelosování šéfa zdarma za patro (Zpravodaj obce) — nevyužitá z minulého patra propadnou.
+    const rerolls = core.mods().bossRerollsPerAnte;
+    if (rerolls > 0) s.flags.bossRerolls = rerolls;
+  }
+
+  /** Nákup ve Večerce: s věrnostní kartičkou (`freePurchaseEvery`) se započítá do počítadla nákupů. */
+  private countPurchase(): void {
+    const s = this.core.state;
+    if (this.core.mods().freePurchaseEvery <= 0) return;
+    const count = typeof s.flags.loyaltyPurchases === 'number' ? s.flags.loyaltyPurchases : 0;
+    s.flags.loyaltyPurchases = count + 1;
   }
 
   private currentBlind(): BlindSlot {
@@ -515,6 +526,8 @@ export class Game {
     s.stats.handsPlayed++;
     s.stats.cardsPlayed += cardIds.length;
     s.stats.handTypeCounts[type] = (s.stats.handTypeCounts[type] ?? 0) + 1;
+    // Kupóny, které reagují na zahranou ruku (Kniha stížností) — úroveň platí až od další ruky.
+    core.eachVoucher('afterHandPlayed', { hand: type, played: hl.played });
     // Byrokracie: poplatek za zahranou ruku (jen do dluhového limitu — ruku jde zahrát vždy).
     const handCost = core.mods().handCost;
     if (handCost > 0) core.api.addMoney(-handCost, 'handCost');
@@ -782,7 +795,7 @@ export class Game {
     }
     const deckMoney = Math.floor(rewardAmount(reg.decks[s.deckId]?.roundEndMoney?.(ctx)));
     if (deckMoney) extra.push({ source: `deck:${s.deckId}`, amount: deckMoney });
-    // Štítky (Termínovaný vklad) — za balíčkem; spotřebovat se smí až v `onRoundEnd`, který běží po rozpisu.
+    // Štítky (Brigáda na chmelu, Půjčka od tchána) — za balíčkem; spotřebovat se smí až v `onRoundEnd` po rozpisu.
     for (const tag of s.tags) {
       const roundEndMoney = reg.tags[tag.defId]?.hooks.roundEndMoney;
       if (!roundEndMoney) continue;
@@ -827,6 +840,7 @@ export class Game {
         core.registry.decks[s.deckId]?.onBossDefeated?.(
           extend(core.baseCtx('misc'), { bossId: round.bossId }),
         );
+        core.eachVoucher('onBossDefeated', { bossId: round.bossId });
         core.invalidate();
       }
     }
@@ -965,12 +979,14 @@ export class Game {
       // by se jinak živý a načtený stav rozešly.
       addJokerInstance(core, detached(item.joker), { ignoreSlots: true, acquire: true });
       s.stats.jokersBought++;
+      this.countPurchase();
       core.emit({ type: 'itemBought', kind: 'joker', defId: item.joker.defId, price: item.price });
     } else if (item.kind === 'consumable') {
       if (use) {
         if (!this.consumableUsable(item.consumable, targetIds ?? [])) fail('cannotUse');
         this.pay(item.price);
         item.sold = true;
+        this.countPurchase();
         core.emit({
           type: 'itemBought',
           kind: 'consumable',
@@ -983,6 +999,7 @@ export class Game {
         this.pay(item.price);
         item.sold = true;
         addConsumableInstance(core, detached(item.consumable), true);
+        this.countPurchase();
         core.emit({
           type: 'itemBought',
           kind: 'consumable',
@@ -1006,6 +1023,7 @@ export class Game {
         },
         { source: 'shop' },
       );
+      this.countPurchase();
       core.emit({ type: 'itemBought', kind: 'card', defId: `${c.rank}${c.suit}`, price: item.price });
     }
   }
@@ -1018,6 +1036,7 @@ export class Game {
     if (b.sold) fail('soldOut');
     this.pay(b.price);
     b.sold = true;
+    this.countPurchase();
     core.emit({ type: 'itemBought', kind: 'booster', defId: b.boosterId, price: b.price });
     this.startBooster(b.boosterId, 'shop');
   }
@@ -1086,6 +1105,8 @@ export class Game {
     if (!voucherAvailable(core, v.voucherId)) fail('cannotUse');
     this.pay(v.price);
     v.sold = true;
+    // Kupón se počítá ještě před uplatněním (koupě samotné kartičky se nepočítá — ještě neplatí).
+    this.countPurchase();
     core.emit({ type: 'itemBought', kind: 'voucher', defId: v.voucherId, price: v.price });
     this.redeemVoucher(v.voucherId);
   }

@@ -132,9 +132,6 @@ function casinoDeck(): CardSpec[] {
   return standardDeckSpecs().map((c) => ({ ...c, enhancement: 'lucky' }));
 }
 
-/** Kupóny přehození — bez přehození (nebo s pevnou cenou) bezcenné. */
-const REROLL_VOUCHERS = ['counter_buddy', 'manager_inlaw'];
-
 // ─────────────────────────── Výzvy ───────────────────────────
 
 const DEFS: Omit<ChallengeDef, 'unlock'>[] = [
@@ -182,8 +179,9 @@ const DEFS: Omit<ChallengeDef, 'unlock'>[] = [
     deckId: 'pub',
     startingMoney: DEFAULT_MONEY,
     extraModifiers: { flatShopPrice: FLAT_PRICE, flatSellPrice: FLAT_SELL },
-    // Slevy nic nezlevní a Amnestie by byla −1 patro zadarmo (příplatek pevná cena přebije).
-    bannedVouchers: ['yellow_price', 'relabeled_price', ...REROLL_VOUCHERS, 'amnesty'],
+    // Pevná cena: nákup zdarma (Věrnostní kartička) ani prodej za plnou cenu do pravidel nepatří a Amnestie by byla
+    // −1 patro zadarmo (příplatek pevná cena přebije).
+    bannedVouchers: ['loyalty_card', 'regular_customer', 'deposit_bottle', 'bottle_return', 'amnesty'],
     ruleKeys: ['price', 'sell'],
     params: { price: FLAT_PRICE, sell: FLAT_SELL },
     art: {
@@ -222,7 +220,6 @@ const DEFS: Omit<ChallengeDef, 'unlock'>[] = [
     deckId: 'pub',
     startingMoney: DEFAULT_MONEY,
     extraModifiers: { noSkip: true, noReroll: true, hands: EXPRESS_HANDS },
-    bannedVouchers: REROLL_VOUCHERS,
     bannedTags: ['open_doors'],
     ruleKeys: ['noSkip', 'noReroll', 'hands'],
     params: { hands: EXPRESS_HANDS },
@@ -243,7 +240,7 @@ const DEFS: Omit<ChallengeDef, 'unlock'>[] = [
     startingMoney: DEFAULT_MONEY,
     startingHandLevels: { flush: MARIAS_PARTY_LEVEL, straight_flush: MARIAS_PARTY_LEVEL },
     bannedBoosterKinds: ['card'],
-    bannedTags: ['cottage_marias'],
+    bannedTags: ['mushroom_hunt'],
     extraModifiers: { targetMult: MARIAS_PARTY_TARGET_MULT },
     ruleKeys: ['levels', 'noCards', 'targets'],
     params: { level: MARIAS_PARTY_LEVEL, mult: MARIAS_PARTY_TARGET_MULT },
@@ -306,7 +303,8 @@ const DEFS: Omit<ChallengeDef, 'unlock'>[] = [
       blindRewardMult: 0,
       moneyPerUnusedHand: -BASE_MODIFIERS.moneyPerUnusedHand,
     },
-    bannedVouchers: ['savings_account', 'building_savings', 'nonstop'],
+    // Další zdroje peněz mimo štěstí (prodej za plnou cenu, Kč za nevyužité ruce).
+    bannedVouchers: ['nonstop', 'deposit_bottle', 'bottle_return'],
     ruleKeys: ['lucky', 'noIncome'],
     params: { cards: 52 },
     art: {
@@ -499,13 +497,13 @@ const DEFS: Omit<ChallengeDef, 'unlock'>[] = [
     id: 'dry_february',
     deckId: 'pub',
     startingMoney: DRY_FEBRUARY_MONEY,
-    startingVouchers: ['tear_calendar'],
+    startingVouchers: ['complaints_book'],
     extraModifiers: {
       noJokers: true,
       consumableSlots: DRY_FEBRUARY_CONSUMABLE_SLOTS,
       targetMult: DRY_FEBRUARY_TARGET_MULT,
     },
-    bannedVouchers: ['narrow_rack', 'proper_rack'],
+    bannedVouchers: ['narrow_rack', 'proper_rack', 'bottle_return', 'spring_cleaning', 'deep_cleaning'],
     bannedConsumables: [
       'knock_on_wood',
       'cauldron',
@@ -516,7 +514,14 @@ const DEFS: Omit<ChallengeDef, 'unlock'>[] = [
       'expropriation',
       'fine_waiver',
     ],
-    bannedTags: ['uncle_envelope', 'polished_cutlery', 'dental_xray', 'referral', 'connections'],
+    bannedTags: [
+      'uncle_envelope',
+      'polished_cutlery',
+      'referral',
+      'connections',
+      'fair_raffle',
+      'moving_day',
+    ],
     ruleKeys: ['noJokers', 'slots', 'targets', 'start'],
     params: {
       slots: DRY_FEBRUARY_CONSUMABLE_SLOTS,

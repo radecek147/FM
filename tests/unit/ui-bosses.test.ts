@@ -126,8 +126,8 @@ describe('texty šéfů v UI', () => {
   });
 
   it('rozpis odměn: peníze ze štítku mají jeho název', () => {
-    expect(rewardSourceLabel('tag:term_deposit')).toBe(
-      t('game.roundEnd.tag', { name: t('tags.term_deposit.name') }),
+    expect(rewardSourceLabel('tag:hop_picking')).toBe(
+      t('game.roundEnd.tag', { name: t('tags.hop_picking.name') }),
     );
     expect(rewardSourceLabel('tag:neznamy')).toBe(t('game.roundEnd.other'));
   });

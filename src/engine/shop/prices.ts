@@ -5,7 +5,9 @@
  *    round = polovina nahoru. Zdarma = 0 (i při `shopPriceAdd`).
  *  - Přehození: `rerollBaseCost + rerollCostStep × placená přehození + shopPriceAdd` (sleva ho nezlevňuje).
  *  - Prodej žolíka/spotřebky: `max(1, floor(základní cena / 2)) + sellBonus`, základní cena = cena z definice
- *    + příplatek za edici (bez slev a `shopPriceAdd`). Zapůjčený žolík 1 Kč, přibitý nejde prodat.
+ *    + příplatek za edici (bez slev a `shopPriceAdd`); s Výkupnou / Zálohovanou lahví plná základní cena. Žolík na
+ *    splátky 1 Kč, přibitý nejde prodat.
+ *  - Věrnostní kartička (`freePurchaseEvery`): každý N-tý nákup je zdarma (`loyaltyFreeNext`).
  */
 import {
   PLAYING_CARD_BASE_PRICE,
@@ -141,7 +143,9 @@ export function jokerSellValue(core: GameCore, joker: JokerInstance): number {
   if (flat > 0) return flat;
   if (joker.stickers.includes('rental')) return RENTAL_SELL_PRICE;
   const base = (core.registry.jokers[joker.defId]?.cost ?? 0) + editionPriceAdd(core, joker.edition);
-  return Math.max(1, Math.floor(base / 2)) + joker.sellBonus;
+  // Výkupna: plná základní cena místo poloviny.
+  const sell = core.mods().jokerSellFull ? base : Math.floor(base / 2);
+  return Math.max(1, sell) + joker.sellBonus;
 }
 
 /** Prodejní cena spotřebky (pranostika 1 Kč, babská rada 2 Kč, razítko 3 Kč; + edice; nebo `flatSellPrice`). */
@@ -149,9 +153,23 @@ export function consumableSellValue(
   core: GameCore,
   c: Pick<ConsumableInstance, 'defId' | 'edition'>,
 ): number {
-  const flat = core.mods().flatSellPrice;
-  if (flat > 0) return flat;
-  return Math.max(1, Math.floor(consumableBasePrice(core, c) / 2));
+  const mods = core.mods();
+  if (mods.flatSellPrice > 0) return mods.flatSellPrice;
+  // Zálohovaná lahev: plná základní cena místo poloviny.
+  const base = consumableBasePrice(core, c);
+  return Math.max(1, mods.consumableSellFull ? base : Math.floor(base / 2));
+}
+
+/**
+ * Je příští nákup ve Večerce zdarma díky věrnostní kartičce (`Modifiers.freePurchaseEvery`)? Počítadlo nákupů
+ * `RunState.flags.loyaltyPurchases` zvyšuje `Game` po každém nákupu, dokud kartička platí.
+ */
+export function loyaltyFreeNext(core: GameCore): boolean {
+  const every = core.mods().freePurchaseEvery;
+  if (every <= 0) return false;
+  const count = core.state.flags.loyaltyPurchases;
+  const bought = typeof count === 'number' && Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
+  return (bought + 1) % every === 0;
 }
 
 /**
@@ -160,10 +178,12 @@ export function consumableSellValue(
  */
 export function refreshShopPrices(core: GameCore, shop: ShopState): void {
   const mods = core.mods();
+  // Věrnostní kartička: příští nákup je zdarma — cokoli si hráč vybere (ne přehození).
+  const loyal = loyaltyFreeNext(core);
   for (const item of shop.items) {
-    if (!item.sold) item.price = shopPrice(mods, shopItemBasePrice(core, item), item.free);
+    if (!item.sold) item.price = shopPrice(mods, shopItemBasePrice(core, item), item.free || loyal);
   }
-  for (const b of shop.boosters) if (!b.sold) b.price = boosterPrice(core, b.boosterId, b.free);
-  for (const v of shop.vouchers) if (!v.sold) v.price = voucherPrice(core, v.voucherId, v.free);
+  for (const b of shop.boosters) if (!b.sold) b.price = boosterPrice(core, b.boosterId, b.free || loyal);
+  for (const v of shop.vouchers) if (!v.sold) v.price = voucherPrice(core, v.voucherId, v.free || loyal);
   shop.rerollCost = shop.freeRerolls > 0 ? 0 : rerollPrice(mods, shop.paidRerolls);
 }

@@ -25,23 +25,24 @@ import {
 } from '../../src/engine/shop/shop';
 import type { GameEvent, ShopItem } from '../../src/engine/types';
 import { hasKey, t } from '../../src/i18n/cs';
-import { ART, boss, makeGame, makeRegistry, winNextHand } from './fixtures/registry';
+import { refreshShopPrices } from '../../src/engine/shop/prices';
+import { ART, boss, makeGame, makeRegistry, play, setupRound, winNextHand } from './fixtures/registry';
 
 // ─────────────────────────── Pomocníci ───────────────────────────
 
 /** DESIGN 6: [tier 1, cena, tier 2, cena] v pořadí tabulky. */
 const PAIRS: [string, number, string, number][] = [
   ['second_shelf', 9, 'checkout_shelf', 12],
-  ['yellow_price', 10, 'relabeled_price', 13],
-  ['counter_buddy', 9, 'manager_inlaw', 11],
+  ['loyalty_card', 10, 'regular_customer', 13],
+  ['village_newsletter', 9, 'village_radio', 12],
   ['late_hours', 12, 'nonstop', 15],
   ['dumpster', 9, 'recycling_yard', 12],
   ['bigger_table', 12, 'folding_table', 15],
-  ['savings_account', 9, 'building_savings', 12],
+  ['deposit_bottle', 8, 'bottle_return', 12],
   ['narrow_rack', 11, 'proper_rack', 13],
-  ['tear_calendar', 8, 'grandmas_pantry', 11],
+  ['complaints_book', 8, 'complaint_settled', 12],
   ['card_stall', 9, 'collectors_fair', 12],
-  ['polish', 9, 'holo_foil', 12],
+  ['spring_cleaning', 9, 'deep_cleaning', 12],
   ['official_strike', 12, 'amnesty', 14],
 ];
 const TIER1 = PAIRS.map((p) => p[0]);
@@ -131,8 +132,6 @@ function sampleItems(g: Game, n: number): ShopItem[] {
   return out;
 }
 
-const kindOf = (it: ShopItem): string => (it.kind === 'consumable' ? it.consumableKind : it.kind);
-
 // ─────────────────────────── Definice a texty ───────────────────────────
 
 describe('kupóny – definice (DESIGN 6)', () => {
@@ -175,19 +174,22 @@ describe('kupóny – definice (DESIGN 6)', () => {
 
   it('popisky čtou stejná čísla jako mechanika', () => {
     const d = (id: string) => t(`vouchers.${id}.desc`, def(id).params ?? {});
-    expect(d('yellow_price')).toBe(`Zboží ve Večerce je o${NBSP}20${NBSP}% levnější (přehození ne).`);
-    expect(d('relabeled_price')).toContain(`o${NBSP}40${NBSP}%`);
-    expect(d('counter_buddy')).toContain(`o${NBSP}1${NBSP}Kč levnější (začíná na 3${NBSP}Kč)`);
+    expect(d('loyalty_card')).toContain('Každý 5. nákup ve Večerce je zdarma');
+    expect(d('regular_customer')).toBe('Zdarma je už každý 3. nákup ve Večerce (místo každého 5.).');
+    expect(d('village_newsletter')).toContain('1× zdarma přelosovat šéfa');
+    expect(d('village_radio')).toContain(`celkem 2× za patro a${NBSP}jeho cíl je o${NBSP}10${NBSP}% nižší`);
     expect(d('nonstop')).toBe(
       `+1${NBSP}ruka v${NBSP}každém kole a${NBSP}+1${NBSP}Kč navíc za každou nevyužitou ruku.`,
     );
-    expect(d('savings_account')).toContain(`na 8${NBSP}Kč`);
-    expect(d('building_savings')).toContain(`na 12${NBSP}Kč`);
-    expect(d('tear_calendar')).toContain('(váha každé 3 → 7, žolíci mají 14)');
-    expect(d('grandmas_pantry')).toContain('7 → 8,5');
+    expect(d('deposit_bottle')).toBe('Spotřebky se prodávají za plnou cenu (místo poloviny).');
+    expect(d('bottle_return')).toContain(`dál za 1${NBSP}Kč`);
+    expect(d('complaints_book')).toContain(`zvýší se o${NBSP}1${NBSP}úroveň`);
+    expect(d('complaint_settled')).toBe(
+      `Každé 6. zahrání téže kombinace v${NBSP}runu jí přidá 1${NBSP}úroveň.`,
+    );
     expect(d('collectors_fair')).toContain(`50% šanci na vylepšení a${NBSP}20% šanci na pečeť`);
-    expect(d('polish')).toContain('2,5× častěji');
-    expect(d('holo_foil')).toContain('3,5× častěji (místo 2,5×)');
+    expect(d('spring_cleaning')).toContain(`(+50${NBSP}čipů)`);
+    expect(d('deep_cleaning')).toContain(`(+10${NBSP}mult)`);
     expect(d('official_strike')).toContain('×1,1');
     expect(d('amnesty')).toContain(`o${NBSP}1${NBSP}Kč víc`);
   });
@@ -208,21 +210,21 @@ describe('kupóny – nabídka a koupě', () => {
   it('tier 2 se nabídne až s vlastněným tier 1; vlastněný kupón už ne', () => {
     const g = game();
     toShop(g);
-    expect(eligibleVouchers(g._core)).not.toContain('relabeled_price');
-    buy(g, 'yellow_price');
+    expect(eligibleVouchers(g._core)).not.toContain('regular_customer');
+    buy(g, 'loyalty_card');
     const pool = eligibleVouchers(g._core);
-    expect(pool).toContain('relabeled_price');
-    expect(pool).not.toContain('yellow_price');
-    expect(pool.filter((id) => def(id).tier === 2)).toEqual(['relabeled_price']);
-    buy(g, 'relabeled_price');
-    expect(eligibleVouchers(g._core)).not.toContain('relabeled_price');
-    expect(g.state.vouchers).toEqual(['yellow_price', 'relabeled_price']);
+    expect(pool).toContain('regular_customer');
+    expect(pool).not.toContain('loyalty_card');
+    expect(pool.filter((id) => def(id).tier === 2)).toEqual(['regular_customer']);
+    buy(g, 'regular_customer');
+    expect(eligibleVouchers(g._core)).not.toContain('regular_customer');
+    expect(g.state.vouchers).toEqual(['loyalty_card', 'regular_customer']);
   });
 
   it('tier 2 bez tier 1 koupit nejde (ani vnucený do nabídky) — stav se nezmění', () => {
     const g = game();
     toShop(g);
-    g._core.state.shop!.vouchers = [{ voucherId: 'relabeled_price', price: 13, sold: false }];
+    g._core.state.shop!.vouchers = [{ voucherId: 'regular_customer', price: 13, sold: false }];
     const before = JSON.stringify(g.state);
     expect(g.dispatch({ type: 'buyVoucher', slot: 0 })).toMatchObject({ ok: false, error: 'cannotUse' });
     expect(JSON.stringify(g.state)).toBe(before);
@@ -239,18 +241,18 @@ describe('kupóny – nabídka a koupě', () => {
 
   it('kupón drží celé patro (nekoupený i ve Večerce po Velké útratě), po porážce šéfa nový los', () => {
     const g = game();
-    g._core.state.anteVouchers = ['polish'];
+    g._core.state.anteVouchers = ['spring_cleaning'];
     toShop(g); // po Malé
-    expect(g.state.shop!.vouchers.map((v) => v.voucherId)).toEqual(['polish']);
+    expect(g.state.shop!.vouchers.map((v) => v.voucherId)).toEqual(['spring_cleaning']);
     toShop(g); // po Velké — stále týž kupón
-    expect(g.state.shop!.vouchers.map((v) => v.voucherId)).toEqual(['polish']);
+    expect(g.state.shop!.vouchers.map((v) => v.voucherId)).toEqual(['spring_cleaning']);
     ok(g.dispatch({ type: 'buyVoucher', slot: 0 }));
     expect(g.state.anteVouchers).toEqual([]);
     toShop(g); // po šéfovi → patro 2, nový kupón
     expect(g.state.ante).toBe(2);
     expect(g.state.anteVouchers).toHaveLength(1);
     const offered = g.state.anteVouchers[0]!;
-    expect(offered).not.toBe('polish');
+    expect(offered).not.toBe('spring_cleaning');
     expect(eligibleVouchers(g._core)).toContain(offered);
     expect(g.state.shop!.vouchers.map((v) => v.voucherId)).toEqual([offered]);
   });
@@ -271,7 +273,7 @@ describe('kupóny – nabídka a koupě', () => {
     const g = game(0);
     toShop(g);
     g._core.state.money = 5;
-    offer(g, 'tear_calendar');
+    offer(g, 'complaints_book');
     expect(g.dispatch({ type: 'buyVoucher', slot: 0 })).toMatchObject({ ok: false, error: 'notEnoughMoney' });
     expect(g.state.vouchers).toEqual([]);
   });
@@ -313,55 +315,83 @@ describe('1 Druhý regál / Regál u pokladny', () => {
   });
 });
 
-describe('2 Žlutá cenovka / Přelepená cenovka', () => {
-  /** Obálky (4 / 7 / 10 Kč) jako vzorek cen. */
-  const boosterPrices = (g: Game) => g.state.shop!.boosters.map((b) => [b.boosterId, b.price] as const);
-  const cost = (id: string) => BOOSTERS.find((b) => b.id === id)!.cost;
+describe('2 Věrnostní kartička / Kmenový zákazník', () => {
+  /** Ceny všeho neprodaného ve Večerce (karty, obálky, kupóny). */
+  const prices = (g: Game) => {
+    const shop = g.state.shop!;
+    return [...shop.items, ...shop.boosters, ...shop.vouchers].filter((x) => !x.sold).map((x) => x.price);
+  };
 
-  it('Žlutá cenovka: zboží o 20 % levnější hned (polovina nahoru), přehození ne', () => {
-    const g = game();
-    toShop(g);
-    const rerollCost = g.state.shop!.rerollCost;
-    buy(g, 'yellow_price');
-    expect(g.modifiers().shopDiscountPct).toBe(20);
-    const expected: Record<number, number> = { 4: 3, 7: 6, 10: 8 };
-    for (const [id, price] of boosterPrices(g)) expect(price, id).toBe(expected[cost(id)]);
-    expect(g.state.shop!.rerollCost).toBe(rerollCost);
-    offer(g, 'relabeled_price');
-    expect(g.state.shop!.vouchers[0]!.price).toBe(10); // 13 × 0,8 = 10,4
+  it('Věrnostní kartička: každý 5. nákup zdarma; koupě kartičky samotné se nepočítá, přehození taky ne', () => {
+    const g = shopWith('loyalty_card');
+    expect(g.modifiers().freePurchaseEvery).toBe(5);
+    expect(g.state.flags.loyaltyPurchases).toBeUndefined();
+    ok(g.dispatch({ type: 'reroll' }));
+    expect(g.state.flags.loyaltyPurchases).toBeUndefined();
+    g._core.state.flags.loyaltyPurchases = 3;
+    refreshShopPrices(g._core, g._core.state.shop!);
+    expect(prices(g).every((p) => p > 0)).toBe(true);
+    ok(g.dispatch({ type: 'buy', slot: 0 }));
+    expect(g.state.flags.loyaltyPurchases).toBe(4);
+    // Pátý nákup: zdarma je cokoli (kartový slot, obálka i kupón), přehození ne.
+    expect(prices(g).every((p) => p === 0)).toBe(true);
+    expect(g.state.shop!.rerollCost).toBeGreaterThan(0);
+    const money = g.state.money;
+    ok(g.dispatch({ type: 'buy', slot: 1 }));
+    expect(g.state.money).toBe(money);
+    expect(g.state.flags.loyaltyPurchases).toBe(5);
+    expect(prices(g).every((p) => p > 0)).toBe(true);
   });
 
-  it('Přelepená cenovka: celkem 40 %', () => {
-    const g = shopWith('yellow_price', 'relabeled_price');
-    expect(g.modifiers().shopDiscountPct).toBe(40);
-    const expected: Record<number, number> = { 4: 2, 7: 4, 10: 6 };
-    for (const [id, price] of boosterPrices(g)) expect(price, id).toBe(expected[cost(id)]);
-    expect(g.state.shop!.rerollCost).toBe(4);
+  it('Kmenový zákazník: zdarma už každý 3. nákup; počítadlo přežije uložení a načtení', () => {
+    const g = shopWith('loyalty_card', 'regular_customer');
+    expect(g.modifiers().freePurchaseEvery).toBe(3);
+    g._core.state.flags.loyaltyPurchases = 2;
+    const loaded = Game.fromState(deserializeRun(serializeRun(g._core.state)), registry());
+    refreshShopPrices(loaded._core, loaded._core.state.shop!);
+    expect(prices(loaded).every((p) => p === 0)).toBe(true);
   });
 });
 
-describe('3 Kamarád za pultem / Švagr vedoucí', () => {
-  it('Kamarád za pultem: přehození začíná na 3 Kč (hned), dál roste o 1 Kč', () => {
-    const g = shopWith('counter_buddy');
-    expect(g.state.shop!.rerollCost).toBe(3);
-    const money = g.state.money;
-    ok(g.dispatch({ type: 'reroll' }));
-    expect(g.state.money).toBe(money - 3);
-    expect(g.state.shop!.rerollCost).toBe(4);
+describe('3 Zpravodaj obce / Obecní rozhlas', () => {
+  /** Registr se dvěma šéfy, ať je co přelosovat. */
+  function rerollGame(): Game {
+    const reg = registry();
+    reg.bosses = { wall: boss('wall', { targetMult: 4 }), fence: boss('fence', { targetMult: 4 }) };
+    const g = makeGame({ registry: reg, money: 200 });
+    toShop(g);
+    return g;
+  }
+
+  it('Zpravodaj obce: přelosování šéfa zdarma hned v rozehraném patře a pak 1× na začátku každého patra', () => {
+    const g = rerollGame();
+    expect(g.dispatch({ type: 'leaveShop' }).ok).toBe(true);
+    expect(g.dispatch({ type: 'rerollBoss' })).toMatchObject({ ok: false, error: 'cannotUse' });
+    const back = rerollGame();
+    buy(back, 'village_newsletter');
+    expect(back.modifiers().bossRerollsPerAnte).toBe(1);
+    expect(back.state.flags.bossRerolls).toBe(1);
+    ok(back.dispatch({ type: 'leaveShop' }));
+    const before = back.state.blinds[2]!.bossId;
+    const money = back.state.money;
+    ok(back.dispatch({ type: 'rerollBoss' }));
+    expect(back.state.blinds[2]!.bossId).not.toBe(before);
+    expect(back.state.money).toBe(money);
+    expect(back.state.flags.bossRerolls).toBe(0);
+    expect(back.dispatch({ type: 'rerollBoss' })).toMatchObject({ ok: false, error: 'cannotUse' });
+    // Velká a šéf → nové patro: přelosování zase 1×.
+    toShop(back);
+    toShop(back);
+    expect(back.state.ante).toBe(2);
+    expect(back.state.flags.bossRerolls).toBe(1);
   });
 
-  it('Švagr vedoucí: cena přehození v téže Večerce neroste (i po už zaplacených přehozeních)', () => {
-    const g = shopWith('counter_buddy');
-    ok(g.dispatch({ type: 'reroll' }));
-    ok(g.dispatch({ type: 'reroll' }));
-    expect(g.state.shop!.rerollCost).toBe(5);
-    buy(g, 'manager_inlaw');
-    expect(g.modifiers().rerollCostStep).toBe(0);
-    expect(g.state.shop!.rerollCost).toBe(3);
-    const money = g.state.money;
-    for (let i = 0; i < 3; i++) ok(g.dispatch({ type: 'reroll' }));
-    expect(g.state.money).toBe(money - 9);
-    expect(g.state.shop!.rerollCost).toBe(3);
+  it('Obecní rozhlas: 2 přelosování za patro a cíl šéfa o 10 % nižší', () => {
+    const g = rerollGame();
+    buy(g, 'village_newsletter', 'village_radio');
+    expect(g.modifiers()).toMatchObject({ bossRerollsPerAnte: 2, bossTargetMult: 0.9 });
+    expect(g.state.flags.bossRerolls).toBe(2);
+    expect(g.blindTarget('boss', 'wall')).toBe(blindTarget(1, 'boss', 1, { bossMult: 4 * 0.9 }));
   });
 });
 
@@ -428,24 +458,23 @@ describe('6 Větší stůl / Rozkládací stůl', () => {
   });
 });
 
-describe('7 Spořicí účet / Stavební spoření', () => {
-  it('bez kupónu strop 5 Kč, Spořicí účet 8 Kč, Stavební spoření 12 Kč', () => {
-    const g = game(200);
-    expect(winRound(g).interest).toBe(5);
-    ok(g.dispatch({ type: 'cashOut' }));
-    buy(g, 'savings_account');
-    expect(g.modifiers().interestCap).toBe(8);
-    expect(winRound(g).interest).toBe(8);
-    ok(g.dispatch({ type: 'cashOut' }));
-    buy(g, 'building_savings');
-    expect(g.modifiers().interestCap).toBe(12);
-    expect(winRound(g).interest).toBe(12);
+describe('7 Zálohovaná lahev / Výkupna', () => {
+  it('Zálohovaná lahev: spotřebka se prodá za plnou cenu (pranostika 3 Kč místo 1 Kč)', () => {
+    const g = shopWith('deposit_bottle');
+    expect(g.modifiers().consumableSellFull).toBe(true);
+    const c = g._core.api.createConsumable({ kind: 'pranostika' })!;
+    const money = g.state.money;
+    ok(g.dispatch({ type: 'sellConsumable', uid: c.uid }));
+    expect(g.state.money).toBe(money + CONSUMABLES.find((x) => x.id === c.defId)!.cost);
   });
 
-  it('strop jen omezuje: s 20 Kč je úrok stále 4 Kč', () => {
-    const g = shopWith('savings_account');
-    g._core.state.money = 20;
-    expect(winRound(g).interest).toBe(4);
+  it('Výkupna: žolík za plnou cenu (+ prodejní bonus), žolík na splátky dál za 1 Kč', () => {
+    const g = shopWith('deposit_bottle', 'bottle_return');
+    expect(g.modifiers().jokerSellFull).toBe(true);
+    const j = g._core.api.createJoker({ defId: 'beer_mat' })!;
+    expect(g.sellValue(j.uid)).toBe(JOKERS.find((x) => x.id === 'beer_mat')!.cost);
+    const rented = g._core.api.createJoker({ defId: 'hearts_man', stickers: ['rental'] })!;
+    expect(g.sellValue(rented.uid)).toBe(1);
   });
 });
 
@@ -464,37 +493,32 @@ describe('8 Úzký věšák / Pořádný věšák', () => {
   });
 });
 
-describe('9 Trhací kalendář / Babiččina spíž', () => {
-  it('Trhací kalendář: váha pranostik a babských rad 3 → 7; spotřebky ve Večerce častěji', () => {
-    const plain = game();
-    toShop(plain);
-    const share = (items: ShopItem[]) =>
-      items.filter((it) => ['pranostika', 'rada'].includes(kindOf(it))).length / items.length;
-    const before = share(sampleItems(plain, 300));
-    const g = shopWith('tear_calendar');
-    expect(g.modifiers()).toMatchObject({ shopWeightPranostika: 7, shopWeightRada: 7, shopWeightJoker: 14 });
-    const after = share(sampleItems(g, 300));
-    // Očekávaný podíl 6/20 = 30 % → 14/28 = 50 %.
-    expect(before).toBeGreaterThan(0.22);
-    expect(before).toBeLessThan(0.38);
-    expect(after).toBeGreaterThan(0.42);
-    expect(after).toBeLessThan(0.58);
+describe('9 Kniha stížností / Vyřízená stížnost', () => {
+  /** Zahraje v kole dané karty (kolo neskončí). */
+  function playCards(g: Game, hand: string): void {
+    startRound(g);
+    g._core.state.round!.target = 1e12;
+    g._core.state.round!.handsLeft = Math.max(g._core.state.round!.handsLeft, 2);
+    play(g, setupRound(g, hand));
+  }
+
+  it('Kniha stížností: kombinace zahraná v runu poprvé dostane po ruce +1 úroveň, podruhé už ne', () => {
+    const g = shopWith('complaints_book');
+    expect(g.state.handLevels.pair.played).toBe(0);
+    playCards(g, 'KS KH');
+    expect(g.state.handLevels.pair.level).toBe(2);
+    playCards(g, 'QS QH');
+    expect(g.state.handLevels.pair.level).toBe(2);
   });
 
-  it('Babiččina spíž: +1 slot spotřebky, ve Večerce i razítka (bez spíže nikdy), váhy 8,5', () => {
-    const plain = game();
-    toShop(plain);
-    expect(sampleItems(plain, 200).some((it) => kindOf(it) === 'razitko')).toBe(false);
-    const g = shopWith('tear_calendar', 'grandmas_pantry');
-    expect(g.modifiers()).toMatchObject({
-      consumableSlots: 3,
-      shopWeightRazitko: 2,
-      shopWeightPranostika: 8.5,
-      shopWeightRada: 8.5,
-    });
-    const razitka = sampleItems(g, 200).filter((it) => kindOf(it) === 'razitko');
-    expect(razitka.length).toBeGreaterThan(0);
-    for (const it of razitka) expect(it.price).toBe(6);
+  it('Vyřízená stížnost: každé 6. zahrání téže kombinace +1 úroveň', () => {
+    const g = shopWith('complaints_book', 'complaint_settled');
+    g._core.state.handLevels.pair.played = 4;
+    playCards(g, 'KS KH');
+    expect(g.state.handLevels.pair.level).toBe(1);
+    playCards(g, 'QS QH');
+    expect(g.state.handLevels.pair.played).toBe(6);
+    expect(g.state.handLevels.pair.level).toBe(2);
   });
 });
 
@@ -528,28 +552,31 @@ describe('10 Stánek s kartami / Sběratelská burza', () => {
   });
 });
 
-describe('11 Leštěnka / Hologramová fólie', () => {
-  /** Podíl žolíků s lesklou/holografickou/duhovou edicí ve vzorku nabídek. */
-  function editionShare(g: Game, n: number): number {
-    const jokers = sampleItems(g, n).flatMap((it) => (it.kind === 'joker' ? [it.joker] : []));
-    return jokers.filter((j) => j.edition && j.edition !== 'negative').length / jokers.length;
+describe('11 Jarní úklid / Generální úklid', () => {
+  /** Z Večerky po Malé útratě přes Velkou až po porážku šéfa (rozpis odměn). */
+  function beatBoss(g: Game): void {
+    toShop(g);
+    winRound(g);
+    expect(g.state.round!.blind).toBe('boss');
   }
 
-  it('Leštěnka ×2,5 a Hologramová fólie celkem ×3,5 (šance 4,4 % → 11 % → 15,4 %)', () => {
-    const plain = game();
-    toShop(plain);
-    const base = editionShare(plain, 1500);
-    const g = shopWith('polish');
-    expect(g.modifiers().editionRateMult).toBe(2.5);
-    const polished = editionShare(g, 1500);
-    buy(g, 'holo_foil');
-    expect(g.modifiers().editionRateMult).toBe(3.5);
-    const foiled = editionShare(g, 1500);
-    expect(base).toBeLessThan(0.07);
-    expect(polished).toBeGreaterThan(0.08);
-    expect(polished).toBeLessThan(0.14);
-    expect(foiled).toBeGreaterThan(0.12);
-    expect(foiled).toBeLessThan(0.19);
+  it('Jarní úklid: po porážce šéfa dostane jeden žolík bez edice lesklou edici', () => {
+    const g = shopWith('spring_cleaning');
+    const plain = g._core.api.createJoker({ defId: 'beer_mat' })!;
+    const shiny = g._core.api.createJoker({ defId: 'hearts_man', edition: 'holo' })!;
+    beatBoss(g);
+    expect(g.state.jokers.find((j) => j.uid === plain.uid)!.edition).toBe('foil');
+    expect(g.state.jokers.find((j) => j.uid === shiny.uid)!.edition).toBe('holo');
+  });
+
+  it('Generální úklid: místo lesklé holografická; bez žolíka bez edice nic', () => {
+    const g = shopWith('spring_cleaning', 'deep_cleaning');
+    const plain = g._core.api.createJoker({ defId: 'beer_mat' })!;
+    beatBoss(g);
+    expect(g.state.jokers.find((j) => j.uid === plain.uid)!.edition).toBe('holo');
+    const empty = shopWith('spring_cleaning');
+    beatBoss(empty);
+    expect(empty.state.jokers).toEqual([]);
   });
 });
 
