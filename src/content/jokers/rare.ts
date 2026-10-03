@@ -139,7 +139,11 @@ const herbalist: JokerDef = {
 
 // ─────────────────────────── #20 Stálý host ───────────────────────────
 
-const REGULAR_MULT = 1;
+/**
+ * Kalibrace 1.0.1: 1 → 0,75 — s referenční rukou R2 350 × 26 (mult „čipové“ tabulky kombinací) byl +16 mult po 16 kolech
+ * R2 67 % nad pásmem vzácného (60 %). 0,75 je v binárním zápisu přesně, skóre se tak nezaokrouhlí o bod níž.
+ */
+const REGULAR_MULT = 0.75;
 
 const regular: JokerDef = {
   id: 'regular',

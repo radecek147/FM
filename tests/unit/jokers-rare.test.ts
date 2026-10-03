@@ -128,7 +128,9 @@ describe('vzácní žolíci — definice a texty', () => {
     expect(descOf('herbalist')).toBe(
       'Po každé použité babské radě trvale +1,5 mult; po kole, ve kterém se žádná rada nepoužila, bylinky zvadnou: −1 mult (teď +0 mult).',
     );
-    expect(descOf('regular')).toBe('+1 mult za každé kolo, které od koupě strávil ve slotu (teď +0 mult).');
+    expect(descOf('regular')).toBe(
+      '+0,75 mult za každé kolo, které od koupě strávil ve slotu (teď +0 mult).',
+    );
     expect(descOf('beer_belly')).toBe('Po každé zahrané ruce trvale +3 čipy (teď +0 čipů).');
     expect(descOf('carousel')).toBe(
       'Postupka smí jít kolem dokola (např. Q-K-A-2-3) a každá Postupka dá +14 mult.',
@@ -145,7 +147,7 @@ describe('vzácní žolíci — definice a texty', () => {
     const g = game();
     const inst = (id: string, state: JokerInstance['state']) => ({ ...newJokerInstance(g._core, id), state });
     expect(descOf('herbalist', inst('herbalist', { mult: 6 }))).toContain('(teď +6 mult)');
-    expect(descOf('regular', inst('regular', { rounds: 4 }))).toContain('(teď +4 mult)');
+    expect(descOf('regular', inst('regular', { rounds: 4 }))).toContain('(teď +3 mult)');
     expect(descOf('beer_belly', inst('beer_belly', { chips: 22 }))).toContain('(teď +22 čipů)');
     expect(descOf('beer_belly', inst('beer_belly', { chips: 4 }))).toContain('(teď +4 čipy)');
   });
@@ -303,18 +305,18 @@ describe('Kořenářka (herbalist)', () => {
 // ─────────────────────────── #20 Stálý host ───────────────────────────
 
 describe('Stálý host (regular)', () => {
-  it('+1 mult za každé dokončené kolo ve slotu', () => {
+  it('+0,75 mult za každé dokončené kolo ve slotu', () => {
     const g = game(['regular']);
     expect(hand(g, 'KS KH').score).toBe(64);
     winRound(g);
     expect(g.state.jokers[0]!.state.rounds).toBe(1);
     nextRound(g);
-    expect(hand(g, 'KS KH').score).toBe(32 * 3);
+    expect(hand(g, 'KS KH').score).toBe(32 * 2.75);
     winRound(g);
     nextRound(g);
-    expect(hand(g, 'KS KH').score).toBe(32 * 4);
+    expect(hand(g, 'KS KH').score).toBe(32 * 3.5);
     // Ruce v rámci kola stav nemění.
-    expect(hand(g, 'KS KH').score).toBe(32 * 4);
+    expect(hand(g, 'KS KH').score).toBe(32 * 3.5);
   });
 
   it('kopie počítadlo nezvedá; stav přežije uložení a načtení', () => {
@@ -323,8 +325,8 @@ describe('Stálý host (regular)', () => {
     nextRound(g);
     g = reload(g);
     expect(g.state.jokers[1]!.state.rounds).toBe(1);
-    // +1 (kopie) +1 (originál): 32 × 4 = 128
-    expect(hand(g, 'KS KH').score).toBe(128);
+    // +0,75 (kopie) +0,75 (originál): 32 × 3,5 = 112
+    expect(hand(g, 'KS KH').score).toBe(112);
   });
 });
 

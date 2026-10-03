@@ -456,7 +456,7 @@ describe('žolíci – vyrenderované popisky (params + počáteční stav)', ()
       old_guard: '×1,5 mult, pokud má zahraná kombinace úroveň aspoň 3.',
       herbalist:
         'Po každé použité babské radě trvale +1,5 mult; po kole, ve kterém se žádná rada nepoužila, bylinky zvadnou: −1 mult (teď +0 mult).',
-      regular: '+1 mult za každé kolo, které od koupě strávil ve slotu (teď +0 mult).',
+      regular: '+0,75 mult za každé kolo, které od koupě strávil ve slotu (teď +0 mult).',
       beer_belly: 'Po každé zahrané ruce trvale +3 čipy (teď +0 čipů).',
       carousel: 'Postupka smí jít kolem dokola (např. Q-K-A-2-3) a každá Postupka dá +14 mult.',
       echo: 'Poslední skórující karta skóruje ještě 4×.',

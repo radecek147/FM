@@ -151,15 +151,17 @@ describe('hodnota žolíků – měření na skutečném obsahu (kouřový test)
     expect(measureJoker(reg, 'beer_mat', opts, new Map())).toEqual(v);
   });
 
-  it('škálující žolík (Stálý host): koupě v patře 2, v R2 stav po 16 kolech = +16 mult', () => {
+  it('škálující žolík (Stálý host): koupě v patře 2, v R2 stav po 16 kolech = +12 mult', () => {
     const v = measureJoker(reg, 'regular', opts, cache);
     expect(v.buyAnte).toBe(2);
     expect(v.r2.hands).toBeGreaterThan(0);
-    // Δmult se měří proti nejlepšímu tahu bez žolíka — bez +16 mult bot občas zahraje jinou kombinaci (jiný základní
+    // Δmult se měří proti nejlepšímu tahu bez žolíka — bez +12 mult bot občas zahraje jinou kombinaci (jiný základní
     // mult). V „čipové“ tabulce kombinací 1.0.1 (mult střední třídy 2–3) se základní mult alternativ liší oběma směry,
-    // takže průměr kolísá kolem +16 (3 seedy: ~18,6); stav žolíka po 16 kolech je +16.
-    expect(v.r2.effect.mult).toBeGreaterThan(R2_ROUNDS_HELD / 2);
-    expect(v.r2.effect.mult).toBeLessThanOrEqual(R2_ROUNDS_HELD * 1.25);
+    // takže průměr kolísá kolem stavu žolíka (+0,75 × 16 kol = +12; dřív s +1 za kolo 3 seedy ~18,6 proti +16).
+    const state = Number(reg.jokers.regular!.params!.mult) * R2_ROUNDS_HELD;
+    expect(state).toBe(12);
+    expect(v.r2.effect.mult).toBeGreaterThan(state / 2);
+    expect(v.r2.effect.mult).toBeLessThanOrEqual(state * 1.4);
   });
 
   it('ekonomický žolík (Pokladnička) se měří v Kč za kolo', () => {
