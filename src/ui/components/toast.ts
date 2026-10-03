@@ -289,7 +289,7 @@ function startTimer(st: ToastState, dismiss: () => void): void {
 
 /** Je roh herní obrazovky plný (kotva, nejvýš `MAX_VISIBLE_ANCHORED` hlášek)? Další počká, až některá odejde. */
 function cornerFull(): boolean {
-  if (!anchor || modalOpen() || !region) return false;
+  if (!anchor || modalOpen() || !region || !region.classList.contains('toast-region--anchored')) return false;
   return visibleToasts(region).length >= MAX_VISIBLE_ANCHORED;
 }
 
@@ -313,7 +313,8 @@ function show(el: HTMLElement): void {
     container.appendChild(el);
     // Nejstarší oznámení ustoupí, když jich je moc (v rohu herní obrazovky dřív).
     const all = visibleToasts(container);
-    const max = anchor && !modalOpen() ? MAX_VISIBLE_ANCHORED : MAX_VISIBLE;
+    const corner = anchor && !modalOpen() && container.classList.contains('toast-region--anchored');
+    const max = corner ? MAX_VISIBLE_ANCHORED : MAX_VISIBLE;
     for (let i = 0; i < all.length - max; i++) {
       const old = all[i];
       if (old) (handles.get(old)?.dismiss ?? (() => old.remove()))();
