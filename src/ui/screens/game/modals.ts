@@ -588,10 +588,10 @@ export function openConsumableDetail(ctx: GameCtx, uid: number): void {
   if (!item) return;
   const opts = { registry: ctx.registry, mods: c.engine.modifiers() };
   const tx = consumableTexts(item.defId, opts);
-  const def = ctx.registry.consumables[item.defId];
   const targets = c.selectedInHandOrder();
   const canUse = c.engine.canUseConsumable(uid, targets);
-  const range = def?.target;
+  // Rozsah cílů od enginu — i s limitem výběru `maxSelect` (Minimalista).
+  const range = c.engine.consumableTargetRange(item.defId);
   const targetHint = range
     ? range.min === range.max
       ? t('game.consumable.targetsExact', { n: range.min })

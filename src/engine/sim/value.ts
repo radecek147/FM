@@ -566,7 +566,8 @@ export function planTargets(
     return c && !c.faceDown;
   });
   ids.sort((x, y) => x - y);
-  const max = Math.min(t.max, ids.length);
+  // Víc cílů, než smí hráč vybrat (`maxSelect`, Minimalista), engine odmítne.
+  const max = Math.min(t.max, ids.length, game.modifiers().maxSelect);
   const min = Math.max(1, t.min);
   if (ids.length < min || max < min) return null;
   const seed = probeSeed(game, key);

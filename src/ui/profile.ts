@@ -27,6 +27,9 @@ import {
   applyRunEvents,
   createProfile,
   currentMatches,
+  dailyDateKey,
+  dailyKeyFromSeed,
+  dailyPracticeError,
   finishRun,
   markSeen,
   refreshMeta,
@@ -263,6 +266,11 @@ export class ProfileController implements RunObserver {
    */
   newRun(req: NewRunRequest, deps: Pick<ControllerDeps, 'present'> = {}): GameController {
     const seeded = req.seeded === true;
+    // Pojistka k zadání seedu (Nová hra): denní run dneška nebo budoucího dne jako trénink mimo soutěž nevznikne —
+    // šel by s ním předem natrénovat oficiální pokus.
+    const dayKey = req.daily === true && seeded ? dailyKeyFromSeed(req.seed) : null;
+    if (dayKey && dailyPracticeError(dayKey, dailyDateKey(this.now().toISOString())))
+      throw new Error(`Daily seed ${req.seed} cannot be practised before its day is over`);
     const controller = GameController.newRun(
       {
         deckId: req.deckId,

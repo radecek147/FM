@@ -395,6 +395,10 @@ class GameView implements PresentView {
     setToastAnchor(null);
     this.bossBanner.hide();
     this.unsubscribe();
+    // Odchod během animace (Esc → Hlavní menu): zbytek přehrávání doběhne okamžitě (mimo obrazovku) a controller
+    // vstup hned odblokuje — po Pokračovat se hraje dál, bez několikasekundového „mrtvého“ čekání.
+    this.anim.skip();
+    this.controller.cancelPresentation();
     this.controller.setPresenter(async () => undefined);
     this.shaker.stop();
     this.particles.clear();

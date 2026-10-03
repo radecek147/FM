@@ -181,6 +181,51 @@ export class Game {
     }
   }
 
+  /**
+   * Kolik cílů spotřebka teď smí mít: rozsah z definice, horní mez navíc omezená `Modifiers.maxSelect` — pravidlo
+   * „vybrat jde nejvýš N karet“ (Minimalista, Garsonka 1+kk) platí pro každý výběr z ruky, i pro cíle spotřebky.
+   * Null = spotřebka cíle nemá (nebo ji registr nezná).
+   */
+  consumableTargetRange(defId: string): { min: number; max: number } | null {
+    const target = this.core.registry.consumables[defId]?.target;
+    if (!target) return null;
+    return { min: target.min, max: Math.min(target.max, this.core.mods().maxSelect) };
+  }
+
+  /**
+   * Šla by akce teď provést? Zkusí ji na kopii stavu — skutečný run se nezmění ani neposune RNG — a vrátí výsledek
+   * (úspěch bez událostí, nebo kód chyby). UI se tak ptá přímo enginu (např. „Koupit a použít“ ve Večerce, „Použít“
+   * v obálce) a nemůže s ním nesouhlasit. Výjimka z obsahu = `cannotUse`.
+   */
+  check(action: Action): ActionResult {
+    try {
+      const copy = new Game(new GameCore(detached(this.core.state), this.core.registry));
+      const res = copy.dispatch(action);
+      return res.ok ? { ok: true, events: [] } : res;
+    } catch {
+      return { ok: false, error: 'cannotUse' };
+    }
+  }
+
+  /**
+   * Prodejní cena zboží ze slotu Večerky, jako by ho hráč koupil — jen tuhle jednu položku, nic dalšího z Večerky
+   * (počítá se nad kopií stavu, vzorec zůstává v `sellValue`). Hrací karta (neprodává se), prodaná nebo neexistující
+   * položka = null.
+   */
+  shopSellValue(slot: number): number | null {
+    const item = this.core.state.shop?.items[slot];
+    if (!item || item.sold || item.kind === 'card') return null;
+    try {
+      const copy = detached(this.core.state);
+      if (item.kind === 'joker') copy.jokers.push(detached(item.joker));
+      else copy.consumables.push(detached(item.consumable));
+      const game = new Game(new GameCore(copy, this.core.registry));
+      return game.sellValue(item.kind === 'joker' ? item.joker.uid : item.consumable.uid);
+    } catch {
+      return null;
+    }
+  }
+
   /** Aktuální křivka cílů (podle obtížnosti). */
   targetCurve(): number {
     let curve = 1;
@@ -1247,8 +1292,9 @@ export class Game {
     const pool = this.targetPool();
     if (!Array.isArray(targetIds) || new Set(targetIds).size !== targetIds.length) return false;
     for (const id of targetIds) if (!pool.includes(id)) return false;
-    if (def.target) {
-      if (targetIds.length < def.target.min || targetIds.length > def.target.max) return false;
+    const range = this.consumableTargetRange(inst.defId);
+    if (range) {
+      if (targetIds.length < range.min || targetIds.length > range.max) return false;
     } else if (targetIds.length > 0) {
       return false;
     }

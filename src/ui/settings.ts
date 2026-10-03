@@ -12,7 +12,7 @@ import type { SaveErrorCode } from '../engine/save/save';
 import type { Profile, ProfileRestoreResult, Settings } from '../engine/meta';
 import { restoreProfile, sanitizeSettings, serializeProfile } from '../engine/meta';
 import type { KeyValueStore } from './storage';
-import { STORAGE_KEYS } from './storage';
+import { STORAGE_KEYS, writeBackup } from './storage';
 
 export type { Settings };
 export { DEFAULT_SETTINGS, sanitizeSettings } from '../engine/meta';
@@ -26,11 +26,7 @@ export const PROFILE_BACKUP_PREFIX = `${STORAGE_KEYS.profile}.backup.`;
  * se nezdvojuje.
  */
 export function writeProfileBackup(store: KeyValueStore, raw: string, now: Date): string | null {
-  let ms = now.getTime();
-  let key = `${PROFILE_BACKUP_PREFIX}${ms}`;
-  for (let existing = store.get(key); existing !== null && existing !== raw; existing = store.get(key))
-    key = `${PROFILE_BACKUP_PREFIX}${++ms}`;
-  return store.set(key, raw) ? key : null;
+  return writeBackup(store, PROFILE_BACKUP_PREFIX, raw, now);
 }
 
 /** Uloží profil (obálka `karban-save`, kind `profile`). Vrací false, když úložiště zápis odmítlo. */

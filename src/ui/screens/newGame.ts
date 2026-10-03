@@ -12,6 +12,7 @@ import '../styles/meta.css';
 import type { ArtSpec, DeckDef, StakeDef } from '../../engine';
 import type { SeedParseResult } from '../../engine/meta';
 import {
+  dailyDateKey,
   dailySetupFromSeed,
   isDeckUnlocked,
   isStakeUnlocked,
@@ -77,10 +78,11 @@ export type SeedChoice =
 
 /**
  * Výklad pole seedu: prázdné = náhodný; beze změny vylosovaný „Náhodný“ = jako náhodný (nepočítá se jako zadaný);
- * jinak `parseSeedInput` (vlastní seed, denní seed, nebo chyba).
+ * jinak `parseSeedInput` (vlastní seed, denní seed minulého dne, nebo chyba). `todayKey` (`YYYYMMDD`, UTC) zakáže
+ * ručně zadat dnešní a budoucí denní seed — dnešek se hraje jen jako Denní run.
  */
-export function interpretSeed(raw: string, generated: string | null): SeedChoice {
-  const res = parseSeedInput(raw);
+export function interpretSeed(raw: string, generated: string | null, todayKey?: string): SeedChoice {
+  const res = parseSeedInput(raw, { todayKey });
   if (!res.ok) return res.error === 'empty' ? { kind: 'random' } : { kind: 'error', error: res.error };
   if (res.kind === 'daily') return { kind: 'daily', seed: res.seed, dateKey: res.dateKey };
   if (generated !== null && res.seed === generated) return { kind: 'generated', seed: res.seed };
@@ -401,7 +403,7 @@ export const newGameScreen: ScreenFactory = (app) => {
 
   /** Stav pole seedu: chyba, poznámka o seedovaném / denním runu, nebo nic. */
   const updateSeedStatus = (): SeedChoice => {
-    const sc = interpretSeed(seedInput.value, generated);
+    const sc = interpretSeed(seedInput.value, generated, dailyDateKey(app.profiles.metaCtx().nowIso));
     seedStatus.className = 'seed-field__status';
     seedInput.setAttribute('aria-invalid', String(sc.kind === 'error'));
     if (sc.kind === 'error') {

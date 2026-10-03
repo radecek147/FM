@@ -85,10 +85,12 @@ export {
   dailySetupFromSeed,
   dailyRunSetup,
   parseSeedInput,
+  dailyPracticeError,
   isDailyAvailable,
   dailyStreak,
   mergeDailyRecords,
   type DailySetup,
+  type ParseSeedOptions,
   type SeedErrorCode,
   type SeedParseResult,
 } from './daily';

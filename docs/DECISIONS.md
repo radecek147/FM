@@ -3239,3 +3239,52 @@ se posunou kvůli nově zařazené kartě, jedou na nové místo animací (FLIP)
 
 **Proč:** přání hráče — po seřazení nechce řadit znovu po každém dobrání. Pole je nepovinné, takže starší uložení
 se načtou bez migrace (chybí = netřídí se). Boti nikdy netřídí, simulace se nemění.
+
+## 2026-10-03 — Oprava logických chyb po testu 1.0
+
+**Co a proč** (nálezy z testu 1.0, ROADMAP „Opravy po testu 1.0 (1.0.1)“):
+
+- **Rozhoduje engine, ne kopie v UI.** Nový dotaz `Game.check(action)` zkusí akci nad kopií stavu (skutečný run ani
+  RNG se nezmění) a vrátí úspěch / kód chyby. „Koupit a použít“ ve Večerce i „Použít“ v obálce se ptají přes něj,
+  takže UI a engine nemohou nesouhlasit. Dřív Večerka vložila do kopie stavu _všechno_ zboží naráz (Výjimka
+  z vyhlášky se 4/5 žolíky a žolíkem ve Večerce byla zamčená, Zaklepat na dřevo bez vlastních žolíků hlásilo chybu
+  až po kliku) a obálka kontrolovala jen počet cílů, ne `canUse` (Babiččina barva na karty stejné barvy). Prodejní
+  cena zboží v tooltipu se počítá po položkách (`Game.shopSellValue`: jako by hráč koupil jen tuto jednu). Render
+  klíče Večerky a obálky nově obsahují i edice žolíků (na nich závisí např. Zaklepat na dřevo).
+- **Limit výběru platí i pro cíle spotřebek.** Minimalista („Vybrat, zahrát i zahodit jde naráz nejvýš 3 karty“)
+  a Garsonka 1+kk („vybrat jde nejvýš 4 karty“) mluví o _výběru_; cíle spotřebky se vybírají stejně z ruky. Engine
+  proto omezí horní mez cílů na `Modifiers.maxSelect` (`Game.consumableTargetRange` — Babiččina barva 2–3 místo
+  2–4), UI ukazuje stejný rozsah (obálka, detail spotřebky) a bot plánuje cíle do limitu. Spodní meze všech
+  spotřebek jsou ≤ 2, takže žádná spotřebka nezůstane nepoužitelná (nejnižší `maxSelect` v obsahu je 3).
+- **Denní run nejde natrénovat.** `parseSeedInput(input, { todayKey })` odmítne denní seed dneška (`dailyToday`:
+  „na dnešek použij Denní run“) i budoucího dne (`dailyFuture`); minulé dny jdou dál přehrát mimo soutěž. Datum dodá
+  UI (`dailyDateKey(now)`), engine hodiny nečte. Pojistka i v `ProfileController.newRun`: seedovaný denní run dneška
+  nebo budoucnosti nevznikne ani obejitím formuláře.
+- **Jedna aktivní karta prohlížeče** (`src/ui/tabGuard.ts`, `src/ui/tabLock.ts`). Vlastník hry = id karty
+  v `karban.tab`; karta ho zapíše při startu a při „Hrát tady“. Ostatní karty se z události `storage` zablokují
+  nezavíratelným modalem „Hra je otevřená v jiné kartě“. Chráněné úložiště (`TabGuard.store`) navíc před každým
+  zápisem klíče hry ověří vlastníka — karta, které událost ještě nedorazila, nic nepřepíše a hned se zablokuje.
+  Zahozený zápis hlásí úspěch (data patří aktivní kartě; hláška „uložení selhalo“ by mátla). „Hrát tady“ hru
+  převezme a znovu načte profil (i nastavení) a run z úložiště (`App.reloadFromStorage`), takže převzetí nikdy nic
+  nevrátí zpět a profil se neztratí. Zapíše-li jiná karta, zatímco vlastníkem je tahle (souběh, karta se starší
+  verzí hry), aktivní karta uloží svůj stav znovu. BroadcastChannel není potřeba: `storage` událost chodí právě
+  do ostatních karet téhož původu a kontrola vlastníka před zápisem pokrývá souběh. Bez `localStorage` se nic
+  neukládá, takže hlídání nic nedělá. Převzetí je ruční (žádné automatické převzetí po zavření druhé karty) —
+  předvídatelné i se třemi kartami.
+- **Odchod z hry během animace.** Herní obrazovka při zavření přeskočí zbytek fronty animací a zavolá
+  `GameController.cancelPresentation()`: vstup se hned odblokuje, odložená oznámení se ukážou a dobíhající presenter
+  (pořadové číslo přehrávání) už controller neodblokuje ani nepřekreslí. Stav enginu je po akci hotový od začátku,
+  takže po Pokračovat se hraje hned (dřív 3,6–16 s bez odezvy).
+- **Hloubková validace runu** v samostatném `src/engine/save/validate.ts` (`validateRunState`), aby se nemíchala
+  s migracemi v `save.ts`. Kontroluje tvar vnořených objektů, id karet v ruce, hromádkách a ruce obálky proti
+  balíčku (každá karta nejvýš jednou), unikátní id/uid, data fáze (kolo/rozpis/výhra bez `round`, Večerka bez
+  nabídky, obálka z Večerky bez Večerky, výběr útraty bez útraty) a s registrem neznámý obsah. Dvě úrovně:
+  `corrupt` (run nejde hrát) a `unknownContent`. Import odmítne obojí (nový kód `corruptRun`, `unknownContent` nově
+  i pro žolíky, spotřebky, štítky, kupóny, šéfy, obálky, vylepšení, pečetě a edice); autosave odmítne jen `corrupt`
+  — neznámý obsah po aktualizaci engine snese (neznámý žolík nic nedělá) a hráč o run nepřijde. Validátor prošel
+  bez jediného nálezu přes 8 264 stavů z botů (všechny balíčky, síly 1/4/8 a všechny výzvy). Nekontroluje se
+  `nextUid` proti id (testovací stavy používají velká uid a kolize nehrozí v praxi).
+- **Nečitelný autosave se nemaže bez zálohy.** Pokračovat s poškozeným runem ho zazálohuje do
+  `karban.run.backup.<ms>` (`GameController.backupSavedRun`, stejný mechanismus klíčů jako u profilu —
+  `writeBackup` v `src/ui/storage.ts`) a teprve pak smaže; když zálohu nejde zapsat, run zůstane. Zálohy jdou do
+  exportu (`runBackups`, import je ignoruje) a reset profilu je nechá.

@@ -37,6 +37,9 @@ export const menu = {
     hint: 'Dohraj rozehranou hru. Karty ještě nevychladly.',
     none: 'Nemáš rozehranou hru. Tak hurá do nové!',
     failed: 'Rozehranou hru se nepodařilo načíst. Asi ji někdo polil pivem.',
+    /** Nečitelný run se před smazáním zazálohuje (`karban.run.backup.<ms>`) — jde do exportu uložení. */
+    backedUp:
+      'Rozehranou hru se nepodařilo načíst, asi ji někdo polil pivem. Schovali jsme ji do zálohy – najdeš ji v exportu uložení.',
   },
   challenges: {
     label: 'Výzvy',
@@ -117,6 +120,9 @@ export const newGame = {
       tooLong: 'Seed je moc dlouhý – stačí přesně {n|plural:znak,znaky,znaků}.',
       invalidDate: 'Takový den v kalendáři nenajdeš. Denní seed má tvar DEN-RRRRMMDD.',
       reserved: 'Tenhle tvar si hra nechává pro sebe. Zadej {n|plural:znak,znaky,znaků}, nebo DEN-RRRRMMDD.',
+      dailyToday:
+        'Dnešní denní run se předem netrénuje – na dnešek použij Denní run v menu. Generálka se nekoná.',
+      dailyFuture: 'Do budoucnosti se nekouká, ani přes karty. Přehrát jde jen den, který už byl.',
     },
   },
   start: 'Rozdat karty',
@@ -215,7 +221,10 @@ export const settings = {
       wrongKind: 'Tohle uložení neobsahuje rozehranou hru ani profil.',
       tooNew: 'Uložení je z novější verze hry. Nejdřív aktualizuj, pak nahrávej.',
       migrationFailed: 'Staré uložení se nepodařilo převést na novou verzi. Pamatuje ještě korunové pivo.',
-      unknownContent: 'Uložení počítá s balíčkem nebo silou piva, které tu nečepujeme.',
+      unknownContent:
+        'Uložení počítá s obsahem, který tu nečepujeme (balíček, síla piva, žolík, spotřebka…). Asi je z jiné verze hry.',
+      corruptRun:
+        'Rozehraná hra v souboru je poškozená – karty v ruce nesedí s balíčkem nebo chybí kus kola. Takhle by se nedala dohrát.',
       readFailed: 'Soubor se nepodařilo přečíst. Písmo jako od doktora.',
       backupFailed:
         'Současný profil se nepodařilo zazálohovat (prohlížeč asi nemá místo), tak jsme nic nepřepsali. Nejdřív si udělej export uložení.',
