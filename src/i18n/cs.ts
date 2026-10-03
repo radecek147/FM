@@ -112,7 +112,7 @@ const errors = {
   generic: 'Něco se pokazilo. Jako u Vaňků o Vánocích.',
   /** Chunk obrazovky se nenačetl (bez sítě a bez service workeru, nebo po novém nasazení). */
   screenLoad:
-    'Tahle obrazovka nedorazila. Asi jede náhradní autobusovou dopravou. Zkontroluj připojení a zkus to znovu.',
+    'Tahle obrazovka nedorazila. Asi zůstala stát na zastávce na znamení. Zkontroluj připojení a zkus to znovu.',
 };
 
 // ─────────────────────────── Tipy na načítací obrazovce ───────────────────────────

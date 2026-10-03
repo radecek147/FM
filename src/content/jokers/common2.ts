@@ -64,16 +64,16 @@ const FISHER_ODDS = 2;
 /** Popelář: trvalé čipy za každou zahozenou kartu s hodnotou nejvýš GARBAGE_RANK („odpad“). */
 const GARBAGE_CHIPS = 1;
 const GARBAGE_RANK: Rank = 5;
-/** Hrací automat: kolikrát navíc skórují karty s nejvyšší hodnotou. */
+/** Hudební automat: kolikrát navíc skórují karty s nejvyšší hodnotou. */
 const JUKEBOX_RETRIGGERS = 1;
 /** Kůlna: sloty spotřebek navíc. */
 const SHED_SLOTS = 1;
 /** Náhradní autobus: prvních N zahození v kole zvětší ruku o tolik karet. */
 const BUS_DISCARDS = 2;
 const BUS_CARDS = 1;
-/** Zabijačka: Kč za zničenou kartu na konci kola. */
+/** Řezník z rohu: Kč za zničenou kartu na konci kola. */
 const SLAUGHTER_MONEY = 2;
-/** Městské derby: +mult, když skórují červená i černá barva. */
+/** Červená a černá: +mult, když skórují červená i černá barva. */
 const DERBY_MULT = 8;
 /** Hospodský kvíz: +čipy za každou různou hodnotu mezi skórujícími kartami. */
 const QUIZ_CHIPS = 10;
@@ -786,7 +786,7 @@ export const COMMON2_JOKERS: JokerDef[] = [
     },
   },
   {
-    // Každá zničená hrací karta balíčku (prasklé sklo, rady, Zabijačka, šéfové) od chvíle, kdy je ve slotu. Strop:
+    // Každá zničená hrací karta balíčku (prasklé sklo, rady, Řezník z rohu, šéfové) od chvíle, kdy je ve slotu. Strop:
     // se Zabijačkou (karta za kolo) by bez něj po 16 kolech dala +48 mult (špička R2 120 % > 2 × 30 %, DESIGN 4.3/3).
     id: 'scrap_yard',
     rarity: 'common',

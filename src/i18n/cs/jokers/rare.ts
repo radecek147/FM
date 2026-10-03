@@ -5,7 +5,7 @@ export const jokersRare = {
   late_train: {
     name: 'Zpožděný rychlík',
     desc: '{xmult|x} mult; {chance} {odds|z}, že efekt „nabere zpoždění“ a nenastane.',
-    flavor: 'Mult přijede s mírným zpožděním.',
+    flavor: 'Zpoždění pět minut. Hlášené zpoždění se může změnit.',
     delay: 'Zpoždění! Mult dorazí příště.',
   },
   head_waiter: {

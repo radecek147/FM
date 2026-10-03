@@ -16,7 +16,7 @@ export const jokersEpic = {
   impersonator: {
     name: 'Napodobitel',
     desc: 'Při získání bez edice dostane duhovou; v každém kole kopíruje tvého nejdražšího běžného nebo vzácného žolíka.',
-    flavor: 'V kulturáku napodobí kohokoli, jen na hvězdy mu flitry nestačí.',
+    flavor: 'V kulturáku dělá všechny hlasy. Ten svůj si už nepamatuje.',
   },
   innkeeper: {
     name: 'Hostinský',

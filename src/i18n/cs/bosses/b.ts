@@ -24,7 +24,7 @@ export const bossesB = {
   regional_derby: {
     name: 'Krajské derby',
     rule: 'Ruka s červenými (♥ ♦) i černými (♠ ♣) kartami má poloviční základní čipy i mult (divoké a kamenné karty stranu nevolí).',
-    intro: 'Hradec, nebo Brno? Vyber si stranu!',
+    intro: 'Červení proti černým, celý kraj se dívá. Vyber si stranu!',
     defeat: 'Remíza. Slaví obě strany.',
     death: 'Prohrané derby se v hospodě probírá ještě deset let.',
   },

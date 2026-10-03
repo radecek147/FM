@@ -9,7 +9,7 @@ export const jokersLegendary = {
   forefather: {
     name: 'Praotec Čech',
     desc: 'První ruka každého kola ještě před skórováním zvýší úroveň zahrané kombinace o {levels} (zatím +{current|plural:úroveň,úrovně,úrovní}).',
-    flavor: 'Tady se usadíme a tady budeme skórovat.',
+    flavor: 'Z Řípu bylo vidět mléko, strdí a jednu poctivou Postupku.',
     settled: 'Tady se usadíme! Úroveň nahoru.',
   },
   libuse: {

@@ -4,10 +4,31 @@
  * Klíče `game.*`. Hráči tykáme (rodově neutrálně), čísla dosazuj přes `{param}` — formátuje `format.ts`.
  */
 
-/** Hlášky pitvy podle příčiny (DESIGN příloha C); šéfové mají vlastní `bosses.<id>.death`. Sdílí je i `cli.ts`. */
+/**
+ * Hlášky pitvy podle příčiny (DESIGN příloha C); šéfové mají vlastní `bosses.<id>.death`. Malá a Velká útrata mají
+ * víc variant — vybírá je `blindDeathQuote` (src/i18n/death.ts) deterministicky podle seedu runu. Sdílí je i `cli.ts`.
+ */
 export const DEATH_QUOTES = {
-  small: '„Na Malé útratě? To se stává. Málokomu.“',
-  big: '„Velká útrata, velké zklamání.“',
+  small: [
+    '„Na Malé útratě? To se stává. Málokomu.“',
+    '„Malá útrata, velká ostuda. Hospodský už to píše do kroniky.“',
+    '„Tohle měla být rozcvička. Rozcvička vyhrála.“',
+    '„Štamgast u okna odložil noviny. Tohle si nenechá ujít ani příště.“',
+    '„Pivo ještě ani nestihlo vychladnout.“',
+    '„Malá útrata stála víc než celý večer. Účet, prosím.“',
+    '„Takhle rychle se odchází jen z třídních schůzek.“',
+    '„Ještě jedno kolo a domů. Tak teda rovnou domů.“',
+  ],
+  big: [
+    '„Velká útrata, velké zklamání.“',
+    '„Malou ještě ano, Velkou už ne. Jako polévka a řízek.“',
+    '„Na Velké útratě se láme chleba. Dneska ten tvůj.“',
+    '„Do šéfa chybělo jedno kolo. A jedna pořádná ruka.“',
+    '„Účet byl moc velký. Peněženka plakala, štamgasti tleskali.“',
+    '„Nejdražší pivo je to, které se nedopije.“',
+    '„Tady končí legrace a začíná účtování.“',
+    '„Větší sousto, než se dalo spolknout. Příště menší lžíci.“',
+  ],
   /** Šéf bez vlastní hlášky (obsah ji zatím nemá). */
   boss: '„Šéf byl silnější. Tentokrát.“',
 };

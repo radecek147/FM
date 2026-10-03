@@ -80,7 +80,7 @@ export const jokersCommon2 = {
   tram_driver: {
     name: 'Tramvaják',
     desc: '+{mult} mult, pokud to není první ruka kola a v kole už se zahazovalo.',
-    flavor: 'Ukončete výstup a nástup. Kdo zahazoval, ten jede dál.',
+    flavor: 'Ukončete výstup a nástup, dveře se zavírají. Kdo nestihl, počká si dvanáct minut.',
   },
   punter: {
     name: 'Sázkař',
@@ -107,7 +107,7 @@ export const jokersCommon2 = {
   thirteenth_salary: {
     name: 'Třináctý plat',
     desc: 'Po porážce šéfa dostaneš v odměnách navíc {money|money}.',
-    flavor: 'Prémie za splnění plánu. Plán zněl: porazit šéfa.',
+    flavor: 'Prémie za splnění plánu na sto dvacet procent. Plán byl, že se splní.',
   },
   temp_worker: {
     name: 'Brigádník',
@@ -126,7 +126,7 @@ export const jokersCommon2 = {
     flavor: 'Ve čtvrtek v šest ráno odveze všechno. Hlavně tvůj spánek.',
   },
   jukebox: {
-    name: 'Hrací automat',
+    name: 'Hudební automat',
     desc: 'Skórující karty s nejvyšší hodnotou skórují ještě {retriggers}×.',
     flavor: 'Za pětikorunu hraje pořád stejnou písničku. Celou noc.',
   },
@@ -141,13 +141,13 @@ export const jokersCommon2 = {
     flavor: 'Pojede to o hodinu déle, ale vejde se celá vesnice i s kozou.',
   },
   pig_slaughter: {
-    name: 'Zabijačka',
+    name: 'Řezník z rohu',
     desc: 'Na konci kola zničí nejnižší kartu bez vylepšení drženou v ruce a dá za ni {money|money}.',
     flavor: 'Z prasete se využije všechno kromě kvičení. Z dvojky taky.',
-    feast: 'Zabijačka! Jitrnice pro celý dům.',
+    feast: 'Do mlýnku s ní! Na jitrnice jako stvořená.',
   },
   derby_fans: {
-    name: 'Městské derby',
+    name: 'Červená a černá',
     desc: '+{mult} mult, pokud mezi skórujícími kartami je červená i černá barva.',
     flavor: 'Půlka hospody fandí červeným, půlka černým. Hospodský fandí tržbě.',
   },

@@ -10,6 +10,7 @@ import {
   type RunState,
 } from '../../src/engine';
 import { t } from '../../src/i18n/cs';
+import { blindDeathQuote } from '../../src/i18n/death';
 import { formatMoney, formatNumber } from '../../src/i18n/format';
 
 /**
@@ -710,7 +711,7 @@ test('pitva z uloženého runu: poslední ruka nestačí → hláška, statistik
   await idle(page);
 
   await expect(page.getByTestId('game-over')).toContainText('Pitva');
-  await expect(page.getByTestId('death-quote')).toHaveText(t('game.death.small'));
+  await expect(page.getByTestId('death-quote')).toHaveText(blindDeathQuote('small', 'E2EPITVA'));
   await expect(page.getByTestId('run-seed')).toHaveText('E2EPITVA');
   await expect(page.getByTestId('run-stats')).toContainText('Zahrané ruce');
   await expect(page.getByTestId('game-over-new')).toBeFocused();

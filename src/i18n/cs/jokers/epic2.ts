@@ -15,7 +15,7 @@ export const jokersEpic2 = {
   archivist: {
     name: 'Archivář',
     desc: 'Při získání bez edice dostane duhovou; kopíruje schopnost žolíka nalevo od sebe.',
-    flavor: 'Opis souhlasí s originálem. Kde je originál, ví jen on a regál číslo čtyřicet sedm.',
+    flavor: 'Kde je originál, ví jen on a regál číslo čtyřicet sedm. Regál mlčí.',
   },
   fair_magician: {
     name: 'Kouzelník z pouti',
@@ -64,7 +64,7 @@ export const jokersEpic2 = {
   exchange_office: {
     name: 'Směnárna',
     desc: '{base|x} mult a navíc +{xmult|x} za každých {chips|plural:čip,čipy,čipů}, které ruka v tu chvíli má (nejvýš {max|x}).',
-    flavor: 'Nula procent provize, kurz drobným písmem. Čipy dáš všechny, mult dostaneš trochu.',
+    flavor: 'Nula procent provize. Provize je schovaná v kurzu, psaném písmem velikosti blechy.',
   },
   new_years_eve: {
     name: 'Silvestr',

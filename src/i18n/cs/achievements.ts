@@ -84,7 +84,7 @@ export const achievements = {
   safety_margin: {
     name: 'S rezervou',
     desc: 'Dosáhni v jednom kole aspoň {mult}násobku cíle.',
-    flavor: 'Kdo šetří, má za tři. Kdo přestřelí, má za deset.',
+    flavor: 'Cíl splněn na dvě stě procent. Zbytek se převádí do příštího roku.',
   },
   five_to_twelve: {
     name: 'Za pět dvanáct',
@@ -279,7 +279,7 @@ export const achievements = {
   flek_re_tutti: {
     name: 'Flek, re, tutti',
     desc: 'Vyhraj run s Mariášovým balíčkem.',
-    flavor: 'Kdo nehraje, nevyhraje. Kdo flekuje, platí.',
+    flavor: 'Sedm, osm, devět, deset a pak už jen vzpomínky na lepší karty.',
   },
   installment_plan: {
     name: 'Splátkový kalendář',
@@ -296,7 +296,7 @@ export const achievements = {
   warmed_up: {
     name: 'Rozehřívačka',
     desc: 'Vyhraj run na Jedenáctce (nebo silnějším pivu).',
-    flavor: 'Pivo zdražilo. Ty taky.',
+    flavor: 'Jedenáct stupňů. Na zahřátí akorát.',
   },
   twelve_standing: {
     name: 'Dvanáctka na stojáka',

@@ -54,7 +54,7 @@ export const jokersRare2 = {
   noon_witch: {
     name: 'Polednice',
     desc: 'Druhá ruka kola dá {xmult|x} mult.',
-    flavor: 'Kdo v poledne zlobí, toho si odnese. Kdo hraje, tomu zdvojnásobí mult.',
+    flavor: 'Nejdřív polévka, pak hlavní chod. Polednice dbá na pořádek u stolu.',
   },
   klekanice: {
     name: 'Klekánice',
