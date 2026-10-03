@@ -26,8 +26,8 @@ const BANANA_MIN_PCT = 20;
 const MAYOR_TARGET_MULT = 2.3;
 const OFFICE_TARGET_MULT = 1.85;
 const FLOOD_TARGET_MULT = 2.5;
-/** Bílá paní: 1.0.1 bez zamíchání (karty jen otočí), proto vyšší cíl než 1,25× z fáze 10 (kalibrace 1.0.1: 1,4×). */
-const WHITE_LADY_TARGET_MULT = 1.4;
+/** Bílá paní: 1.0.1 bez zamíchání (karty jen otočí), proto vyšší cíl než 1,25× z fáze 10 (kalibrace 1.0.1: 1,3× — s 1,4× 39 % proher, bot barvy 56 %). */
+const WHITE_LADY_TARGET_MULT = 1.3;
 /** Velká voda: o kolik karet se po každé zahrané ruce zmenší ruka (do konce kola). */
 const FLOOD_HAND_SIZE = 1;
 /** Krajský úřad: kolik fungujících žolíků se po každé ruce vypne. */

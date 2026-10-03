@@ -4,14 +4,14 @@ import type { BlindKind } from '../types';
 
 /**
  * Základ patra 1–8 pro křivky 1–3 (index křivky je 1-based). Kalibrace 1.0.1 (docs/DECISIONS.md 2026-10-03): patra 4–7
- * o 35–45 % výš a patro 8 o ~10 % (křivka 1: 2 700 / 6 500 / 16 000 / 39 000 / 95 000 → 3 600 / 9 400 / 23 000 / 53 000
- * / 105 000) — dřív se patra 1–5 vyhrávala první rukou a patro 8 bylo zeď (49 % proher runů, které ho dosáhly); křivka 3
+ * o 30–45 % výš a patro 8 o ~5 % (křivka 1: 2 700 / 6 500 / 16 000 / 39 000 / 95 000 → 3 600 / 9 400 / 23 000 / 51 000
+ * / 100 000) — dřív se patra 1–5 vyhrávala první rukou a patro 8 bylo zeď (49 % proher runů, které ho dosáhly); křivka 3
  * je o ~15 % nad křivkou 2, aby Bock nebyl prázdný krok proti Ležáku. Hodnoty musí být „hezká“ čísla (`niceRound`).
  */
 export const TARGET_CURVES: readonly (readonly number[])[] = [
-  [250, 600, 1300, 3600, 9400, 23000, 53000, 105000],
-  [250, 600, 1400, 4100, 11000, 27000, 61000, 120000],
-  [250, 650, 1550, 4700, 12500, 31000, 70000, 140000],
+  [250, 600, 1300, 3600, 9400, 23000, 51000, 100000],
+  [250, 600, 1400, 4100, 11000, 27000, 59000, 115000],
+  [250, 650, 1550, 4700, 12500, 31000, 68000, 135000],
 ];
 
 /** Re-export pro starší importy — násobky útrat žijí v engine/constants.ts. */
@@ -22,7 +22,7 @@ export const DEFAULT_BOSS_TARGET_MULT = BLIND_TARGET_MULT.boss;
 /**
  * Růst nekonečného režimu: g(a) = ENDLESS_GROWTH_BASE + ENDLESS_GROWTH_STEP × (a − 9), base(a) = base(8) × g(a)^(a − 8).
  * Kalibrace 1.0.1 (docs/DECISIONS.md 2026-10-03): 1,5 + 0,035 × (a − 9) — mírný začátek (patro 9 ×1,5 proti patru 8,
- * patro 16 ×2 za patro), pak zrychluje (patro 30 ×3,1 za patro, základ 5,1e12 — „Tepelná smrt vesmíru“ je extrémní, ale
+ * patro 16 ×2 za patro), pak zrychluje (patro 30 ×3,1 za patro, základ 4,8e12 — „Tepelná smrt vesmíru“ je extrémní, ale
  * ne nemožná). S 2,3 + 0,01 × (a − 9) padal vítězný build botů v patře 9–10 (medián), s 2,2 + 0,15 × (a − 9) (do 1.0)
  * v patře 10–11 a patro 30 bylo nedosažitelné.
  */

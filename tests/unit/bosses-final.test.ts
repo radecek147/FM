@@ -60,7 +60,7 @@ describe('fináloví šéfové – data (DESIGN 8.3)', () => {
       mayor: 2.3,
       regional_office: 1.85,
       great_flood: 2.5,
-      white_lady: 1.4,
+      white_lady: 1.3,
       banana_queue: 2.35,
     };
     expect(BOSSES_FINAL.map((b) => b.id).sort()).toEqual(Object.keys(table).sort());
