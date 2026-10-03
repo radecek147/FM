@@ -20,6 +20,7 @@ import type {
   Rng,
   TagCtx,
   TagHooks,
+  VoucherHooks,
 } from '../content-types';
 import { EventBus } from '../events';
 import { rngFromState } from '../rng/rng';
@@ -478,6 +479,16 @@ export class GameCore {
       layer,
     );
     return total;
+  }
+
+  /** Zavolá hook uplatněných kupónů (v pořadí uplatnění) s kontextem `extra`; kupón bez definice se přeskočí. */
+  eachVoucher<K extends keyof VoucherHooks>(hook: K, extra: Record<string, unknown>): void {
+    for (const id of [...this.state.vouchers]) {
+      const fn = this.registry.vouchers[id]?.hooks?.[hook] as ((ctx: unknown) => void) | undefined;
+      if (!fn) continue;
+      fn(Object.assign(this.baseCtx('misc'), { self: id }, extra));
+      this.invalidate();
+    }
   }
 
   /** Zavolá hook štítků; štítky, které vrátí true, se odeberou. (`onRoundLost` volá run loop zvlášť.) */

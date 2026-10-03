@@ -8,6 +8,7 @@
  */
 import type { UnlockTotalStat } from '../content-types';
 import { MAX_STAKE } from '../constants';
+import { renameIds, renameKeys, TAG_RENAMES_V2, VOUCHER_RENAMES_V2 } from '../save/renames';
 import type { Migration, SaveErrorCode } from '../save/save';
 import { SaveError, migrate, unwrap, wrap } from '../save/save';
 import type { ConsumableKind, HandType } from '../types';
@@ -38,7 +39,7 @@ import type {
 import { DISCOVERY_CATEGORIES } from './types';
 
 /** Aktuální verze formátu profilu. */
-export const PROFILE_VERSION = 1;
+export const PROFILE_VERSION = 2;
 
 /** Kolik runů drží historie (DESIGN 11.5). */
 export const HISTORY_LIMIT = 50;
@@ -48,8 +49,55 @@ export const HISTORY_LIMIT = 50;
  * takže migrace řeší jen přejmenování/převody — chybějící pole doplní normalizace.
  */
 export const PROFILE_MIGRATIONS: Readonly<Record<number, Migration>> = Object.freeze({
-  // 1: (d) => ({ ...d, newField: defaultValue }),
+  1: migrateProfileV1,
 });
+
+/** Je hodnota prostý objekt? */
+function isPlain(x: unknown): x is Record<string, unknown> {
+  return typeof x === 'object' && x !== null && !Array.isArray(x);
+}
+
+/**
+ * Profil v1 → v2 (1.0.1, docs/DECISIONS.md 2026-10-03): nahrazené kupóny a štítky dostanou id nástupce
+ * (`save/renames.ts`) v odemčených kupónech, objevech sbírky, štítcích „Nové“, statistice runů s kupóny a počítadle
+ * kupónů rozehraného runu. Nic se nemaže — profil se nesmí ztratit.
+ */
+export function migrateProfileV1(d: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...d };
+  if (isPlain(d.unlocks)) {
+    out.unlocks = { ...d.unlocks, vouchers: renameIds(d.unlocks.vouchers, VOUCHER_RENAMES_V2) };
+  }
+  if (isPlain(d.discovered)) {
+    out.discovered = {
+      ...d.discovered,
+      vouchers: renameIds(d.discovered.vouchers, VOUCHER_RENAMES_V2),
+      tags: renameIds(d.discovered.tags, TAG_RENAMES_V2),
+    };
+  }
+  if (Array.isArray(d.unseen)) {
+    const key = (k: unknown): unknown => {
+      if (typeof k !== 'string') return k;
+      const [cat, id] = [k.slice(0, k.indexOf(':')), k.slice(k.indexOf(':') + 1)];
+      if (cat === 'vouchers' && VOUCHER_RENAMES_V2[id]) return `${cat}:${VOUCHER_RENAMES_V2[id]}`;
+      if (cat === 'tags' && TAG_RENAMES_V2[id]) return `${cat}:${TAG_RENAMES_V2[id]}`;
+      return k;
+    };
+    out.unseen = [...new Set(d.unseen.map(key))];
+  }
+  if (isPlain(d.stats)) {
+    out.stats = { ...d.stats, voucherRuns: renameKeys(d.stats.voucherRuns, VOUCHER_RENAMES_V2) };
+  }
+  if (isPlain(d.current) && isPlain(d.current.counters)) {
+    out.current = {
+      ...d.current,
+      counters: {
+        ...d.current.counters,
+        vouchersBought: renameIds(d.current.counters.vouchersBought, VOUCHER_RENAMES_V2),
+      },
+    };
+  }
+  return out;
+}
 
 /** Všechna celoživotní počítadla (`StatTotals`) v pevném pořadí. */
 export const TOTAL_STAT_KEYS: readonly UnlockTotalStat[] = [

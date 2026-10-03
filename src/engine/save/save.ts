@@ -6,6 +6,7 @@
 import { RNG_STREAMS } from '../rng/rng';
 import { RUN_STATE_VERSION } from '../run/init';
 import type { RunPhase, RunState } from '../types';
+import { HELD_TAG_V2, renameIds, TAG_RENAMES_V2, VOUCHER_RENAMES_V2 } from './renames';
 
 export const SAVE_FORMAT = 'karban-save';
 
@@ -34,9 +35,57 @@ export class SaveError extends Error {
 /** Migrace stavu runu: klíč = verze, ze které se migruje (v → v+1). */
 export type Migration = (data: Record<string, unknown>) => Record<string, unknown>;
 export const RUN_MIGRATIONS: Readonly<Record<number, Migration>> = Object.freeze({
-  // Příklad budoucí migrace:
-  // 1: (d) => ({ ...d, newField: defaultValue }),
+  1: migrateRunV1,
 });
+
+/**
+ * Run v1 → v2 (1.0.1, docs/DECISIONS.md 2026-10-03): nahrazené kupóny a štítky dostanou id nástupce (`renames.ts`) —
+ * vlastněné i nabízené kupóny, štítky u útrat a pool odemčených kupónů. Držený Termínovaný vklad se vyplatí hned
+ * (+15 Kč), držený Rentgen od zubaře se změní na Vyleštěné příbory; jiné odebrané štítky (spotřebovaly se hned) zmizí.
+ * Nové nepovinné pole `JokerInstance.rentalPaid` migraci nepotřebuje (chybí = 0 splátek).
+ */
+export function migrateRunV1(d: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...d };
+  const voucher = (id: unknown): unknown => (typeof id === 'string' ? (VOUCHER_RENAMES_V2[id] ?? id) : id);
+  if (Array.isArray(d.vouchers)) out.vouchers = renameIds(d.vouchers, VOUCHER_RENAMES_V2);
+  if (Array.isArray(d.anteVouchers)) out.anteVouchers = renameIds(d.anteVouchers, VOUCHER_RENAMES_V2);
+  if (isRecord(d.shop) && Array.isArray(d.shop.vouchers)) {
+    out.shop = {
+      ...d.shop,
+      vouchers: d.shop.vouchers.map((v) => (isRecord(v) ? { ...v, voucherId: voucher(v.voucherId) } : v)),
+    };
+  }
+  if (isRecord(d.unlockedPool) && Array.isArray(d.unlockedPool.vouchers)) {
+    out.unlockedPool = {
+      ...d.unlockedPool,
+      vouchers: renameIds(d.unlockedPool.vouchers, VOUCHER_RENAMES_V2),
+    };
+  }
+  if (Array.isArray(d.blinds)) {
+    out.blinds = d.blinds.map((b) =>
+      isRecord(b) && typeof b.skipTagId === 'string'
+        ? { ...b, skipTagId: TAG_RENAMES_V2[b.skipTagId] ?? b.skipTagId }
+        : b,
+    );
+  }
+  if (Array.isArray(d.tags)) {
+    let money = 0;
+    const tags: unknown[] = [];
+    for (const t of d.tags) {
+      const id = isRecord(t) && typeof t.defId === 'string' ? t.defId : null;
+      const held = id ? HELD_TAG_V2[id] : undefined;
+      if (held) {
+        money += held.money ?? 0;
+        if (held.to) tags.push({ ...(t as Record<string, unknown>), defId: held.to, state: {} });
+      } else if (!id || !TAG_RENAMES_V2[id]) {
+        tags.push(t);
+      }
+    }
+    out.tags = tags;
+    if (money > 0 && isFiniteNumber(d.money)) out.money = d.money + money;
+  }
+  return out;
+}
 
 /**
  * Postupně aplikuje migrace `from → from + 1 → … → to`. Chybějící nebo selhavší migrace = `SaveError`

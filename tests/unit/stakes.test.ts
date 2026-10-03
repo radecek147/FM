@@ -78,7 +78,7 @@ describe('obtížnosti – seznam (DESIGN kap. 10)', () => {
       special: 'Speciál se pije pomalu. Žolíci zvětrají rychle.',
       lezak: 'Dýško? To se dneska nenosí.',
       bock: 'Tmavé, silné a cíle až do stropu.',
-      doppelbock: 'Co je přibité, neprodáš. Co je půjčené, platíš.',
+      doppelbock: 'Co je přibité, neprodáš. Co je na splátky, splácíš.',
       imperial: 'Šéf sedí u každého stolu.',
     };
     for (const s of STAKES) {

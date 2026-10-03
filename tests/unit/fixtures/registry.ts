@@ -1,7 +1,7 @@
 /**
  * Testovací registr obsahu a pomocníci pro testy skórování a EngineApi.
  *
- * Registr má skutečné kombinace, vylepšení, pečetě a edice ze `src/content` a malou sadu TESTOVACÍCH žolíků,
+ * Registr má testovací tabulku kombinací (čísla z 1.0, `fixtures/hand-table.ts`), skutečná vylepšení, pečetě a edice ze `src/content` a malou sadu TESTOVACÍCH žolíků,
  * šéfů, štítků, spotřebek, obálek, balíčků a obtížností — každý testuje jeden hook (seznam níže). Testy si
  * přes `makeRegistry(overrides)` mohou přidat nebo nahradit položky (podle id).
  *
@@ -9,8 +9,8 @@
  *   hodnota 2–10, J, Q, K, A; barva S/H/D/C (nebo ♠ ♥ ♦ ♣); `!` debuffnutá, `^` lícem dolů.
  *   Např. `KH`, `10S`, `KH:mult`, `KS~foil`, `5H:glass@red`, `QS:steel`, `AS+20`, `9D!`.
  */
-import { HAND_TYPE_DEFS } from '../../../src/content/hands';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../../../src/content/modifiers';
+import { TEST_HAND_TYPE_DEFS } from './hand-table';
 import { createCard } from '../../../src/engine/cards/cards';
 import type {
   ArtSpec,
@@ -265,7 +265,7 @@ function byId<T extends { id: string }>(base: readonly T[], extra: readonly T[] 
  */
 export function makeRegistry(overrides: RegistryOverrides = {}): ContentRegistry {
   return {
-    handTypes: HAND_TYPE_DEFS,
+    handTypes: TEST_HAND_TYPE_DEFS,
     jokers: byId(TEST_JOKERS, overrides.jokers),
     consumables: byId(TEST_CONSUMABLES, overrides.consumables),
     enhancements: byId(ENHANCEMENTS),

@@ -23,8 +23,8 @@ export const bossesFinal = {
   },
   banana_queue: {
     name: 'Fronta na banány',
-    rule: 'Žádné zvláštní pravidlo, jen vyšší cíl: {target}× základ patra.',
-    intro: 'Stojí se od šesti ráno. Banány prý přivezou.',
+    rule: 'Banány docházejí: každá další ruka kola se započítá o {step} % méně než předchozí (první celá, nejméně {min} %).',
+    intro: 'Stojí se od šesti ráno. Banány prý přivezli, ale jen pár beden.',
     defeat: 'Fronta se pohnula. Banány jsou tvoje.',
     death: 'Na tebe už nezbyly. Fronta se rozchází.',
   },
@@ -37,7 +37,7 @@ export const bossesFinal = {
   },
   white_lady: {
     name: 'Bílá paní',
-    rule: 'Po každé zahrané ruce i zahození se všechny karty v ruce otočí lícem dolů a zamíchají.',
+    rule: 'Po každé zahrané ruce i zahození se všechny karty v ruce otočí lícem dolů (pořadí zůstává).',
     intro: 'O půlnoci se zjevuje na zámku. A otáčí karty.',
     defeat: 'Zmizela. Klíče od sklepa taky.',
     death: 'Strašidelně slabý výkon.',

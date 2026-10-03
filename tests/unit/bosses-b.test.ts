@@ -6,7 +6,7 @@
  * prodeji, Odvolání a na konci kola) a dotaz `EngineApi.cardRank`.
  */
 import { describe, expect, it } from 'vitest';
-import { BOSSES_B, INFLUENCER_FLAG } from '../../src/content/bosses/b';
+import { BOSSES_B, decreeLevel, INFLUENCER_FLAG } from '../../src/content/bosses/b';
 import type { ContentRegistry } from '../../src/engine/content-types';
 import { MSG } from '../../src/engine/constants';
 import { bossFitsAnte, bossHasRule } from '../../src/engine/run/bosses';
@@ -79,7 +79,7 @@ const debuffedUids = (g: Game) => g.state.jokers.filter((j) => j.debuffed).map((
 describe('běžní šéfové 14–25 – data (DESIGN 8.2)', () => {
   it('id, od patra a cíl odpovídají tabulce', () => {
     const table: Record<string, [number, number]> = {
-      new_decree: [3, 1.1],
+      new_decree: [3, 1.5],
       binder_tower: [2, 3],
       regional_derby: [2, 1.75],
       pig_slaughter: [3, 2.5],
@@ -142,14 +142,21 @@ describe('běžní šéfové 14–25 – data (DESIGN 8.2)', () => {
 // ─────────────────────────── 14 Nová vyhláška ───────────────────────────
 
 describe('Nová vyhláška (new_decree)', () => {
-  it('kombinace na úrovni 5 se počítá jako na úrovni 1 (i v náhledu)', () => {
+  it('kombinace na úrovni 5 se počítá jako na úrovni 3 — polovina nahoru (i v náhledu)', () => {
     const g = bossGame('new_decree');
     const cards = setupRound(g, 'KH KS', { levels: { pair: 5 } });
     const preview = g.preview(cards.map((c) => c.id));
-    expect(preview).toMatchObject({ chips: 12, mult: 2 });
+    expect(preview).toMatchObject({ chips: 12 + 2 * 28, mult: 2 + 2 * 2 });
     const r = hand(g, 'KH KS', undefined, { levels: { pair: 5 } });
+    expect(baseStep(r)).toMatchObject({ chips: 68, mult: 6 });
+    expect(r.score).toBe((68 + 10 + 10) * 6);
+  });
+
+  it('úroveň 1 zůstává 1, úroveň 2 klesne na 1, úroveň 8 na 4', () => {
+    expect([1, 2, 3, 4, 8, 9].map(decreeLevel)).toEqual([1, 1, 2, 2, 4, 5]);
+    const g = bossGame('new_decree');
+    const r = hand(g, 'KH KS', undefined, { levels: { pair: 2 } });
     expect(baseStep(r)).toMatchObject({ chips: 12, mult: 2 });
-    expect(r.score).toBe((12 + 10 + 10) * 2);
   });
 
   it('Odvolání: úrovně zase platí', () => {

@@ -13,10 +13,11 @@ const GLASS_BREAK_ODDS = 5;
 const STEEL_XMULT = 1.5;
 const STONE_CHIPS = 50;
 const GOLD_MONEY = 3;
-const LUCKY_MULT = 15;
-const LUCKY_MULT_ODDS = 4;
-const LUCKY_MONEY = 15;
-const LUCKY_MONEY_ODDS = 12;
+/** Šťastná (1.0.1): častější, menší výhry — 1 ze 3 za +10 mult, nezávisle 1 ze 6 za +7 Kč. */
+const LUCKY_MULT = 10;
+const LUCKY_MULT_ODDS = 3;
+const LUCKY_MONEY = 7;
+const LUCKY_MONEY_ODDS = 6;
 const WORN_CHIPS = 3;
 
 /** „1 z N“ prasknutí skla: `Modifiers.glassBreakOdds` (> 0), jinak výchozí `GLASS_BREAK_ODDS`. */
@@ -141,7 +142,8 @@ export const SEALS: SealDef[] = [
 /**
  * Edice (DESIGN 2.6): `weight` = šance u žolíka v %, `weightCard` = šance u hrací karty v %.
  * Negativní se losuje samostatně (jen žolíci) a nenásobí ji `editionRateMult`.
- * Šance u hrací karty jsou vlastní (5 / 2,5 / 1 %) — 4 / 2,8 / 1,2 % by byla převzatá čísla (DESIGN příloha A).
+ * Šance jsou vlastní: u žolíka 4 / 1,2 / 0,6 / 0,15 % (1.0.1 — hodně lesklých, málo negativních), u hrací karty
+ * 5 / 2,5 / 1 % (DESIGN příloha A).
  */
 export const EDITIONS: EditionDef[] = [
   {
@@ -150,7 +152,7 @@ export const EDITIONS: EditionDef[] = [
     effect: () => ({ chips: 50 }),
     jokerTiming: 'before',
     priceAdd: 1,
-    weight: 2.5,
+    weight: 4,
     weightCard: 5,
   },
   {
@@ -159,7 +161,7 @@ export const EDITIONS: EditionDef[] = [
     effect: () => ({ mult: 10 }),
     jokerTiming: 'before',
     priceAdd: 2,
-    weight: 1.5,
+    weight: 1.2,
     weightCard: 2.5,
   },
   {
@@ -168,7 +170,7 @@ export const EDITIONS: EditionDef[] = [
     effect: () => ({ xmult: 1.5 }),
     jokerTiming: 'after',
     priceAdd: 4,
-    weight: 0.4,
+    weight: 0.6,
     weightCard: 1,
   },
   {
@@ -176,7 +178,7 @@ export const EDITIONS: EditionDef[] = [
     params: { slots: 1 },
     extraSlots: 1,
     priceAdd: 6,
-    weight: 0.25,
+    weight: 0.15,
     weightCard: 0,
     separateRoll: true,
   },

@@ -9,7 +9,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { registry } from '../../src/content';
 import type { JokerInstance, RunState } from '../../src/engine';
 import { Game, serializeRun } from '../../src/engine';
-import { t } from '../../src/i18n/cs';
+import { t, tList } from '../../src/i18n/cs';
+import { blindDeathQuote } from '../../src/i18n/death';
 import { App } from '../../src/ui/app';
 import { closeAllModals } from '../../src/ui/components/modal';
 import { GameController } from '../../src/ui/controller';
@@ -227,7 +228,9 @@ describe('herní obrazovka – fáze runu', () => {
     }
     expect(c.state.phase).toBe('game_over');
     expect(phase()).toBe('game_over');
-    expect(root.querySelector('[data-testid="death-quote"]')?.textContent).toBe(t('game.death.small'));
+    expect(root.querySelector('[data-testid="death-quote"]')?.textContent).toBe(
+      blindDeathQuote('small', SEED),
+    );
     expect(root.querySelector('[data-testid="run-seed"]')?.textContent).toBe(SEED);
     expect(root.querySelector('[data-testid="run-stats"]')).not.toBeNull();
     expect(store.get(STORAGE_KEYS.run)).toBeNull();
@@ -435,8 +438,9 @@ describe('pomocné funkce herní obrazovky', () => {
   });
 
   it('hláška pitvy: Malá, Velká, šéf bez textu', () => {
-    expect(deathQuote('small')).toBe(t('game.death.small'));
-    expect(deathQuote('big')).toBe(t('game.death.big'));
+    expect(deathQuote('small', 'ABC')).toBe(blindDeathQuote('small', 'ABC'));
+    expect(deathQuote('big', 'ABC')).toBe(blindDeathQuote('big', 'ABC'));
+    expect(tList('game.death.small')).toContain(deathQuote('small'));
     expect(deathQuote('neznamy_sef')).toBe(t('game.death.boss'));
   });
 

@@ -242,14 +242,14 @@ describe('rollEdition (DESIGN 2.6)', () => {
     expect(Math.abs(actual - mean), `${actual} vs ${mean.toFixed(1)}`).toBeLessThanOrEqual(5 * sd);
   }
 
-  it('žolíci: negativní 0,25 % samostatně, pak lesklá 2,5 %, holo 1,5 %, duhová 0,4 %', () => {
+  it('žolíci: negativní 0,15 % samostatně, pak lesklá 4 %, holo 1,2 %, duhová 0,6 %', () => {
     const n = 200_000;
     const d = distribution('joker', n);
-    const notNeg = 1 - 0.0025;
-    expectNear(d.negative!, n, 0.0025);
-    expectNear(d.foil!, n, notNeg * 0.025);
-    expectNear(d.holo!, n, notNeg * 0.015);
-    expectNear(d.poly!, n, notNeg * 0.004);
+    const notNeg = 1 - 0.0015;
+    expectNear(d.negative!, n, 0.0015);
+    expectNear(d.foil!, n, notNeg * 0.04);
+    expectNear(d.holo!, n, notNeg * 0.012);
+    expectNear(d.poly!, n, notNeg * 0.006);
   });
 
   it('hrací karty: lesklá 5 %, holo 2,5 %, duhová 1 %, nikdy negativní', () => {
@@ -264,23 +264,23 @@ describe('rollEdition (DESIGN 2.6)', () => {
   it('editionRateMult násobí lesklou/holo/duhovou, negativní ne', () => {
     const n = 200_000;
     const d = distribution('joker', n, { editionRateMult: 2.5 });
-    const notNeg = 1 - 0.0025;
-    expectNear(d.negative!, n, 0.0025);
-    expectNear(d.foil!, n, notNeg * 0.0625);
-    expectNear(d.holo!, n, notNeg * 0.0375);
-    expectNear(d.poly!, n, notNeg * 0.01);
+    const notNeg = 1 - 0.0015;
+    expectNear(d.negative!, n, 0.0015);
+    expectNear(d.foil!, n, notNeg * 0.1);
+    expectNear(d.holo!, n, notNeg * 0.03);
+    expectNear(d.poly!, n, notNeg * 0.015);
   });
 
   it('jeden hod r proti kumulativním šancím od nejvzácnější: duhová → holo → lesklá', () => {
     const core = newCore(reg);
     // žolík: první next() = hod na negativní, druhý = r
-    expect(rollEdition(core, scripted([0.002]), 'joker')).toBe('negative');
-    expect(rollEdition(core, scripted([0.5, 0.0039]), 'joker')).toBe('poly');
-    expect(rollEdition(core, scripted([0.5, 0.004]), 'joker')).toBe('holo');
-    expect(rollEdition(core, scripted([0.5, 0.0189]), 'joker')).toBe('holo');
-    expect(rollEdition(core, scripted([0.5, 0.019]), 'joker')).toBe('foil');
-    expect(rollEdition(core, scripted([0.5, 0.0439]), 'joker')).toBe('foil');
-    expect(rollEdition(core, scripted([0.5, 0.0441]), 'joker')).toBeNull();
+    expect(rollEdition(core, scripted([0.0014]), 'joker')).toBe('negative');
+    expect(rollEdition(core, scripted([0.5, 0.0059]), 'joker')).toBe('poly');
+    expect(rollEdition(core, scripted([0.5, 0.0061]), 'joker')).toBe('holo');
+    expect(rollEdition(core, scripted([0.5, 0.0179]), 'joker')).toBe('holo');
+    expect(rollEdition(core, scripted([0.5, 0.0181]), 'joker')).toBe('foil');
+    expect(rollEdition(core, scripted([0.5, 0.0579]), 'joker')).toBe('foil');
+    expect(rollEdition(core, scripted([0.5, 0.0581]), 'joker')).toBeNull();
     // karta: bez hodu na negativní
     expect(rollEdition(core, scripted([0.0099]), 'card')).toBe('poly');
     expect(rollEdition(core, scripted([0.0101]), 'card')).toBe('holo');
@@ -367,7 +367,7 @@ describe('pool žolíků (DESIGN 2.5.1)', () => {
     expect(pickJokerDefId(core, rngFromState(cyrb128('x')))).toBeNull();
   });
 
-  it('vzácnosti podle RARITY_WEIGHTS 68 / 26 / 6, legendární nikdy', () => {
+  it('vzácnosti podle RARITY_WEIGHTS 62 / 30 / 8, legendární nikdy', () => {
     const reg = makeRegistry({
       jokers: [
         joker('c', { rarity: 'common' }),
@@ -385,9 +385,9 @@ describe('pool žolíků (DESIGN 2.5.1)', () => {
       counts[id] = (counts[id] ?? 0) + 1;
     }
     expect(counts.l).toBeUndefined();
-    expect(counts.c! / n).toBeCloseTo(0.68, 1);
-    expect(counts.r! / n).toBeCloseTo(0.26, 1);
-    expect(counts.e! / n).toBeCloseTo(0.06, 1);
+    expect(counts.c! / n).toBeCloseTo(0.62, 1);
+    expect(counts.r! / n).toBeCloseTo(0.3, 1);
+    expect(counts.e! / n).toBeCloseTo(0.08, 1);
   });
 
   it('createJoker s rarity: legendary vytvoří legendárního', () => {

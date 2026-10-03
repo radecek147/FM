@@ -118,7 +118,7 @@ describe('pranostiky — definice (DESIGN 5.2)', () => {
       expect(t(`consumables.${d.id}.name`).split(/\s+/).length, d.id).toBeLessThanOrEqual(3);
     }
     expect(t('consumables.medard_drop.desc', def('medard_drop').params)).toBe(
-      'Barva +1 úroveň (+36 čipů a +4 mult za úroveň).',
+      'Barva +1 úroveň (+42 čipů a +3 mult za úroveň).',
     );
   });
 });

@@ -145,7 +145,10 @@ export const art = {
       left: 'Zvětrá za {n|plural:kolo,kola,kol}.',
       perished: 'Zvětralý – nefunguje on ani jeho edice.',
     },
-    rental: { name: 'Zapůjčený', desc: 'Na konci každého kola stojí {fee|money}.' },
+    rental: {
+      name: 'Na splátky',
+      desc: 'Na konci kola splátka {fee|money}, zbývá {n|plural:splátka,splátky,splátek}; pak je žolík tvůj. Bez peněz na splátku propadne.',
+    },
   },
 
   /** Kopírující žolíci (`hooks.copyTarget`, např. Napodobitel): stav v tooltipu, detailu, Info o runu a v řadě. */

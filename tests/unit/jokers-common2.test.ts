@@ -911,7 +911,7 @@ describe('Popelář (garbage_man)', () => {
   });
 });
 
-describe('Hrací automat (jukebox)', () => {
+describe('Hudební automat (jukebox)', () => {
   it('skórující karty s nejvyšší hodnotou skórují ještě 1×', () => {
     // Dvojice králů: 12 + 2 × (10 + 10).
     const r = playHand(roundGame(['jukebox']), 'KS KH');
@@ -973,7 +973,7 @@ describe('Náhradní autobus (replacement_bus)', () => {
   });
 });
 
-describe('Zabijačka (pig_slaughter)', () => {
+describe('Řezník z rohu (pig_slaughter)', () => {
   it('na konci kola zničí nejnižší kartu bez vylepšení v ruce a dá 2 Kč', () => {
     const game = makeGame({ registry: reg, jokers: ['pig_slaughter'] });
     const deckBefore = game.state.deck.length;
@@ -998,7 +998,7 @@ describe('Zabijačka (pig_slaughter)', () => {
   });
 });
 
-describe('Městské derby (derby_fans)', () => {
+describe('Červená a černá (derby_fans)', () => {
   it('+8 mult, když skóruje červená i černá barva', () => {
     const r = playHand(roundGame(['derby_fans']), 'KS KH');
     expect([r.chips, r.mult, r.score]).toEqual([32, 10, 320]);

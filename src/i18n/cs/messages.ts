@@ -26,7 +26,8 @@ export const boss = {
 export const joker = {
   saved: 'Na poslední chvíli! Kolo se počítá.',
   perished: 'Zvětral. Jako pivo, co zůstalo přes noc na stole.',
-  rentalReturned: 'Poplatek nezaplacen – žolík se vrací do půjčovny.',
+  rentalReturned: 'Splátka nezaplacena – žolík propadá zpátky do bazaru.',
+  rentalPaidOff: 'Poslední splátka! Žolík je tvůj, bez poznámky pod čarou.',
 };
 
 /** Obecné hlášky štítků. */

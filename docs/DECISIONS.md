@@ -3343,3 +3343,84 @@ se načtou bez migrace (chybí = netřídí se). Boti nikdy netřídí, simulace
 
 **Nepatří sem** (jiní agenti): „Koupit a použít“ (`prospective()`), `canUse` v obálce, Minimalista, denní run, dvě
 karty prohlížeče, zpoždění po návratu z menu, validace importu; obsah a balanc.
+
+## 2026-10-03 — Odlišení od Balatra a designové opravy po testu 1.0
+
+**Kontext:** komplexní test 1.0 (ROADMAP „Opravy po testu 1.0 (1.0.1)“, Balanc a design) ukázal, že část
+systémového obsahu je pořád příliš blízko předloze žánru — ne názvy a texty, ale čísla a „obyčejné“ mechaniky —
+a našel několik designových děr. Čísla předlohy se sem záměrně nepíšou (CLAUDE.md kap. 7); záznam říká jen,
+jak blízko jsme byli a čím jsme to nahradili.
+
+**Co bylo jak blízko a čím je nahrazeno (Balatro → Karban 1.0.1):**
+
+| Systém                       | Jak blízko byla 1.0                                                                                                  | 1.0.1 (DESIGN)                                                                                                                                                                                                                                                                                                                  |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tabulka kombinací            | stejný tvar: žebřík multu skoro shodný, poměr čipů a multu u většiny řádků do ±15 %, podobné přírůstky úrovní        | vlastní „čipová“ tabulka (2.2.1): víc čipů, mult 1-2-2-2-3-3-4-5-6-7 (tajné 9 / 10 / 12), úrovně hlavně čipy; žádný řádek do ±15 %; síla typických rukou 0,95–1,13× proti 1.0                                                                                                                                                   |
+| Váhy kartových slotů Večerky | proporce žolík : spotřebky jen mírně posunuté, razítka jen s kupónem                                                 | 12 / 5 / 3 / 0,5 — méně žolíků, víc pranostik, razítka vzácně i bez kupónu (2.5.3)                                                                                                                                                                                                                                              |
+| Vzácnosti žolíků             | posun o 1–2 body                                                                                                     | 62 / 30 / 8 (2.5.3)                                                                                                                                                                                                                                                                                                             |
+| Edice žolíků                 | stejné pořadí a podobné poměry šancí                                                                                 | lesklá 4 %, holografická 1,2 %, duhová 0,6 %, negativní 0,15 % (2.6)                                                                                                                                                                                                                                                            |
+| Šťastná karta                | stejný profil (vzácná velká výhra multu, ještě vzácnější velká výhra peněz)                                          | 1 z 3: +10 mult, 1 z 6: +7 Kč — častější a menší výhry (2.7)                                                                                                                                                                                                                                                                    |
+| Kupóny (5 párů)              | přímé obdoby: procentní sleva, levnější přehození, strop úroku, častější spotřebky, častější edice                   | Věrnostní kartička / Kmenový zákazník (každý 5. / 3. nákup zdarma), Zpravodaj obce / Obecní rozhlas (přelosování šéfa), Zálohovaná lahev / Výkupna (prodej za plnou cenu), Kniha stížností / Vyřízená stížnost (úrovně za nové a opakované kombinace), Jarní / Generální úklid (edice po porážce šéfa) (kap. 6)                 |
+| Štítky (7)                   | vklad vyplácený po šéfovi, peníze za přeskočené útraty, obálky zdarma navíc, negativní žolík, peníze za zahrané ruce | Pouťová tombola (legendárka), Půjčka od tchána, Sběr papíru, Dožínky, Stěhování, Houbaření; Brigáda na chmelu má novou mechaniku (+6 Kč za 2 další vyhraná kola) (kap. 7)                                                                                                                                                       |
+| Žolíci (5 z 6 vytipovaných)  | Dvorní malíř, Vyšlapaná pěšina, Turistický průvodce, Kouzelník z pouti a Kořenářka měli mechaniku 1 : 1 s předlohou  | Malíř po první ruce kola natrvalo namaluje jednu kartu na figuru; Pěšina jedna chybějící hodnota v celé Postupce; Průvodce chce za čtyřkartovou ruku spropitné 1 Kč; Kouzelník: 1 z 5, že zahraná karta zmizí; Kořenářka +2 mult za radu, bez rady vadne −1 (4.10). Barvoslepý strýc zůstal (mechanika spojení barev je obecná) |
+| Nálepka zapůjčení            | stejná mechanika „platíš za kolo navždy“                                                                             | **Na splátky**: akontace 2 Kč, 5 splátek po 2 Kč, pak je žolík tvůj (4.6)                                                                                                                                                                                                                                                       |
+
+**Designové opravy:**
+
+- **Dechovka + sklo (auto-win):** principiální strop místo záplaty na jednom žolíkovi — ×mult vázaný na kartu
+  (vylepšení, edice karty, pečeť, reakce žolíků na kartu) platí jen v prvních dvou aktivacích téže karty
+  (`MAX_XMULT_ACTIVATIONS_PER_CARD = 2`, DESIGN 3.1); další opakování dají jen čipy, +mult a peníze. Trojice se třemi
+  skly a Dechovkou ~96 000 000 → 187 264, Čtveřice se čtyřmi skly ~2,3e12 → 2 234 880 (regresní test
+  `tests/unit/balance-101.test.ts`, kryje i Ozvěnu a Šťastnou sedmičku). Zvažováno: strop jen na Dechovce (neřeší
+  ostatní opakovače ani budoucí žolíky), slabší sklo (rozbije výzvu Skleník a babskou radu Babiččina vitrína).
+  Červená pečeť + jeden opakovač tak ×mult ještě zdvojí, takže build „sklo + opakování“ zůstává silný.
+- **Šéfové:** Kontrola z finančáku 1 Kč za každou zahranou kartu (cíl 2,25× → 2×), Parkovné 1 Kč × patro za
+  zahození (2,25× → 2×) — v pozdních patrech byli bezzubí. Garsonka jen −2 karty v ruce bez limitu výběru
+  (1,35× → 1,6×; s limitem 4 karet zabíjela Barvu), Nová vyhláška úrovně půlí (zaokrouhleno nahoru) místo vynulování
+  (1,1× → 1,5×). Fronta na banány dostala vlastní pravidlo místo „vyššího cíle“ (ruce 100 / 80 / 60 / 40 / 20 %,
+  3,5× → 2,5×), Bílá paní karty jen otočí bez zamíchání (1,25× → 1,6×).
+- **Přeskakování a legendárky:** peněžní štítky zhruba ×2 (Drobné v kabátě 6 → 12 Kč, Bazar u silnice 4 → 8 Kč,
+  nové Půjčka od tchána +20 / −15 Kč, Sběr papíru 3 × 3 Kč, Brigáda na chmelu 2 × 6 Kč). Pouťová tombola (od patra 4)
+  dá legendárního žolíka; v sadě QC se nabídla ve ~41 % runů (≈ 0,1 na patro 4–8), tedy legendárka zhruba v každém
+  3.–4. runu, když ji hráč bere.
+- **Nekonečný režim:** `g(a) = 2,3 + 0,01 × (a − 9)` místo `2,2 + 0,15 × (a − 9)` — růst je skoro konstantní (×2,3 → ×2,51
+  v patře 30), patro 16 je na 95 000 000 místo 1 200 000 000 a přetečení až v patře 393. „Tepelná smrt vesmíru“ je za
+  dosažení patra 30 (dřív přetečení skóre na 1,8e308 — nesplnitelné), zůstává skrytý.
+
+**Texty:** kolize názvů — žolík Zabijačka → **Řezník z rohu** (šéf Zabijačka zůstal), žolík Městské derby →
+**Červená a černá** (vedle šéfa Krajské derby); opakované motivy (Hradec vs. Brno, náhradní autobusová doprava,
+„Kdo šetří, má za tři“, „Pivo zdražilo“, „splátkový kalendář“) nahrazené jinými; anglické slovní hříčky (Hrobník
+„kope pro každou piku“, Klenotník „vyleští každou káru“) a „Hrací automat“ (v češtině výherní automat) →
+**Hudební automat**; flavory, které jen opakovaly mechaniku (Polednice, Směnárna, Zpožděný rychlík, Kořenářka,
+Praotec Čech, Tramvaják, Třináctý plat, Napodobitel, Archivář), mají vlastní pointu. Pitva Malé a Velké útraty má po
+8 variantách; vybírá je `blindDeathQuote` (`src/i18n/death.ts`, FNV-1a hash seedu) — stejný run ukáže stejnou
+hlášku na obrazovce, po načtení i v `npm run simulate`.
+
+**Migrace:** `RUN_STATE_VERSION` 1 → 2 (`RUN_MIGRATIONS[1]`) a `PROFILE_VERSION` 1 → 2 (`migrateProfileV1`) přejmenují
+nahrazené kupóny a štítky podle `src/engine/save/renames.ts` (vlastněné a nabízené kupóny, kupóny patra, pool
+odemčených, štítky útrat i držené štítky; v profilu odemčení, objevy, „Nové“, statistiky kupónů a počítadla).
+Držený Termínovaný vklad se převede na +15 Kč hned, Rentgen od zubaře na Vyleštěné příbory. Test
+`tests/unit/migration-101.test.ts` (roundtrip v1 → v2, nic se neztratí, neznámá `id` zůstanou).
+
+**Simulace** (`npm run simulate -- --runs 100 --stake 1 --bot all --seed-prefix QC`, Desítka, Hospodský):
+
+| Bot                  |     Výhry 1.0 → 1.0.1 | Nejlepší ruka (průměr) | Prohra v patře 8 (% runů) |
+| -------------------- | --------------------: | ---------------------: | ------------------------: |
+| `max`                |           28 % → 33 % |      116 234 → 130 839 |               25 % → 32 % |
+| `flush`              |           34 % → 33 % |      157 091 → 130 950 |               26 % → 32 % |
+| `pairs`              |           24 % → 28 % |      101 583 → 117 922 |               24 % → 25 % |
+| `econ`               |            7 % → 21 % |                      — |                15 % → 9 % |
+| `random` / `nojoker` | 0 % / 0 % → 0 % / 0 % |                      — |                         — |
+
+Nejlepší rozumná strategie 33 % (pásmo Desítky 25–35 %). Patra 1–6 jsou o něco bezpečnější (Garsonka a Nová
+vyhláška už nezabíjejí buildy), zeď se přesunula do pater 7–8. Bílá paní je teď 11,9 % proher bota `max` (dřív
+2,8 %), Garsonka 10 % proher bota `nojoker` — obojí kandidáti na doladění cíle. Boti přeskakují víc (v průměru
+0,15 → 0,8 útraty na run), hlavně kvůli Půjčce od tchána, jejíž splátku nevidí.
+
+**→ kalibrace (zůstává otevřené):** patro 8 je pořád zeď (bot `max` tam ztrácí kolem třetiny runů); letalita
+nových pravidel šéfů (Garsonka, Nová vyhláška, Bílá paní, Fronta na banány) na velké sadě; levné ruce a žolíci
+„na první ruku“; boti nevidí splátku Půjčky od tchána (berou ji moc často) a Pouťovou tombolu podceňují; tempo
+nekonečného režimu proti skutečným hráčům.
+
+**Proč:** CLAUDE.md kap. 0, 5 a 7 (vlastní dílo, žádná převzatá čísla), kap. 8 (žádný auto-win, žádný bezcenný
+obsah) a výsledky testu 1.0.

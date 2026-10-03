@@ -244,13 +244,14 @@ describe('migrace', () => {
     expect(() => migrate({ version: 1 }, 1, 2, empty)).toThrow(SaveError);
   });
 
-  it('deserializeRun s vlastní tabulkou: uložení v1 se načte jako v2', () => {
+  it('deserializeRun s vlastní tabulkou: uložení vN se načte jako vN+1', () => {
     const state = makeGame().state;
+    const next = RUN_STATE_VERSION + 1;
     const migrations: Record<number, Migration> = {
-      1: (d) => ({ ...d, flags: { ...(d.flags as object), migrated: true } }),
+      [RUN_STATE_VERSION]: (d) => ({ ...d, flags: { ...(d.flags as object), migrated: true } }),
     };
-    const loaded = deserializeRun(serializeRun(state), { migrations, currentVersion: 2 });
-    expect(loaded.version).toBe(2);
+    const loaded = deserializeRun(serializeRun(state), { migrations, currentVersion: next });
+    expect(loaded.version).toBe(next);
     expect(loaded.flags.migrated).toBe(true);
     expect(loaded.money).toBe(state.money);
     // Načtený stav jde hrát.
@@ -260,19 +261,21 @@ describe('migrace', () => {
 
   it('deserializeRun: chybějící migrace na novou verzi → migrationFailed; migrace rozbije stav → invalidFormat', () => {
     const save = serializeRun(makeGame().state);
-    expect(() => deserializeRun(save, { migrations: {}, currentVersion: 2 })).toThrow(
+    const next = RUN_STATE_VERSION + 1;
+    expect(() => deserializeRun(save, { migrations: {}, currentVersion: next })).toThrow(
       expect.objectContaining({ code: 'migrationFailed' }) as Error,
     );
-    const breaking: Record<number, Migration> = { 1: ({ deck: _deck, ...rest }) => rest };
-    expect(() => deserializeRun(save, { migrations: breaking, currentVersion: 2 })).toThrow(
+    const breaking: Record<number, Migration> = { [RUN_STATE_VERSION]: ({ deck: _deck, ...rest }) => rest };
+    expect(() => deserializeRun(save, { migrations: breaking, currentVersion: next })).toThrow(
       expect.objectContaining({ code: 'invalidFormat' }) as Error,
     );
   });
 
   it('uložení z novější verze nejde načíst starší verzí enginu', () => {
-    const migrations: Record<number, Migration> = { 1: (d) => d };
-    const v2 = deserializeRun(serializeRun(makeGame().state), { migrations, currentVersion: 2 });
-    const env = { format: SAVE_FORMAT, kind: 'run', version: 2, savedAt: 'x', data: v2 };
+    const next = RUN_STATE_VERSION + 1;
+    const migrations: Record<number, Migration> = { [RUN_STATE_VERSION]: (d) => d };
+    const newer = deserializeRun(serializeRun(makeGame().state), { migrations, currentVersion: next });
+    const env = { format: SAVE_FORMAT, kind: 'run', version: next, savedAt: 'x', data: newer };
     expect(() => deserializeRun(env)).toThrow(expect.objectContaining({ code: 'tooNew' }) as Error);
   });
 

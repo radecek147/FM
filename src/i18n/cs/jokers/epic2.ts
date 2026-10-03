@@ -15,17 +15,19 @@ export const jokersEpic2 = {
   archivist: {
     name: 'Archivář',
     desc: 'Při získání bez edice dostane duhovou; kopíruje schopnost žolíka nalevo od sebe.',
-    flavor: 'Opis souhlasí s originálem. Kde je originál, ví jen on a regál číslo čtyřicet sedm.',
+    flavor: 'Kde je originál, ví jen on a regál číslo čtyřicet sedm. Regál mlčí.',
   },
   fair_magician: {
     name: 'Kouzelník z pouti',
-    desc: 'Skórují všechny zahrané karty a každá skórující karta dá {xmult|x} mult.',
+    desc: 'Skórují všechny zahrané karty a každá skórující karta dá {xmult|x} mult; {chance} {odds|z}, že po ruce jedna zahraná karta zmizí v klobouku (zničí se).',
     flavor: 'Z klobouku vytáhne králíka, z rukávu eso a z tvé peněženky stovku.',
+    vanished: 'Abraka… dabra… a karta je fuč!',
   },
   tour_guide: {
     name: 'Turistický průvodce',
-    desc: 'Postupka i Barva stačí ze čtyř karet a ruka, která obsahuje Postupku nebo Barvu, dá +{chips|plural:čip,čipy,čipů}.',
+    desc: 'Postupka i Barva stačí ze čtyř karet a ruka, která obsahuje Postupku nebo Barvu, dá +{chips|plural:čip,čipy,čipů}; když má jen {cards|plural:kartu,karty,karet}, chce průvodce spropitné {tip|money}.',
     flavor: 'Značky mají čtyři barvy a jemu to stačí. Pátá cesta stejně vede do hospody.',
+    tip: 'Spropitné pro průvodce. Dobrovolné, ale povinné.',
   },
 
   // ── vlastní ──
@@ -62,7 +64,7 @@ export const jokersEpic2 = {
   exchange_office: {
     name: 'Směnárna',
     desc: '{base|x} mult a navíc +{xmult|x} za každých {chips|plural:čip,čipy,čipů}, které ruka v tu chvíli má (nejvýš {max|x}).',
-    flavor: 'Nula procent provize, kurz drobným písmem. Čipy dáš všechny, mult dostaneš trochu.',
+    flavor: 'Nula procent provize. Provize je schovaná v kurzu, psaném písmem velikosti blechy.',
   },
   new_years_eve: {
     name: 'Silvestr',

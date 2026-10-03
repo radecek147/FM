@@ -9,6 +9,7 @@ import { registry } from '../../src/content';
 import type { Card, JokerInstance, RunState } from '../../src/engine';
 import { Game, serializeRun } from '../../src/engine';
 import { t } from '../../src/i18n/cs';
+import { blindDeathQuote } from '../../src/i18n/death';
 import { App } from '../../src/ui/app';
 import { closeAllModals } from '../../src/ui/components/modal';
 import { cardTooltip, jokerTooltip, type TooltipLine } from '../../src/ui/components/tooltip';
@@ -121,13 +122,13 @@ describe('texty šéfů v UI', () => {
   it('hláška pitvy šéfa v uvozovkách; neznámý šéf a útraty mají obecnou', () => {
     expect(deathQuote('tax_audit')).toBe(t('game.gameOver.quote', { text: t('bosses.tax_audit.death') }));
     expect(norm(deathQuote('tax_audit'))).toContain('Doklady k tomu nemáte, že?');
-    expect(deathQuote('small')).toBe(t('game.death.small'));
+    expect(deathQuote('small', 'SEED')).toBe(blindDeathQuote('small', 'SEED'));
     expect(deathQuote('neznamy')).toBe(t('game.death.boss'));
   });
 
   it('rozpis odměn: peníze ze štítku mají jeho název', () => {
-    expect(rewardSourceLabel('tag:term_deposit')).toBe(
-      t('game.roundEnd.tag', { name: t('tags.term_deposit.name') }),
+    expect(rewardSourceLabel('tag:hop_picking')).toBe(
+      t('game.roundEnd.tag', { name: t('tags.hop_picking.name') }),
     );
     expect(rewardSourceLabel('tag:neznamy')).toBe(t('game.roundEnd.other'));
   });

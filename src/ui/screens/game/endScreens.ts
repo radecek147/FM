@@ -7,6 +7,7 @@
 import '../../styles/meta.css';
 import type { RunState } from '../../../engine';
 import { hasKey, t } from '../../../i18n/cs';
+import { blindDeathQuote } from '../../../i18n/death';
 import { formatMoney, formatNumber } from '../../../i18n/format';
 import { blindArt } from '../../art/art';
 import { iconElement } from '../../art/icons';
@@ -21,9 +22,12 @@ import { dailyShareText } from '../stats';
 import type { GameCtx } from './shared';
 import { copySeed, statRow } from './shared';
 
-/** Hláška pitvy podle příčiny: šéf (`bosses.<id>.death`), jinak Malá / Velká útrata. */
-export function deathQuote(cause: string): string {
-  if (cause === 'small' || cause === 'big') return t(`game.death.${cause}`);
+/**
+ * Hláška pitvy podle příčiny: šéf (`bosses.<id>.death`), jinak Malá / Velká útrata (varianta podle seedu runu —
+ * stejný run má vždy stejnou hlášku).
+ */
+export function deathQuote(cause: string, seed = ''): string {
+  if (cause === 'small' || cause === 'big') return blindDeathQuote(cause, seed);
   const key = `bosses.${cause}.death`;
   if (!hasKey(key)) return t('game.death.boss');
   const text = t(key);
@@ -95,7 +99,7 @@ function deathBlock(ctx: GameCtx, cause: string): HTMLElement {
   const quote = h(
     'blockquote',
     { class: 'game-over__quote', 'data-testid': 'death-quote' },
-    deathQuote(cause),
+    deathQuote(cause, ctx.controller.state.seed),
   );
   if (!ctx.registry.bosses[cause]) return quote;
   const tx = bossTexts(cause, { registry: ctx.registry });

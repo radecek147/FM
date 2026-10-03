@@ -163,8 +163,8 @@ describe('epičtí žolíci fáze 7 – definice', () => {
     expect(Object.fromEntries(EPIC2_JOKERS.map((j) => [j.id, j.params ?? {}]))).toEqual({
       beer_sommelier: { base: 1, xmult: 0.7 },
       archivist: {},
-      fair_magician: { xmult: 1.15 },
-      tour_guide: { chips: 40, hand: 'flush' },
+      fair_magician: { xmult: 1.15, chance: 1, odds: 5 },
+      tour_guide: { chips: 40, tip: 1, cards: 4, hand: 'flush' },
       spartakiada: { retriggers: 2 },
       voucher_privatization: { money: 1, pct: 5, max: 8 },
       spa_guest: { xmult: 0.13 },
@@ -184,7 +184,12 @@ describe('epičtí žolíci fáze 7 – definice', () => {
     expect(flagged((j) => j.noPerishable === true)).toEqual(['spa_guest', 'new_years_eve']);
     expect(flagged((j) => j.noEternal === true)).toEqual([]);
     expect(flagged((j) => j.noShop === true)).toEqual([]);
-    expect(flagged((j) => j.initState !== undefined)).toEqual(['archivist', 'spa_guest', 'new_years_eve']);
+    expect(flagged((j) => j.initState !== undefined)).toEqual([
+      'archivist',
+      'fair_magician',
+      'spa_guest',
+      'new_years_eve',
+    ]);
     expect(flagged((j) => j.tags.includes('copy'))).toEqual(['archivist']);
   });
 
@@ -233,9 +238,10 @@ describe('epičtí žolíci fáze 7 – texty', () => {
       beer_sommelier:
         '×1 mult a navíc +×0,7 za každou různou kombinaci zahranou v tomto kole (včetně této ruky).',
       archivist: 'Při získání bez edice dostane duhovou; kopíruje schopnost žolíka nalevo od sebe.',
-      fair_magician: 'Skórují všechny zahrané karty a každá skórující karta dá ×1,15 mult.',
+      fair_magician:
+        'Skórují všechny zahrané karty a každá skórující karta dá ×1,15 mult; 1 z 5, že po ruce jedna zahraná karta zmizí v klobouku (zničí se).',
       tour_guide:
-        'Postupka i Barva stačí ze čtyř karet a ruka, která obsahuje Postupku nebo Barvu, dá +40 čipů.',
+        'Postupka i Barva stačí ze čtyř karet a ruka, která obsahuje Postupku nebo Barvu, dá +40 čipů; když má jen 4 karty, chce průvodce spropitné 1 Kč.',
       spartakiada: 'V první ruce kola skóruje každá skórující karta ještě 2×.',
       voucher_privatization:
         'Na konci kola +1 Kč za každých 5 % cíle, o které skóre kola cíl překročilo (nejvýš 8 Kč).',
@@ -385,6 +391,23 @@ describe('Kouzelník z pouti (fair_magician)', () => {
     const g = roundGame(['copier', 'fair_magician']);
     expect(playHand(g, 'KS KH').score).toBe(Math.floor(32 * 2 * 1.15 * 1.15 * 1.15 * 1.15)); // 111
   });
+
+  it('trik: 1 z 5 (s probabilityMult 5 jistě), že jedna zahraná karta po ruce zmizí; skóruje ještě celá', () => {
+    const g = roundGame(['fair_magician']);
+    g._core.api.addPermanentModifier({ probabilityMult: 5 });
+    const cards = setupRound(g, 'KS KH 5C');
+    const r = play(g, cards).result;
+    expect(r.score).toBe(Math.floor(37 * 2 * 1.15 ** 3));
+    expect(r.destroyedCardIds).toHaveLength(1);
+    expect(cards.map((c) => c.id)).toContain(r.destroyedCardIds[0]);
+    expect(g.card(r.destroyedCardIds[0]!)).toBeUndefined();
+    expect(r.steps.some((s) => s.message === 'jokers.fair_magician.vanished')).toBe(true);
+    expect(joker(g, 'fair_magician').state.vanish).toBeNull();
+    // s nulovou šancí nezmizí nic, ani s kopií
+    const safe = roundGame(['copier', 'fair_magician']);
+    safe._core.api.addPermanentModifier({ probabilityMult: 0 });
+    expect(playHand(safe, 'KS KH 5C').destroyedCardIds).toEqual([]);
+  });
 });
 
 // ─────────────────────────── Turistický průvodce ───────────────────────────
@@ -416,6 +439,19 @@ describe('Turistický průvodce (tour_guide)', () => {
     const r = playHand(roundGame(['tour_guide']), 'KS KH');
     expect(r.score).toBe(64);
     expect(jokerSteps(r, 'tour_guide')).toEqual([]);
+  });
+
+  it('spropitné: za ruku ze 4 karet s Barvou nebo Postupkou −1 Kč, z 5 karet a bez Barvy nic; kopie nic', () => {
+    const g = roundGame(['copier', 'tour_guide']);
+    g._core.state.money = 10;
+    const cards = setupRound(g, 'AH 9H 6H 2H');
+    const { events } = play(g, cards);
+    expect(events).toContainEqual({ type: 'message', key: 'jokers.tour_guide.tip' });
+    expect(g.state.money).toBe(9);
+    playHand(g, 'AH 9H 6H 2H 3H');
+    expect(g.state.money).toBe(9);
+    playHand(g, 'KS KH 5C 5D');
+    expect(g.state.money).toBe(9);
   });
 });
 

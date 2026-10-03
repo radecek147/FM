@@ -31,6 +31,7 @@ import {
 } from '../src/engine/sim/index';
 import type { BlindKind, BoosterOption, Card, GameEvent, ShopItem } from '../src/engine/types';
 import { hasKey, t, tList } from '../src/i18n/cs';
+import { blindDeathQuote } from '../src/i18n/death';
 import { formatSigned } from '../src/i18n/format';
 
 // ─────────────────────────── Volby ───────────────────────────
@@ -408,12 +409,15 @@ function runStats(game: Game): string {
   });
 }
 
-/** Hláška pitvy podle příčiny (DESIGN 1.2, příloha C): šéf `bosses.<id>.death`, jinak Malá/Velká útrata. */
-function deathLine(cause: string, blind: BlindKind): string | null {
+/**
+ * Hláška pitvy podle příčiny (DESIGN 1.2, příloha C): šéf `bosses.<id>.death`, jinak Malá/Velká útrata (varianta
+ * podle seedu runu, stejně jako na herní obrazovce).
+ */
+function deathLine(cause: string, blind: BlindKind, seed: string): string | null {
   const bossKey = `bosses.${cause}.death`;
   if (hasKey(bossKey)) return t(bossKey);
   const kind = cause === 'small' || cause === 'big' ? cause : blind;
-  return kind === 'boss' ? null : t(`cli.play.gameOver.death.${kind}`);
+  return kind === 'boss' ? null : blindDeathQuote(kind, seed);
 }
 
 /** Výpis stavu podle fáze. */
@@ -560,7 +564,7 @@ export function renderState(game: Game): string[] {
         }),
       );
       lines.push(t('cli.play.gameOver.cause', { cause: causeName(go.cause) }));
-      const death = deathLine(go.cause, go.blind);
+      const death = deathLine(go.cause, go.blind, s.seed);
       if (death) lines.push(death);
       lines.push(runStats(game));
       break;

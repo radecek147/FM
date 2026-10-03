@@ -13,6 +13,7 @@ import { Game } from '../../src/engine/run/game';
 import { jokerPrice } from '../../src/engine/shop/prices';
 import type { ActionResult, BlindKind } from '../../src/engine/types';
 import { t } from '../../src/i18n/cs';
+import { blindDeathQuote } from '../../src/i18n/death';
 import { formatMoney } from '../../src/i18n/format';
 import { ART, makeGame, makeRegistry, winNextHand } from './fixtures/registry';
 
@@ -110,7 +111,7 @@ describe('Doppelbock: popisek ceny zapůjčeného žolíka sedí s cenou ve Več
       const rental = newJokerInstance(game._core, 'epic_one', null, ['rental']);
       const price = jokerPrice(game._core, rental);
       expect(price).toBe(doppelbock.params!.price);
-      expect(t('stakes.doppelbock.desc', doppelbock.params)).toContain(`stojí jen ${formatMoney(price)}`);
+      expect(t('stakes.doppelbock.desc', doppelbock.params)).toContain(`akontace ${formatMoney(price)}`);
       game._core.state.ante = Number(jedenactka.params!.fromAnte);
       game._core.invalidate();
       expect(jokerPrice(game._core, rental)).toBe(price);
@@ -139,7 +140,7 @@ describe('textový režim: pitva, výhra a nekonečný režim', () => {
       game._core.state.round!.target = 1e9;
       ok(game.dispatch({ type: 'play', cardIds: [game.state.round!.hand[0]!] }));
       expect(game.state.phase).toBe('game_over');
-      expect(renderState(game)).toContain(t(`cli.play.gameOver.death.${kind}`));
+      expect(renderState(game)).toContain(blindDeathQuote(kind, 'DEATHTXT'));
     }
   });
 

@@ -196,6 +196,11 @@ export interface EngineApi {
    */
   rerollBoss(): string | null;
   /**
+   * Přidá `n` přelosování šéfa zdarma, která hráč použije sám na výběru útraty (`RunState.flags.bossRerolls`; Zpravodaj
+   * obce koupený uprostřed patra). Propadnou se začátkem dalšího patra.
+   */
+  addBossRerolls(n: number): void;
+  /**
    * Nastaví edici žolíka (Hromadné vyřízení); `null` edici odebere. Negativní edice tím přidá/ubere slot.
    * Neznámá edice = výjimka (chyba obsahu).
    */
@@ -666,7 +671,7 @@ export interface TagHooks {
   onShopEnter?(ctx: TagCtx): boolean;
   /**
    * Peníze v rozpisu odměn vyhraného kola (DESIGN 2.4.2 krok 5, za balíčkem; zdroj `tag:<id>`). Nespotřebovává —
-   * spotřebovat se dá v `onRoundEnd`, který běží po rozpisu (Termínovaný vklad).
+   * spotřebovat se dá v `onRoundEnd`, který běží po rozpisu (Brigáda na chmelu, Půjčka od tchána).
    */
   roundEndMoney?(ctx: TagCtx): number;
   /**
@@ -687,6 +692,23 @@ export interface TagDef {
   art: ArtSpec;
 }
 
+/** Kontext hooku kupónu: `self` = id kupónu (kupón nemá vlastní stav). */
+export type VoucherCtx = BaseCtx & { readonly self: string };
+
+/**
+ * Události runu, na které kupón reaguje (1.0.1, vlastní mechaniky kupónů). Volají se v pořadí, v jakém hráč kupóny
+ * uplatnil; stream RNG `misc`.
+ */
+export interface VoucherHooks {
+  /**
+   * Po zahrané ruce (i zakázané šéfem) — `played` = kolikrát se kombinace `hand` v tomto runu zahrála včetně této ruky
+   * (Kniha stížností: poprvé +1 úroveň, Vyřízená stížnost: každé 6. zahrání).
+   */
+  afterHandPlayed?(ctx: VoucherCtx & { readonly hand: HandType; readonly played: number }): void;
+  /** Po porážce šéfa, ještě před rozpisem odměn (Jarní úklid: edice náhodnému žolíkovi). */
+  onBossDefeated?(ctx: VoucherCtx & { readonly bossId: string }): void;
+}
+
 export interface VoucherDef {
   id: string;
   tier: 1 | 2;
@@ -696,6 +718,8 @@ export interface VoucherDef {
   params?: Record<string, number | string>;
   passive?(ctx: BaseCtx): ModifierDelta;
   onRedeem?(ctx: BaseCtx): void;
+  /** Reakce na události runu (vlastní mechaniky kupónů 1.0.1). */
+  hooks?: VoucherHooks;
   /**
    * Smí se kupón teď nabídnout a koupit? (Úřední škrt a Amnestie až od patra 2 — v patře 1 by „−1 patro“ nic
    * neudělalo a zbyl by jen postih.) Čistá funkce (běží v `GameCore.readOnly`); výchozí ano. Kontroluje se při

@@ -10,20 +10,21 @@ export const tags = {
     desc: 'Dostaneš {money|money}.',
     flavor: 'Z loňské zimy, ještě s účtenkou.',
   },
-  term_deposit: {
-    name: 'Termínovaný vklad',
-    desc: 'Po porážce šéfa tohoto patra dostaneš {money|money} navíc v rozpisu odměn.',
-    flavor: 'Výběr před splatností zpoplatněn.',
+  fair_raffle: {
+    name: 'Pouťová tombola',
+    desc: 'Hlavní výhra: náhodný legendární žolík (potřebuje volný slot); jinak cena útěchy {money|money}.',
+    flavor: 'Hlavní cena: legenda. Útěcha: sud piva a fotka s kolotočářem.',
+    won: 'Tombola! Hlavní výhra jde k tobě.',
   },
-  advance_payment: {
-    name: 'Zálohy',
-    desc: '+{money|money} za každou útratu přeskočenou v tomto runu (včetně této).',
-    flavor: 'Doplatek přijde v březnu.',
+  in_law_loan: {
+    name: 'Půjčka od tchána',
+    desc: 'Hned dostaneš {money|money}; po porážce šéfa tohoto patra se z odměny strhne {repay|money}.',
+    flavor: 'Vrátíš, až budeš mít. Nejpozději v pátek. Ráno.',
   },
-  hop_picking: {
-    name: 'Brigáda na chmelu',
-    desc: '+{money|money} za {hands|word:každou,každé,každých} {hands|plural:zahranou ruku,zahrané ruce,zahraných rukou} v tomto runu (nejvýš +{cap|money}).',
-    flavor: 'Za dědy povinná, dnes aspoň placená.',
+  paper_drive: {
+    name: 'Sběr papíru',
+    desc: 'Zničí z balíčku {cards|plural:kartu,karty,karet} s nejnižší hodnotou bez vylepšení, pečeti a edice a za každou dá {money|money}.',
+    flavor: 'Za kilo starých karet razítko do žákovské. Za tři kila i pochvala.',
   },
   open_doors: {
     name: 'Otevřené dveře',
@@ -35,25 +36,25 @@ export const tags = {
     desc: 'Hned otevřeš zdarma Tlustou obálku žolíků.',
     flavor: 'Na zub. A nic neříkej mámě.',
   },
-  kiosk_calendar: {
-    name: 'Kalendář z trafiky',
-    desc: 'Hned otevřeš zdarma Tlustou obálku pranostik.',
-    flavor: 'S hasičskými motivy, jako každý rok.',
+  harvest_festival: {
+    name: 'Dožínky',
+    desc: '+{levels|plural:úroveň,úrovně,úrovní} každé kombinaci, která se v tomto runu hrála aspoň {plays}× (když žádná, tvé nejhranější).',
+    flavor: 'Věnec ze žita, tancovačka do rána a úroda bodů pro každého, kdo dřel.',
   },
   grandma_parcel: {
     name: 'Balík od babičky',
     desc: 'Hned otevřeš zdarma Tlustou obálku babských rad.',
     flavor: 'Buchty, ponožky a dobré rady.',
   },
-  official_letter: {
-    name: 'Úřední dopis',
-    desc: 'Hned otevřeš zdarma Obálku razítek.',
-    flavor: 'Do vlastních rukou. Bohužel.',
+  moving_day: {
+    name: 'Stěhování',
+    desc: '+{joker|plural:slot,sloty,slotů} žolíka, ale −{consumable|plural:slot,sloty,slotů} spotřebky do konce runu.',
+    flavor: 'Skříň se do nového bytu nevešla. Žolík ano.',
   },
-  cottage_marias: {
-    name: 'Mariáš na chalupě',
-    desc: 'Hned otevřeš zdarma Tlustou obálku hracích karet.',
-    flavor: 'Hraje se do tmy a o drobné.',
+  mushroom_hunt: {
+    name: 'Houbaření',
+    desc: 'Přidá do balíčku {copies|plural:kopii,kopie,kopií} náhodné karty z balíčku (i s vylepšením, pečetí a edicí).',
+    flavor: 'Kde roste jeden, rostou tři. Místo ti ale nikdo neprozradí.',
   },
   polished_cutlery: {
     name: 'Vyleštěné příbory',
@@ -62,10 +63,10 @@ export const tags = {
       'bez příplatku.',
     flavor: 'Na návštěvu se vytahuje to nejlepší.',
   },
-  dental_xray: {
-    name: 'Rentgen od zubaře',
-    desc: 'Příští žolík ve Večerce bude negativní, bez příplatku.',
-    flavor: 'Na snímku je vidět skrz. Proto nezabere místo.',
+  hop_picking: {
+    name: 'Brigáda na chmelu',
+    desc: 'Další {rounds|plural:vyhrané kolo,vyhraná kola,vyhraných kol} dostaneš v odměnách navíc {money|money} (za každé).',
+    flavor: 'Za dědy povinná, dnes aspoň placená. Výplata po žních.',
   },
   referral: {
     name: 'Doporučení od známého',

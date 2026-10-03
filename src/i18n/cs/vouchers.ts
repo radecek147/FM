@@ -16,25 +16,25 @@ export const vouchers = {
     desc: '+{slots|plural:slot,sloty,slotů} na obálky ve Večerce.',
     flavor: 'Impulzivní nákupy na dosah ruky.',
   },
-  yellow_price: {
-    name: 'Žlutá cenovka',
-    desc: 'Zboží ve Večerce je o {pct} % levnější (přehození ne).',
-    flavor: 'Žlutá barva, menší číslo. Víc vědět nepotřebuješ.',
+  loyalty_card: {
+    name: 'Věrnostní kartička',
+    desc: 'Každý {every}. nákup ve Večerce je zdarma – žolík, spotřebka, hrací karta, obálka i kupón (přehození se nepočítá).',
+    flavor: 'Za každý nákup razítko. Za plnou kartičku rohlík a nová kartička.',
   },
-  relabeled_price: {
-    name: 'Přelepená cenovka',
-    desc: 'Zboží ve Večerce je celkem o {pct} % levnější (přehození ne).',
-    flavor: 'Pod novou cenovkou stará, pod ní ještě starší. Archeologie slev.',
+  regular_customer: {
+    name: 'Kmenový zákazník',
+    desc: 'Zdarma je už každý {every}. nákup ve Večerce (místo každého {from}.).',
+    flavor: 'Paní vedoucí ti schovává čerstvé a zdraví tě jménem. I příjmením.',
   },
-  counter_buddy: {
-    name: 'Kamarád za pultem',
-    desc: 'Každé přehození je o {discount|money} levnější (začíná na {cost|money}).',
-    flavor: 'Pro tebe to přehodím.',
+  village_newsletter: {
+    name: 'Zpravodaj obce',
+    desc: 'V každém patře můžeš na výběru útraty {rerolls}× zdarma přelosovat šéfa (nevyužité přelosování propadne).',
+    flavor: 'Strana tři: kdo k nám přijede na šéfa. Strana čtyři: jak se mu vyhnout.',
   },
-  manager_inlaw: {
-    name: 'Švagr vedoucí',
-    desc: 'Cena přehození v téže Večerce neroste.',
-    flavor: 'Rodina je rodina.',
+  village_radio: {
+    name: 'Obecní rozhlas',
+    desc: 'Šéfa jde přelosovat celkem {rerolls}× za patro a jeho cíl je o {pct} % nižší.',
+    flavor: 'Vážení spoluobčané, šéf dnes úřaduje jen dopoledne. Hlášení opakovat nebudeme.',
   },
   late_hours: {
     name: 'Prodloužená otvíračka',
@@ -66,15 +66,15 @@ export const vouchers = {
     desc: '+{cards|plural:karta,karty,karet} v ruce; v kole se šéfem ještě +{bossCards|plural:karta,karty,karet} navíc.',
     flavor: 'Když přijde šéf, rozkládá se až do předsíně.',
   },
-  savings_account: {
-    name: 'Spořicí účet',
-    desc: 'Strop úroku se zvedne na {cap|money} za kolo.',
-    flavor: 'Úrok skoro jako za první republiky.',
+  deposit_bottle: {
+    name: 'Zálohovaná lahev',
+    desc: 'Spotřebky se prodávají za plnou cenu (místo poloviny).',
+    flavor: 'Tři koruny za lahev. Za nepoužité razítko taky, když ho vrátíš s účtenkou.',
   },
-  building_savings: {
-    name: 'Stavební spoření',
-    desc: 'Strop úroku se zvedne na {cap|money} za kolo.',
-    flavor: 'Se státní podporou, bez stavby.',
+  bottle_return: {
+    name: 'Výkupna',
+    desc: 'Žolíci se prodávají za plnou cenu (místo poloviny; žolík na splátky dál za {rental|money}).',
+    flavor: 'Výkup barevných kovů, papíru a žolíků. Původ se nezkoumá.',
   },
   narrow_rack: {
     name: 'Úzký věšák',
@@ -86,15 +86,17 @@ export const vouchers = {
     desc: '+{cards|plural:karta,karty,karet} v ruce (vyrovná postih Úzkého věšáku).',
     flavor: 'Konečně i na bundu.',
   },
-  tear_calendar: {
-    name: 'Trhací kalendář',
-    desc: 'Pranostiky a babské rady se ve Večerce objevují častěji (váha každé {from} → {to}, žolíci mají {joker}).',
-    flavor: 'Každý den jedna moudrost.',
+  complaints_book: {
+    name: 'Kniha stížností',
+    desc: 'Když se kombinace v tomto runu zahraje poprvé, zvýší se o {levels|plural:úroveň,úrovně,úrovní}.',
+    flavor: 'Stížnost přijata. Vyřízení do třiceti dnů, úroveň hned.',
+    leveled: 'Stížnost přijata – úroveň kombinace o stupeň výš.',
   },
-  grandmas_pantry: {
-    name: 'Babiččina spíž',
-    desc: '+{slots|plural:slot,sloty,slotů} spotřebky; ve Večerce se objevují i úřední razítka (váha {stamps}) a pranostiky s babskými radami ještě častěji (váha {from} → {to}).',
-    flavor: 'Zavařeniny na příštích dvacet let.',
+  complaint_settled: {
+    name: 'Vyřízená stížnost',
+    desc: 'Každé {every}. zahrání téže kombinace v runu jí přidá {levels|plural:úroveň,úrovně,úrovní}.',
+    flavor: 'Vyřízeno kladně! Poprvé od roku osmdesát devět.',
+    leveled: 'Stížnost vyřízena kladně – úroveň navíc.',
   },
   card_stall: {
     name: 'Stánek s kartami',
@@ -106,15 +108,16 @@ export const vouchers = {
     desc: 'Hrací karty ve Večerce mají {enhancePct}% šanci na vylepšení a {sealPct}% šanci na pečeť.',
     flavor: 'Tahle je ještě s pečetí z první republiky. Pro tebe za pade.',
   },
-  polish: {
-    name: 'Leštěnka',
-    desc: 'Lesklá, holografická a duhová edice se objevují {mult}× častěji.',
-    flavor: 'Lesk jako nedělní boty.',
+  spring_cleaning: {
+    name: 'Jarní úklid',
+    desc: 'Po porážce šéfa dostane náhodný tvůj žolík bez edice lesklou edici (+{chips|plural:čip,čipy,čipů}).',
+    flavor: 'Okna umytá, koberec vyklepaný a žolík se leskne jako nový.',
+    cleaned: 'Jarní úklid: jeden žolík se leskne až do kuchyně.',
   },
-  holo_foil: {
-    name: 'Hologramová fólie',
-    desc: 'Lesklá, holografická a duhová edice se objevují celkem {mult}× častěji (místo {base}×).',
-    flavor: 'Duha v každém balení.',
+  deep_cleaning: {
+    name: 'Generální úklid',
+    desc: 'Po porážce šéfa dostane žolík místo lesklé holografickou edici (+{mult} mult).',
+    flavor: 'Vysává se i pod gaučem. Našly se tam tři koruny a jeden žolík.',
   },
   official_strike: {
     name: 'Úřední škrt',

@@ -116,7 +116,9 @@ Denní run: `dailySeed(date)` = `DEN-YYYYMMDD` (UTC).
    (počítadla), šéf `afterHandPlayed`, `afterScored` vylepšení (jednou za ruku: hod skla, Ohmataná +3 čipy;
    `afterScoredCards` ve `scoring/score.ts`) a zničení označených karet.
 
-Počet aktivací jedné karty je nejvýš `MAX_ACTIVATIONS_PER_CARD` (10). Platná vylepšení dává `GameCore.enhancements()`
+Počet aktivací jedné karty je nejvýš `MAX_ACTIVATIONS_PER_CARD` (10); ×mult vázaný na kartu (vylepšení, edice,
+pečeť, reakce žolíků na kartu) platí jen v prvních `MAX_XMULT_ACTIVATIONS_PER_CARD` (2) aktivacích, další opakování
+ho vynechají (`withoutXmult`, DESIGN 3.1). Platná vylepšení dává `GameCore.enhancements()`
 — při `Modifiers.disableEnhancements` (Bílá hora) prázdný registr, karta se pak chová jako bez vylepšení.
 
 Každá změna čipů/multu/peněz se zapíše jako **samostatný** `ScoreStep` (s průběžnými hodnotami), UI je přehraje —
@@ -236,7 +238,7 @@ Dřív se `ScoringInfo` kopírovala přes `extend` (deskriptory) pro každý hoo
 `addRoundHandSize` platí pro první dobrání); `onShopEnter` až **po** vygenerování Večerky (štítek ji upravuje přes
 `addShopJoker` / `setShopJokerEdition` / `addShopVoucher` / `addFreeRerolls`; `passive` štítku při generování platí),
 před `onShopEnter` žolíků; `roundEndMoney` přidá řádek `tag:<id>` do rozpisu odměn (krok 5 za balíčkem) a `onRoundEnd`
-štítků běží až **po** sestavení rozpisu — štítek, který vyplácí v rozpisu (Termínovaný vklad), se tak smí spotřebovat
+štítků běží až **po** sestavení rozpisu — štítek, který vyplácí v rozpisu (Půjčka od tchána, Brigáda na chmelu), se tak smí spotřebovat
 v `onRoundEnd`. `api.openBooster(id)` zařadí obálku zdarma do fronty `RunState.flags.pendingBoosters`; `Game.dispatch`
 (a konec `newRun`) ji po akci otevře přes `startBooster`, jakmile je fáze `blind_select` nebo `shop` (zavření obálky
 vrátí tam, odkud se otevřela, a další z fronty se otevře po té akci). Obálka ze štítku získaného uprostřed kola tak
@@ -256,7 +258,7 @@ Akce `pickBooster` umí `keep: true` — vybraná spotřebka se uloží do slotu
 
 Úpravy ze štítků (fáze 6) jsou pole položky (`ShopPriced`), takže je přepočet cen respektuje: `priceMult` násobí
 základní cenu před slevou a `shopPriceAdd` (Doporučení od známého 0,5), `noEditionSurcharge` počítá žolíka bez
-příplatku za edici (Vyleštěné příbory, Rentgen od zubaře) a `extra` označí položku navíc — přehození ji (neprodanou) nechá
+příplatku za edici (Vyleštěné příbory) a `extra` označí položku navíc — přehození ji (neprodanou) nechá
 na konci nabídky a její žolík se znovu nenabídne, `syncShopSlots` ji do `shopCardSlots` nepočítá. Kupón navíc
 (`addShopVoucher`) platí jen pro tu Večerku, do `anteVouchers` se nezapíše.
 
@@ -359,7 +361,8 @@ flavor a že texty dodržují typografii.
 - Formát `{ format: 'karban-save', kind: 'run' | 'profile', version: N, savedAt, data }` (`src/engine/save/save.ts`:
   `serializeRun`, `deserializeRun`, `SaveError`). `savedAt` dodá volající (engine nečte hodiny). Migrace
   `RUN_MIGRATIONS` ve stejném souboru (čisté funkce `vN → vN+1`, aplikují se postupně, každá musí vrátit objekt;
-  `deserializeRun(input, { migrations, currentVersion })` umí vlastní tabulku pro testy). Načtení ověří obálku (verze
+  `deserializeRun(input, { migrations, currentVersion })` umí vlastní tabulku pro testy). Run v1 → v2 a profil v1 → v2 (1.0.1) převedou nahrazené kupóny a štítky podle
+  tabulek v `src/engine/save/renames.ts`. Načtení ověří obálku (verze
   = kladné celé číslo), odmítne novější verzi a po migracích zkontroluje tvar stavu (fáze, RNG streamy, pole);
   vstupní objekt nemění. Chyby: `SaveError.code` = `invalidJson` / `invalidFormat` / `wrongKind` / `tooNew` /
   `migrationFailed` (`tests/unit/save.test.ts`). Profil se nikdy nesmí ztratit: při chybě načtení se poškozená data

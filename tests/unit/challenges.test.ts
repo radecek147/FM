@@ -158,7 +158,7 @@ describe('výzvy – obsah (DESIGN 11.1)', () => {
       challengeTexts(id, { registry: REG })
         .rules.join(' ')
         .replace(/\u00a0/g, ' ');
-    expect(rules('dry_february')).toContain(t('vouchers.tear_calendar.name'));
+    expect(rules('dry_february')).toContain(t('vouchers.complaints_book.name'));
     expect(rules('greenhouse')).toContain(t('consumables.apple_tree.name'));
     expect(rules('greenhouse')).toContain('1 ze 2');
     expect(rules('quarry')).toContain(t('jokers.golem.name'));
@@ -207,7 +207,7 @@ const START: Record<string, StartSpec> = {
   straight_to_boss: { deck: 'pub', money: null, cards: 52 },
   lifelong_wedding: { deck: 'regulars', money: 0, cards: 52 },
   costume_rental: { deck: 'pub', money: 10, cards: 52 },
-  dry_february: { deck: 'pub', money: 10, cards: 52, vouchers: ['tear_calendar'] },
+  dry_february: { deck: 'pub', money: 10, cards: 52, vouchers: ['complaints_book'] },
   end_of_world: { deck: 'pub', money: 5, cards: 52 },
 };
 
@@ -268,7 +268,7 @@ describe('výzvy – pravidla', () => {
     expect(g.sellValue(g.state.jokers[0]!.uid)).toBe(2);
     expect(g.sellValue(g.state.consumables[0]!.uid)).toBe(2);
     const offered = eligibleVouchers(g._core);
-    for (const v of ['yellow_price', 'relabeled_price', 'counter_buddy', 'manager_inlaw', 'amnesty'])
+    for (const v of ['loyalty_card', 'regular_customer', 'deposit_bottle', 'bottle_return', 'amnesty'])
       expect(offered).not.toContain(v);
   });
 
@@ -303,7 +303,6 @@ describe('výzvy – pravidla', () => {
     openShop(g);
     g._core.state.shop!.freeRerolls = 1;
     expect(g.dispatch({ type: 'reroll' })).toEqual({ ok: false, error: 'cannotUse' });
-    for (const v of ['counter_buddy', 'manager_inlaw']) expect(eligibleVouchers(g._core)).not.toContain(v);
     expect(passAntes(run('express'), 4)).toEqual([]);
   });
 
@@ -319,7 +318,7 @@ describe('výzvy – pravidla', () => {
     expect(g.blindTarget('small')).toBe(
       blindTarget(1, 'small', 1, { targetMult: MARIAS_TARGET_MULT * 1.25 }),
     );
-    expect(passAntes(run('marias_party'), 6)).not.toContain('cottage_marias');
+    expect(passAntes(run('marias_party'), 6)).not.toContain('mushroom_hunt');
   });
 
   it('Vánoční kapr: 0 zahození, +2 ruce, +1 karta v ruce; kupóny na zahození se nenabízejí', () => {

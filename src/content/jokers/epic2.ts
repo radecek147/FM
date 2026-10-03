@@ -104,21 +104,43 @@ const archivist: JokerDef = {
 // ─────────────────────────── Kouzelník z pouti ───────────────────────────
 
 const MAGICIAN_XMULT = 1.15;
+/** 1.0.1: trik se občas „povede“ — 1 z 5 za ruku, že náhodná zahraná karta zmizí v klobouku (zničí se po ruce). */
+const MAGICIAN_VANISH_CHANCE = 1;
+const MAGICIAN_VANISH_ODDS = 5;
+/** Klíč stavu: id karty, která v této ruce zmizí (nebo null). */
+const MAGICIAN_VANISH = 'vanish';
+const MSG_MAGICIAN_VANISH = 'jokers.fair_magician.vanished';
 
 /**
  * `allCardsScore`: skórují i karty mimo kombinaci (kopy). ×1,15 za každou **aktivaci** skórující karty (opakování
- * červenou pečetí nebo žolíkem dá ×1,15 znovu); debuffnutá karta se přeskočí celá. Kopie dá jen ×1,15 za kartu
- * (`passive` se nekopíruje).
+ * červenou pečetí nebo žolíkem dá ×1,15 znovu, ale jen do stropu ×mult z opakování); debuffnutá karta se přeskočí
+ * celá. Před skórováním hod 1 z 5 (stream `joker`): vybraná zahraná karta ještě skóruje a po ruce se zničí. Kopie dá
+ * jen ×1,15 za kartu (`passive` se nekopíruje, karty nemizí dvakrát).
  */
 const fairMagician: JokerDef = {
   id: 'fair_magician',
   rarity: 'epic',
   cost: 9,
   tags: ['xmult', 'utility'],
-  params: { xmult: MAGICIAN_XMULT },
+  params: { xmult: MAGICIAN_XMULT, chance: MAGICIAN_VANISH_CHANCE, odds: MAGICIAN_VANISH_ODDS },
+  initState: () => ({ [MAGICIAN_VANISH]: null }),
   hooks: {
     passive: () => ({ allCardsScore: true }),
-    onCardScored: () => ({ xmult: MAGICIAN_XMULT }),
+    beforeScoring: (ctx) => {
+      if (ctx.isCopy) return;
+      const victim =
+        ctx.played.length > 0 && ctx.chance(MAGICIAN_VANISH_CHANCE, MAGICIAN_VANISH_ODDS)
+          ? ctx.rng.pick(ctx.played).id
+          : null;
+      ctx.self.state[MAGICIAN_VANISH] = victim;
+    },
+    onCardScored: (ctx) =>
+      !ctx.isCopy && !ctx.isRetrigger && ctx.self.state[MAGICIAN_VANISH] === ctx.card.id
+        ? { xmult: MAGICIAN_XMULT, destroyCard: true, message: MSG_MAGICIAN_VANISH }
+        : { xmult: MAGICIAN_XMULT },
+    afterHandScored: (ctx) => {
+      if (!ctx.isCopy) ctx.self.state[MAGICIAN_VANISH] = null;
+    },
   },
   art: {
     icon: 'magic-hat',
@@ -133,6 +155,10 @@ const fairMagician: JokerDef = {
 // ─────────────────────────── Turistický průvodce ───────────────────────────
 
 const GUIDE_CHIPS = 40;
+/** 1.0.1: spropitné průvodci za každou zahranou ruku ze 4 karet, která obsahuje Postupku nebo Barvu. */
+const GUIDE_TIP = 1;
+const GUIDE_TIP_CARDS = 4;
+const MSG_GUIDE_TIP = 'jokers.tour_guide.tip';
 
 /**
  * `fourCardStraightFlush` (Postupka i Barva ze 4 karet; 5 karet má přednost). „Obsahuje“ = `hand.contains`, tedy
@@ -147,13 +173,19 @@ const tourGuide: JokerDef = {
   unlock: { type: 'winRun', deck: 'tourist' },
   tags: ['chips', 'utility', 'hand'],
   // `hand` čtou boti (honí Barvu), v popisku není.
-  params: { chips: GUIDE_CHIPS, hand: 'flush' },
+  params: { chips: GUIDE_CHIPS, tip: GUIDE_TIP, cards: GUIDE_TIP_CARDS, hand: 'flush' },
   hooks: {
     passive: () => ({ fourCardStraightFlush: true }),
     onHandPlayed: (ctx) =>
       ctx.hand.contains.includes('straight') || ctx.hand.contains.includes('flush')
         ? { chips: GUIDE_CHIPS }
         : null,
+    afterHandScored: (ctx) => {
+      if (ctx.isCopy || ctx.played.length !== GUIDE_TIP_CARDS) return;
+      if (!ctx.hand.contains.includes('straight') && !ctx.hand.contains.includes('flush')) return;
+      ctx.api.addMoney(-GUIDE_TIP, 'joker');
+      ctx.api.message(MSG_GUIDE_TIP);
+    },
   },
   art: {
     icon: 'umbrella',

@@ -27,7 +27,7 @@ import {
  * uložený run (tests/e2e/helpers.ts). Animace vypnuté (presenter běží hned), konzole bez chyb a varování.
  *  1. Večerka: pranostika do slotu → použít ze slotu → úroveň kombinace v Info o runu; babská rada s cíli nejde
  *     „Koupit a použít“ (ve Večerce není ruka — tlačítko je neaktivní a řekne proč), ani použít ze slotu; prodej,
- *  2. kupón: Druhý regál přidá slot zboží hned v otevřené Večerce, Žlutá cenovka hned zlevní,
+ *  2. kupón: Druhý regál přidá slot zboží hned v otevřené Večerce, Věrnostní kartička hned ukáže nákup zdarma,
  *  3. obálka babských rad: otevřít, vybrat cíl v dobrané ruce, použít → vylepšení na kartě i v uloženém stavu,
  *  4. obálka pranostik: „Nechat si“ → spotřebka ve slotu,
  *  5. obálka hracích karet: vybrat kartu → balíček má o kartu víc,
@@ -175,16 +175,20 @@ test('Večerka: pranostika do slotu → použít → úroveň v Info o runu; rad
 
 // ─────────────────────────── 2. Kupón ───────────────────────────
 
-test('kupón: Druhý regál přidá slot zboží hned, Žlutá cenovka hned zlevní zboží', async ({ page }) => {
+test('kupón: Druhý regál přidá slot zboží hned, Věrnostní kartička hned ukáže nákup zdarma', async ({
+  page,
+}) => {
   const log = watchConsole(page);
   await presetSettings(page, { animations: false });
   const state = shopState('E2EKUPON1', 40, {
     items: [shopConsumable(consumable(900, 'medard_drop'), 3), shopConsumable(consumable(901, 'chili'), 3)],
     vouchers: [
       { voucherId: 'second_shelf', price: REG.vouchers.second_shelf!.cost, sold: false },
-      { voucherId: 'yellow_price', price: REG.vouchers.yellow_price!.cost, sold: false },
+      { voucherId: 'loyalty_card', price: REG.vouchers.loyalty_card!.cost, sold: false },
     ],
   });
+  // Na kartičce už jsou 4 razítka (počítadlo nákupů) — s uplatněnou kartičkou je hned příští nákup zdarma.
+  state.flags.loyaltyPurchases = 4;
   // Ceny podle enginu (kupón přepočítá ceny i sloty hned v otevřené Večerce).
   const g = Game.fromState(structuredClone(state), REG);
   expect(g.dispatch({ type: 'buyVoucher', slot: 0 }).ok).toBe(true);
@@ -205,17 +209,18 @@ test('kupón: Druhý regál přidá slot zboží hned, Žlutá cenovka hned zlev
   expect((await readRun(page)).shop!.items).toHaveLength(afterShelf.shop!.items.length);
   expect((await readRun(page)).vouchers).toContain('second_shelf');
 
-  // Žlutá cenovka → ceny zboží hned dolů (stejně jako v enginu).
+  // Věrnostní kartička → příští nákup zdarma: ceny zboží hned na 0 (stejně jako v enginu).
   const before = (await readRun(page)).shop!.items.map((i) => i.price);
   await page.getByTestId('shop-redeem-1').click();
   await idle(page);
   const after = (await readRun(page)).shop!.items.map((i) => i.price);
   expect(after).toEqual(afterLoyalty.shop!.items.map((i) => i.price));
   expect(after.some((p, i) => p < (before[i] ?? 0))).toBe(true);
+  expect(after.every((p) => p === 0)).toBe(true);
   await expect(page.getByTestId('shop-buy-0')).toContainText(formatMoney(after[0]!));
   await expect(page.getByTestId('money')).toHaveText(formatMoney(afterLoyalty.money));
   await page.getByTestId('run-info').click();
-  await expect(page.getByTestId('run-info-modal')).toContainText(t('vouchers.yellow_price.name'));
+  await expect(page.getByTestId('run-info-modal')).toContainText(t('vouchers.loyalty_card.name'));
   await page.getByTestId('run-info-close').click();
   expectCleanConsole(log);
 });

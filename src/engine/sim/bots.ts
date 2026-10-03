@@ -22,7 +22,7 @@
  * ve Večerce, zahrané ruce) bot čte ze stavu. Simulace je proto deterministická i při sdílení instance bota mezi
  * prokládanými runy a po uložení a načtení uprostřed runu pokračuje stejně.
  */
-import { FINAL_ANTE, RENTAL_FEE } from '../constants';
+import { FINAL_ANTE, RENTAL_FEE, RENTAL_INSTALLMENTS } from '../constants';
 import type { BoosterDef, JokerRarity, JokerTag, Rng } from '../content-types';
 import { cyrb128, rngFromState } from '../rng/rng';
 import type { Game } from '../run/game';
@@ -646,7 +646,9 @@ class StrategyBot implements Bot {
       v *= this.activeShare(game, j);
     }
     if (j.edition === 'negative') v += NEGATIVE_EXTRA_KC;
-    if (j.stickers.includes('rental')) v -= RENTAL_FEE * Math.min(left, 12) * 0.5;
+    // Na splátky: zbývající splátky (nejvýš do konce runu), pak je žolík bota.
+    if (j.stickers.includes('rental'))
+      v -= RENTAL_FEE * Math.min(left, Math.max(0, RENTAL_INSTALLMENTS - (j.rentalPaid ?? 0)));
     return v;
   }
 

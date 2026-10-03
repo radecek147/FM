@@ -28,15 +28,20 @@ export const BASE_MODIFIERS: Readonly<Modifiers> = Object.freeze({
   rerollBaseCost: 4,
   rerollCostStep: 1,
   shopDiscountPct: 0,
-  shopWeightJoker: 14,
-  shopWeightPranostika: 3,
+  // Vlastní profil Večerky (1.0.1): žolík 60 %, pranostika 24 %, babská rada 14 %, razítko 2 % (DESIGN 2.5.3).
+  shopWeightJoker: 12,
+  shopWeightPranostika: 5,
   shopWeightRada: 3,
-  shopWeightRazitko: 0,
+  shopWeightRazitko: 0.5,
   shopWeightPlayingCard: 0,
   editionRateMult: 1,
   shopPriceAdd: 0,
   playingCardEnhanceChance: 0.2,
   playingCardSealChance: 0,
+  freePurchaseEvery: 0,
+  consumableSellFull: false,
+  jokerSellFull: false,
+  bossRerollsPerAnte: 0,
 
   probabilityMult: 1,
   targetMult: 1,
@@ -157,6 +162,9 @@ export function clampModifiers(m: Modifiers): Modifiers {
   m.handCost = Math.max(0, m.handCost);
   m.discardCost = Math.max(0, m.discardCost);
   m.glassBreakOdds = Math.max(0, m.glassBreakOdds);
+  // Věrnostní kartička: celé číslo ≥ 2 (každý 1. nákup zdarma by byl nesmysl), jinak vypnuto.
+  m.freePurchaseEvery = m.freePurchaseEvery >= 2 ? Math.round(m.freePurchaseEvery) : 0;
+  m.bossRerollsPerAnte = Math.max(0, Math.floor(m.bossRerollsPerAnte));
   // Patro výhry je celé číslo ≥ 1 (porovnává se s `RunState.ante`).
   m.finalAnte = Math.max(1, Math.round(m.finalAnte));
   return m;

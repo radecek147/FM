@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { registry } from '../../src/content';
 import { Game, deserializeRun, serializeRun, type JokerInstance, type RunState } from '../../src/engine';
 import { t } from '../../src/i18n/cs';
+import { blindDeathQuote } from '../../src/i18n/death';
 import { formatNumber } from '../../src/i18n/format';
 import { bossTexts, tagTexts } from '../../src/ui/describe';
 
@@ -266,7 +267,7 @@ test('pitva na Malé útratě: obecná hláška bez šéfa', async ({ page }) =>
   await handCards(page).first().click();
   await page.getByTestId('play').click();
   await expect(page.getByTestId('game-over')).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByTestId('death-quote')).toHaveText(t('game.death.small'));
+  await expect(page.getByTestId('death-quote')).toHaveText(blindDeathQuote('small', 'E2ESEF-MALA'));
   await expect(page.getByTestId('death-boss')).toHaveCount(0);
   expectCleanConsole(log);
 });

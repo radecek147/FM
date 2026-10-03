@@ -19,12 +19,12 @@ export const jokersCommon = {
   gravedigger: {
     name: 'Hrobník',
     desc: 'Každá skórující piková karta dá +{chips|plural:čip,čipy,čipů}.',
-    flavor: 'Pro každou piku kope zvlášť.',
+    flavor: 'Jeho zákazníci si nikdy nestěžují. Ani na čekací dobu.',
   },
   jeweler: {
     name: 'Klenotník',
     desc: 'Každá skórující kárová karta trvale získá +{chips|plural:čip,čipy,čipů}.',
-    flavor: 'Každou káru nejdřív vyleští.',
+    flavor: 'Briliant od skla pozná na první pohled. Cenu ti řekne až na druhý.',
     polished: 'Vyleštěno!',
   },
   crusader: {

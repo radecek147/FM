@@ -9,8 +9,8 @@ import type { TextTree } from '../../cs';
 export const bossesB = {
   new_decree: {
     name: 'Nová vyhláška',
-    rule: 'Všechny kombinace se v tomto kole počítají na úrovni {level}.',
-    intro: 'Na základě nové vyhlášky se úrovně ruší.',
+    rule: 'Úrovně všech kombinací se v tomto kole dělí {divisor} (zaokrouhleno nahoru, nejméně 1).',
+    intro: 'Na základě nové vyhlášky se úrovně krátí na polovinu. Druhá polovina je ve schvalovacím řízení.',
     defeat: 'Vyhláška zrušena soudem.',
     death: 'Neznalost vyhlášky neomlouvá.',
   },
@@ -24,7 +24,7 @@ export const bossesB = {
   regional_derby: {
     name: 'Krajské derby',
     rule: 'Ruka s červenými (♥ ♦) i černými (♠ ♣) kartami má poloviční základní čipy i mult (divoké a kamenné karty stranu nevolí).',
-    intro: 'Hradec, nebo Brno? Vyber si stranu!',
+    intro: 'Červení proti černým, celý kraj se dívá. Vyber si stranu!',
     defeat: 'Remíza. Slaví obě strany.',
     death: 'Prohrané derby se v hospodě probírá ještě deset let.',
   },

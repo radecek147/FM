@@ -153,6 +153,20 @@ export interface Modifiers {
   playingCardEnhanceChance: number;
   /** Šance (0–1), že hrací karta nabízená ve Večerce má pečeť (výchozí 0; Sběratelská burza 0,2). */
   playingCardSealChance: number;
+  /**
+   * Každý N-tý nákup ve Večerce je zdarma (Věrnostní kartička 5, Kmenový zákazník 3) — žolíci, spotřebky, karty,
+   * obálky i kupóny, přehození se nepočítá. 0 = vypnuto. Počítadlo nákupů je `RunState.flags.loyaltyPurchases`.
+   */
+  freePurchaseEvery: number;
+  /** Spotřebky se prodávají za plnou základní cenu, ne za polovinu (Zálohovaná lahev). */
+  consumableSellFull: boolean;
+  /** Žolíci se prodávají za plnou základní cenu, ne za polovinu (Výkupna; žolík na splátky dál za 1 Kč). */
+  jokerSellFull: boolean;
+  /**
+   * Přelosování šéfa zdarma na začátku každého patra (Zpravodaj obce 1, Obecní rozhlas 2) — engine je zapíše do
+   * `RunState.flags.bossRerolls` (nevyužitá propadnou s koncem patra). 0 = vypnuto.
+   */
+  bossRerollsPerAnte: number;
 
   /** Násobič čitatele všech pravděpodobností („1 z 4“ → „2 z 4“). */
   probabilityMult: number;
@@ -237,6 +251,8 @@ export interface JokerInstance {
   stickers: StickerId[];
   /** Zvětrávající žolík: kolik dokončených kol zbývá, než zvětrá (0 = zvětralý, trvale debuffnutý). */
   perishRounds?: number;
+  /** Žolík na splátky (nálepka `rental`): kolik splátek už je zaplaceno (chybí = 0). */
+  rentalPaid?: number;
   debuffed: boolean;
 }
 

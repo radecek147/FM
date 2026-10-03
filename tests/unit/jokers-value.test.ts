@@ -138,11 +138,11 @@ describe('hodnota žolíků – hodnocení podle pravidel 1–3 a ekonomiky', ()
 describe('hodnota žolíků – měření na skutečném obsahu (kouřový test)', { timeout: 60_000 }, () => {
   const cache: BaseCache = new Map();
 
-  it('Pivní tácek: každá ruka přesně +10 čipů a +2 mult → R1 +45,8 %, R2 +10,25 %; měření je deterministické', () => {
+  it('Pivní tácek: každá ruka přesně +10 čipů a +2 mult → R1 +45,8 %, R2 +9,7 %; měření je deterministické', () => {
     const v = measureJoker(reg, 'beer_mat', opts, cache);
     expect(v.r1.hands).toBeGreaterThan(0);
     expect(v.r1.avg).toBeCloseTo(45.83, 1);
-    expect(v.r2.avg).toBeCloseTo(10.25, 1);
+    expect(v.r2.avg).toBeCloseTo(9.69, 1);
     expect(v.r1.fired).toBe(1);
     expect(v.r1.effect).toEqual({ chips: 10, mult: 2, xmult: 1 });
     expect(v.sim.runs).toBe(3);
@@ -155,10 +155,10 @@ describe('hodnota žolíků – měření na skutečném obsahu (kouřový test)
     expect(v.buyAnte).toBe(2);
     expect(v.r2.hands).toBeGreaterThan(0);
     // Δmult se měří proti nejlepšímu tahu bez žolíka — bez +16 mult bot občas zahraje jinou kombinaci (jiný základní
-    // mult). S dvojnásobnými přírůstky úrovní (fáze 10) se základní mult kombinací na úrovni R2 liší víc, takže průměr
-    // vychází pod +16 (3 seedy: ~8,7); stav žolíka po 16 kolech je ale +16 a víc nedá.
+    // mult). V „čipové“ tabulce kombinací 1.0.1 (mult střední třídy 2–3) se základní mult alternativ liší oběma směry,
+    // takže průměr kolísá kolem +16 (3 seedy: ~18,6); stav žolíka po 16 kolech je +16.
     expect(v.r2.effect.mult).toBeGreaterThan(R2_ROUNDS_HELD / 2);
-    expect(v.r2.effect.mult).toBeLessThanOrEqual(R2_ROUNDS_HELD + 0.5);
+    expect(v.r2.effect.mult).toBeLessThanOrEqual(R2_ROUNDS_HELD * 1.25);
   });
 
   it('ekonomický žolík (Pokladnička) se měří v Kč za kolo', () => {

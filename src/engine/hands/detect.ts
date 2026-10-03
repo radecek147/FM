@@ -17,7 +17,8 @@
  * - Postupka: různé po sobě jdoucí hodnoty; A-2-3-4-5 i 10-J-Q-K-A ano; „kolem dokola“ (Q-K-A-2-3)
  *   jen s `straightWrap`. U duplicitní hodnoty skóruje jen jedna z karet (podle bodu 3 a 4 výše).
  * - `fourCardStraightFlush`: Postupka i Barva stačí ze 4 karet (5 karet má přednost — víc skórujících).
- * - `straightGaps`: mezi sousedními hodnotami Postupky smí chybět nejvýš jedna hodnota.
+ * - `straightGaps`: v celé Postupce smí chybět nejvýš jedna hodnota (jedna mezera, např. 3-4-6-7-8; 1.0.1 — dřív
+ *   mezi každými dvěma sousedními kartami).
  * - Postupka v barvě = Postupka, jejíž karty mají všechny jednu barvu (ne „Postupka + Barva z různých karet“).
  * - Královská postupka = Postupka v barvě bez přetočení „kolem dokola“, jejíž nejvyšší karta je vysoké Eso.
  * - `contains` = vyhodnocená kombinace + všechny kombinace, které tvoří některá podmnožina zahraných karet;
@@ -54,11 +55,20 @@ export function compareHandTypes(a: HandType, b: HandType): number {
 /** Druh postupky: `aceHigh` = bez přetočení a nejvyšší karta je vysoké Eso (základ Královské). */
 export type StraightKind = 'normal' | 'aceHigh';
 
-/** Jsou pozice (seřazené vzestupně, různé) postupkou s kroky 1…maxStep? */
-function linearOk(sortedPositions: readonly number[], maxStep: number): boolean {
+/**
+ * Jsou pozice (seřazené vzestupně, různé) postupkou? Mezi sousedy smí být krok 1, s `gaps` navíc jeden krok 2 v celé
+ * postupce (chybí jedna hodnota).
+ */
+function linearOk(sortedPositions: readonly number[], gaps: number): boolean {
+  let left = gaps;
   for (let i = 1; i < sortedPositions.length; i++) {
     const d = sortedPositions[i]! - sortedPositions[i - 1]!;
-    if (d < 1 || d > maxStep) return false;
+    if (d === 1) continue;
+    if (d === 2 && left > 0) {
+      left--;
+      continue;
+    }
+    return false;
   }
   return true;
 }
@@ -70,20 +80,23 @@ function linearOk(sortedPositions: readonly number[], maxStep: number): boolean 
 export function straightKind(ranks: readonly Rank[], gaps: boolean, wrap: boolean): StraightKind | null {
   const sorted = [...ranks].sort((a, b) => a - b);
   for (let i = 1; i < sorted.length; i++) if (sorted[i] === sorted[i - 1]) return null;
-  const maxStep = gaps ? 2 : 1;
+  // Počet mezer (chybějících hodnot), které postupka smí mít.
+  const allowed = gaps ? 1 : 0;
   // Pozice 0..12 = hodnoty 2..A.
   const pos = sorted.map((r) => r - 2);
-  if (linearOk(pos, maxStep)) return sorted.includes(14) ? 'aceHigh' : 'normal';
+  if (linearOk(pos, allowed)) return sorted.includes(14) ? 'aceHigh' : 'normal';
   if (sorted.includes(14)) {
     // Eso jako jednička (pozice −1) — jen A-2-3-4-5 a podobné; Eso pak není nejvyšší karta.
     const low = [-1, ...pos.filter((p) => p !== 12)];
-    if (linearOk(low, maxStep)) return 'normal';
+    if (linearOk(low, allowed)) return 'normal';
   }
   if (wrap && pos.length > 1) {
-    // Kruh 13 pozic: největší mezera je „vnějšek“ postupky, ostatní musí být v mezích.
+    // Kruh 13 pozic: největší mezera je „vnějšek“ postupky, ostatní kroky 1 (s `gaps` nejvýš jeden krok 2).
     const circular = pos.map((p, i) => (i + 1 < pos.length ? pos[i + 1]! : pos[0]! + 13) - p);
     const outer = circular.indexOf(Math.max(...circular));
-    if (circular.every((g, i) => i === outer || g <= maxStep)) return 'normal';
+    const inner = circular.filter((_, i) => i !== outer);
+    const twos = inner.filter((g) => g === 2).length;
+    if (inner.every((g) => g === 1 || g === 2) && twos <= allowed) return 'normal';
   }
   return null;
 }

@@ -54,7 +54,7 @@ export const jokersRare2 = {
   noon_witch: {
     name: 'Polednice',
     desc: 'Druhá ruka kola dá {xmult|x} mult.',
-    flavor: 'Kdo v poledne zlobí, toho si odnese. Kdo hraje, tomu zdvojnásobí mult.',
+    flavor: 'Nejdřív polévka, pak hlavní chod. Polednice dbá na pořádek u stolu.',
   },
   klekanice: {
     name: 'Klekánice',
@@ -74,8 +74,9 @@ export const jokersRare2 = {
   },
   court_painter: {
     name: 'Dvorní malíř',
-    desc: 'Všechny karty kromě kamenných se počítají jako figury.',
+    desc: 'Po první ruce kola namaluje první skórující kartu, která není figura, natrvalo jako náhodnou figuru stejné barvy.',
     flavor: 'Namaluje tě jako krále. Za příplatek i s koněm.',
+    painted: 'Portrét hotov. Podobnost čistě náhodná.',
   },
   colorblind_uncle: {
     name: 'Barvoslepý strýc',
@@ -84,8 +85,8 @@ export const jokersRare2 = {
   },
   trodden_path: {
     name: 'Vyšlapaná pěšina',
-    desc: 'Mezi sousedními kartami Postupky smí chybět jedna hodnota.',
-    flavor: 'Kudy chodí všichni, tam jednou udělají chodník. Za dvacet let.',
+    desc: 'V celé Postupce smí jedna hodnota chybět (třeba trojka, čtyřka, šestka, sedmička a osmička).',
+    flavor: 'Jedna zkratka přes louku se toleruje. Dvě už jsou nová silnice.',
   },
 
   // ── vlastní: úřady, historie, internet a memy, Hradec vs. Brno ──

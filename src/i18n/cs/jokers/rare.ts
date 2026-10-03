@@ -5,7 +5,7 @@ export const jokersRare = {
   late_train: {
     name: 'Zpožděný rychlík',
     desc: '{xmult|x} mult; {chance} {odds|z}, že efekt „nabere zpoždění“ a nenastane.',
-    flavor: 'Mult přijede s mírným zpožděním.',
+    flavor: 'Zpoždění pět minut. Hlášené zpoždění se může změnit.',
     delay: 'Zpoždění! Mult dorazí příště.',
   },
   head_waiter: {
@@ -20,8 +20,8 @@ export const jokersRare = {
   },
   herbalist: {
     name: 'Kořenářka',
-    desc: 'Po každé použité babské radě trvale +{mult} mult (teď +{current} mult).',
-    flavor: 'Na každou bolest bylinka, na každou bylinku mult.',
+    desc: 'Po každé použité babské radě trvale +{mult} mult; po kole, ve kterém se žádná rada nepoužila, bylinky zvadnou: −{wilt} mult (teď +{current} mult).',
+    flavor: 'Bylinky sbírá za úplňku. Recepty stahuje z internetu.',
   },
   regular: {
     name: 'Stálý host',

@@ -3,7 +3,7 @@
  * přesná pravidla s čísly, hranice, Odvolání (`disableBoss`), uložení a načtení. Obsah: src/content/bosses/final.ts.
  */
 import { describe, expect, it } from 'vitest';
-import { BOSSES_FINAL, FLOOD_FLAG, MAYOR_FLAG } from '../../src/content/bosses/final';
+import { bananaShare, BOSSES_FINAL, FLOOD_FLAG, MAYOR_FLAG } from '../../src/content/bosses/final';
 import type { ContentRegistry } from '../../src/engine/content-types';
 import { MSG } from '../../src/engine/constants';
 import { bossFitsAnte, bossHasRule, pickBossId } from '../../src/engine/run/bosses';
@@ -60,15 +60,16 @@ describe('fináloví šéfové – data (DESIGN 8.3)', () => {
       mayor: 2.5,
       regional_office: 2.25,
       great_flood: 2.5,
-      white_lady: 1.25,
-      banana_queue: 3.5,
+      white_lady: 1.6,
+      banana_queue: 2.5,
     };
     expect(BOSSES_FINAL.map((b) => b.id).sort()).toEqual(Object.keys(table).sort());
     for (const b of BOSSES_FINAL) {
       expect(b.final, b.id).toBe(true);
       expect(b.targetMult ?? 2, b.id).toBe(table[b.id]);
       expect(b.reward ?? 5, b.id).toBe(5);
-      expect(bossHasRule(b), b.id).toBe(b.id !== 'banana_queue');
+      // 1.0.1: i Fronta na banány má pravidlo (dřív jen vyšší cíl).
+      expect(bossHasRule(b), b.id).toBe(true);
     }
   });
 
@@ -101,7 +102,7 @@ describe('fináloví šéfové – data (DESIGN 8.3)', () => {
     }
     const rule = (id: string): string =>
       t(`bosses.${id}.rule`, BOSSES_FINAL.find((b) => b.id === id)?.params);
-    expect(rule('banana_queue')).toContain('3,5×');
+    expect(rule('banana_queue')).toContain('o\u00a020\u00a0% méně');
     expect(rule('great_flood')).toContain('o\u00a01\u00a0kartu');
     expect(t('bosses.great_flood.rule', { cards: 2 })).toContain('o\u00a02\u00a0karty');
     // Pitva podle DESIGN příloha C.
@@ -191,14 +192,31 @@ describe('Krajský úřad (regional_office)', () => {
 // ─────────────────────────── F3 Fronta na banány ───────────────────────────
 
 describe('Fronta na banány (banana_queue)', () => {
-  it('cíl je 3,5× základ patra (hezky zaokrouhlený, DESIGN 2.3.2)', () => {
+  it('cíl je 2,5× základ patra (hezky zaokrouhlený, DESIGN 2.3.2)', () => {
     const g = bossGame('banana_queue');
-    expect(g.state.round!.target).toBe(niceRound(anteBase(1, 1) * 3.5));
-    expect(g.state.round!.target).toBe(880);
+    expect(g.state.round!.target).toBe(niceRound(anteBase(1, 1) * 2.5));
     g._core.state.ante = 8;
-    expect(g.blindTarget('boss', 'banana_queue')).toBe(niceRound(anteBase(8, 1) * 3.5));
-    // Víc než 1,5× cíl běžného šéfa (2× základ patra).
-    expect(g.blindTarget('boss', 'banana_queue')).toBeGreaterThan(1.5 * niceRound(anteBase(8, 1) * 2));
+    expect(g.blindTarget('boss', 'banana_queue')).toBe(niceRound(anteBase(8, 1) * 2.5));
+  });
+
+  it('banány docházejí: 1. ruka celá, 2. ruka 80 %, 3. ruka 60 % … nejméně 20 %', () => {
+    expect([0, 1, 2, 3, 4, 5, 9].map(bananaShare)).toEqual([100, 80, 60, 40, 20, 20, 20]);
+    const g = bossGame('banana_queue');
+    const r1 = hand(g, 'KH KS');
+    expect(r1.score).toBe(64);
+    const r2 = hand(g, 'KH KS');
+    expect(r2.score).toBe(Math.floor((64 * 80) / 100));
+    expect(r2.steps.at(-1)).toMatchObject({ source: 'boss', defId: 'banana_queue' });
+    const r3 = hand(g, 'KH KS');
+    expect(r3.score).toBe(Math.floor((64 * 60) / 100));
+    expect(g.state.round!.score).toBe(64 + 51 + 38);
+  });
+
+  it('po Odvolání se počítá celé skóre', () => {
+    const g = bossGame('banana_queue');
+    hand(g, 'KH KS');
+    g._core.api.disableBoss();
+    expect(hand(g, 'KH KS').score).toBe(64);
   });
 });
 
@@ -246,7 +264,7 @@ describe('Velká voda (great_flood)', () => {
 // ─────────────────────────── F5 Bílá paní ───────────────────────────
 
 describe('Bílá paní (white_lady)', () => {
-  it('po zahrání: zbylé karty lícem dolů a zamíchané, dobrané lícem nahoru', () => {
+  it('po zahrání: zbylé karty lícem dolů ve stejném pořadí (bez zamíchání), dobrané lícem nahoru', () => {
     const g = bossGame('white_lady');
     const cards = setupRound(g, 'KH KS 2C 3D 4H 5S 6C 7D');
     g._core.state.round!.target = 1e15;
@@ -258,7 +276,8 @@ describe('Bílá paní (white_lady)', () => {
     const drawn = round.hand.filter((id) => !kept.includes(id));
     expect(drawn).toHaveLength(2);
     for (const id of drawn) expect(g.card(id)!.faceDown).toBe(false);
-    expect(events.some((e) => e.type === 'handShuffled')).toBe(true);
+    expect(events.some((e) => e.type === 'handShuffled')).toBe(false);
+    expect(round.hand.filter((id) => kept.includes(id))).toEqual(kept);
     // Zakrytá karta ve výběru = náhled se nepočítá.
     expect(g.preview([kept[0]!]).hidden).toBe(true);
   });

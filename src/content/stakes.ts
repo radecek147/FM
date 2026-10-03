@@ -6,7 +6,7 @@
  * Návod: docs/CONTENT-GUIDE.md.
  */
 import type { StakeDef } from '../engine/content-types';
-import { PERISH_ROUNDS, RENTAL_BUY_PRICE, RENTAL_FEE } from '../engine/constants';
+import { PERISH_ROUNDS, RENTAL_BUY_PRICE, RENTAL_FEE, RENTAL_INSTALLMENTS } from '../engine/constants';
 import { anteBase } from '../engine/run/targets';
 import { shopPrice } from '../engine/shop/prices';
 
@@ -105,6 +105,7 @@ export const STAKES: StakeDef[] = [
       rental: pct(RENTAL_CHANCE),
       price: RENTAL_SHOP_PRICE,
       fee: RENTAL_FEE,
+      installments: RENTAL_INSTALLMENTS,
     },
     art: {
       icon: 'claw-hammer',

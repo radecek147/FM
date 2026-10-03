@@ -7,7 +7,7 @@ import { createRngStates, rngFromState } from '../rng/rng';
 import type { HandType, RunState, RunStats } from '../types';
 
 /** Aktuální verze formátu uloženého runu (viz engine/save/migrations.ts). */
-export const RUN_STATE_VERSION = 1;
+export const RUN_STATE_VERSION = 2;
 
 /** Re-export pro starší importy — konstanta žije v engine/constants.ts. */
 export { STARTING_MONEY };
