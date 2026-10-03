@@ -2224,6 +2224,42 @@
   font-size: 0.95rem;
 }
 
+/* Detail zboží / možnosti obálky: tlačítka slotu a pod neaktivním důvod (vidět i na dotyku). */
+.detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.detail__action {
+  display: flex;
+  flex: 1 1 10rem;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.detail__why {
+  font-size: 0.8rem;
+  line-height: 1.3;
+  color: var(--danger);
+}
+
+/* Proč tlačítka slotu nejdou (Na tohle nemáš, Nemáš volný slot, Vyber v ruce kartu…): vidět bez hoveru. */
+.offer-why {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  color: #ffd8cc;
+  text-align: center;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
 .modal--pause .modal__actions {
   flex-direction: column;
   align-items: stretch;
@@ -2719,6 +2755,17 @@
   }
 }
 
+/* Dotyk bez myši: nápovědy kláves (čísla pod kartami) nemají smysl — pryč, a ruka je o ně nižší. */
+@media (hover: none) and (pointer: coarse) {
+  .pcard__key {
+    display: none;
+  }
+
+  .gb-hand {
+    padding-bottom: 0.35rem;
+  }
+}
+
 /* Dotyk: menší tlačítka herní obrazovky taky aspoň 44 px vysoká. */
 @media (pointer: coarse) {
   .gs-buttons .btn,
@@ -2726,5 +2773,188 @@
   .shop-slot__actions .btn,
   .booster-option__actions .btn {
     min-height: 44px;
+  }
+}
+
+/*
+ * Telefon na výšku (390 × 844, „best effort“, test 1.0.1): ruka a Zahrát / Zahodit vidět bez posouvání a možnosti
+ * obálky nad přehybem. Kompaktní levý panel (útrata na jeden řádek, kombinace s čipy × mult v jedné řadě, menší
+ * čísla), žolíci a spotřebky vedle sebe s menšími kartami, balíček vpravo vedle třídění.
+ */
+@media (max-width: 600px) {
+  .game {
+    gap: 0.35rem;
+  }
+
+  /* Volné místo do výšky okna dostane stůl (ne řada žolíků a ruka). */
+  .game-main {
+    grid-template-rows: auto minmax(calc(var(--card-w) * 1.9), 1fr) auto;
+    gap: 0.3rem;
+  }
+
+  .game-sidebar {
+    gap: 0.3rem;
+    padding: 0.35rem;
+  }
+
+  .gs-blind {
+    grid-template-columns: 2.2rem minmax(0, 1fr);
+    gap: 0.45rem;
+    padding: 0.3rem 0.45rem;
+  }
+
+  .gs-blind__token {
+    width: 2.2rem;
+    height: 2.2rem;
+  }
+
+  .gs-blind__name {
+    font-size: 0.95rem;
+  }
+
+  .gs-blind__rule {
+    margin-top: 0.1rem;
+    font-size: 0.72rem;
+  }
+
+  .gs-box {
+    padding: 0.25rem 0.45rem;
+  }
+
+  .gs-label {
+    font-size: 0.62rem;
+  }
+
+  .gs-target__reward {
+    font-size: 0.7rem;
+  }
+
+  .gs-target__value,
+  .gs-score__value {
+    --value-fs: 1.15rem;
+  }
+
+  /* Kombinace: název vlevo, čipy × mult vpravo v jedné řadě; laťka a varování pod nimi přes celou šířku. */
+  .gs-hand {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    gap: 0.2rem 0.45rem;
+    align-items: center;
+  }
+
+  .gs-hand__head {
+    min-height: 0;
+  }
+
+  .gs-hand__name {
+    font-size: 0.88rem;
+  }
+
+  .gs-hand__calc {
+    grid-row: 1;
+    grid-column: 2;
+    gap: 0.25rem;
+    margin-top: 0;
+  }
+
+  .gs-hand__beat,
+  .gs-hand__warn {
+    grid-column: 1 / -1;
+    margin-top: 0;
+  }
+
+  .gs-hand__chips,
+  .gs-hand__mult {
+    padding: 0.1rem 0.25rem;
+    font-size: 1rem;
+  }
+
+  .gs-hand__times {
+    font-size: 0.95rem;
+  }
+
+  .gs-stats {
+    gap: 0.25rem;
+  }
+
+  .gs-stat {
+    padding: 0.1rem 0.15rem;
+  }
+
+  .gs-stat__value {
+    --stat-fs: 0.9rem;
+  }
+
+  .gs-buttons {
+    gap: 0.3rem;
+  }
+
+  /* Žolíci a spotřebky vedle sebe, menší karty (dotykový cíl pořád ≥ 42 px). */
+  .game-top {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.3rem;
+  }
+
+  .gt-group {
+    --card-w: 42px;
+
+    padding: 0.2rem 0.35rem 0.3rem;
+  }
+
+  .gt-group--consumables {
+    min-width: calc(var(--card-w) * 2 + 1.1rem);
+  }
+
+  .gt-title {
+    margin-bottom: 0.1rem;
+    font-size: 0.62rem;
+  }
+
+  .gt-row {
+    gap: 0.3rem;
+  }
+
+  .gt-empty {
+    inset: 1rem 0.35rem 0.3rem;
+    font-size: 0.72rem;
+  }
+
+  .game-stage {
+    min-height: calc(var(--card-w) * 1.9);
+  }
+
+  .game-table__hint {
+    font-size: 0.8rem;
+  }
+
+  .gb-controls {
+    gap: 0.35rem;
+  }
+
+  /* Balíček vpravo vedle třídění (ne ve vlastní řadě pod tlačítky); bez ruky zůstává v toku. */
+  .game-bottom:not(.is-empty) {
+    position: relative;
+  }
+
+  .game-bottom:not(.is-empty) .gb-deck {
+    --card-w: 30px;
+
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    grid-template-columns: auto;
+    gap: 0.1rem;
+    padding: 0.1rem;
+    margin: 0;
+  }
+
+  .game-bottom:not(.is-empty) .gb-deck__count {
+    padding: 0 0.3rem;
+    font-size: 0.7rem;
+  }
+
+  .game-bottom:not(.is-empty) .gb-mid {
+    justify-content: flex-start;
+    padding-right: 3.2rem;
   }
 }

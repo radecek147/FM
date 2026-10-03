@@ -1,7 +1,8 @@
 /**
- * Dialogy herní obrazovky: Info o runu, náhled balíčku, pauza (Esc), detail žolíka (Prodat, posun)
- * a detail spotřebky (Použít s vybranými kartami jako cíli, Prodat). Vše přes `openModal` (focus trap,
- * Esc, návrat focusu) a akce controlleru.
+ * Dialogy herní obrazovky: Info o runu, náhled balíčku, pauza (Esc), detail žolíka (Prodat, posun),
+ * detail spotřebky (Použít s vybranými kartami jako cíli, Prodat) a detail zboží Večerky / možnosti obálky (tap na
+ * kartu — na dotyku jediný způsob, jak si přečíst popis). Vše přes `openModal` (focus trap, Esc, návrat focusu)
+ * a akce controlleru.
  */
 import type { Card, HandType, JokerInstance, RunState, Suit } from '../../../engine';
 import { HAND_TYPES, RANKS, SUITS, handValueAtLevel } from '../../../engine';
@@ -13,7 +14,7 @@ import { createCardBack, createCardView } from '../../components/card';
 import { createConsumableCard } from '../../components/consumableCard';
 import { createJokerCard } from '../../components/jokerCard';
 import { openModal } from '../../components/modal';
-import { hideTooltip, richText } from '../../components/tooltip';
+import { hideTooltip, richText, type TooltipContent, type TooltipLine } from '../../components/tooltip';
 import {
   bossTexts,
   challengeTexts,
@@ -658,5 +659,87 @@ export function openConsumableDetail(ctx: GameCtx, uid: number): void {
     else if (choice === 'use') {
       if (await ctx.act({ type: 'useConsumable', uid, targetIds: targets })) c.clearSelection();
     }
+  });
+}
+
+// ─────────────────────────── Detail zboží a možnosti obálky ───────────────────────────
+
+export interface OfferDetailOptions {
+  /** Obrázek karty (bez tooltipu a bez kliku). */
+  card: HTMLElement;
+  /** Obsah jako v tooltipu (název, druh, popis, flavor, cena). */
+  content: TooltipContent;
+  /**
+   * Tlačítka slotu (Koupit, Koupit a použít, Otevřít, Vzít, Použít, Nechat si…): dialog je zopakuje i s důvodem,
+   * proč nejdou, a klik zavře dialog a „zmáčkne“ původní tlačítko — logika nákupu zůstává na jednom místě.
+   */
+  buttons: readonly HTMLButtonElement[];
+  testId?: string;
+}
+
+/** Důvod, proč tlačítko nejde (neaktivní `disabled` / `aria-disabled` s nápovědou v `title`), jinak null. */
+export function buttonBlockReason(b: HTMLButtonElement): string | null {
+  const blocked = b.disabled || b.getAttribute('aria-disabled') === 'true';
+  return blocked ? b.title || null : null;
+}
+
+/** Detail zboží Večerky nebo možnosti obálky (tap / klik na kartu). */
+export function openOfferDetail(opts: OfferDetailOptions): void {
+  hideTooltip();
+  // Cenovka nad kartou by v dialogu přetekla — cena je v textu.
+  for (const tag of Array.from(opts.card.querySelectorAll('.price-tag'))) tag.remove();
+  const { content } = opts;
+  const lines = (content.lines ?? []).filter((l): l is string | TooltipLine => !!l);
+  const actions = opts.buttons.map((orig) => {
+    const reason = buttonBlockReason(orig);
+    const copy = button({
+      label: orig.textContent ?? '',
+      variant: orig.classList.contains('btn--primary') ? 'primary' : 'paper',
+      size: 'small',
+      testId: orig.dataset.testid ? `detail-${orig.dataset.testid}` : undefined,
+      disabled: orig.disabled,
+      onClick: () => {
+        m.close();
+        // Původní tlačítko (Večerka / obálka) — i neaktivní „Koupit a použít“ tak řekne proč (hláška).
+        orig.click();
+      },
+    });
+    if (orig.getAttribute('aria-disabled') === 'true') {
+      copy.setAttribute('aria-disabled', 'true');
+      copy.classList.add('btn--inert');
+    }
+    return h(
+      'div',
+      { class: 'detail__action' },
+      copy,
+      reason ? h('p', { class: 'detail__why', 'data-testid': 'detail-why' }, reason) : null,
+    );
+  });
+  const m = openModal<void>({
+    title: content.title,
+    size: 'medium',
+    className: 'modal--detail',
+    testId: opts.testId ?? 'offer-detail',
+    body: h(
+      'div',
+      { class: 'detail' },
+      h('div', { class: 'detail__card' }, opts.card),
+      h(
+        'div',
+        { class: 'detail__text' },
+        content.subtitle ? h('p', { class: ['detail__kind', content.tone] }, content.subtitle) : null,
+        lines.map((l, i) =>
+          typeof l === 'string'
+            ? h('p', { class: i === 0 ? 'detail__desc' : 'detail__line' }, richText(l))
+            : h('p', { class: ['detail__line', l.muted ? 'detail__line--muted' : ''] }, richText(l.text)),
+        ),
+        content.flavor
+          ? h('p', { class: 'detail__flavor' }, t('art.tooltip.flavor', { text: content.flavor }))
+          : null,
+        (content.footer ?? []).map((f) => h('p', { class: 'detail__hint' }, richText(f))),
+        actions.length > 0 ? h('div', { class: 'detail__actions' }, actions) : null,
+      ),
+    ),
+    actions: [{ label: t('common.close'), variant: 'ghost', testId: 'offer-detail-close', autofocus: true }],
   });
 }

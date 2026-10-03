@@ -67,6 +67,11 @@ export function digitIndex(e: Pick<KeyboardEvent, 'key' | 'code'>): number | nul
   return null;
 }
 
+/** Dotykové zařízení bez myši (nápovědy kláves se neukazují). */
+export function touchOnly(): boolean {
+  return typeof matchMedia === 'function' && matchMedia('(hover: none) and (pointer: coarse)').matches;
+}
+
 function isControl(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement) || target === document.body) return false;
   return target.closest('button, a[href], input, select, textarea, [role="radio"], [role="button"]') !== null;
@@ -204,7 +209,10 @@ class GameView implements PresentView {
     if (!inRound && !c.busy && this.table.childElementCount > 0) this.table.replaceChildren();
     this.tableHint.hidden = !inRound || this.table.childElementCount > 0 || c.selected.length > 0;
     if (inRound)
-      this.tableHint.textContent = t('game.hand.tableHint', { max: c.engine.modifiers().maxSelect });
+      // Na dotyku bez klávesnice nápověda kláves nedává smysl (stejně jako čísla pod kartami, game.css).
+      this.tableHint.textContent = t(touchOnly() ? 'game.hand.tableHintTouch' : 'game.hand.tableHint', {
+        max: c.engine.modifiers().maxSelect,
+      });
 
     const panel = PANELS[s.phase];
     const key = panel ? `${s.phase}|${panel.key(this.ctx)}` : s.phase;

@@ -9,10 +9,12 @@ import { button } from '../../components/button';
 import { createCardView } from '../../components/card';
 import { createConsumableCard } from '../../components/consumableCard';
 import { createJokerCard } from '../../components/jokerCard';
+import { cardTooltip, consumableTooltip, jokerTooltip, type TooltipContent } from '../../components/tooltip';
 import { boosterTexts, capitalize, cardName } from '../../describe';
 import { h } from '../../dom';
+import { openOfferDetail } from './modals';
 import type { GameCtx } from './shared';
-import { hasConsumableRoom, hasJokerRoom } from './shared';
+import { blockReasonsLine, hasConsumableRoom, hasJokerRoom, markDetailTriggers } from './shared';
 
 export function boosterKey(ctx: GameCtx): string {
   const c = ctx.controller;
@@ -26,12 +28,20 @@ function optionName(ctx: GameCtx, opt: BoosterOption): string {
   return capitalize(cardName(opt.card, ctx.registry));
 }
 
-function optionVisual(ctx: GameCtx, opt: BoosterOption): HTMLElement {
+function optionVisual(ctx: GameCtx, opt: BoosterOption, onClick?: () => void): HTMLElement {
   const mods = ctx.controller.engine.modifiers();
-  if (opt.kind === 'joker') return createJokerCard(opt.joker, { registry: ctx.registry, mods });
+  if (opt.kind === 'joker') return createJokerCard(opt.joker, { registry: ctx.registry, mods, onClick });
   if (opt.kind === 'consumable')
-    return createConsumableCard(opt.consumable, { registry: ctx.registry, mods });
-  return createCardView(opt.card, { registry: ctx.registry, mods });
+    return createConsumableCard(opt.consumable, { registry: ctx.registry, mods, onClick });
+  return createCardView(opt.card, { registry: ctx.registry, mods, onClick });
+}
+
+/** Obsah detailu možnosti (jako tooltip karty). */
+function optionContent(ctx: GameCtx, opt: BoosterOption): TooltipContent {
+  const opts = { registry: ctx.registry, mods: ctx.controller.engine.modifiers() };
+  if (opt.kind === 'joker') return jokerTooltip(opt.joker, opts);
+  if (opt.kind === 'consumable') return consumableTooltip(opt.consumable, opts);
+  return cardTooltip(opt.card, opts);
 }
 
 function actionButton(
@@ -126,13 +136,24 @@ export function renderBooster(ctx: GameCtx): HTMLElement {
         ),
       );
     }
-    return h(
+    // Tap / klik na kartu = detail s popisem a s tlačítky možnosti (na dotyku jinak popis vidět není).
+    const openDetail = (): void =>
+      openOfferDetail({
+        card: optionVisual(ctx, opt),
+        content: optionContent(ctx, opt),
+        buttons: actions,
+        testId: 'booster-detail',
+      });
+    const li = h(
       'li',
       { class: ['booster-option', `booster-option--${opt.kind}`], 'data-testid': `booster-option-${index}` },
-      h('div', { class: 'booster-option__card' }, optionVisual(ctx, opt)),
+      h('div', { class: 'booster-option__card' }, optionVisual(ctx, opt, openDetail)),
       h('p', { class: 'booster-option__name', id: nameId }, optionName(ctx, opt)),
       h('div', { class: 'booster-option__actions' }, actions),
+      blockReasonsLine(actions),
     );
+    markDetailTriggers(li, '.booster-option__card');
+    return li;
   });
 
   const skip = button({

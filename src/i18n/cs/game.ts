@@ -119,6 +119,7 @@ export const game = {
     selected: 'Vybráno {n}/{max}',
     tableLabel: 'Stůl se zahranými kartami',
     tableHint: 'Vyber až {max|plural:kartu,karty,karet} a zahraj je. Klávesy 1–8 vybírají, Enter hraje.',
+    tableHintTouch: 'Ťukni až na {max|plural:kartu,karty,karet} a zahraj je.',
     boosterHint: 'Vyber v ruce cíle pro babskou radu nebo razítko.',
     handSize: 'Ruka: {n|plural:karta,karty,karet}',
     handSizeDelta: 'Ruka: {n|plural:karta,karty,karet} ({delta|signed})',

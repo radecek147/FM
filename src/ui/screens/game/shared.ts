@@ -157,3 +157,31 @@ export function restoreFocus(container: HTMLElement, key: string | null, wasInsi
     container.querySelector<HTMLElement>('[data-autofocus]:not(:disabled)');
   if (target && (lost || wasInside)) target.focus({ preventScroll: true });
 }
+
+/**
+ * Proč tlačítka slotu nejdou (Koupit, Otevřít, Vzít, Použít…): krátký řádek pod nimi, vidět i bez hoveru (dotyk).
+ * Bere jen opravdu neaktivní tlačítka (`disabled`) s důvodem v `title`; bez důvodu null.
+ */
+export function blockReasonsLine(buttons: readonly HTMLElement[]): HTMLElement | null {
+  const reasons = [
+    ...new Set(
+      buttons
+        .filter((b): b is HTMLButtonElement => b instanceof HTMLButtonElement && b.disabled && !!b.title)
+        .map((b) => b.title),
+    ),
+  ];
+  return reasons.length > 0
+    ? h('p', { class: 'offer-why', 'data-testid': 'offer-why' }, reasons.join(' '))
+    : null;
+}
+
+/**
+ * Karty zboží a možností obálky otevírají detail (dialog), nevybírají se: místo `aria-pressed` (přepínač výběru)
+ * dostanou `aria-haspopup="dialog"`.
+ */
+export function markDetailTriggers(root: HTMLElement, selector: string): void {
+  for (const el of Array.from(root.querySelectorAll<HTMLElement>(`${selector} button`))) {
+    el.removeAttribute('aria-pressed');
+    el.setAttribute('aria-haspopup', 'dialog');
+  }
+}
