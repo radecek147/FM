@@ -4,8 +4,7 @@
  * inventura“. Nákup obecně přes akce enginu (`buy`, `buyAndUse`, `buyBooster`, `buyVoucher`, `reroll`) —
  * obsah registru se může libovolně rozšiřovat.
  */
-import type { RunState, ShopItem } from '../../../engine';
-import { Game } from '../../../engine';
+import type { ShopItem } from '../../../engine';
 import { t } from '../../../i18n/cs';
 import { button } from '../../components/button';
 import { createCardView } from '../../components/card';
@@ -21,7 +20,9 @@ import { canAfford, hasConsumableRoom, hasJokerRoom } from './shared';
 export function shopKey(ctx: GameCtx): string {
   const s = ctx.controller.state;
   const m = ctx.controller.engine.modifiers();
-  return `${s.money}|${JSON.stringify(s.shop)}|${s.jokers.length}|${s.consumables.length}|${m.jokerSlots}|${
+  // Žolíci i s edicemi: použitelnost „Koupit a použít“ na nich závisí (Zaklepat na dřevo chce žolíka bez edice).
+  const jokers = s.jokers.map((j) => `${j.uid}:${j.edition ?? ''}`).join(',');
+  return `${s.money}|${JSON.stringify(s.shop)}|${jokers}|${s.consumables.length}|${m.jokerSlots}|${
     m.consumableSlots
   }|${m.debtLimit}`;
 }
@@ -33,40 +34,34 @@ function itemName(ctx: GameCtx, item: ShopItem): string {
 }
 
 /**
- * Zboží „jako po koupi“, spočítané enginem nad kopií stavu, do které se zboží „přidá“ — vzorce zůstávají na jednom
- * místě a skutečný run se nemění:
- *  - prodejní ceny (tooltip „Cena · Prodej za“) podle slotu (`Game.sellValue`: edice, zapůjčený, `sellBonus`);
+ * Zboží „jako po koupi“ — každá položka zvlášť, jako by hráč koupil jen ji (přesně jako akce enginu). Rozhoduje engine,
+ * vzorce zůstávají na jednom místě a skutečný run se nemění:
+ *  - prodejní ceny (tooltip „Cena · Prodej za“) podle slotu (`Game.shopSellValue`: edice, zapůjčený, `sellBonus`);
  *    hrací karty se neprodávají (bez ceny),
- *  - jestli jde spotřebka bez cílů rovnou použít (`Game.canUseConsumable` — např. rada, která potřebuje žolíka).
+ *  - jestli jde spotřebka bez cílů rovnou použít (`Game.check` akce `buyAndUse` nad kopií stavu — např. rada, která
+ *    potřebuje vlastního žolíka, nebo razítko, které potřebuje volný slot). Vrací kód chyby enginu, nebo null.
  */
-function prospective(ctx: GameCtx): { sell: Map<number, number>; usable: Map<number, boolean> } {
+function prospective(ctx: GameCtx): { sell: Map<number, number>; useError: Map<number, string | null> } {
   const sell = new Map<number, number>();
-  const usable = new Map<number, boolean>();
-  const s = ctx.controller.state;
-  const items = s.shop?.items ?? [];
-  if (!items.some((i) => !i.sold && i.kind !== 'card')) return { sell, usable };
-  try {
-    const copy = structuredClone(s) as RunState;
-    const slots: [number, number, boolean][] = [];
-    items.forEach((item, slot) => {
-      if (item.sold) return;
-      if (item.kind === 'joker') {
-        copy.jokers.push(structuredClone(item.joker));
-        slots.push([slot, item.joker.uid, false]);
-      } else if (item.kind === 'consumable') {
-        copy.consumables.push(structuredClone(item.consumable));
-        slots.push([slot, item.consumable.uid, true]);
-      }
-    });
-    const game = Game.fromState(copy, ctx.registry);
-    for (const [slot, uid, consumable] of slots) {
-      sell.set(slot, game.sellValue(uid));
-      if (consumable) usable.set(slot, game.canUseConsumable(uid, []));
+  const useError = new Map<number, string | null>();
+  const engine = ctx.controller.engine;
+  (ctx.controller.state.shop?.items ?? []).forEach((item, slot) => {
+    if (item.sold || item.kind === 'card') return;
+    const value = engine.shopSellValue(slot);
+    if (value !== null) sell.set(slot, value);
+    if (item.kind === 'consumable' && !ctx.registry.consumables[item.consumable.defId]?.target) {
+      const res = engine.check({ type: 'buyAndUse', slot });
+      useError.set(slot, res.ok ? null : res.error);
     }
-  } catch {
-    // Bez prodejní ceny v tooltipu (a s povoleným „Koupit a použít“ — engine ho případně odmítne) se dá nakupovat.
-  }
-  return { sell, usable };
+  });
+  return { sell, useError };
+}
+
+/** Proč „Koupit a použít“ nejde (spotřebka bez cílů), podle kódu chyby enginu; null = jde. */
+function useBlockedReason(afford: boolean, error: string | null): string | null {
+  if (!afford || error === 'notEnoughMoney') return t('game.shop.cantAfford');
+  if (error === null) return null;
+  return error === 'cannotUse' ? t('game.shop.useNotNow') : t(`errors.${error}`);
 }
 
 function itemVisual(ctx: GameCtx, item: ShopItem, sellValue: number | undefined): HTMLElement {
@@ -140,7 +135,7 @@ export function renderShop(ctx: GameCtx): HTMLElement {
   const s = c.state;
   const shop = s.shop;
 
-  const { sell: sellValues, usable } = prospective(ctx);
+  const { sell: sellValues, useError } = prospective(ctx);
   const items = (shop?.items ?? []).map((item, slot) => {
     const testId = `shop-item-${slot}`;
     if (item.sold) return soldSlot(testId);
@@ -169,13 +164,7 @@ export function renderShop(ctx: GameCtx): HTMLElement {
       const targeted = !!ctx.registry.consumables[item.consumable.defId]?.target;
       const use = buyButton({
         label: t('game.shop.buyAndUse'),
-        disabledReason: targeted
-          ? null
-          : !afford
-            ? t('game.shop.cantAfford')
-            : usable.get(slot) === false
-              ? t('game.shop.useNotNow')
-              : null,
+        disabledReason: targeted ? null : useBlockedReason(afford, useError.get(slot) ?? null),
         testId: `shop-use-${slot}`,
         focusKey: `use-${slot}`,
         describedBy: targeted ? `${testId}-name ${testId}-use-why` : `${testId}-name`,

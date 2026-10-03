@@ -17,7 +17,9 @@ import { hasConsumableRoom, hasJokerRoom } from './shared';
 export function boosterKey(ctx: GameCtx): string {
   const c = ctx.controller;
   const s = c.state;
-  return `${JSON.stringify(s.booster)}|${c.selected.join(',')}|${s.jokers.length}|${s.consumables.length}`;
+  // Žolíci i s edicemi: na nich závisí, jestli jde spotřebka použít (Zaklepat na dřevo chce žolíka bez edice).
+  const jokers = s.jokers.map((j) => `${j.uid}:${j.edition ?? ''}`).join(',');
+  return `${JSON.stringify(s.booster)}|${c.selected.join(',')}|${jokers}|${s.consumables.length}|${s.money}`;
 }
 
 function optionName(ctx: GameCtx, opt: BoosterOption): string {
@@ -57,6 +59,25 @@ function actionButton(
   return b;
 }
 
+/**
+ * Proč „Použít“ u spotřebky z obálky nejde (null = jde) — stejně jako slot spotřebek: špatný počet cílů ukáže, kolik
+ * jich vybrat (rozsah od enginu, i s limitem výběru `maxSelect`), jinak rozhodne engine nad kopií stavu
+ * (`Game.check` akce `pickBooster`, tj. i `canUse` — Babiččina barva na karty, které už barvu mají).
+ */
+function useBlockedReason(ctx: GameCtx, defId: string, index: number, targets: number[]): string | null {
+  const engine = ctx.controller.engine;
+  const range = engine.consumableTargetRange(defId);
+  const targetsOk = range ? targets.length >= range.min && targets.length <= range.max : targets.length === 0;
+  if (!targetsOk) {
+    if (!range) return t('game.consumable.noTargets');
+    return range.min === range.max
+      ? t('game.consumable.targetsExact', { n: range.min })
+      : t('game.consumable.targetsRange', { min: range.min, max: range.max });
+  }
+  if (engine.check({ type: 'pickBooster', index, targetIds: targets }).ok) return null;
+  return range ? t('game.consumable.cannotUse') : t('game.shop.useNotNow');
+}
+
 export function renderBooster(ctx: GameCtx): HTMLElement {
   const c = ctx.controller;
   const s = c.state;
@@ -94,21 +115,11 @@ export function renderBooster(ctx: GameCtx): HTMLElement {
         ),
       );
     } else {
-      const def = ctx.registry.consumables[opt.consumable.defId];
-      const range = def?.target;
-      const targetsOk = range
-        ? targets.length >= range.min && targets.length <= range.max
-        : targets.length === 0;
-      const hint = range
-        ? range.min === range.max
-          ? t('game.consumable.targetsExact', { n: range.min })
-          : t('game.consumable.targetsRange', { min: range.min, max: range.max })
-        : t('game.consumable.noTargets');
       actions.push(
         actionButton(
           t('game.booster.use'),
           `booster-use-${index}`,
-          targetsOk ? null : hint,
+          useBlockedReason(ctx, opt.consumable.defId, index, targets),
           () =>
             void (async () => {
               if (await ctx.act({ type: 'pickBooster', index, targetIds: targets })) c.clearSelection();
