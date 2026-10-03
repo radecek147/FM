@@ -454,7 +454,8 @@ describe('žolíci – vyrenderované popisky (params + počáteční stav)', ()
       late_train: '×1,5 mult; 1 ze 6, že efekt „nabere zpoždění“ a nenastane.',
       head_waiter: '×2 mult, pokud zahraná ruka má nejvýš 3 karty.',
       old_guard: '×1,5 mult, pokud má zahraná kombinace úroveň aspoň 3.',
-      herbalist: 'Po každé použité babské radě trvale +2 mult; po kole, ve kterém se žádná rada nepoužila, bylinky zvadnou: −1 mult (teď +0 mult).',
+      herbalist:
+        'Po každé použité babské radě trvale +2 mult; po kole, ve kterém se žádná rada nepoužila, bylinky zvadnou: −1 mult (teď +0 mult).',
       regular: '+1 mult za každé kolo, které od koupě strávil ve slotu (teď +0 mult).',
       beer_belly: 'Po každé zahrané ruce trvale +2 čipy (teď +0 čipů).',
       carousel: 'Postupka smí jít kolem dokola (např. Q-K-A-2-3) a každá Postupka dá +14 mult.',
@@ -475,9 +476,11 @@ describe('žolíci – vyrenderované popisky (params + počáteční stav)', ()
       klekanice: '×2 mult, pokud ti po zahrání v ruce nezůstala žádná figura.',
       parish_priest: '+2,5 mult za každou kartu v balíčku, která má vylepšení, pečeť nebo edici.',
       seer: 'Když jediná ruka dosáhne celého cíle Malé útraty, vytvoří pranostiku její kombinace (potřebuje volný slot).',
-      court_painter: 'Po první ruce kola namaluje první skórující kartu, která není figura, natrvalo jako náhodnou figuru stejné barvy.',
+      court_painter:
+        'Po první ruce kola namaluje první skórující kartu, která není figura, natrvalo jako náhodnou figuru stejné barvy.',
       colorblind_uncle: 'Srdcové a kárové karty se počítají jako jedna barva, pikové a křížové taky.',
-      trodden_path: 'V celé Postupce smí jedna hodnota chybět (třeba trojka, čtyřka, šestka, sedmička a osmička).',
+      trodden_path:
+        'V celé Postupce smí jedna hodnota chybět (třeba trojka, čtyřka, šestka, sedmička a osmička).',
       war_loot: 'Na konci kola +2 Kč za každého šéfa poraženého od jeho koupě (teď +0 Kč).',
       anonymous_commenter: 'Každá zahraná karta, která neskóruje, dá +7 mult.',
       viral_video: 'První ruka kola dá +64 čipů, každá další ruka v kole polovinu předchozí.',
@@ -495,7 +498,8 @@ describe('žolíci – vyrenderované popisky (params + počáteční stav)', ()
       beer_sommelier:
         '×1 mult a navíc +×0,7 za každou různou kombinaci zahranou v tomto kole (včetně této ruky).',
       archivist: 'Při získání bez edice dostane duhovou; kopíruje schopnost žolíka nalevo od sebe.',
-      fair_magician: 'Skórují všechny zahrané karty a každá skórující karta dá ×1,15 mult; 1 z 5, že po ruce jedna zahraná karta zmizí v klobouku (zničí se).',
+      fair_magician:
+        'Skórují všechny zahrané karty a každá skórující karta dá ×1,15 mult; 1 z 5, že po ruce jedna zahraná karta zmizí v klobouku (zničí se).',
       tour_guide:
         'Postupka i Barva stačí ze čtyř karet a ruka, která obsahuje Postupku nebo Barvu, dá +40 čipů; když má jen 4 karty, chce průvodce spropitné 1 Kč.',
       spartakiada: 'V první ruce kola skóruje každá skórující karta ještě 2×.',

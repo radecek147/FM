@@ -4,7 +4,14 @@
  */
 import type { BaseCtx, ConsumableCtx, ContentRegistry, NewRunOptions } from '../content-types';
 import { compareCards } from '../cards/cards';
-import { BLIND_REWARDS, BOSS_REROLL_COST, FINAL_ANTE, MSG, RENTAL_FEE, RENTAL_INSTALLMENTS } from '../constants';
+import {
+  BLIND_REWARDS,
+  BOSS_REROLL_COST,
+  FINAL_ANTE,
+  MSG,
+  RENTAL_FEE,
+  RENTAL_INSTALLMENTS,
+} from '../constants';
 import {
   addConsumableInstance,
   addJokerInstance,

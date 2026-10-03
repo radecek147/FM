@@ -325,9 +325,11 @@ describe('vzácní žolíci fáze 7 – texty', () => {
       klekanice: '×2 mult, pokud ti po zahrání v ruce nezůstala žádná figura.',
       parish_priest: '+2,5 mult za každou kartu v balíčku, která má vylepšení, pečeť nebo edici.',
       seer: 'Když jediná ruka dosáhne celého cíle Malé útraty, vytvoří pranostiku její kombinace (potřebuje volný slot).',
-      court_painter: 'Po první ruce kola namaluje první skórující kartu, která není figura, natrvalo jako náhodnou figuru stejné barvy.',
+      court_painter:
+        'Po první ruce kola namaluje první skórující kartu, která není figura, natrvalo jako náhodnou figuru stejné barvy.',
       colorblind_uncle: 'Srdcové a kárové karty se počítají jako jedna barva, pikové a křížové taky.',
-      trodden_path: 'V celé Postupce smí jedna hodnota chybět (třeba trojka, čtyřka, šestka, sedmička a osmička).',
+      trodden_path:
+        'V celé Postupce smí jedna hodnota chybět (třeba trojka, čtyřka, šestka, sedmička a osmička).',
       war_loot: 'Na konci kola +2 Kč za každého šéfa poraženého od jeho koupě (teď +0 Kč).',
       anonymous_commenter: 'Každá zahraná karta, která neskóruje, dá +7 mult.',
       viral_video: 'První ruka kola dá +64 čipů, každá další ruka v kole polovinu předchozí.',

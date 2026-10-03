@@ -238,7 +238,8 @@ describe('epičtí žolíci fáze 7 – texty', () => {
       beer_sommelier:
         '×1 mult a navíc +×0,7 za každou různou kombinaci zahranou v tomto kole (včetně této ruky).',
       archivist: 'Při získání bez edice dostane duhovou; kopíruje schopnost žolíka nalevo od sebe.',
-      fair_magician: 'Skórují všechny zahrané karty a každá skórující karta dá ×1,15 mult; 1 z 5, že po ruce jedna zahraná karta zmizí v klobouku (zničí se).',
+      fair_magician:
+        'Skórují všechny zahrané karty a každá skórující karta dá ×1,15 mult; 1 z 5, že po ruce jedna zahraná karta zmizí v klobouku (zničí se).',
       tour_guide:
         'Postupka i Barva stačí ze čtyř karet a ruka, která obsahuje Postupku nebo Barvu, dá +40 čipů; když má jen 4 karty, chce průvodce spropitné 1 Kč.',
       spartakiada: 'V první ruce kola skóruje každá skórující karta ještě 2×.',

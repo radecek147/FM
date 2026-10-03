@@ -83,12 +83,7 @@ function flagSuit(round: Readonly<RoundState>, key: string): Suit | null {
  * Díky tomu strop platí i s kupóny, balíčkem a žolíky, které hodnotu zvyšují, a Odvolání (`disableBoss`) vrátí
  * rozdíl jako u každého `passive`. Efekty, které ruce nebo zahození přidají až během kola, platí navíc.
  */
-function capAtRoundStart(
-  ctx: BossCtx,
-  key: 'hands' | 'discards',
-  flag: string,
-  cap: number,
-): void {
+function capAtRoundStart(ctx: BossCtx, key: 'hands' | 'discards', flag: string, cap: number): void {
   const uncapped = ctx.api.modifiers()[key] + flagNum(ctx.round, flag);
   ctx.round.flags[flag] = Math.max(0, uncapped - cap);
 }

@@ -125,7 +125,9 @@ describe('vzácní žolíci — definice a texty', () => {
     expect(descOf('late_train')).toBe('×1,5 mult; 1 ze 6, že efekt „nabere zpoždění“ a nenastane.');
     expect(descOf('head_waiter')).toBe('×2 mult, pokud zahraná ruka má nejvýš 3 karty.');
     expect(descOf('old_guard')).toBe('×1,5 mult, pokud má zahraná kombinace úroveň aspoň 3.');
-    expect(descOf('herbalist')).toBe('Po každé použité babské radě trvale +2 mult; po kole, ve kterém se žádná rada nepoužila, bylinky zvadnou: −1 mult (teď +0 mult).');
+    expect(descOf('herbalist')).toBe(
+      'Po každé použité babské radě trvale +2 mult; po kole, ve kterém se žádná rada nepoužila, bylinky zvadnou: −1 mult (teď +0 mult).',
+    );
     expect(descOf('regular')).toBe('+1 mult za každé kolo, které od koupě strávil ve slotu (teď +0 mult).');
     expect(descOf('beer_belly')).toBe('Po každé zahrané ruce trvale +2 čipy (teď +0 čipů).');
     expect(descOf('carousel')).toBe(

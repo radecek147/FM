@@ -108,7 +108,8 @@ export const BOSSES_B: BossDef[] = [
     params: { divisor: DECREE_LEVEL_DIVISOR },
     color: '#5b6b8c',
     hooks: {
-      modifyBase: (ctx) => ctx.api.handBase(ctx.hand.type, decreeLevel(ctx.state.handLevels[ctx.hand.type]?.level ?? 1)),
+      modifyBase: (ctx) =>
+        ctx.api.handBase(ctx.hand.type, decreeLevel(ctx.state.handLevels[ctx.hand.type]?.level ?? 1)),
     },
     art: { icon: 'scroll-unfurled', prop: 'gavel', bg: '#2b2f3a', fg: '#e8e2c9', pattern: 'grid' },
   },

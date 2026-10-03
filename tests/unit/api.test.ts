@@ -347,10 +347,13 @@ describe('zapůjčení a zvětrávající žolíci na konci kola (DESIGN 2.4.2, 
     expect(game.dispatch({ type: 'leaveShop' }).ok).toBe(true);
     expect(game.dispatch({ type: 'selectBlind' }).ok).toBe(true);
     winSmall(game);
-    expect(game.state.rewards!.extra).toContainEqual(expect.objectContaining({ source: 'rental:lent', amount: -2 }));
+    expect(game.state.rewards!.extra).toContainEqual(
+      expect.objectContaining({ source: 'rental:lent', amount: -2 }),
+    );
     res = game.dispatch({ type: 'cashOut' });
     expect(res.ok).toBe(true);
-    if (res.ok) expect(res.events.some((e) => e.type === 'message' && e.key === MSG.rentalPaidOff)).toBe(true);
+    if (res.ok)
+      expect(res.events.some((e) => e.type === 'message' && e.key === MSG.rentalPaidOff)).toBe(true);
     expect(game.state.jokers[0]!.stickers).toEqual([]);
     expect(game.state.jokers[0]!.rentalPaid).toBeUndefined();
     expect(game.sellValue(j.uid)).toBeGreaterThan(1);

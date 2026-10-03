@@ -15,8 +15,13 @@
  */
 import type { CardSpec, ChallengeDef, UnlockCondition } from '../engine/content-types';
 import { standardDeckSpecs } from '../engine/cards/cards';
-import { FINAL_ANTE, RENTAL_BUY_PRICE, RENTAL_FEE,
-  RENTAL_INSTALLMENTS, RENTAL_SELL_PRICE } from '../engine/constants';
+import {
+  FINAL_ANTE,
+  RENTAL_BUY_PRICE,
+  RENTAL_FEE,
+  RENTAL_INSTALLMENTS,
+  RENTAL_SELL_PRICE,
+} from '../engine/constants';
 import { BASE_MODIFIERS } from '../engine/effects/modifiers';
 import type { HandType, Suit } from '../engine/types';
 import { HAND_TYPES, RANKS, SUITS } from '../engine/types';

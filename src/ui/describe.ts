@@ -164,7 +164,10 @@ function dynamicParams(def: JokerDef, inst: JokerInstance): Record<string, numbe
 }
 
 /** Texty nálepky (`Přibitý: Nejde prodat ani zničit.`); u zvětrávajícího se zbývajícími koly. */
-export function stickerText(id: StickerId, inst?: Pick<JokerInstance, 'perishRounds' | 'rentalPaid'>): string {
+export function stickerText(
+  id: StickerId,
+  inst?: Pick<JokerInstance, 'perishRounds' | 'rentalPaid'>,
+): string {
   const name = t(`art.stickers.${id}.name`);
   let desc: string;
   if (id === 'perishable') {
