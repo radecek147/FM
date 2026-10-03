@@ -4,6 +4,7 @@
  */
 import { beforeEach, describe, expect, it } from 'vitest';
 import { MAX_ACTIVATIONS_PER_CARD, MSG } from '../../src/engine/constants';
+import { HAND_TYPE_DEFS } from '../../src/content/hands';
 import { activationCount, scoreHand } from '../../src/engine/scoring/score';
 import type { RunState, ScoreStep } from '../../src/engine/types';
 import {
@@ -32,7 +33,9 @@ const inRound = (opts: MakeGameOptions = {}) => makeGame({ round: true, ...opts 
 
 describe('pracovní příklad z DESIGN 3.2', () => {
   function setup(probabilityMult: number) {
+    // Pracovní příklad počítá se skutečnou tabulkou kombinací (DESIGN 2.2.1), ne s testovací tabulkou z 1.0.
     const game = makeGame({
+      registry: { ...makeRegistry(), handTypes: HAND_TYPE_DEFS },
       jokers: [
         { id: 'heart_fan', edition: 'holo' },
         { id: 'coaster' },
@@ -48,7 +51,7 @@ describe('pracovní příklad z DESIGN 3.2', () => {
     return { game, cards, fan: fan!.uid, coaster: coaster!.uid, train: train!.uid };
   }
 
-  it('přesné pořadí kroků a výsledek floor(246 × 263,25) = 64 759', () => {
+  it('přesné pořadí kroků a výsledek floor(268 × 236,25) = 63 315', () => {
     const { game, cards, fan, coaster, train } = setup(0);
     const [kh, ks, kd, c5, h5, qs] = cards.map((c) => c.id);
     const { result } = play(game, [kh!, ks!, kd!, c5!, h5!]);
@@ -62,54 +65,54 @@ describe('pracovní příklad z DESIGN 3.2', () => {
     });
     expect(result.hand.type).toBe('full_house');
     expect(steps(result.steps)).toEqual([
-      { source: 'hand', defId: 'full_house', chips: 101, mult: 9, chipsAfter: 101, multAfter: 9 },
-      card(kh!, { chips: 10, chipsAfter: 111, multAfter: 9 }),
-      card(kh!, { mult: 5, chipsAfter: 111, multAfter: 14 }),
-      fanOn(kh!, { chips: 5, chipsAfter: 116, multAfter: 14 }),
-      fanOn(kh!, { mult: 2, chipsAfter: 116, multAfter: 16 }),
-      card(ks!, { chips: 10, chipsAfter: 126, multAfter: 16 }),
-      card(ks!, { chips: 50, chipsAfter: 176, multAfter: 16 }),
-      card(kd!, { chips: 10, chipsAfter: 186, multAfter: 16 }),
-      card(c5!, { chips: 5, chipsAfter: 191, multAfter: 16 }),
-      card(c5!, { chips: 25, chipsAfter: 216, multAfter: 16 }),
-      card(h5!, { chips: 5, chipsAfter: 221, multAfter: 16 }),
-      card(h5!, { xmult: 2, chipsAfter: 221, multAfter: 32 }),
-      fanOn(h5!, { chips: 5, chipsAfter: 226, multAfter: 32 }),
-      fanOn(h5!, { mult: 2, chipsAfter: 226, multAfter: 34 }),
-      card(h5!, { message: MSG.again, chipsAfter: 226, multAfter: 34 }),
-      card(h5!, { chips: 5, chipsAfter: 231, multAfter: 34 }),
-      card(h5!, { xmult: 2, chipsAfter: 231, multAfter: 68 }),
-      fanOn(h5!, { chips: 5, chipsAfter: 236, multAfter: 68 }),
-      fanOn(h5!, { mult: 2, chipsAfter: 236, multAfter: 70 }),
-      { source: 'held', cardId: qs, xmult: 1.5, chipsAfter: 236, multAfter: 105 },
-      { source: 'joker', defId: 'heart_fan', jokerUid: fan, mult: 10, chipsAfter: 236, multAfter: 115 },
-      { source: 'joker', defId: 'coaster', jokerUid: coaster, chips: 10, chipsAfter: 246, multAfter: 115 },
-      { source: 'joker', defId: 'coaster', jokerUid: coaster, mult: 2, chipsAfter: 246, multAfter: 117 },
+      { source: 'hand', defId: 'full_house', chips: 123, mult: 7, chipsAfter: 123, multAfter: 7 },
+      card(kh!, { chips: 10, chipsAfter: 133, multAfter: 7 }),
+      card(kh!, { mult: 5, chipsAfter: 133, multAfter: 12 }),
+      fanOn(kh!, { chips: 5, chipsAfter: 138, multAfter: 12 }),
+      fanOn(kh!, { mult: 2, chipsAfter: 138, multAfter: 14 }),
+      card(ks!, { chips: 10, chipsAfter: 148, multAfter: 14 }),
+      card(ks!, { chips: 50, chipsAfter: 198, multAfter: 14 }),
+      card(kd!, { chips: 10, chipsAfter: 208, multAfter: 14 }),
+      card(c5!, { chips: 5, chipsAfter: 213, multAfter: 14 }),
+      card(c5!, { chips: 25, chipsAfter: 238, multAfter: 14 }),
+      card(h5!, { chips: 5, chipsAfter: 243, multAfter: 14 }),
+      card(h5!, { xmult: 2, chipsAfter: 243, multAfter: 28 }),
+      fanOn(h5!, { chips: 5, chipsAfter: 248, multAfter: 28 }),
+      fanOn(h5!, { mult: 2, chipsAfter: 248, multAfter: 30 }),
+      card(h5!, { message: MSG.again, chipsAfter: 248, multAfter: 30 }),
+      card(h5!, { chips: 5, chipsAfter: 253, multAfter: 30 }),
+      card(h5!, { xmult: 2, chipsAfter: 253, multAfter: 60 }),
+      fanOn(h5!, { chips: 5, chipsAfter: 258, multAfter: 60 }),
+      fanOn(h5!, { mult: 2, chipsAfter: 258, multAfter: 62 }),
+      { source: 'held', cardId: qs, xmult: 1.5, chipsAfter: 258, multAfter: 93 },
+      { source: 'joker', defId: 'heart_fan', jokerUid: fan, mult: 10, chipsAfter: 258, multAfter: 103 },
+      { source: 'joker', defId: 'coaster', jokerUid: coaster, chips: 10, chipsAfter: 268, multAfter: 103 },
+      { source: 'joker', defId: 'coaster', jokerUid: coaster, mult: 2, chipsAfter: 268, multAfter: 105 },
       {
         source: 'joker',
         defId: 'late_train',
         jokerUid: train,
         xmult: 1.5,
-        chipsAfter: 246,
-        multAfter: 175.5,
+        chipsAfter: 268,
+        multAfter: 157.5,
       },
       {
         source: 'joker',
         defId: 'late_train',
         jokerUid: train,
         xmult: 1.5,
-        chipsAfter: 246,
-        multAfter: 263.25,
+        chipsAfter: 268,
+        multAfter: 236.25,
       },
     ]);
-    expect(result.chips).toBe(246);
-    expect(result.mult).toBe(263.25);
-    expect(result.score).toBe(64759);
+    expect(result.chips).toBe(268);
+    expect(result.mult).toBe(236.25);
+    expect(result.score).toBe(63315);
     expect(result.destroyedCardIds).toEqual([]);
-    expect(game.state.round!.score).toBe(64759);
+    expect(game.state.round!.score).toBe(63315);
   });
 
-  it('zpožděný rychlík: jeho ×1,5 odpadne, duhová edice platí dál → 43 173; sklo praskne až po sečtení', () => {
+  it('zpožděný rychlík: jeho ×1,5 odpadne, duhová edice platí dál → 42 210; sklo praskne až po sečtení', () => {
     const { game, cards, train } = setup(6);
     const [kh, ks, kd, c5, h5] = cards.map((c) => c.id);
     const { result } = play(game, [kh!, ks!, kd!, c5!, h5!]);
@@ -120,20 +123,20 @@ describe('pracovní příklad z DESIGN 3.2', () => {
         defId: 'late_train',
         jokerUid: train,
         message: LATE_TRAIN_DELAY,
-        chipsAfter: 246,
-        multAfter: 117,
+        chipsAfter: 268,
+        multAfter: 105,
       },
       {
         source: 'joker',
         defId: 'late_train',
         jokerUid: train,
         xmult: 1.5,
-        chipsAfter: 246,
-        multAfter: 175.5,
+        chipsAfter: 268,
+        multAfter: 157.5,
       },
-      { source: 'card', cardId: h5, message: MSG.glassBreak, chipsAfter: 246, multAfter: 175.5 },
+      { source: 'card', cardId: h5, message: MSG.glassBreak, chipsAfter: 268, multAfter: 157.5 },
     ]);
-    expect(result.score).toBe(43173);
+    expect(result.score).toBe(42210);
     expect(result.destroyedCardIds).toEqual([h5]);
     expect(game.card(h5!)).toBeUndefined();
   });

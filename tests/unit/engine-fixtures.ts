@@ -2,8 +2,8 @@
  * Pomocníci pro testy enginu: malý testovací registr obsahu (skutečné kombinace a úpravy karet + testovací
  * žolíci, šéfové, štítky…), založení hry a ruční nastavení ruky.
  */
-import { HAND_TYPE_DEFS } from '../../src/content/hands';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../../src/content/modifiers';
+import { TEST_HAND_TYPE_DEFS } from './fixtures/hand-table';
 import type {
   ArtSpec,
   BoosterDef,
@@ -45,7 +45,7 @@ function byId<T extends { id: string }>(items: readonly T[] = []): Record<string
 /** Registr se skutečnými kombinacemi, vylepšeními, pečetěmi a edicemi + dodaným testovacím obsahem. */
 export function makeRegistry(parts: RegistryParts = {}): ContentRegistry {
   return {
-    handTypes: HAND_TYPE_DEFS,
+    handTypes: TEST_HAND_TYPE_DEFS,
     jokers: byId(parts.jokers),
     consumables: byId(parts.consumables),
     enhancements: byId(ENHANCEMENTS),

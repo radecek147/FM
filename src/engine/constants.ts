@@ -80,6 +80,14 @@ export const RENTAL_SELL_PRICE = 1;
 /** Nejvýš tolik aktivací jedné karty v jedné ruce (pojistka proti nekonečným opakováním). */
 export const MAX_ACTIVATIONS_PER_CARD = 10;
 
+/**
+ * Kolik aktivací jedné karty v jedné ruce smí dát ×mult — z vylepšení (skleněná, ocelová v ruce), edice (duhová),
+ * pečeti i ze žolíků reagujících na kartu (`onCardScored`, `onCardHeld`). Další opakování dají jen čipy, +mult
+ * a peníze. Pojistka proti exponenciálnímu násobení opakováním (Dechovka, Ozvěna z propasti, Šťastná sedmička
+ * se skleněnými kartami: Trojice 3× sklo dávala ×2^15) — docs/DECISIONS.md 2026-10-03.
+ */
+export const MAX_XMULT_ACTIVATIONS_PER_CARD = 2;
+
 // ─────────────────────────── Seed (11.6) ───────────────────────────
 
 /** Znaky seedu — bez zaměnitelných I, O, 0 a 1. */

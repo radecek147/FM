@@ -3,15 +3,16 @@
  *  0. šéf `validateHand` (zákaz ruky), žolíci `beforeScoring` (mohou např. zvýšit úroveň kombinace),
  *  1. základ kombinace (čipy + mult podle úrovně, případně upravený šéfem) + výsledky beforeScoring,
  *  2. skórující karty zleva doprava: čipy karty → vylepšení → edice → pečeť → žolíci `onCardScored`;
- *     opakované aktivace (max. `MAX_ACTIVATIONS_PER_CARD`) zopakují celou sekvenci,
- *  3. karty v ruce: vylepšení `onHeld` → žolíci `onCardHeld` (s opakováním),
+ *     opakované aktivace (max. `MAX_ACTIVATIONS_PER_CARD`) zopakují celou sekvenci; ×mult dají jen první
+ *     `MAX_XMULT_ACTIVATIONS_PER_CARD` aktivace karty (další opakování jen čipy, +mult a peníze),
+ *  3. karty v ruce: vylepšení `onHeld` → žolíci `onCardHeld` (s opakováním, ×mult stejně omezený),
  *  4. žolíci zleva doprava: edice „before“ → `onHandPlayed` → edice „after“,
  *  5. skóre = floor(čipy × mult), šéf `adjustHandScore`, žolíci `afterHandScored`;
  *     run loop pak volá šéfa `afterHandPlayed` a `afterScoredCards` (hod skla, Ohmataná) a ničí karty.
  */
 import type { BossCtx, EffectResult, JokerScoringCtx, ScoringInfo } from '../content-types';
 import { cardChips } from '../cards/cards';
-import { MAX_ACTIVATIONS_PER_CARD, MSG } from '../constants';
+import { MAX_ACTIVATIONS_PER_CARD, MAX_XMULT_ACTIVATIONS_PER_CARD, MSG } from '../constants';
 import type { CtxLayer, GameCore } from '../effects/core';
 import { toResults } from '../effects/core';
 import { compareHandTypes, detectHand } from '../hands/detect';
@@ -46,6 +47,22 @@ export function safe(n: number): number {
 export function activationCount(extra: number): number {
   const n = 1 + Math.max(0, Math.floor(Number.isFinite(extra) ? extra : 0));
   return Math.min(MAX_ACTIVATIONS_PER_CARD, n);
+}
+
+/**
+ * Smí aktivace karty s pořadím `activation` (0 = první) ještě násobit mult? Jen prvních
+ * `MAX_XMULT_ACTIVATIONS_PER_CARD` aktivací — další opakování (Dechovka, Ozvěna, Šťastná sedmička) dají čipy, +mult
+ * a peníze, ale ×mult ne.
+ */
+export function xmultAllowed(activation: number): boolean {
+  return activation < MAX_XMULT_ACTIVATIONS_PER_CARD;
+}
+
+/** Výsledky efektu karty bez ×mult (pro aktivace nad `MAX_XMULT_ACTIVATIONS_PER_CARD`). */
+function withoutXmult(results: EffectResult[]): EffectResult[] {
+  return results
+    .map((r) => (r.xmult === undefined ? r : { ...r, xmult: undefined }))
+    .filter((r) => r.chips || r.mult || r.money || r.message || r.destroyCard);
 }
 
 /** Použitelné číslo efektu (ne NaN; nekonečno ořízne `safe`). */
@@ -298,13 +315,15 @@ export function scoreHand(core: GameCore, playedIds: readonly number[]): ScoreRe
     for (let a = 0; a < activations; a++) {
       const meta: StepMeta = { source: 'card', cardId: card.id };
       if (a > 0) acc.steps.push({ ...meta, message: MSG.again, chipsAfter: acc.chips, multAfter: acc.mult });
+      // Opakování nad strop ×mult: efekty karty i žolíků dají jen čipy, +mult a peníze.
+      const cap = xmultAllowed(a) ? (r: EffectResult[]) => r : withoutXmult;
       const chips = cardChips(card, enh, core.mods());
       if (chips) applyResult(core, acc, { chips }, meta, card.id);
       if (enhDef?.onScored)
-        applyAll(core, acc, toResults(enhDef.onScored(core.cardCtx(card, layer))), meta, card.id);
-      if (edDef?.effect) applyResult(core, acc, edDef.effect(), meta, card.id);
+        applyAll(core, acc, cap(toResults(enhDef.onScored(core.cardCtx(card, layer)))), meta, card.id);
+      if (edDef?.effect) applyAll(core, acc, cap([edDef.effect()]), meta, card.id);
       if (sealDef?.onScored)
-        applyAll(core, acc, toResults(sealDef.onScored(core.cardCtx(card, layer))), meta, card.id);
+        applyAll(core, acc, cap(toResults(sealDef.onScored(core.cardCtx(card, layer)))), meta, card.id);
       core.eachJoker(
         'onCardScored',
         { card, isRetrigger: a > 0 },
@@ -312,7 +331,7 @@ export function scoreHand(core: GameCore, playedIds: readonly number[]): ScoreRe
           applyAll(
             core,
             acc,
-            results,
+            cap(results),
             { source: 'joker', jokerUid: owner.uid, defId: owner.defId, cardId: card.id },
             card.id,
           );
@@ -334,10 +353,11 @@ export function scoreHand(core: GameCore, playedIds: readonly number[]): ScoreRe
       const meta: StepMeta = { source: 'held', cardId: card.id };
       const startLen = acc.steps.length;
       if (a > 0) acc.steps.push({ ...meta, message: MSG.again, chipsAfter: acc.chips, multAfter: acc.mult });
+      const cap = xmultAllowed(a) ? (r: EffectResult[]) => r : withoutXmult;
       let any = false;
       // Bez `cardId`: `destroyCard` platí jen pro efekty skórující karty (EffectResult), ne pro kartu v ruce.
       if (enhDef?.onHeld)
-        any = applyAll(core, acc, toResults(enhDef.onHeld(core.cardCtx(card, layer))), meta) || any;
+        any = applyAll(core, acc, cap(toResults(enhDef.onHeld(core.cardCtx(card, layer)))), meta) || any;
       core.eachJoker(
         'onCardHeld',
         { card, isRetrigger: a > 0 },
@@ -348,7 +368,7 @@ export function scoreHand(core: GameCore, playedIds: readonly number[]): ScoreRe
             defId: owner.defId,
             cardId: card.id,
           };
-          if (applyAll(core, acc, results, jokerMeta)) any = true;
+          if (applyAll(core, acc, cap(results), jokerMeta)) any = true;
         },
         layer,
       );

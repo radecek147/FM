@@ -138,11 +138,11 @@ describe('hodnota žolíků – hodnocení podle pravidel 1–3 a ekonomiky', ()
 describe('hodnota žolíků – měření na skutečném obsahu (kouřový test)', { timeout: 60_000 }, () => {
   const cache: BaseCache = new Map();
 
-  it('Pivní tácek: každá ruka přesně +10 čipů a +2 mult → R1 +45,8 %, R2 +10,25 %; měření je deterministické', () => {
+  it('Pivní tácek: každá ruka přesně +10 čipů a +2 mult → R1 +45,8 %, R2 +10,4 %; měření je deterministické', () => {
     const v = measureJoker(reg, 'beer_mat', opts, cache);
     expect(v.r1.hands).toBeGreaterThan(0);
     expect(v.r1.avg).toBeCloseTo(45.83, 1);
-    expect(v.r2.avg).toBeCloseTo(10.25, 1);
+    expect(v.r2.avg).toBeCloseTo(10.4, 1);
     expect(v.r1.fired).toBe(1);
     expect(v.r1.effect).toEqual({ chips: 10, mult: 2, xmult: 1 });
     expect(v.sim.runs).toBe(3);

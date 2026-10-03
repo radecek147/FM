@@ -44,19 +44,19 @@ describe('registr obsahu', () => {
 describe('kombinace (docs/DESIGN.md kap. 2.2.1)', () => {
   // [čipy, mult, +čipy/úr., +mult/úr.] — přepis tabulky z DESIGN.md (vlastní čísla, ne převzatá).
   const table: Record<HandType, [number, number, number, number]> = {
-    high_card: [6, 1, 24, 2],
-    pair: [12, 2, 28, 2],
-    two_pair: [24, 2, 36, 2],
-    three: [28, 3, 44, 4],
-    straight: [35, 4, 50, 4],
-    flush: [40, 4, 36, 4],
-    full_house: [45, 5, 56, 4],
-    four: [65, 6, 70, 6],
-    straight_flush: [90, 9, 80, 6],
-    royal_flush: [120, 10, 90, 6],
-    five: [110, 11, 80, 6],
-    flush_house: [130, 13, 90, 8],
-    flush_five: [150, 15, 110, 6],
+    high_card: [8, 1, 25, 2],
+    pair: [14, 2, 30, 2],
+    two_pair: [30, 2, 38, 2],
+    three: [36, 2, 48, 3],
+    straight: [45, 3, 48, 4],
+    flush: [55, 3, 42, 3],
+    full_house: [65, 4, 58, 3],
+    four: [95, 5, 80, 5],
+    straight_flush: [130, 6, 90, 5],
+    royal_flush: [170, 7, 100, 5],
+    five: [165, 9, 90, 4],
+    flush_house: [190, 10, 100, 6],
+    flush_five: [220, 12, 105, 5],
   };
 
   it.each(HAND_TYPES.map((type) => [type]))('%s odpovídá tabulce', (type) => {

@@ -214,10 +214,10 @@ describe('každý šéf × Odvolání uprostřed kola', () => {
 // ─────────────────────────── Šéf × kopírující žolík ───────────────────────────
 
 describe('kopírující žolík × šéfové, kteří vypínají žolíky: kopie žolíka mimo provoz nedá nic', () => {
-  /** Dvojice králů (12 + 10 + 10 = 32 čipů, 2 mult); Pivní tácek +10 čipů a +2 mult, jeho kopie znovu. */
-  const BASE = { chips: 32, mult: 2 };
-  const ONE = { chips: 42, mult: 4 };
-  const TWO = { chips: 52, mult: 6 };
+  /** Dvojice králů (14 + 10 + 10 = 34 čipů, 2 mult); Pivní tácek +10 čipů a +2 mult, jeho kopie znovu. */
+  const BASE = { chips: 34, mult: 2 };
+  const ONE = { chips: 44, mult: 4 };
+  const TWO = { chips: 54, mult: 6 };
 
   /** Skutečné skóre Dvojice králů — zahraje se na kopii hry (uložení a načtení), ať se stav kola nezmění. */
   function pairPreview(g: Game): { chips: number; mult: number } {
@@ -285,7 +285,7 @@ describe('kopírující žolík × šéfové, kteří vypínají žolíky: kopie
     const cards = setupRound(g, 'AC 2D 4D 6D 8S');
     ok(g.dispatch({ type: 'play', cardIds: [cards[0]!.id] }), 'první ruka');
     // Tácek + Archivář + Napodobitel (kopie Tácku) = 3× +10 čipů a +2 mult.
-    expect(pairPreview(g)).toEqual({ chips: 62, mult: 8 });
+    expect(pairPreview(g)).toEqual({ chips: 64, mult: 8 });
   });
 
   it('Krajský úřad: po ruce vypne jednoho žolíka; kopie vypnutého cíle nedá nic', () => {
