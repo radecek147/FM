@@ -263,9 +263,9 @@ test('výhra runu: další síla piva pro balíček, oznámení, achievement, z�
   await expect(game(page)).toHaveAttribute('data-phase', 'victory', { timeout: 30_000 });
   await idle(page);
 
-  // Oznámení s ikonou (nejvýš dvě naráz) a souhrn novinek runu na výherní obrazovce.
-  await expect(page.locator('.toast--meta').first()).toBeVisible();
-  expect(await page.locator('.toast--meta:not(.toast--leaving)').count()).toBeLessThanOrEqual(2);
+  // Souhrn novinek runu na výherní obrazovce — tytéž novinky se už neohlašují toasty (1.0.1: nepřekážejí výhře).
+  await expect(page.getByTestId('run-news')).toBeVisible();
+  await expect(page.locator('.toast--meta:not(.toast--leaving)')).toHaveCount(0);
   const jedenactka = t(`stakes.${stakeId(2)}.name`);
   const news = page.getByTestId('run-news');
   await expect(news.getByTestId('run-news-stake')).toContainText(jedenactka);
@@ -287,10 +287,9 @@ test('výhra runu: další síla piva pro balíček, oznámení, achievement, z�
   expect(won.unlocks.challenges).toHaveLength(5);
   expect(won.history).toHaveLength(0);
 
-  // Oznámení o další síle piva dojde na řadu ve frontě.
-  await expect(page.getByTestId('toast-unlock').filter({ hasText: jedenactka })).toBeVisible({
-    timeout: 20_000,
-  });
+  // Další síla piva je v seznamu, ne v toastu (fronta ji vyřadila).
+  await page.waitForTimeout(500);
+  await expect(page.getByTestId('toast-unlock').filter({ hasText: jedenactka })).toHaveCount(0);
 
   await page.getByTestId('victory-end').click();
   await expect(screen(page)).toHaveAttribute('data-screen', 'menu');
@@ -795,7 +794,10 @@ test('sbírka: filtr vzácnosti a zaměření, řazení, štítek „Nové“ zm
     t('meta.collection.count', { n: found.length, total: jokers.length }),
   );
   const tab = page.getByTestId('codex-tab-jokers');
-  await expect(tab.locator('.tabs__badge')).toHaveText(String(fresh.length));
+  // Cedulka říká „N nových“ — holé číslo vedle počtu „x / y“ mátlo.
+  await expect(tab.locator('.tabs__badge')).toHaveText(
+    t('meta.collection.newBadgeCount', { n: fresh.length }),
+  );
   for (const j of fresh)
     await expect(page.getByTestId(`codex-item-${j.id}`).locator('.codex-item__new')).toHaveText(
       t('meta.collection.newBadge'),
@@ -848,7 +850,7 @@ test('sbírka: filtr vzácnosti a zaměření, řazení, štítek „Nové“ zm
   await expect(page.getByTestId('codex-detail-desc')).toBeVisible();
   await page.getByTestId('codex-detail-close').click();
   await expect(page.getByTestId(`codex-item-${commons[0]!.id}`).locator('.codex-item__new')).toHaveCount(0);
-  await expect(tab.locator('.tabs__badge')).toHaveText('1');
+  await expect(tab.locator('.tabs__badge')).toHaveText(t('meta.collection.newBadgeCount', { n: 1 }));
   expect((await storedProfile(page)).unseen).toEqual([`jokers:${legendary.id}`]);
 
   // Odchod ze záložky sundá štítek i zbytku, co hráč v záložce viděl.

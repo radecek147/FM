@@ -2293,6 +2293,12 @@
   line-clamp: 2;
 }
 
+/* Řádek důvodu má v řadě slotů stejnou výšku (dva řádky), prázdný jen drží místo — tlačítka v jedné linii. */
+.booster-option .offer-why,
+.shop-slot .offer-why {
+  min-height: 2.5em;
+}
+
 .modal--pause .modal__actions {
   flex-direction: column;
   align-items: stretch;

@@ -3239,3 +3239,58 @@ se posunou kvůli nově zařazené kartě, jedou na nové místo animací (FLIP)
 
 **Proč:** přání hráče — po seřazení nechce řadit znovu po každém dobrání. Pole je nepovinné, takže starší uložení
 se načtou bez migrace (chybí = netřídí se). Boti nikdy netřídí, simulace se nemění.
+
+## 2026-10-03 — Oprava UI po testu 1.0
+
+**Co a proč** (nálezy hráčského testu 2026-10-02, ROADMAP „Opravy po testu 1.0 (1.0.1)“):
+
+- **Čitelnost písma.** „Karban Digits“ (`src/ui/art/digitFont.ts`) kreslí kromě číslic a Z/Ž i **C, c a česká
+  písmena s háčkem a kroužkem** (Č č Ď Ě ě Ň ň Ř ř Š š Ť Ů ů Ž ž). Základy písmen jsou původní obrysy Pixelify Sans
+  (vytažené z WOFF, uložené jako body), nový je jen **háček ve tvaru „v“ široký přes tři pixely** a **větší kroužek**
+  — původní háček měl ≈ 1,5 pixelu a v drobném textu splynul v tečku („Kċ“). „C“ má kratší koncové tahy (otvor přes
+  dva pixely, „RUCE“ se už nečte „RUOE“), „c“ je bez koncových tahů. Číslice: **„3“ je vlevo otevřená** (rovné linky
+  nahoře a dole, prostřední tah od středu — „Patro 3/8“ ≠ „8/8“), „6“ a „9“ přišly o koncový háček, který se zavíral
+  do „8“, a **„0“ je užší než „O“**. ď a ť (háček jako apostrof) zůstávají Pixelify. Proč vlastní glyfy místo
+  nepixelového písma pro drobné popisky: hra drží jednotný pixelový styl a stejná vada je i ve větších velikostech
+  (peníze „35 Kč“). Testy hlídají otevřenou „3“, otvor „C“ a šířku háčku. Licence OFL 1.1 (ASSETS.md, Titulky).
+- **Toasty** (`src/ui/components/toast.ts`): **pod modální vrstvou** (z-index 890 < 900) a v **rohu mimo hrací
+  plochu** — na herní obrazovce vpravo nahoře nad kapsou spotřebek (kotva vrací `ToastSpot`), na pitvě a výhře dole
+  v levém panelu, na úzkém rozvržení nahoře v okně. **Pozdržení** (`holdToasts`): během animace akce (skórování,
+  rozdávání) čekají a vypustí se až po překreslení (další úloha po presenteru). Oznámení **na pozadí** (`background`:
+  achievementy, odemčení) čekají i na zavření dialogu; odezva akce v dialogu (export, prodej z detailu) se ukáže
+  v rohu okna nad zatemněním (`toast-region--over-modal`), ne přes dialog. Kratší doby (info 3,2 s, meta 3,8 s),
+  meta oznámení po jednom, v rohu hry nejvýš dvě hlášky. Sloupec obchází prvky `data-overlay-avoid` (bublina
+  Štamgasta) — nejdřív ustoupí do strany, pak pod/nad ni. Novinky, které ukazuje seznam na pitvě a výhře, se
+  neohlašují (`ProfileManager.onSettled` ve fázi konce runu, `NoticeQueue.drop` vyřadí čekající i pozdržené).
+- **Pan starosta.** Nový čistý hook `BossHooks.scoreToBeat` (laťka pro příští ruku) a dotaz `Game.scoreToBeat()`.
+  Náhled ruky (`Game.preview`) s laťkou přidá `estimate` = `floor(čipy × mult)` se všemi efekty: ruka se zahraje
+  na **kopii stavu s náhradními RNG proudy** (`createRngStates(seed + ':preview')`), takže odhad neprozradí skutečný
+  hod (šťastné karty, sklo) a run ani RNG se nezmění. Levý panel ukáže „Překonej: X“ a jantarové varování „Odhad Y
+  nepřekoná X – nezapočítá se“. Odhad se počítá jen pro šéfa s laťkou (cena ≈ jedna simulovaná ruka na změnu
+  výběru). Hláška „Šéf to přepočítal po svém.“ je uprostřed stolu, ne nad číslem Skóre kola.
+- **Dotyk.** Tap na kartu zboží / možnosti obálky otevře **detail** (`openOfferDetail`) s popisem a s tlačítky slotu
+  — dialog „zmáčkne“ původní tlačítko, logika nákupu tak zůstává na jednom místě. Důvod neaktivního tlačítka
+  (`title`) je i jako text pod slotem (`blockReasonsLine`). `@media (hover: none) and (pointer: coarse)` schová čísla
+  kláves pod kartami, nápověda stolu má dotykovou verzi bez kláves.
+- **Telefon 390 × 844:** kompaktní levý panel (kombinace a čipy × mult v jedné řadě), žolíci a spotřebky vedle sebe
+  s kartami 42 px, balíček vedle třídění, volné místo dostane stůl — ruka, Zahrát / Zahodit i možnosti obálky jsou
+  bez posouvání (stránka 844 px).
+- **Nová hra:** odemčené balíčky napřed, zamčené jako malé dlaždice v hustší mřížce (telefon: dva sloupce bez
+  obrázku); „Rozdat karty“ už neplave přes formulář (je na konci a druhé v záhlaví); neplatný seed posune pole
+  s chybou do středu okna. Nápověda seedu a poznámka na pitvě zmiňují jedinou výjimku — achievement „Semínko zaseto“
+  (`allowSeeded`), který seedovaný run dát smí (text se upravil podle skutečného chování, pravidlo zůstává).
+- **Tutoriál:** rada se ukáže **nejvýš jednou** — dokončí ji „Rozumím“ nebo jakákoli akce s událostmi, zatímco visí
+  (přeřazení karet a žolíků ne). Neviděné rady se už tiše nedokončují událostmi, nabídnou se později (achievement
+  „Štamgastův žák“ tak chce opravdu vidět všech 9 rad). Číslo „Rada n z 9“ = počet viděných rad + 1. Bublina se
+  vyhýbá Skóre kola, cíli a záhlaví panelů (konec kola → pod panel); tooltip karty bublinu obejde.
+- **Levý panel:** náhled kombinace jen v kole a v obálce s rukou; na konci kola „Poraženo! Vyzvedni si odměnu“ (zlatý
+  rámeček místo šéfova červeného); na výhře pohár místo žetonu dalšího šéfa; po „Nekonečný režim“ má výplata
+  nadpis „Nekonečný režim začíná“ (vyplácí se finálový šéf, ne nové kolo). Velká čísla jsou na jeden řádek a písmo
+  se zmenší podle délky (`--chars` + container query `cqi`).
+- **Přístupnost a drobnosti:** po výběru útraty jde focus na ruku (ne na `<body>`); šestá karta se zatřese a ukáže se
+  hláška „Vybrat jde nejvýš 5 karet“, Enter / X bez výběru „Nejdřív vyber karty“. Sbírka: cedulka záložky „48 nových“
+  a počítá jen položky, které registr zná. Postup podmínky „úroveň kombinace“ se neukazuje, dokud je na výchozí 1
+  (`UnlockProgress.base`) — Kalendářový balíček na čistém profilu ukazoval „(1 / 6)“.
+
+**Nepatří sem** (jiní agenti): „Koupit a použít“ (`prospective()`), `canUse` v obálce, Minimalista, denní run, dvě
+karty prohlížeče, zpoždění po návratu z menu, validace importu; obsah a balanc.

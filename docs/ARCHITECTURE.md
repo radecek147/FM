@@ -61,8 +61,10 @@ if (!res.ok) ui.toast(t(`errors.${res.error}`));
   takže obsah vidí v ruce jen zbylé karty a událost `cardsDiscarded` hráčova zahození přijde před reakcemi.
 - Dotazy pro UI bez změny stavu: `blindTarget(kind, bossId)` a `blindReward(kind, bossId)` (výběr útrat ukazuje
   stejná čísla, jaká pak použije kolo a rozpis odměn), `preview(cardIds)`, `sellValue(uid)`,
-  `canUseConsumable(uid, targets)`, `modifiers()`. `preview` vrací i `blockedReason` (i18n klíč), když by šéf ruku
-  zakázal (`validateHand`, Soused s vrtačkou) — čistý hook se volá v `readOnly`, takže dotaz neposune RNG.
+  `canUseConsumable(uid, targets)`, `modifiers()`, `scoreToBeat()`. `preview` vrací i `blockedReason` (i18n klíč),
+  když by šéf ruku zakázal (`validateHand`, Soused s vrtačkou) — čistý hook se volá v `readOnly`, takže dotaz neposune
+  RNG. Má-li šéf laťku (`BossHooks.scoreToBeat`, Pan starosta), `preview` přidá `scoreToBeat` a `estimate` — skóre ruky
+  se všemi efekty spočítané na kopii stavu s náhradními RNG proudy (neprozradí skutečný hod, run nezmění).
 
 ### 2.3 RNG
 
@@ -332,6 +334,14 @@ flavor a že texty dodržují typografii.
   aktivní štítky (žetony s tooltipem), varování „Neskóruje“ z `preview.blockedReason`; ruka ukazuje velikost
   (`Modifiers.handSize`) se změnou proti začátku kola (Velká voda). Pitva ukáže žeton a pravidlo šéfa vedle hlášky
   `death`, Info o runu šéfa patra; zboží ze štítků ve Večerce má nálepku (`extra`, `priceMult`, `noEditionSurcharge`).
+- Oznámení (`components/toast.ts`, 1.0.1): pod modální vrstvou, v rohu mimo hrací plochu (kotva herní obrazovky vrací
+  `ToastSpot`), během animace akce pozdržená (`holdToasts`), novinky meta vrstvy (`background`) čekají i na zavření
+  dialogu; prvky `data-overlay-avoid` (bublina Štamgasta) obchází sloupec oznámení i tooltip karty.
+- Detail zboží a možnosti obálky (`openOfferDetail` v `screens/game/modals.ts`): tap / klik na kartu otevře dialog
+  s popisem a kopiemi tlačítek slotu, které „zmáčknou“ původní tlačítko; důvod neaktivního tlačítka je i jako text pod
+  slotem (`blockReasonsLine`).
+- Písmo „Karban Digits“ (`art/digitFont.ts`): číslice, C, c, Z a písmena s háčkem a kroužkem skládané za běhu do
+  TrueType (FontFace, `unicode-range`) — čitelné v drobném pixelovém textu.
 
 ## 5. Ukládání
 

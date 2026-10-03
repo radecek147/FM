@@ -147,7 +147,9 @@ export function focusKey(): string | null {
  */
 export function restoreFocus(container: HTMLElement, key: string | null, wasInside: boolean): void {
   const active = document.activeElement;
-  const lost = !active || active === document.body || !active.isConnected;
+  // Focus ve schovaném prvku (ruka po konci kola) je ztracený stejně jako na <body>.
+  const lost =
+    !active || active === document.body || !active.isConnected || active.closest('[hidden]') !== null;
   if (!lost && !wasInside) return;
   const byKey = key
     ? container.querySelector<HTMLElement>(`[data-focus-key="${key.replace(/["\\]/g, '')}"]`)
@@ -163,6 +165,23 @@ export function restoreFocus(container: HTMLElement, key: string | null, wasInsi
  * Bere jen opravdu neaktivní tlačítka (`disabled`) s důvodem v `title`; bez důvodu null.
  */
 export function blockReasonsLine(buttons: readonly HTMLElement[]): HTMLElement | null {
+  return reasonsLine(buttons);
+}
+
+/**
+ * Řada slotů (možnosti obálky, sekce Večerky): když má důvod aspoň jeden slot, dostanou ostatní prázdný řádek
+ * stejné výšky — tlačítka zůstanou v jedné linii.
+ */
+export function alignReasonLines(slots: readonly HTMLElement[]): void {
+  if (!slots.some((li) => li.querySelector('.offer-why') !== null)) return;
+  for (const li of slots) {
+    if (li.querySelector('.offer-why')) continue;
+    if (li.classList.contains('is-sold')) continue;
+    li.appendChild(h('p', { class: 'offer-why is-empty', 'aria-hidden': 'true' }));
+  }
+}
+
+function reasonsLine(buttons: readonly HTMLElement[]): HTMLElement | null {
   const reasons = [
     ...new Set(
       buttons

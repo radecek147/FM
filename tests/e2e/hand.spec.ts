@@ -270,7 +270,7 @@ test('náhled balíčku bez zakrytých karet: ztlumené karty venku podle hodnot
 
 // ─────────────────────────── 5. Hlášky ───────────────────────────
 
-test('hlášky: nejvýš 3 ve sloupci nad stolem, mimo ruku, tlačítka a balíček; opakovaná jen „×2“', async ({
+test('hlášky: v rohu mimo hrací plochu nejvýš 2 (další čekají), mimo stůl, ruku, tlačítka a balíček; opakovaná „×2“', async ({
   page,
 }) => {
   const log = watchConsole(page);
@@ -282,17 +282,26 @@ test('hlášky: nejvýš 3 ve sloupci nad stolem, mimo ruku, tlačítka a balí�
   await expect(game(page)).toHaveAttribute('data-phase', 'round');
   const toasts = page.getByTestId('toasts').locator('.toast:not(.toast--leaving)');
 
-  // Dvě pranostiky = 4 hlášky (použito + nová úroveň) → vidět jsou jen 3 nejnovější.
+  // Dvě pranostiky = 4 hlášky (použito + nová úroveň) → v rohu jsou vidět dvě, další čekají ve frontě.
   for (const uid of [960, 961]) {
     await page.getByTestId('consumable-row').locator(`[data-consumable-uid="${uid}"]`).click();
     await page.getByTestId('consumable-use').click();
     await idle(page);
   }
-  await expect(toasts).toHaveCount(3);
-  await expect(toasts.filter({ hasText: t('hands.straight.name') })).toHaveCount(1);
+  await expect(toasts).toHaveCount(2);
   await expect(page.getByTestId('toasts')).toHaveClass(/toast-region--anchored/);
+  // Zavřená hláška uvolní místo další z fronty (Svatá Anna = Postupka).
+  await toasts
+    .first()
+    .getByRole('button', { name: t('common.dismiss') })
+    .click();
+  await toasts
+    .first()
+    .getByRole('button', { name: t('common.dismiss') })
+    .click();
+  await expect(toasts.filter({ hasText: t('hands.straight.name') })).toHaveCount(1);
 
-  // Zahodit bez zahození → chyba; podruhé stejná chyba jen „×2“ (pořád 3 hlášky).
+  // Zahodit bez zahození → chyba (nečeká ve frontě); podruhé stejná chyba jen „×2“.
   await page.keyboard.press('1');
   await page.keyboard.press('x');
   await expect(page.getByTestId('toast-action-error')).toHaveCount(1);
@@ -301,16 +310,18 @@ test('hlášky: nejvýš 3 ve sloupci nad stolem, mimo ruku, tlačítka a balí�
   await expect(page.getByTestId('toast-action-error').getByTestId('toast-count')).toHaveText(
     t('common.repeated', { n: 2 }),
   );
-  await expect(toasts).toHaveCount(3);
+  expect(await toasts.count()).toBeLessThanOrEqual(2);
   await page.screenshot({ path: 'test-results/hand-toasts.png', animations: 'disabled' });
 
-  // Sloupec je nahoře uprostřed jeviště a nepřekrývá ruku, Zahrát / Zahodit ani balíček.
-  const stage = await page.locator('.game-stage').boundingBox();
+  // Sloupec je vpravo nahoře v řadě žolíků a spotřebek — nepřekrývá stůl, ruku, Zahrát / Zahodit ani balíček.
+  const top = await page.locator('.game-top').boundingBox();
   const region = await page.getByTestId('toasts').boundingBox();
-  if (!stage || !region) throw new Error('Jeviště nebo hlášky nejsou vidět.');
-  expect(Math.abs(region.x + region.width / 2 - (stage.x + stage.width / 2))).toBeLessThan(2);
-  expect(region.y).toBeGreaterThanOrEqual(stage.y);
+  if (!top || !region) throw new Error('Řada žolíků nebo hlášky nejsou vidět.');
+  expect(region.x + region.width).toBeLessThanOrEqual(top.x + top.width + 1);
+  expect(region.x).toBeGreaterThan(top.x + top.width / 2);
+  expect(region.y).toBeLessThan(top.y + top.height);
   const blockers = [
+    await page.getByTestId('table').boundingBox(),
     await page.getByTestId('hand').boundingBox(),
     await page.getByTestId('play').boundingBox(),
     await page.getByTestId('discard').boundingBox(),
@@ -323,10 +334,23 @@ test('hlášky: nejvýš 3 ve sloupci nad stolem, mimo ruku, tlačítka a balí�
     }),
   )) {
     for (const blocker of blockers) {
-      if (!blocker) throw new Error('Ovládací prvek není vidět.');
+      if (!blocker) continue;
       expect(overlaps(box, blocker)).toBe(false);
     }
   }
+
+  // Pod dialogem: otevřená pauza hlášky překryje (bod uprostřed hlášky patří dialogové vrstvě).
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.modal-layer')).toBeVisible();
+  const hit = await page.evaluate(() => {
+    const el = document.querySelector('.toast');
+    if (!el) return 'none';
+    const r = el.getBoundingClientRect();
+    const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return at?.closest('.modal-layer') ? 'modal' : at?.closest('.toast') ? 'toast' : 'other';
+  });
+  expect(['modal', 'none']).toContain(hit);
+  await page.keyboard.press('Escape');
   expectCleanConsole(log);
 });
 

@@ -485,6 +485,31 @@ describe('hlášky (toast)', () => {
     expect(region.style.left).toBe('');
   });
 
+  it('roh herní obrazovky: nejvýš dvě hlášky, třetí počká, až jedna odejde (chyba vytlačí nejstarší)', async () => {
+    document.documentElement.classList.add('no-anim');
+    window.innerWidth = 1366;
+    window.innerHeight = 768;
+    try {
+      setToastAnchor(() => ({ right: 16, top: 12, width: 340 }));
+      const a = toast('Štítek A');
+      toast('Štítek B');
+      const c = toast('Štítek C');
+      expect(c.el.isConnected).toBe(false);
+      expect(heldToastCount()).toBe(1);
+      a.dismiss();
+      await Promise.resolve();
+      expect(c.el.isConnected).toBe(true);
+      expect(heldToastCount()).toBe(0);
+      // Chyba nečeká: vytlačí nejstarší.
+      const err = toast('Chyba', { kind: 'error' });
+      expect(err.el.isConnected).toBe(true);
+      expect(toastRegion().querySelectorAll('.toast:not(.toast--leaving)').length).toBe(2);
+    } finally {
+      setToastAnchor(null);
+      document.documentElement.classList.remove('no-anim');
+    }
+  });
+
   it('pozdržení: během animace hlášky čekají (kromě chyb) a po ní se vypustí v pořadí', () => {
     document.documentElement.classList.add('no-anim');
     try {

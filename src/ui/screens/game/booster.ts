@@ -14,7 +14,13 @@ import { boosterTexts, capitalize, cardName } from '../../describe';
 import { h } from '../../dom';
 import { openOfferDetail } from './modals';
 import type { GameCtx } from './shared';
-import { blockReasonsLine, hasConsumableRoom, hasJokerRoom, markDetailTriggers } from './shared';
+import {
+  alignReasonLines,
+  blockReasonsLine,
+  hasConsumableRoom,
+  hasJokerRoom,
+  markDetailTriggers,
+} from './shared';
 
 export function boosterKey(ctx: GameCtx): string {
   const c = ctx.controller;
@@ -155,6 +161,7 @@ export function renderBooster(ctx: GameCtx): HTMLElement {
     markDetailTriggers(li, '.booster-option__card');
     return li;
   });
+  alignReasonLines(options);
 
   const skip = button({
     label: t('game.booster.skip'),

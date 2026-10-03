@@ -18,7 +18,14 @@ import { h } from '../../dom';
 import { formatMoney } from '../../../i18n/format';
 import { openOfferDetail } from './modals';
 import type { GameCtx } from './shared';
-import { blockReasonsLine, canAfford, hasConsumableRoom, hasJokerRoom, markDetailTriggers } from './shared';
+import {
+  alignReasonLines,
+  blockReasonsLine,
+  canAfford,
+  hasConsumableRoom,
+  hasJokerRoom,
+  markDetailTriggers,
+} from './shared';
 
 export function shopKey(ctx: GameCtx): string {
   const s = ctx.controller.state;
@@ -350,6 +357,9 @@ export function renderShop(ctx: GameCtx): HTMLElement {
     markDetailTriggers(li, '.shop-slot__card');
     return li;
   });
+
+  // Tlačítka v sekci v jedné linii, i když jen některý slot vysvětluje, proč nejde koupit.
+  for (const list of [items, boosters, vouchers]) alignReasonLines(list);
 
   const anyLeft =
     (shop?.items ?? []).some((i) => !i.sold) ||

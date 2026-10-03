@@ -16,8 +16,9 @@
  *   (`refreshToastPlacement`) — žádné čtení layoutu v animaci.
  * - Pozdržení (`holdToasts`): dokud trvá (animace skórování a dalších akcí), nová oznámení kromě chyb čekají ve
  *   frontě a vypustí se až po skončení — nepřekryjí skórování ani rozdávání.
- * - Fronta: nejvýš `MAX_VISIBLE` (3) naráz, nejnovější dole; když přijde další, nejstarší odejde. Stejné oznámení
- *   znovu (např. opakovaná chyba) nepřibude, jen se obnoví jeho čas a naskočí počet „×2“.
+ * - Fronta: nejvýš `MAX_VISIBLE` (3) naráz, nejnovější dole; když přijde další, nejstarší odejde. V rohu herní
+ *   obrazovky nejvýš `MAX_VISIBLE_ANCHORED` (2) a další počkají, až některé odejde (chyba vytlačí nejstarší).
+ *   Stejné oznámení znovu (např. opakovaná chyba) nepřibude, jen se obnoví jeho čas a naskočí počet „×2“.
  * - Rychlost hry (CSS `--speed`, 1×–4×) zkracuje výchozí dobu zobrazení (s dolní mezí, aby šlo dočíst), vypnuté
  *   animace (`html.no-anim`, prefers-reduced-motion) znamenají příchod i odchod bez animace.
  * - Chyby mají role="alert" (čtečka je přečte hned), ostatní jdou přes živou oblast `polite`.
@@ -286,10 +287,19 @@ function startTimer(st: ToastState, dismiss: () => void): void {
   st.timer = st.duration > 0 ? setTimeout(dismiss, st.duration) : null;
 }
 
-/** Musí oznámení teď počkat (pozdržení, dialog)? Chyby nečekají nikdy. */
+/** Je roh herní obrazovky plný (kotva, nejvýš `MAX_VISIBLE_ANCHORED` hlášek)? Další počká, až některá odejde. */
+function cornerFull(): boolean {
+  if (!anchor || modalOpen() || !region) return false;
+  return visibleToasts(region).length >= MAX_VISIBLE_ANCHORED;
+}
+
+/**
+ * Musí oznámení teď počkat (pozdržení, dialog, plný roh)? Chyby nečekají nikdy (v plném rohu vytlačí nejstarší).
+ * V rohu herní obrazovky se hlášky řadí do fronty, místo aby se vytlačovaly — tři štítky naráz se ukážou postupně.
+ */
 function mustWait(st: Pick<ToastState, 'kind' | 'background'>): boolean {
   if (st.kind === 'error') return false;
-  return holds.size > 0 || (st.background && modalOpen());
+  return holds.size > 0 || (st.background && modalOpen()) || cornerFull();
 }
 
 /** Vloží postavené oznámení do sloupce a spustí jeho čas. */
@@ -403,14 +413,20 @@ export function toast(message: string, opts: ToastOptions = {}): ToastHandle {
     st.gone = true;
     if (st.timer) clearTimeout(st.timer);
     st.onClose?.();
+    // Uvolnilo se místo v rohu — čekající hláška smí ven (i během odchodu této).
+    const flushSoon = (): void => {
+      if (held.length > 0) queueMicrotask(() => flushHeldToasts());
+    };
     // Bez animací (nebo ještě nevložené) pryč hned; jinak po krátké animaci (pojistka: timeout).
     if (animationsOff() || !el.isConnected) {
       remove();
+      flushSoon();
       return;
     }
     el.classList.add('toast--leaving');
     el.addEventListener('animationend', remove, { once: true });
     setTimeout(remove, 400);
+    flushSoon();
   };
 
   const el = h(
