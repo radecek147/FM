@@ -10,6 +10,7 @@ import type { BlindKind, HandType } from '../../../engine';
 import { hasKey, t } from '../../../i18n/cs';
 import { formatMoney, formatNumber } from '../../../i18n/format';
 import { blindArt } from '../../art/art';
+import { iconElement } from '../../art/icons';
 import { button } from '../../components/button';
 import { createContentCard } from '../../components/consumableCard';
 import { attachTooltip, contentTooltip } from '../../components/tooltip';
@@ -41,6 +42,16 @@ export interface SidebarActions {
 
 function setText(el: HTMLElement, text: string): void {
   if (el.textContent !== text) el.textContent = text;
+}
+
+/**
+ * Číslo do políčka panelu: text a jeho délka v `--chars` — CSS podle ní zmenší písmo, aby se velké číslo (nekonečný
+ * režim, 12+ číslic) vešlo na jeden řádek a nikdy se nezlomilo uprostřed skupiny číslic (game.css, `cqi`).
+ */
+export function setNumberText(el: HTMLElement, text: string): void {
+  setText(el, text);
+  const chars = String(Math.max(1, [...text].length));
+  if (el.style.getPropertyValue('--chars') !== chars) el.style.setProperty('--chars', chars);
 }
 
 export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
@@ -89,10 +100,13 @@ export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
   const multEl = h('span', { class: 'gs-hand__mult', 'data-testid': 'hand-mult' }, '0');
   // Šéf by ruku zakázal (Soused s vrtačkou) — hráč to vidí ještě před zahráním.
   const handWarn = h('p', { class: 'gs-hand__warn', 'data-testid': 'hand-blocked', hidden: true });
+  // Laťka šéfa (Pan starosta): skóre, které musí příští ruka překonat, aby se započítala.
+  const handBeat = h('p', { class: 'gs-hand__beat', 'data-testid': 'hand-beat', hidden: true });
   const handInfoEl = h(
     'section',
     { class: 'gs-box gs-hand', 'aria-label': t('game.sidebar.hand') },
     h('p', { class: 'gs-hand__head' }, handName, handLevel),
+    handBeat,
     handWarn,
     h(
       'p',
@@ -175,10 +189,18 @@ export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
   let tagsKey = '';
   let detachToken: (() => void) | null = null;
 
-  const setWarn = (text: string): void => {
+  const setWarn = (text: string, blocked = true): void => {
     setText(handWarn, text);
     handWarn.hidden = text === '';
-    handInfoEl.classList.toggle('is-blocked', text !== '');
+    handInfoEl.classList.toggle('is-blocked', text !== '' && blocked);
+    handInfoEl.classList.toggle('is-short', text !== '' && !blocked);
+  };
+
+  /** „Překonej: X“ (Pan starosta) — v kole, dokud laťka platí; mimo kolo a během skórování nic. */
+  const setBeat = (beat: number | null): void => {
+    const text = beat === null ? '' : t('game.sidebar.scoreToBeat', { score: beat });
+    setText(handBeat, text);
+    handBeat.hidden = text === '';
   };
 
   const updateTags = (): void => {
@@ -210,6 +232,11 @@ export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
   };
 
   const updateHand = (): void => {
+    const s = c.state;
+    // Mimo kolo (výběr útraty, Večerka, konec kola…) se náhled kombinace neukazuje — „Vyber karty 0 × 0“ by mátlo.
+    // Během skórování zůstává (presenter ho plní), v obálce s dobranou rukou slouží výběru cílů.
+    const handPhase = s.phase === 'round' || (s.phase === 'booster' && (s.booster?.hand.length ?? 0) > 0);
+    handInfoEl.hidden = !scoring && !handPhase;
     if (scoring) {
       writeHand(
         t(`hands.${scoring.hand}.name`),
@@ -219,11 +246,12 @@ export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
       );
       handInfoEl.classList.add('is-scoring');
       setWarn('');
+      setBeat(null);
       return;
     }
     handInfoEl.classList.remove('is-scoring');
-    const s = c.state;
-    const selecting = (s.phase === 'round' || s.phase === 'booster') && c.selected.length > 0;
+    setBeat(s.phase === 'round' ? c.engine.scoreToBeat() : null);
+    const selecting = handPhase && c.selected.length > 0;
     if (!selecting) {
       writeHand(t('game.sidebar.handNone'), '', '0', '0');
       setWarn('');
@@ -232,7 +260,18 @@ export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
     const p = c.preview();
     const reason =
       s.phase === 'round' && p.blockedReason && hasKey(p.blockedReason) ? t(p.blockedReason) : '';
-    setWarn(reason ? t('game.sidebar.handBlocked', { reason }) : '');
+    if (reason) setWarn(t('game.sidebar.handBlocked', { reason }));
+    else if (
+      s.phase === 'round' &&
+      p.scoreToBeat !== undefined &&
+      p.estimate !== undefined &&
+      p.estimate <= p.scoreToBeat
+    ) {
+      // Pan starosta: podle odhadu (všechny efekty, náhoda neprozrazená) ruka laťku nepřekoná. Varování nese obě
+      // čísla — řádek „Překonej“ se schová, ať panel nepřeteče.
+      setWarn(t('game.sidebar.belowBeat', { estimate: p.estimate, score: p.scoreToBeat }), false);
+      setBeat(null);
+    } else setWarn('');
     if (p.hidden) {
       writeHand(t('game.sidebar.handHidden'), '', t('game.sidebar.unknown'), t('game.sidebar.unknown'));
     } else if (!p.hand) {
@@ -255,11 +294,18 @@ export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
     let bossId: string | null = slot?.bossId ?? null;
     let name: string;
     let rule = '';
+    let beaten = false;
+    const victory = s.phase === 'victory';
     if (round && (s.phase === 'round' || s.phase === 'round_end' || s.phase === 'game_over')) {
       kind = round.blind;
       bossId = round.bossId;
       name = blindName(kind, bossId && ctx.registry.bosses[bossId] ? bossId : null);
-      if (bossId && ctx.registry.bosses[bossId]) {
+      if (s.phase === 'round_end') {
+        // Útrata je poražená: pravidlo už neplatí — místo něj „Poraženo“ (jinak to vypadá jako další šéf, zvlášť po
+        // startu nekonečného režimu, kdy se vyplácí odměna za finálového šéfa).
+        beaten = true;
+        rule = t(kind === 'boss' ? 'game.sidebar.bossBeaten' : 'game.sidebar.blindBeaten');
+      } else if (bossId && ctx.registry.bosses[bossId]) {
         const bossRule = bossTexts(bossId, { registry: ctx.registry }).rule;
         // Velká útrata na Imperialu má pravidlo šéfa navíc (DESIGN kap. 10).
         rule = round.bossDisabled
@@ -273,18 +319,24 @@ export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
     } else {
       name = t(`game.sidebar.phase.${s.phase}`);
       const boss = s.blinds.find((b) => b.kind === 'boss');
-      if (boss?.bossId && ctx.registry.bosses[boss.bossId] && s.phase !== 'victory')
+      if (boss?.bossId && ctx.registry.bosses[boss.bossId] && !victory)
         rule = t('game.sidebar.nextBoss', { name: blindName('boss', boss.bossId) });
     }
     setText(blindNameEl, name);
     setText(blindRule, rule);
     blindRule.hidden = rule === '';
-    blindBox.dataset.blind = kind;
-    const key = `${kind}|${bossId ?? ''}`;
+    blindBox.dataset.blind = victory ? 'victory' : kind;
+    blindBox.classList.toggle('is-beaten', beaten);
+    // Výhra: pohár místo žetonu útraty (ne ikona dalšího / poraženého šéfa).
+    const key = victory ? 'victory' : `${kind}|${bossId ?? ''}`;
     if (key !== tokenKey) {
       tokenKey = key;
-      const known = bossId && ctx.registry.bosses[bossId] ? bossId : null;
-      token.replaceChildren(blindArt(kind, known, { registry: ctx.registry }));
+      const known = !victory && bossId && ctx.registry.bosses[bossId] ? bossId : null;
+      token.replaceChildren(
+        victory
+          ? iconElement('trophy', { className: 'gs-blind__trophy' })
+          : blindArt(kind, known, { registry: ctx.registry }),
+      );
       // Žeton šéfa: tooltip s pravidlem a hláškou (hover, dlouhý stisk); jinak jen ozdoba.
       detachToken?.();
       detachToken = known
@@ -317,7 +369,7 @@ export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
       target = c.engine.blindTarget(slot.kind, slot.bossId);
       reward = c.engine.blindReward(slot.kind, slot.bossId);
     }
-    setText(targetValue, target === null ? '–' : formatNumber(target));
+    setNumberText(targetValue, target === null ? '–' : formatNumber(target));
     setText(
       targetReward,
       reward === null
@@ -326,12 +378,12 @@ export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
           ? t('game.sidebar.reward', { n: reward })
           : t('game.sidebar.noReward'),
     );
-    if (!scoring) setText(roundScoreEl, formatNumber(round?.score ?? 0));
+    if (!scoring) setNumberText(roundScoreEl, formatNumber(round?.score ?? 0));
     updateHand();
 
     setText(handsEl, formatNumber(round ? round.handsLeft : m.hands));
     setText(discardsEl, formatNumber(round ? round.discardsLeft : m.discards));
-    setText(moneyEl, formatMoney(s.money));
+    setNumberText(moneyEl, formatMoney(s.money));
     moneyEl.classList.toggle('is-negative', s.money < 0);
     setText(
       anteEl,
@@ -363,10 +415,10 @@ export function createSidebar(ctx: GameCtx, actions: SidebarActions): Sidebar {
       setText(multEl, formatNumber(mult));
     },
     setRoundScore(n) {
-      setText(roundScoreEl, formatNumber(n));
+      setNumberText(roundScoreEl, formatNumber(n));
     },
     setMoney(n) {
-      setText(moneyEl, formatMoney(n));
+      setNumberText(moneyEl, formatMoney(n));
       moneyEl.classList.toggle('is-negative', n < 0);
     },
   };

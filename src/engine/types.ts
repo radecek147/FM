@@ -593,6 +593,16 @@ export interface HandPreview {
    * při výběru karet. Chybí, když ruka projde (nebo je náhled skrytý).
    */
   blockedReason?: string;
+  /**
+   * Laťka šéfa (`Game.scoreToBeat`, Pan starosta): ruka se započítá, jen když ji překoná. Chybí bez laťky (nebo
+   * u skrytého / zakázaného náhledu).
+   */
+  scoreToBeat?: number;
+  /**
+   * Odhad skóre ruky `floor(čipy × mult)` se všemi efekty — jen s laťkou. Počítá se na kopii stavu s náhradními RNG
+   * proudy, takže neprozradí skutečný hod (šťastné karty, sklo) a run nezmění.
+   */
+  estimate?: number;
 }
 
 // ─────────────────────────── Události ───────────────────────────

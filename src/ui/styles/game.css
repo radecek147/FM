@@ -93,10 +93,29 @@
     0 3px 0 rgb(0 0 0 / 30%);
 }
 
-.gs-blind[data-blind='boss'] {
+.gs-blind[data-blind='boss']:not(.is-beaten) {
   box-shadow:
     inset 0 0 0 3px var(--danger),
     0 3px 0 rgb(0 0 0 / 30%);
+}
+
+/* Poražená útrata (konec kola) a výhra: zlatý rámeček místo červeného šéfova. */
+.gs-blind.is-beaten,
+.gs-blind[data-blind='victory'] {
+  box-shadow:
+    inset 0 0 0 3px var(--accent),
+    0 3px 0 rgb(0 0 0 / 30%);
+}
+
+.gs-blind.is-beaten .gs-blind__rule {
+  color: var(--accent);
+}
+
+.gs-blind__trophy {
+  width: 100%;
+  height: 100%;
+  padding: 0.35rem;
+  color: var(--accent);
 }
 
 .gs-blind__token {
@@ -156,8 +175,25 @@
   box-shadow: inset 0 2px 6px rgb(0 0 0 / 35%);
 }
 
+/*
+ * Velká čísla (nekonečný režim, 12+ číslic) se nesmí zlomit uprostřed skupiny číslic: jeden řádek a písmo se
+ * zmenší podle délky textu (`--chars` dosadí sidebar.ts `setNumberText`) a šířky políčka (container query `cqi`).
+ */
+.gs-target,
+.gs-score,
+.gs-stat {
+  container-type: inline-size;
+}
+
+.gs-target__value,
+.gs-score__value,
+.gs-stat__value {
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+
 .gs-target__value {
-  font-size: 1.7rem;
+  font-size: clamp(0.75rem, calc(100cqi / (var(--chars, 6) * 0.62)), var(--value-fs, 1.7rem));
   font-weight: 700;
   line-height: 1.1;
   color: var(--accent);
@@ -170,7 +206,7 @@
 }
 
 .gs-score__value {
-  font-size: 1.9rem;
+  font-size: clamp(0.75rem, calc(100cqi / (var(--chars, 6) * 0.62)), var(--value-fs, 1.9rem));
   font-weight: 700;
   line-height: 1.1;
   color: var(--paper);
@@ -243,6 +279,20 @@
   opacity: 0.6;
 }
 
+/* Laťka šéfa (Pan starosta): „Překonej: X“ pod názvem kombinace. */
+.gs-hand__beat {
+  margin-top: 0.2rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* Odhad nepřekoná laťku (Pan starosta): varování jantarové — ruka se zahrát smí, jen se nezapočítá. */
+.gs-hand.is-short .gs-hand__warn {
+  color: var(--ink);
+  background: var(--accent);
+}
+
 /* Šéf by ruku zakázal (Soused s vrtačkou): varování přímo v náhledu kombinace. */
 .gs-hand__warn {
   margin-top: 0.25rem;
@@ -303,7 +353,7 @@
 }
 
 .gs-stat__value {
-  font-size: 1.3rem;
+  font-size: var(--stat-fs, 1.3rem);
   font-weight: 700;
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
@@ -318,6 +368,8 @@
 }
 
 .gs-stat__value--money {
+  /* Velký zůstatek (milion korun) se zmenší, ať se vejde na řádek (`--chars`, viz výš). */
+  font-size: min(var(--stat-fs, 1.3rem), calc(100cqi / (var(--chars, 4) * 0.62)));
   color: #8a6408;
 }
 
@@ -1571,6 +1623,12 @@
   outline: none;
 }
 
+/* Focus z klávesnice na ruce (po výběru útraty Enterem): jemný rámeček kolem karet. */
+.gb-hand:focus-visible {
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 0 3px rgb(232 169 42 / 55%);
+}
+
 .gb-hand {
   display: flex;
   align-items: flex-end;
@@ -1696,6 +1754,39 @@
   gap: 0.15rem 0.6rem;
   align-items: baseline;
   justify-content: center;
+}
+
+/* Krátká hláška u tlačítek (nejvýš 5 karet, nejdřív vyber karty) — naskočí jen průhledností. */
+.gb-mid {
+  position: relative;
+}
+
+/* Přes řádek „Vybráno x/5“ (o výběr jde), bez posunu rozvržení. */
+.gb-alert {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  z-index: 2;
+  max-width: min(26rem, 90vw);
+  padding: 0.1rem 0.6rem;
+  text-align: center;
+  translate: -50% 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--danger);
+  border-radius: 999px;
+  animation: gb-alert-in var(--t-fast) ease-out;
+}
+
+@keyframes gb-alert-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.no-anim .gb-alert {
+  animation: none;
 }
 
 /* Velikost ruky; zmenšená (Velká voda, Garsonka) červeně, zvětšená zeleně. */
@@ -2166,6 +2257,48 @@
   font-size: 0.95rem;
 }
 
+/* Detail zboží / možnosti obálky: tlačítka slotu a pod neaktivním důvod (vidět i na dotyku). */
+.detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.detail__action {
+  display: flex;
+  flex: 1 1 10rem;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.detail__why {
+  font-size: 0.8rem;
+  line-height: 1.3;
+  color: var(--danger);
+}
+
+/* Proč tlačítka slotu nejdou (Na tohle nemáš, Nemáš volný slot, Vyber v ruce kartu…): vidět bez hoveru. */
+.offer-why {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  color: #ffd8cc;
+  text-align: center;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+/* Řádek důvodu má v řadě slotů stejnou výšku (dva řádky), prázdný jen drží místo — tlačítka v jedné linii. */
+.booster-option .offer-why,
+.shop-slot .offer-why {
+  min-height: 2.5em;
+}
+
 .modal--pause .modal__actions {
   flex-direction: column;
   align-items: stretch;
@@ -2207,7 +2340,7 @@
 
   .gs-target__value,
   .gs-score__value {
-    font-size: 1.45rem;
+    --value-fs: 1.45rem;
   }
 
   .gs-hand__chips,
@@ -2247,11 +2380,11 @@
   }
 
   .ui-large .gs-target__value {
-    font-size: 1.35rem;
+    --value-fs: 1.35rem;
   }
 
   .ui-large .gs-score__value {
-    font-size: 1.45rem;
+    --value-fs: 1.45rem;
   }
 
   .ui-large .gs-hand__calc {
@@ -2280,7 +2413,7 @@
   }
 
   .ui-large .gs-stat__value {
-    font-size: 1.1rem;
+    --stat-fs: 1.1rem;
   }
 
   .ui-large .gs-buttons {
@@ -2318,11 +2451,11 @@
   }
 
   .gs-target__value {
-    font-size: 1.35rem;
+    --value-fs: 1.35rem;
   }
 
   .gs-score__value {
-    font-size: 1.45rem;
+    --value-fs: 1.45rem;
   }
 
   .gs-hand__calc {
@@ -2351,7 +2484,7 @@
   }
 
   .gs-stat__value {
-    font-size: 1.1rem;
+    --stat-fs: 1.1rem;
   }
 
   .gs-buttons {
@@ -2463,7 +2596,7 @@
   }
 
   .gs-stat__value {
-    font-size: 1.05rem;
+    --stat-fs: 1.05rem;
   }
 
   .gs-buttons {
@@ -2478,7 +2611,7 @@
 
   .gs-target__value,
   .gs-score__value {
-    font-size: 1.35rem;
+    --value-fs: 1.35rem;
   }
 
   .gb-controls {
@@ -2579,7 +2712,7 @@
   }
 
   .gs-stat__value {
-    font-size: 0.95rem;
+    --stat-fs: 0.95rem;
   }
 
   .gs-buttons .btn {
@@ -2661,6 +2794,17 @@
   }
 }
 
+/* Dotyk bez myši: nápovědy kláves (čísla pod kartami) nemají smysl — pryč, a ruka je o ně nižší. */
+@media (hover: none) and (pointer: coarse) {
+  .pcard__key {
+    display: none;
+  }
+
+  .gb-hand {
+    padding-bottom: 0.35rem;
+  }
+}
+
 /* Dotyk: menší tlačítka herní obrazovky taky aspoň 44 px vysoká. */
 @media (pointer: coarse) {
   .gs-buttons .btn,
@@ -2668,5 +2812,188 @@
   .shop-slot__actions .btn,
   .booster-option__actions .btn {
     min-height: 44px;
+  }
+}
+
+/*
+ * Telefon na výšku (390 × 844, „best effort“, test 1.0.1): ruka a Zahrát / Zahodit vidět bez posouvání a možnosti
+ * obálky nad přehybem. Kompaktní levý panel (útrata na jeden řádek, kombinace s čipy × mult v jedné řadě, menší
+ * čísla), žolíci a spotřebky vedle sebe s menšími kartami, balíček vpravo vedle třídění.
+ */
+@media (max-width: 600px) {
+  .game {
+    gap: 0.35rem;
+  }
+
+  /* Volné místo do výšky okna dostane stůl (ne řada žolíků a ruka). */
+  .game-main {
+    grid-template-rows: auto minmax(calc(var(--card-w) * 1.9), 1fr) auto;
+    gap: 0.3rem;
+  }
+
+  .game-sidebar {
+    gap: 0.3rem;
+    padding: 0.35rem;
+  }
+
+  .gs-blind {
+    grid-template-columns: 2.2rem minmax(0, 1fr);
+    gap: 0.45rem;
+    padding: 0.3rem 0.45rem;
+  }
+
+  .gs-blind__token {
+    width: 2.2rem;
+    height: 2.2rem;
+  }
+
+  .gs-blind__name {
+    font-size: 0.95rem;
+  }
+
+  .gs-blind__rule {
+    margin-top: 0.1rem;
+    font-size: 0.72rem;
+  }
+
+  .gs-box {
+    padding: 0.25rem 0.45rem;
+  }
+
+  .gs-label {
+    font-size: 0.62rem;
+  }
+
+  .gs-target__reward {
+    font-size: 0.7rem;
+  }
+
+  .gs-target__value,
+  .gs-score__value {
+    --value-fs: 1.15rem;
+  }
+
+  /* Kombinace: název vlevo, čipy × mult vpravo v jedné řadě; laťka a varování pod nimi přes celou šířku. */
+  .gs-hand {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    gap: 0.2rem 0.45rem;
+    align-items: center;
+  }
+
+  .gs-hand__head {
+    min-height: 0;
+  }
+
+  .gs-hand__name {
+    font-size: 0.88rem;
+  }
+
+  .gs-hand__calc {
+    grid-row: 1;
+    grid-column: 2;
+    gap: 0.25rem;
+    margin-top: 0;
+  }
+
+  .gs-hand__beat,
+  .gs-hand__warn {
+    grid-column: 1 / -1;
+    margin-top: 0;
+  }
+
+  .gs-hand__chips,
+  .gs-hand__mult {
+    padding: 0.1rem 0.25rem;
+    font-size: 1rem;
+  }
+
+  .gs-hand__times {
+    font-size: 0.95rem;
+  }
+
+  .gs-stats {
+    gap: 0.25rem;
+  }
+
+  .gs-stat {
+    padding: 0.1rem 0.15rem;
+  }
+
+  .gs-stat__value {
+    --stat-fs: 0.9rem;
+  }
+
+  .gs-buttons {
+    gap: 0.3rem;
+  }
+
+  /* Žolíci a spotřebky vedle sebe, menší karty (dotykový cíl pořád ≥ 42 px). */
+  .game-top {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.3rem;
+  }
+
+  .gt-group {
+    --card-w: 42px;
+
+    padding: 0.2rem 0.35rem 0.3rem;
+  }
+
+  .gt-group--consumables {
+    min-width: calc(var(--card-w) * 2 + 1.1rem);
+  }
+
+  .gt-title {
+    margin-bottom: 0.1rem;
+    font-size: 0.62rem;
+  }
+
+  .gt-row {
+    gap: 0.3rem;
+  }
+
+  .gt-empty {
+    inset: 1rem 0.35rem 0.3rem;
+    font-size: 0.72rem;
+  }
+
+  .game-stage {
+    min-height: calc(var(--card-w) * 1.9);
+  }
+
+  .game-table__hint {
+    font-size: 0.8rem;
+  }
+
+  .gb-controls {
+    gap: 0.35rem;
+  }
+
+  /* Balíček vpravo vedle třídění (ne ve vlastní řadě pod tlačítky); bez ruky zůstává v toku. */
+  .game-bottom:not(.is-empty) {
+    position: relative;
+  }
+
+  .game-bottom:not(.is-empty) .gb-deck {
+    --card-w: 30px;
+
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    grid-template-columns: auto;
+    gap: 0.1rem;
+    padding: 0.1rem;
+    margin: 0;
+  }
+
+  .game-bottom:not(.is-empty) .gb-deck__count {
+    padding: 0 0.3rem;
+    font-size: 0.7rem;
+  }
+
+  .game-bottom:not(.is-empty) .gb-mid {
+    justify-content: flex-start;
+    padding-right: 3.2rem;
   }
 }

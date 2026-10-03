@@ -450,9 +450,15 @@ test('Večerka po štítcích: žolík navíc se slevou, edice bez příplatku a
   if (editionSlot >= 0)
     await expect(page.getByTestId(`shop-item-${editionSlot}-badge`)).toHaveText(t('game.shop.badgeEdition'));
   await expect(page.getByTestId(`shop-voucher-${voucherSlot}-badge`)).toHaveText(t('game.shop.badgeExtra'));
-  // Štítky se spotřebovaly: hlášky a prázdný panel.
-  await expect(page.getByTestId('toast-tag')).toHaveCount(3);
+  // Štítky se spotřebovaly: hlášky (v rohu nejvýš dvě, třetí počká, až jedna odejde) a prázdný panel.
+  await expect(page.getByTestId('toast-tag')).toHaveCount(2);
   await expect(page.getByTestId('active-tags')).toBeHidden();
+  await page
+    .getByTestId('toast-tag')
+    .first()
+    .getByRole('button', { name: t('common.dismiss') })
+    .click();
+  await expect(page.getByTestId('toast-tag')).toHaveCount(2);
   await shot(page, 'shop-tags');
   expectCleanConsole(log);
 });

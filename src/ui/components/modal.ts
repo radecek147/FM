@@ -16,6 +16,7 @@ import type { Child } from '../dom';
 import { h } from '../dom';
 import type { ButtonVariant } from './button';
 import { button } from './button';
+import { flushHeldToasts } from './toast';
 
 export interface ModalAction<T> {
   label: string;
@@ -161,7 +162,11 @@ export function openModal<T = unknown>(opts: ModalOptions<T>): ModalHandle<T> {
     if (idx >= 0) stack.splice(idx, 1);
     restoreInert();
     layer.remove();
-    if (stack.length === 0) document.documentElement.classList.remove('modal-open');
+    if (stack.length === 0) {
+      document.documentElement.classList.remove('modal-open');
+      // Novinky, které čekaly na zavření dialogu (toast.ts `background`), teď smějí ven.
+      flushHeldToasts();
+    }
     if (returnFocus && returnFocus.isConnected && !returnFocus.closest('[inert]'))
       returnFocus.focus({ preventScroll: true });
     else top()?.dialog.focus();

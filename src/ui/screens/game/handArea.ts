@@ -14,6 +14,7 @@ import { formatNumber } from '../../../i18n/format';
 import { button } from '../../components/button';
 import { createCardBack, createCardView, updateCardView } from '../../components/card';
 import { attachDragSort } from '../../components/dragSort';
+import { sound } from '../../audio/hooks';
 import { toast } from '../../components/toast';
 import { hideTooltip } from '../../components/tooltip';
 import { activeBossId, blindName, bossReasonText, cardLabel } from '../../describe';
@@ -35,6 +36,13 @@ export interface HandArea {
   moveCard(dir: -1 | 1): boolean;
   /** Přesune focus na ruku (skupinu karet) — když byl na jiném ovládacím prvku mimo ruku. */
   focusHand(): void;
+  /**
+   * Výběr / zrušení výběru karty (klik, dotyk, klávesy 1–8). Šestá karta nad limit se nevybere tiše: karta se
+   * zatřese a pod tlačítky naskočí „Vybrat jde nejvýš 5 karet“.
+   */
+  toggle(cardId: number): void;
+  /** Krátká zpětná vazba, že akce nejde (Enter / X bez vybraných karet): zatřesení ruky a hláška pod tlačítky. */
+  nudge(key: 'selectFirst' | 'maxSelected'): void;
 }
 
 export interface HandAreaActions {
@@ -77,6 +85,9 @@ export function createHandArea(ctx: GameCtx, actions: HandAreaActions): HandArea
   // Velikost ruky v kole (Garsonka, Rozložené noviny, Velká voda ji mění) — se změnou proti začátku kola.
   const handSizeEl = h('p', { class: 'gb-handsize', 'data-testid': 'hand-size' });
   const hint = h('p', { class: 'gb-hint' });
+  // Krátká hláška u tlačítek (nejvýš 5 karet, nejdřív vyber karty) — role status, čtečka ji přečte.
+  const alertEl = h('p', { class: 'gb-alert', role: 'status', 'data-testid': 'hand-alert', hidden: true });
+  let alertTimer = 0;
 
   const playBtn = button({
     label: t('game.hand.play'),
@@ -128,7 +139,13 @@ export function createHandArea(ctx: GameCtx, actions: HandAreaActions): HandArea
     'div',
     { class: 'gb-controls' },
     playBtn,
-    h('div', { class: 'gb-mid' }, sortGroup, h('div', { class: 'gb-counts' }, selectedEl, handSizeEl)),
+    h(
+      'div',
+      { class: 'gb-mid' },
+      sortGroup,
+      h('div', { class: 'gb-counts' }, selectedEl, handSizeEl),
+      alertEl,
+    ),
     discardBtn,
   );
 
@@ -212,6 +229,44 @@ export function createHandArea(ctx: GameCtx, actions: HandAreaActions): HandArea
     });
     return true;
   };
+  const shake = (el: Element | null): void =>
+    void animate(
+      ctx.app.anim,
+      el,
+      [
+        { translate: '0 0' },
+        { translate: '-5px 0', offset: 0.2 },
+        { translate: '5px 0', offset: 0.45 },
+        { translate: '-3px 0', offset: 0.7 },
+        { translate: '0 0' },
+      ],
+      320,
+    );
+
+  const nudge = (key: 'selectFirst' | 'maxSelected', target: Element | null = handRow): void => {
+    alertEl.textContent = t(`game.hand.${key}`, { max: c.engine.modifiers().maxSelect });
+    alertEl.hidden = false;
+    window.clearTimeout(alertTimer);
+    alertTimer = window.setTimeout(() => {
+      alertEl.hidden = true;
+    }, 1800);
+    sound('error');
+    shake(target);
+  };
+
+  const toggle = (cardId: number): void => {
+    if (c.busy) return;
+    const full =
+      !c.selected.includes(cardId) &&
+      c.handIds().includes(cardId) &&
+      c.selected.length >= c.engine.modifiers().maxSelect;
+    if (full) {
+      nudge('maxSelected', cards.get(cardId) ?? handRow);
+      return;
+    }
+    c.toggleSelect(cardId);
+  };
+
   /** Velikost ruky: identita kola, velikost na jeho začátku a naposledy ukázaná. */
   const size = { round: '', start: 0, last: 0 };
 
@@ -280,7 +335,7 @@ export function createHandArea(ctx: GameCtx, actions: HandAreaActions): HandArea
           mods,
           reason,
           registry: ctx.registry,
-          onClick: (cd) => c.toggleSelect(cd.id),
+          onClick: (cd) => toggle(cd.id),
         });
         cards.set(id, elCard);
         created.add(elCard);
@@ -380,5 +435,7 @@ export function createHandArea(ctx: GameCtx, actions: HandAreaActions): HandArea
     focusHand() {
       handRow.focus({ preventScroll: true });
     },
+    toggle,
+    nudge: (key) => nudge(key),
   };
 }

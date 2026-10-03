@@ -7,7 +7,7 @@
  */
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { registry } from '../../src/content';
-import type { ContentRegistry, GameEvent, RunState } from '../../src/engine';
+import type { ContentRegistry, RunState } from '../../src/engine';
 import { Game, serializeRun } from '../../src/engine';
 import type { MetaNotice, Profile } from '../../src/engine/meta';
 import {
@@ -45,7 +45,7 @@ import { dailyShareText } from '../../src/ui/screens/stats';
 import { PROFILE_BACKUP_PREFIX } from '../../src/ui/settings';
 import { STORAGE_KEYS, memoryStore, type KeyValueStore } from '../../src/ui/storage';
 import type { TutorialController } from '../../src/ui/tutorial';
-import { installTutorial, pendingTutorialStep, placeBubble, stepsDoneByEvents } from '../../src/ui/tutorial';
+import { installTutorial, pendingTutorialStep, placeBubble, tutorialStepNumber } from '../../src/ui/tutorial';
 
 const REG = registry();
 const NOW = new Date('2026-10-02T10:00:00.000Z');
@@ -516,20 +516,14 @@ describe('tutoriál: výběr kroku a umístění', () => {
     expect(pendingTutorialStep(off, b, view)).toBeNull();
   });
 
-  it('stepsDoneByEvents: akce dokončí své kroky', () => {
-    const ev = (e: unknown): GameEvent => e as GameEvent;
-    expect(stepsDoneByEvents([ev({ type: 'handPlayed' })])).toEqual(['select', 'play']);
-    expect(
-      stepsDoneByEvents([
-        ev({ type: 'cardsDiscarded' }),
-        ev({ type: 'roundWon' }),
-        ev({ type: 'cashedOut' }),
-        ev({ type: 'itemBought', kind: 'joker' }),
-        ev({ type: 'itemBought', kind: 'voucher' }),
-        ev({ type: 'blindSkipped' }),
-        ev({ type: 'bossDefeated' }),
-      ]),
-    ).toEqual(['discard', 'goal', 'roundEnd', 'shop', 'skip', 'boss']);
+  it('tutorialStepNumber: číslo rady podle počtu viděných rad — roste o jedna v jakémkoli pořadí', () => {
+    // Dřív podle pořadí v seznamu: 1 → 2 → 5 → 6 → 9 → 7 → 8.
+    expect(tutorialStepNumber([], 'select')).toBe(1);
+    expect(tutorialStepNumber(['select', 'play'], 'roundEnd')).toBe(3);
+    expect(tutorialStepNumber(['select', 'play', 'roundEnd', 'shop'], 'skip')).toBe(5);
+    expect(tutorialStepNumber(['select', 'play', 'roundEnd', 'shop', 'skip'], 'jokerOrder')).toBe(6);
+    // Krok sám se nepočítá dvakrát a číslo nepřeroste počet kroků.
+    expect(tutorialStepNumber(['select', 'play'], 'play')).toBe(2);
   });
 
   it('placeBubble: strana v pořadí, vyhne se ovládání, záložní místo, roh bez šipky', () => {
@@ -596,6 +590,36 @@ describe('tutoriál ve hře', () => {
     expectNoMissingTexts(bubble());
     // Uloženo v profilu.
     expect(deserializeProfile(store.get(STORAGE_KEYS.profile)).tutorial.seen).toContain('discard');
+  });
+
+  it('rada se ukáže nejvýš jednou (další akce ji dokončí, přeřazení ne); číslo rady roste o jedna', async () => {
+    app.controller = app.profiles.newRun({ deckId: 'pub', stake: 1, seed: 'TUTORIAL' });
+    app.go('game');
+    const c = running();
+    await c.act({ type: 'selectBlind' });
+    await settle(c);
+    const meta = (): string => q('.tutorial__meta').textContent ?? '';
+    expect(meta()).toContain(t('meta.tutorial.step', { n: 1, total: 9 }));
+    c.toggleSelect(c.state.round!.hand[0]!);
+    expect(meta()).toContain(t('meta.tutorial.step', { n: 2, total: 9 }));
+    await c.play();
+    await settle(c);
+    expect(bubble().dataset.step).toBe('discard');
+    expect(meta()).toContain(t('meta.tutorial.step', { n: 3, total: 9 }));
+    // Hráč radu nechá být a zahraje další ruku → rada je přečtená a už se nevrátí.
+    c.toggleSelect(c.state.round!.hand[0]!);
+    await c.play();
+    await settle(c);
+    expect(app.profile.tutorial.seen).toContain('discard');
+    expect(bubble().dataset.step).toBe('goal');
+    expect(meta()).toContain(t('meta.tutorial.step', { n: 4, total: 9 }));
+    // Přeřazení ruky (akce bez událostí) radu nedokončí.
+    await c.act({ type: 'sortHand', by: 'suit' });
+    await settle(c);
+    expect(app.profile.tutorial.seen).not.toContain('goal');
+    expect(bubble().dataset.step).toBe('goal');
+    // Bublinu obcházejí toasty a tooltipy.
+    expect(bubble().hasAttribute('data-overlay-avoid')).toBe(true);
   });
 
   it('Štamgast v bublině se při připojení ke hře překreslí (tutoriál vzniká dřív, než dorazí ikony)', async () => {

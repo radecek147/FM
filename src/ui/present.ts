@@ -268,13 +268,16 @@ async function presentStep(view: PresentView, step: ScoreStep, per: number, mone
     await anim.wait(per);
     return;
   }
-  const target = stepTarget(view, step);
+  // Šéf přepočítal výsledek (Pan starosta): hláška uprostřed stolu u zahraných karet — nad náhledem kombinace v levém
+  // panelu by zakryla číslo Skóre kola.
+  const bossStep = step.source === 'boss';
+  const target = bossStep ? (view.tableEl() ?? stepTarget(view, step)) : stepTarget(view, step);
   // Nejdřív změřit (zdroj kroku), pak zapisovat — bubliny i částice použijí stejný obdélník.
   const rect = anim.instant ? null : measure(target);
-  void pop(anim, target);
+  if (!bossStep) void pop(anim, target);
   let offset = 0;
   const add = (text: string, tone: BubbleTone): void => {
-    bubble(view, rect, text, tone, { offset });
+    bubble(view, rect, text, tone, { offset, big: bossStep });
     offset += 26;
   };
   const msg = messageText(step.message);

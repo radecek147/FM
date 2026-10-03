@@ -462,7 +462,7 @@ for (const vp of [
 test.describe('rozložení tablet 820×1180 — hlášky', () => {
   test.use({ viewport: { width: 820, height: 1180 }, hasTouch: true });
 
-  test('hláška ve Večerce jde do volného místa pod panelem a nezakryje zboží', async ({ page }) => {
+  test('hláška ve Večerce jde do rohu mimo panel a nezakryje zboží ani tlačítka', async ({ page }) => {
     const log = watchConsole(page);
     await presetSettings(page, { animations: false });
     await seedSavedRun(
@@ -480,11 +480,12 @@ test.describe('rozložení tablet 820×1180 — hlášky', () => {
     const toastEl = page.getByTestId('toast-shop-use');
     await expect(toastEl).toContainText(t('game.shop.useNeedsHand'));
     const toastBox = (await toastEl.boundingBox())!;
-    const panel = (await page.getByTestId('shop').boundingBox())!;
-    expect(toastBox.y).toBeGreaterThanOrEqual(panel.y + panel.height);
+    // Úzké rozvržení: roh nahoře v okně (nad levým panelem), ne přes Večerku.
+    expect(toastBox.y).toBeGreaterThanOrEqual(0);
     expect(toastBox.y + toastBox.height).toBeLessThanOrEqual(1180);
     for (const slot of await boxes(page, '.shop-slot')) expect(overlaps(toastBox, slot)).toBe(false);
-    expect(overlaps(toastBox, (await page.getByTestId('deck').boundingBox())!)).toBe(false);
+    for (const id of ['shop-reroll', 'shop-continue', 'deck'])
+      expect(overlaps(toastBox, (await page.getByTestId(id).boundingBox())!)).toBe(false);
     expectCleanConsole(log);
   });
 });

@@ -154,20 +154,47 @@ function render(content: TooltipContent): HTMLParagraphElement[] {
   ].filter((n) => n !== null);
 }
 
+/** Obdélníky prvků, které bublina nemá zakrýt (bublina Štamgasta: `data-overlay-avoid`). */
+function avoidRects(): DOMRect[] {
+  return Array.from(document.querySelectorAll<HTMLElement>('[data-overlay-avoid]'))
+    .filter((el) => !el.hidden && el.getClientRects().length > 0)
+    .map((el) => el.getBoundingClientRect())
+    .filter((r) => r.width > 0 && r.height > 0);
+}
+
 function position(tip: HTMLElement, target: HTMLElement): void {
   const rect = target.getBoundingClientRect();
   const vw = document.documentElement.clientWidth || window.innerWidth;
   const vh = document.documentElement.clientHeight || window.innerHeight;
   const w = tip.offsetWidth;
   const ht = tip.offsetHeight;
-  let x = rect.left + rect.width / 2 - w / 2;
-  x = Math.max(MARGIN, Math.min(x, vw - w - MARGIN));
+  const clampX = (x: number): number => Math.max(MARGIN, Math.min(x, vw - w - MARGIN));
+  const clampY = (y: number): number => Math.max(MARGIN, Math.min(y, vh - ht - MARGIN));
+  let x = clampX(rect.left + rect.width / 2 - w / 2);
   let y = rect.top - ht - GAP;
   let below = false;
   if (y < MARGIN) {
     y = rect.bottom + GAP;
     below = true;
     if (y + ht > vh - MARGIN) y = Math.max(MARGIN, vh - ht - MARGIN);
+  }
+  // Bublina Štamgasta: tooltip ji nesmí překrýt — zkusí druhou stranu, pak vedle karty.
+  const avoid = avoidRects();
+  const hits = (cx: number, cy: number): boolean =>
+    avoid.some((a) => cx < a.right && a.left < cx + w && cy < a.bottom && a.top < cy + ht);
+  if (avoid.length > 0 && hits(x, y)) {
+    const cy = clampY(rect.top + rect.height / 2 - ht / 2);
+    const options: [number, number, boolean][] = [
+      [x, rect.top - ht - GAP, false],
+      [x, rect.bottom + GAP, true],
+      [rect.right + GAP, cy, false],
+      [rect.left - w - GAP, cy, false],
+    ];
+    const ok = options.find(
+      ([cx, cy2]) =>
+        cx >= MARGIN && cy2 >= MARGIN && cx + w <= vw - MARGIN && cy2 + ht <= vh - MARGIN && !hits(cx, cy2),
+    );
+    if (ok) [x, y, below] = ok;
   }
   tip.classList.toggle('ktip--below', below);
   tip.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;

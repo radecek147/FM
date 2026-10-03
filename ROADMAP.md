@@ -366,14 +366,17 @@ simulacemi. Seřazeno podle priority.
 
 **Chyby a čitelnost**
 
-- [ ] Číslice „3“ v písmu Karban Digits vypadá jako „8“ („Patro 3/8“ se čte „8/8“); „C“ jako „O“, „č“ jako „ċ“
-      (`src/ui/art/digitFont.ts`, malé velikosti v levém panelu)
-- [ ] Toasty (achievementy, odemčení) se zobrazují uprostřed plochy a zakrývají obálku, zboží, skórování i výhru
-      a jsou i nad modály — přesunout do rohu, pod modaly, během skórování pozdržet
+- [x] Číslice „3“ v písmu Karban Digits vypadá jako „8“ („Patro 3/8“ se čte „8/8“); „C“ jako „O“, „č“ jako „ċ“
+      (`src/ui/art/digitFont.ts`, malé velikosti v levém panelu) — „3“ otevřená vlevo, „6“/„9“ bez háčku, užší „0“;
+      písmo kreslí i C, c a písmena s háčkem/kroužkem (nový háček „v“), DECISIONS 2026-10-03
+- [x] Toasty (achievementy, odemčení) se zobrazují uprostřed plochy a zakrývají obálku, zboží, skórování i výhru
+      a jsou i nad modály — přesunout do rohu, pod modaly, během skórování pozdržet — roh mimo plochu, pod dialogy,
+      `holdToasts` během animace, novinky ze seznamu pitvy/výhry se neopakují, obchází bublinu Štamgasta
 - [x] „Koupit a použít“ ve Večerce počítá použitelnost se vším zbožím naráz (`src/ui/screens/game/shop.ts`
       `prospective()`) — Výjimka z vyhlášky zamčená, Zaklepat na dřevo hlásí chybu
       _(1.0.1: rozhoduje engine po položkách — `Game.check` nad kopií stavu, `Game.shopSellValue`)_
-- [ ] Pan starosta: náhled nevaruje, že ruka nepřekoná předchozí; ukázat „Překonej: X“
+- [x] Pan starosta: náhled nevaruje, že ruka nepřekoná předchozí; ukázat „Překonej: X“ — `BossHooks.scoreToBeat`,
+      odhad v náhledu na kopii s náhradním RNG, hláška šéfa uprostřed stolu
 - [x] Denní run jde natrénovat ručním seedem `DEN-dnešek` a zadat i budoucí den (`src/engine/meta/daily.ts`)
       _(1.0.1: `parseSeedInput(…, { todayKey })` → `dailyToday` / `dailyFuture`; pojistka v `ProfileController.newRun`)_
 - [x] Dvě karty prohlížeče si přepisují profil i run (chybí posluchač `storage` / zámek)
@@ -385,11 +388,19 @@ simulacemi. Seřazeno podle priority.
       zazálohuje do `karban.run.backup.<ms>`)_
 - [x] Obálka: „Použít“ nekontroluje `canUse`; Minimalista + Babiččina barva: UI pustí 3 cíle, rada chce až 4
       _(1.0.1: „Použít“ přes `Game.check`; limit výběru `maxSelect` platí i pro cíle — `consumableTargetRange`)_
-- [ ] Velká čísla v levém panelu se lámou uprostřed skupiny číslic; focus po výběru útraty padá na `<body>`
-- [ ] Nová hra: zamčené balíčky zaberou obrazovku, chyba seedu je mimo viewport pod plovoucím tlačítkem;
-      achievement „Semínko zaseto“ odporuje nápovědě o seedovaných runech
-- [ ] Tutoriál: rady 7 a 9 se vracejí každé kolo, číslování skáče, bublina zakrývá Skóre kola
-- [ ] Dotyk: popisy zboží jen na hover / dlouhý stisk; telefon: ruka a tlačítka pod přehybem
+- [x] Velká čísla v levém panelu se lámou uprostřed skupiny číslic; focus po výběru útraty padá na `<body>` —
+      jeden řádek, písmo podle délky (`--chars`, `cqi`); focus na ruku
+- [x] Nová hra: zamčené balíčky zaberou obrazovku, chyba seedu je mimo viewport pod plovoucím tlačítkem;
+      achievement „Semínko zaseto“ odporuje nápovědě o seedovaných runech — kompaktní mřížka zamčených, tlačítko
+      neplave, chyba seedu do středu okna, nápověda zmiňuje výjimku
+- [x] Tutoriál: rady 7 a 9 se vracejí každé kolo, číslování skáče, bublina zakrývá Skóre kola — každá rada nejvýš
+      jednou, číslo podle viděných rad, neviděné se nabídnou později, bublina mimo skóre a záhlaví panelů
+- [x] Dotyk: popisy zboží jen na hover / dlouhý stisk; telefon: ruka a tlačítka pod přehybem — tap otevře detail
+      zboží / možnosti obálky, důvod neaktivního tlačítka jako text, bez nápověd kláves na dotyku; telefon 390 × 844
+      bez posouvání v kole i v obálce
+- [x] Drobnosti z testu UI: levý panel mimo kolo bez „Vyber karty 0 × 0“, výhra bez ikony dalšího šéfa, výplata po
+      startu nekonečného režimu popsaná, šestá karta a Enter / X bez výběru se ozvou, cedulka Sbírky „N nových“,
+      Kalendářový balíček bez „(1 / 6)“ na čistém profilu
 
 **Balanc a design**
 

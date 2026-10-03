@@ -54,18 +54,29 @@ export function renderRoundEnd(ctx: GameCtx): HTMLElement {
   const lines = r ? rewardLines(r, round?.handsLeft ?? 0, round?.discardsLeft ?? 0) : [];
   const total = r?.total ?? 0;
   const amount = (n: number): string => t('game.roundEnd.amount', { n });
+  // Hned po „Nekonečný režim“ na výherní obrazovce: vyplácí se odměna za finálového šéfa, ne nové kolo — ať to
+  // nevypadá jako smíchaný stav (starý šéf + nový režim).
+  const endlessStart =
+    s.endless && round?.blind === 'boss' && s.ante === ctx.controller.engine.modifiers().finalAnte;
   return h(
     'section',
     { class: 'game-panel round-end paper', 'aria-labelledby': 'round-end-title', 'data-testid': 'round-end' },
     h(
       'header',
       { class: 'game-panel__header' },
-      h('h2', { class: 'game-panel__title', id: 'round-end-title' }, t('game.roundEnd.title')),
+      h(
+        'h2',
+        { class: 'game-panel__title', id: 'round-end-title' },
+        t(endlessStart ? 'game.roundEnd.endlessTitle' : 'game.roundEnd.title'),
+      ),
       round
         ? h(
             'p',
-            { class: 'game-panel__subtitle' },
-            t('game.roundEnd.score', { score: round.score, target: round.target }),
+            { class: 'game-panel__subtitle', 'data-testid': 'round-end-subtitle' },
+            t(endlessStart ? 'game.roundEnd.endlessScore' : 'game.roundEnd.score', {
+              score: round.score,
+              target: round.target,
+            }),
           )
         : null,
     ),

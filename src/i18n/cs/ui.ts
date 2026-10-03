@@ -82,6 +82,8 @@ export const newGame = {
     unlockedCount: 'odemčeno {n} {total|z}',
     locked: 'Zamčeno',
     lockedLabel: '{name}, zamčeno',
+    /** Nadpis kompaktní mřížky zamčených balíčků. */
+    lockedTitle: 'Ještě zamčeno: {n|plural:balíček,balíčky,balíčků}',
     condition: 'Jak odemknout: {text}',
     progress: '({progress})',
     /** Tácek s nejsilnější silou piva, na které hráč s balíčkem vyhrál (DESIGN 9). */
@@ -111,7 +113,7 @@ export const newGame = {
     hint: 'Stejný seed rozdá stejné karty. Pošli ho kamarádovi a porovnejte, kdo to pokazil víc.',
     /** Run se zadaným seedem (DESIGN 11.6). */
     seededNote:
-      'Run se zadaným seedem se nepočítá do odemykání, statistik ani achievementů – jen do historie. Zato se hraje s celým obsahem, přesně jako u kamaráda.',
+      'Run se zadaným seedem se nepočítá do odemykání, statistik ani achievementů (kromě jediného, „Semínko zaseto“) – jen do historie. Zato se hraje s celým obsahem, přesně jako u kamaráda.',
     dailyNote:
       'Denní run z {date} mimo soutěž: balíček {deck} a sílu piva {stake} určuje seed. Do statistik se nepočítá.',
     errors: {
@@ -126,6 +128,7 @@ export const newGame = {
     },
   },
   start: 'Rozdat karty',
+  startHint: 'Rozdat karty se zvoleným balíčkem, silou piva a seedem',
   overwrite: {
     title: 'Zahodit rozehranou hru?',
     message: 'Máš rozehraný run. Nová hra ho přepíše – a karty už se nevrátí.',
@@ -266,7 +269,7 @@ export const credits = {
     title: 'Písmo',
     license: 'Licence SIL Open Font License 1.1',
     digits:
-      'Číslice a písmeno Z jsme podle něj překreslili, aby se pětka nepletla s písmenem S a zet s dvojkou. I upravené písmo je pod OFL 1.1.',
+      'Číslice, písmena C a Z a háčky jsme podle něj překreslili, aby se v drobném textu nepletla pětka s písmenem S, zet s dvojkou, trojka s osmičkou, C s O a háček s tečkou. I upravené písmo je pod OFL 1.1.',
   },
   icons: {
     title: 'Ikony',

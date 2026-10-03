@@ -62,6 +62,8 @@ export const BOSSES_FINAL: BossDef[] = [
         ctx.round.flags[MAYOR_FLAG] = score;
         return !hasPrevious || score > previous ? score : 0;
       },
+      // UI: „Překonej: X“ a varování v náhledu (src/ui/screens/game/sidebar.ts).
+      scoreToBeat: (ctx) => (Object.hasOwn(ctx.round.flags, MAYOR_FLAG) ? flagNumber(ctx, MAYOR_FLAG) : null),
     },
     art: {
       icon: 'top-hat',

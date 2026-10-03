@@ -15,6 +15,7 @@ import {
   pendingBoosterIds,
 } from '../effects/api';
 import { GameCore, extend } from '../effects/core';
+import { createRngStates } from '../rng/rng';
 import type { EventBus } from '../events';
 import { afterScoredCards, previewHand, safe, scoreHand } from '../scoring/score';
 import { pickStartingJokers } from '../shop/pool';
@@ -155,7 +156,49 @@ export class Game {
   }
 
   preview(cardIds: readonly number[]): HandPreview {
-    return previewHand(this.core, cardIds);
+    const p = previewHand(this.core, cardIds);
+    if (p.hidden || !p.hand || p.blockedReason) return p;
+    const beat = this.scoreToBeat();
+    if (beat === null) return p;
+    const estimate = this.estimateScore(cardIds);
+    return estimate === null ? { ...p, scoreToBeat: beat } : { ...p, scoreToBeat: beat, estimate };
+  }
+
+  /**
+   * Laťka aktivního šéfa pro příští ruku (`BossHooks.scoreToBeat`, Pan starosta), nebo null. Čistý dotaz pro UI —
+   * běží v `readOnly`, chyba obsahu = bez laťky.
+   */
+  scoreToBeat(): number | null {
+    const core = this.core;
+    const s = core.state;
+    if (s.phase !== 'round' || !s.round) return null;
+    const hook = core.activeBoss()?.hooks.scoreToBeat;
+    if (!hook) return null;
+    try {
+      const v = core.readOnly(() => hook(core.bossCtx()));
+      return typeof v === 'number' && Number.isFinite(v) ? v : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Odhad skóre ruky `floor(čipy × mult)` se všemi efekty: zahraje ji na kopii stavu s náhradními RNG proudy
+   * (odhad tak neprozradí skutečný výsledek náhody a skutečný run se nezmění). Null = nejde spočítat.
+   */
+  private estimateScore(cardIds: readonly number[]): number | null {
+    try {
+      const copy = structuredClone(this.core.state) as RunState;
+      copy.rng = createRngStates(`${copy.seed}:preview`);
+      const res = Game.fromState(copy, this.core.registry).dispatch({ type: 'play', cardIds: [...cardIds] });
+      if (!res.ok) return null;
+      const played = res.events.find((e) => e.type === 'handPlayed');
+      if (!played || played.type !== 'handPlayed' || played.result.blockedReason) return null;
+      const raw = Math.floor(played.result.chips * played.result.mult);
+      return Number.isFinite(raw) ? raw : null;
+    } catch {
+      return null;
+    }
   }
 
   card(id: number): Readonly<Card> | undefined {

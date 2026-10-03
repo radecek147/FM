@@ -5,8 +5,11 @@
  *
  *  - Bublina **neblokuje hru**: není modální, nebere focus, je mimo #app (vrstva pod dialogy a nad jevištěm),
  *    kliknout jde jen na ni samotnou; během animací a mimo herní obrazovku zmizí.
- *  - Krok se dokončí tlačítkem „Rozumím“ nebo sám příslušnou akcí (výběr karty, zahraná ruka, zahození, výplata,
- *    koupě žolíka, přeskočení útraty, poražený šéf). „Přeskočit tutoriál“ ho vypne celý (`skipTutorial`).
+ *  - Každá rada se ukáže **nejvýš jednou**: dokončí ji tlačítko „Rozumím“, nebo jakákoli další akce hráče, zatímco
+ *    visí (zahraná ruka, výplata, výběr útraty… — jen přeřazení karet či žolíků ne). Rada, kterou hráč nestihl vidět
+ *    (kolo vyhrané první rukou), se nabídne později — tiše se nedokončí. „Přeskočit tutoriál“ ho vypne celý.
+ *  - Číslování „Rada n z 9“ jde podle počtu už viděných rad (rady chodí podle situace, ne v pevném pořadí).
+ *  - Bublina nesmí zakrýt Skóre kola a cíl v levém panelu; toasty a tooltipy ji obcházejí (`data-overlay-avoid`).
  *  - Stav je v profilu (`Profile.tutorial`, rady `Settings.tutorial`); dokončení všech kroků přepočítá meta vrstvu
  *    (`profiles.refresh`) → achievement „Štamgastův žák“.
  *  - V e2e testech se vypne parametrem `?tutorial=off` (src/main.ts ho pak vůbec nenainstaluje) nebo profilem.
@@ -19,7 +22,7 @@ import { t } from '../i18n/cs';
 import type { App } from './app';
 import { stamgastElement, stamgastMarkup } from './art/stamgast';
 import { button } from './components/button';
-import { toast } from './components/toast';
+import { refreshToastPlacement, toast } from './components/toast';
 import type { GameController } from './controller';
 import { h } from './dom';
 
@@ -72,21 +75,6 @@ export function pendingTutorialStep(
   }
 }
 
-/** Kroky, které události akce dokončí samy (hráč to právě udělal). */
-export function stepsDoneByEvents(events: readonly GameEvent[]): TutorialStepId[] {
-  const out = new Set<TutorialStepId>();
-  for (const e of events) {
-    if (e.type === 'handPlayed') out.add('select').add('play');
-    else if (e.type === 'cardsDiscarded') out.add('discard');
-    else if (e.type === 'roundWon') out.add('goal');
-    else if (e.type === 'cashedOut') out.add('roundEnd');
-    else if (e.type === 'itemBought' && e.kind === 'joker') out.add('shop');
-    else if (e.type === 'blindSkipped') out.add('skip');
-    else if (e.type === 'bossDefeated') out.add('boss');
-  }
-  return [...out];
-}
-
 export type Placement = 'top' | 'bottom' | 'left' | 'right';
 
 /** Obdélník v souřadnicích okna. */
@@ -131,9 +119,11 @@ function stepTarget(step: TutorialStepId, phase: RunState['phase']): StepTarget 
     case 'goal':
       return { selectors: ['.gs-target', '[data-testid="round-target"]'], placements: ['right', 'bottom'] };
     case 'roundEnd':
+      // Nad rozpisem by zakryla nadpis a skóre panelu, vlevo Skóre kola v levém panelu — záložně pod panel.
       return {
         selectors: ['[data-testid="round-end"] .round-end__lines', '[data-testid="round-end"]'],
         placements: ['right', 'left', 'top', 'bottom'],
+        fallbacks: [{ selector: '[data-testid="round-end"]', placements: ['bottom'] }],
       };
     case 'shop':
       return {
@@ -161,9 +151,16 @@ function stepTarget(step: TutorialStepId, phase: RunState['phase']): StepTarget 
 /** Odstup bubliny od cíle a od okraje okna (px). */
 const GAP = 14;
 const MARGIN = 8;
-/** Ovládací prvky, které bublina nemá zakrývat (karty v ruce, tlačítka, žolíci…). */
+/** Ovládací prvky a čísla, které bublina nemá zakrývat (karty v ruce, tlačítka, žolíci, cíl a Skóre kola…). */
 const OBSTACLES =
-  '#app button, #app [role="button"], #app [role="radio"], #app .pcard, #app input, #app .kcard';
+  '#app button, #app [role="button"], #app [role="radio"], #app .pcard, #app input, #app .kcard, ' +
+  '#app .gs-score, #app .gs-target, #app .game-panel__header';
+
+/** Číslo rady („Rada n z 9“): kolik rad už hráč viděl + tahle. Roste o jedna, ať rady chodí v jakémkoli pořadí. */
+export function tutorialStepNumber(seen: readonly string[], step: TutorialStepId): number {
+  const done = TUTORIAL_STEPS.filter((s) => s !== step && seen.includes(s)).length;
+  return Math.min(TUTORIAL_STEPS.length, done + 1);
+}
 
 function firstVisible(selectors: readonly string[]): HTMLElement | null {
   for (const sel of selectors) {
@@ -323,6 +320,8 @@ export class TutorialController {
         'aria-labelledby': 'tutorial-title',
         'aria-describedby': 'tutorial-text',
         'data-testid': 'tutorial',
+        // Toasty a tooltipy karet bublinu obcházejí (toast.ts, tooltip.ts).
+        'data-overlay-avoid': '',
         hidden: true,
       },
       h('span', { class: 'tutorial__arrow', 'aria-hidden': 'true' }),
@@ -410,9 +409,12 @@ export class TutorialController {
   }
 
   private onEvents(events: readonly GameEvent[]): void {
+    // Rada, která visela, když hráč udělal akci, je přečtená (nejvýš jednou — dřív se „Přeskočit útratu“ a „Pořadí
+    // žolíků“ vracely každé kolo). Přeřazení karet a žolíků (akce bez událostí) se nepočítá.
+    const shown = this.bubble.hidden ? null : this.step;
     // Během animací akce bublina zmizí; po nich ji vrátí `update` (controller.notify).
     this.hide();
-    this.mark(stepsDoneByEvents(events));
+    if (shown && events.length > 0) this.mark([shown]);
   }
 
   private acknowledge(): void {
@@ -461,7 +463,7 @@ export class TutorialController {
     const title = t(`meta.tutorial.steps.${step}.title`);
     const text = t(`meta.tutorial.steps.${step}.text`, stepParams(step, c));
     this.metaEl.textContent = `${t('meta.tutorial.name')} · ${t('meta.tutorial.step', {
-      n: TUTORIAL_STEPS.indexOf(step) + 1,
+      n: tutorialStepNumber(this.profile.tutorial.seen, step),
       total: TUTORIAL_STEPS.length,
     })}`;
     this.titleEl.textContent = title;
@@ -511,6 +513,8 @@ export class TutorialController {
     } else {
       this.ring.hidden = true;
     }
+    // Toasty se bublině vyhnou (přeměří se podle její nové polohy).
+    refreshToastPlacement();
   }
 
   private hide(): void {

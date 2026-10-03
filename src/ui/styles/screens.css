@@ -493,6 +493,58 @@
   gap: 1rem;
 }
 
+.deck-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Zamčené balíčky: malé dlaždice v hustší mřížce (podmínka a průběh zůstávají čitelné). */
+.deck-locked__title {
+  margin-bottom: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--on-felt-muted);
+}
+
+.deck-grid--locked {
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: 0.6rem;
+}
+
+.deck-grid--locked .deck-option {
+  flex-direction: row;
+  box-shadow: 0 3px 0 rgb(0 0 0 / 25%);
+}
+
+.deck-grid--locked .deck-option__art {
+  flex: 0 0 3.6rem;
+  height: auto;
+  min-height: 4.6rem;
+}
+
+.deck-grid--locked .deck-option__art .deck-option__lock {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.deck-grid--locked .deck-option__text {
+  gap: 0.15rem;
+  padding: 0.4rem 0.6rem 0.5rem;
+}
+
+.deck-grid--locked .deck-option__name {
+  font-size: 0.95rem;
+}
+
+.deck-grid--locked .deck-option__condition {
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.deck-grid--locked .deck-option__locked {
+  display: none;
+}
+
 .deck-option {
   position: relative;
   display: flex;
@@ -744,21 +796,17 @@
   opacity: 0.8;
 }
 
-/* „Rozdat karty“ je pořád po ruce — lišta se při posouvání drží u spodního okraje okna. */
+/* Tlačítko „Rozdat karty“ na konci formuláře (už neplave přes obsah — zakrývalo pole seedu a jeho chybu). */
 .newgame__actions {
-  position: sticky;
-  bottom: 0;
-  z-index: 5;
   display: flex;
   justify-content: center;
-  padding: 1.25rem 0 1rem;
-  margin-bottom: -2rem;
-  background: linear-gradient(rgb(18 56 38 / 0%), rgb(18 56 38 / 88%) 45%);
-  pointer-events: none;
+  padding: 0.25rem 0 1rem;
 }
 
-.newgame__actions .btn {
-  pointer-events: auto;
+/* Druhé „Rozdat karty“ v záhlaví — po ruce bez posouvání. */
+.newgame__start-top {
+  align-self: center;
+  margin-left: auto;
 }
 
 /* ─────────────────────────── Nastavení ─────────────────────────── */
@@ -1309,7 +1357,8 @@ html.modal-open {
   position: fixed;
   right: 1rem;
   bottom: 1rem;
-  z-index: 950;
+  /* Pod modální vrstvou (900): oznámení nikdy nepřekryje otevřený dialog (src/ui/components/toast.ts). */
+  z-index: 890;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -1318,18 +1367,63 @@ html.modal-open {
   pointer-events: none;
 }
 
+/* Odezva akce v otevřeném dialogu (export, prodej z detailu): v rohu okna nad zatemněním, ale mimo dialog. */
+.toast-region--over-modal {
+  z-index: 910;
+}
+
 /*
- * Herní obrazovka: sloupec nahoře uprostřed jeviště nad stolem (src/ui/components/toast.ts `setToastAnchor` dosadí
- * left / top / width) — mimo ruku, tlačítka Zahrát / Zahodit a balíček. Nejnovější oznámení dole.
+ * Herní obrazovka: sloupec v rohu mimo hrací plochu (src/ui/screens/game/index.ts — vpravo nahoře nad kapsou
+ * spotřebek; toast.ts dosadí left / top / width). Oznámení jsou kompaktní, nejnovější dole.
  */
 .toast-region--anchored {
   right: auto;
   bottom: auto;
   align-items: stretch;
-  transform: translateX(-50%);
+  gap: 0.35rem;
 }
 
 .toast-region--anchored .toast {
+  gap: 0.5rem;
+  padding: 0.4rem 0.45rem 0.4rem 0.6rem;
+  border-left-width: 5px;
+  box-shadow: 0 6px 16px rgb(0 0 0 / 45%);
+}
+
+.toast-region--anchored .toast__text {
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.toast-region--anchored .toast__title {
+  font-size: 0.9rem;
+}
+
+.toast-region--anchored .toast__eyebrow {
+  font-size: 0.65rem;
+}
+
+.toast-region--anchored .toast__media,
+.toast-region--anchored.toast-region .toast--meta .toast__media,
+.toast-region--anchored .toast--meta .toast__media .meta-icon {
+  flex-basis: 2.3rem;
+  width: 2.3rem;
+  height: 2.3rem;
+}
+
+.toast-region--anchored .toast__icon {
+  flex-basis: 1.35rem;
+  height: 1.35rem;
+  font-size: 0.8rem;
+}
+
+.toast-region--anchored .toast__close {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: 1.1rem;
+}
+
+.toast {
   padding-block: 0.5rem;
   box-shadow: 0 6px 16px rgb(0 0 0 / 45%);
 }
@@ -1472,10 +1566,6 @@ html.modal-open {
   animation: toast-out var(--t-fast) ease-in forwards;
 }
 
-.toast-region--anchored .toast--leaving {
-  animation-name: toast-out-up;
-}
-
 @keyframes toast-in {
   from {
     opacity: 0;
@@ -1487,13 +1577,6 @@ html.modal-open {
   to {
     opacity: 0;
     transform: translateX(24px);
-  }
-}
-
-@keyframes toast-out-up {
-  to {
-    opacity: 0;
-    transform: translateY(-10px);
   }
 }
 
@@ -1551,6 +1634,15 @@ html.modal-open {
 
   .deck-grid {
     grid-template-columns: 1fr;
+  }
+
+  /* Zamčené na telefonu ve dvou sloupcích jen s názvem a podmínkou (obrázek se zámkem by sebral půlku šířky). */
+  .deck-grid.deck-grid--locked {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .deck-grid--locked .deck-option__art {
+    display: none;
   }
 
   .deck-option {

@@ -151,10 +151,13 @@ function setChecked(items: HTMLElement[], index: number): void {
 export const newGameScreen: ScreenFactory = (app) => {
   const reg = app.registry;
   const profile = app.profile;
-  const decks = Object.values(reg.decks);
+  const deckOpen = (deck: DeckDef): boolean => isDeckUnlocked(profile, reg, deck.id);
+  // Odemčené balíčky napřed, zamčené až za nimi v kompaktní mřížce (deset velkých zamčených dlaždic zabralo celou
+  // obrazovku a Síla piva se Seedem byly daleko pod přehybem).
+  const allDecks = Object.values(reg.decks);
+  const decks = [...allDecks.filter(deckOpen), ...allDecks.filter((d) => !deckOpen(d))];
   const stakes = Object.values(reg.stakes).sort((a, b) => a.level - b.level);
   const choice = loadChoice(app, decks);
-  const deckOpen = (deck: DeckDef): boolean => isDeckUnlocked(profile, reg, deck.id);
   const unlockedDecks = decks.filter(deckOpen).length;
 
   // ── Balíček ──
@@ -224,10 +227,25 @@ export const newGameScreen: ScreenFactory = (app) => {
       ),
     );
   });
+  const openItems = deckItems.filter((_, i) => deckOpen(decks[i]!));
+  const lockedItems = deckItems.filter((_, i) => !deckOpen(decks[i]!));
+  // Jedna radiogroup (šipky přeskakují zamčené), uvnitř dvě mřížky: odemčené velké, zamčené malé.
   const deckGroup = h(
     'div',
-    { class: 'deck-grid', role: 'radiogroup', 'aria-labelledby': 'newgame-deck-title' },
-    deckItems,
+    { class: 'deck-picker', role: 'radiogroup', 'aria-labelledby': 'newgame-deck-title' },
+    h('div', { class: 'deck-grid' }, openItems),
+    lockedItems.length > 0
+      ? h(
+          'div',
+          { class: 'deck-locked' },
+          h(
+            'p',
+            { class: 'deck-locked__title', 'aria-hidden': 'true' },
+            t('newGame.deck.lockedTitle', { n: lockedItems.length }),
+          ),
+          h('div', { class: 'deck-grid deck-grid--locked', 'data-testid': 'deck-locked-grid' }, lockedItems),
+        )
+      : null,
   );
 
   // ── Síla piva ──
@@ -434,7 +452,9 @@ export const newGameScreen: ScreenFactory = (app) => {
   const start = async (): Promise<void> => {
     const sc = updateSeedStatus();
     if (sc.kind === 'error') {
-      seedInput.focus();
+      // Chyba je pod polem — pole i s ní do středu okna (ne pod plovoucí lištu „Rozdat karty“).
+      seedInput.focus({ preventScroll: true });
+      seedField.scrollIntoView({ block: 'center' });
       return;
     }
     if (!(await confirmOverwrite(app))) return;
@@ -467,6 +487,19 @@ export const newGameScreen: ScreenFactory = (app) => {
       toast(t('newGame.failed'), { kind: 'error' });
     }
   };
+
+  const seedField = h(
+    'section',
+    { class: 'newgame__section newgame__section--seed', 'aria-labelledby': 'newgame-seed-title' },
+    h(
+      'h2',
+      { id: 'newgame-seed-title', class: 'section-title' },
+      h('label', { for: 'newgame-seed' }, t('newGame.seed.title')),
+    ),
+    h('div', { class: 'seed-field' }, seedInput, randomBtn),
+    h('p', { id: 'newgame-seed-hint', class: 'field-hint' }, t('newGame.seed.hint')),
+    seedStatus,
+  );
 
   const form = h(
     'form',
@@ -502,18 +535,7 @@ export const newGameScreen: ScreenFactory = (app) => {
       stakeGroup,
       stakeDetail,
     ),
-    h(
-      'section',
-      { class: 'newgame__section newgame__section--seed', 'aria-labelledby': 'newgame-seed-title' },
-      h(
-        'h2',
-        { id: 'newgame-seed-title', class: 'section-title' },
-        h('label', { for: 'newgame-seed' }, t('newGame.seed.title')),
-      ),
-      h('div', { class: 'seed-field' }, seedInput, randomBtn),
-      h('p', { id: 'newgame-seed-hint', class: 'field-hint' }, t('newGame.seed.hint')),
-      seedStatus,
-    ),
+    seedField,
     h(
       'div',
       { class: 'newgame__actions' },
@@ -540,6 +562,16 @@ export const newGameScreen: ScreenFactory = (app) => {
         h('h1', { id: 'newgame-title', class: 'screen-title' }, t('newGame.title')),
         h('p', { class: 'screen-subtitle' }, t('newGame.subtitle')),
       ),
+      // Rozdat jde hned nahoře (balíček a síla piva mají výchozí volbu); dole je tlačítko na konci formuláře —
+      // neplave přes obsah (dřív zakrývalo pole seedu i jeho chybu).
+      button({
+        label: t('newGame.start'),
+        title: t('newGame.startHint'),
+        variant: 'primary',
+        className: 'newgame__start-top',
+        testId: 'newgame-start-top',
+        onClick: () => void start(),
+      }),
     ),
     form,
   );

@@ -33,6 +33,11 @@ export const game = {
     bossDisabled: 'Pravidlo šéfa dnes neplatí.',
     tags: 'Štítky',
     handBlocked: 'Neskóruje: {reason}',
+    /** Pan starosta: laťka pro příští ruku a varování z odhadu náhledu. */
+    scoreToBeat: 'Překonej: {score}',
+    belowBeat: 'Odhad {estimate} nepřekoná {score} – nezapočítá se.',
+    blindBeaten: 'Poraženo! Vyzvedni si odměnu.',
+    bossBeaten: 'Šéf poražen! Vyzvedni si odměnu.',
     target: 'Dosáhni aspoň',
     targetNone: 'Cíl se ukáže po výběru útraty.',
     reward: 'Odměna {n|money}',
@@ -112,8 +117,12 @@ export const game = {
     sortSuitLabel: 'Řadit ruku podle barvy (B)',
     sortHint: 'Ruka zůstane seřazená i po dobrání dalších karet. Ruční přesun karty řazení vypne.',
     selected: 'Vybráno {n}/{max}',
+    /** Krátká zpětná vazba u tlačítek (šestá karta, Enter / X bez výběru). */
+    maxSelected: 'Vybrat jde nejvýš {max|plural:kartu,karty,karet}.',
+    selectFirst: 'Nejdřív vyber karty – klávesy 1–8.',
     tableLabel: 'Stůl se zahranými kartami',
     tableHint: 'Vyber až {max|plural:kartu,karty,karet} a zahraj je. Klávesy 1–8 vybírají, Enter hraje.',
+    tableHintTouch: 'Ťukni až na {max|plural:kartu,karty,karet} a zahraj je.',
     boosterHint: 'Vyber v ruce cíle pro babskou radu nebo razítko.',
     handSize: 'Ruka: {n|plural:karta,karty,karet}',
     handSizeDelta: 'Ruka: {n|plural:karta,karty,karet} ({delta|signed})',
@@ -182,6 +191,10 @@ export const game = {
   roundEnd: {
     title: 'Kolo vyhráno!',
     score: 'Skóre {score} z cíle {target}',
+    /** Hned po startu nekonečného režimu: výplata za finálového šéfa. */
+    endlessTitle: 'Nekonečný režim začíná',
+    endlessScore:
+      'Nejdřív odměna za finálového šéfa (skóre {score} z cíle {target}). Pak hurá do dalšího patra.',
     blind: 'Odměna za útratu',
     hands: 'Nevyužité ruce ({n})',
     discards: 'Nevyužitá zahození ({n})',

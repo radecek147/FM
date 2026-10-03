@@ -11,11 +11,20 @@ import { createCardView } from '../../components/card';
 import { createConsumableCard, createContentCard } from '../../components/consumableCard';
 import { createJokerCard } from '../../components/jokerCard';
 import { toast } from '../../components/toast';
+import { cardTooltip, consumableTooltip, contentTooltip, jokerTooltip } from '../../components/tooltip';
 import { boosterTexts, capitalize, cardName, voucherTexts } from '../../describe';
 import { h } from '../../dom';
 import { formatMoney } from '../../../i18n/format';
+import { openOfferDetail } from './modals';
 import type { GameCtx } from './shared';
-import { canAfford, hasConsumableRoom, hasJokerRoom } from './shared';
+import {
+  alignReasonLines,
+  blockReasonsLine,
+  canAfford,
+  hasConsumableRoom,
+  hasJokerRoom,
+  markDetailTriggers,
+} from './shared';
 
 export function shopKey(ctx: GameCtx): string {
   const s = ctx.controller.state;
@@ -64,23 +73,69 @@ function useBlockedReason(afford: boolean, error: string | null): string | null 
   return error === 'cannotUse' ? t('game.shop.useNotNow') : t(`errors.${error}`);
 }
 
-function itemVisual(ctx: GameCtx, item: ShopItem, sellValue: number | undefined): HTMLElement {
+function itemVisual(
+  ctx: GameCtx,
+  item: ShopItem,
+  sellValue: number | undefined,
+  onClick?: () => void,
+): HTMLElement {
   const mods = ctx.controller.engine.modifiers();
   if (item.kind === 'joker')
-    return createJokerCard(item.joker, { price: item.price, sellValue, registry: ctx.registry, mods });
+    return createJokerCard(item.joker, {
+      price: item.price,
+      sellValue,
+      registry: ctx.registry,
+      mods,
+      onClick,
+    });
   if (item.kind === 'consumable')
     return createConsumableCard(item.consumable, {
       price: item.price,
       sellValue,
       registry: ctx.registry,
       mods,
+      onClick,
     });
   return h(
     'div',
     { class: 'shop-slot__playing' },
-    createCardView(item.card, { registry: ctx.registry, mods }),
+    createCardView(item.card, { registry: ctx.registry, mods, onClick }),
     h('span', { class: 'price-tag', 'aria-hidden': 'true' }, formatMoney(item.price)),
   );
+}
+
+/** Obsah detailu zboží (jako tooltip karty: název, druh, popis, flavor, cena). */
+function itemContent(ctx: GameCtx, item: ShopItem, sellValue: number | undefined) {
+  const opts = {
+    registry: ctx.registry,
+    mods: ctx.controller.engine.modifiers(),
+    price: item.price,
+    sellValue,
+  };
+  if (item.kind === 'joker') return jokerTooltip(item.joker, opts);
+  if (item.kind === 'consumable') return consumableTooltip(item.consumable, opts);
+  return cardTooltip(item.card, opts);
+}
+
+/**
+ * Tap / klik na kartu zboží otevře detail s popisem a s tlačítky slotu (na dotyku jinak popis vidět není — hover
+ * chybí a dlouhý stisk nikdo nečeká). Tlačítka se čtou až při otevření (aktuální stav).
+ */
+function detailOpener(
+  slot: () => HTMLElement | null,
+  card: () => HTMLElement,
+  content: () => ReturnType<typeof itemContent>,
+) {
+  return (): void => {
+    const li = slot();
+    if (!li) return;
+    openOfferDetail({
+      card: card(),
+      content: content(),
+      buttons: Array.from(li.querySelectorAll<HTMLButtonElement>('.shop-slot__actions button')),
+      testId: 'shop-detail',
+    });
+  };
 }
 
 /**
@@ -186,7 +241,14 @@ export function renderShop(ctx: GameCtx): HTMLElement {
         );
     }
     const badge = itemBadge(item);
-    return h(
+    let li: HTMLElement | null = null;
+    const sellValue = sellValues.get(slot);
+    const openDetail = detailOpener(
+      () => li,
+      () => itemVisual(ctx, item, sellValue),
+      () => itemContent(ctx, item, sellValue),
+    );
+    li = h(
       'li',
       { class: ['shop-slot', `shop-slot--${item.kind}`, badge ? 'has-badge' : ''], 'data-testid': testId },
       badge
@@ -200,45 +262,68 @@ export function renderShop(ctx: GameCtx): HTMLElement {
             badge,
           )
         : null,
-      h('div', { class: 'shop-slot__card' }, itemVisual(ctx, item, sellValues.get(slot))),
+      h('div', { class: 'shop-slot__card' }, itemVisual(ctx, item, sellValue, openDetail)),
       h('p', { class: 'shop-slot__name', id: `${testId}-name` }, itemName(ctx, item)),
       h('div', { class: 'shop-slot__actions' }, actions),
+      blockReasonsLine(actions),
     );
+    markDetailTriggers(li, '.shop-slot__card');
+    return li;
   });
 
   const boosters = (shop?.boosters ?? []).map((b, slot) => {
     const testId = `shop-booster-${slot}`;
     if (b.sold) return soldSlot(testId);
     const name = boosterTexts(b.boosterId, { registry: ctx.registry }).name;
-    return h(
+    let li: HTMLElement | null = null;
+    const art = (onClick?: () => void): HTMLElement =>
+      createContentCard('booster', b.boosterId, { price: b.price, registry: ctx.registry, onClick });
+    const open = buyButton({
+      label: t('game.shop.open', { price: b.price }),
+      disabledReason: canAfford(ctx, b.price) ? null : t('game.shop.cantAfford'),
+      testId: `shop-open-${slot}`,
+      focusKey: `open-${slot}`,
+      describedBy: `${testId}-name`,
+      onClick: () => void ctx.act({ type: 'buyBooster', slot }),
+    });
+    const openDetail = detailOpener(
+      () => li,
+      () => art(),
+      () => contentTooltip('booster', b.boosterId, { registry: ctx.registry, price: b.price }),
+    );
+    li = h(
       'li',
       { class: 'shop-slot shop-slot--booster', 'data-testid': testId },
-      h(
-        'div',
-        { class: 'shop-slot__card' },
-        createContentCard('booster', b.boosterId, { price: b.price, registry: ctx.registry }),
-      ),
+      h('div', { class: 'shop-slot__card' }, art(openDetail)),
       h('p', { class: 'shop-slot__name', id: `${testId}-name` }, name),
-      h(
-        'div',
-        { class: 'shop-slot__actions' },
-        buyButton({
-          label: t('game.shop.open', { price: b.price }),
-          disabledReason: canAfford(ctx, b.price) ? null : t('game.shop.cantAfford'),
-          testId: `shop-open-${slot}`,
-          focusKey: `open-${slot}`,
-          describedBy: `${testId}-name`,
-          onClick: () => void ctx.act({ type: 'buyBooster', slot }),
-        }),
-      ),
+      h('div', { class: 'shop-slot__actions' }, open),
+      blockReasonsLine([open]),
     );
+    markDetailTriggers(li, '.shop-slot__card');
+    return li;
   });
 
   const vouchers = (shop?.vouchers ?? []).map((v, slot) => {
     const testId = `shop-voucher-${slot}`;
     if (v.sold) return soldSlot(testId);
     const name = voucherTexts(v.voucherId, { registry: ctx.registry }).name;
-    return h(
+    let li: HTMLElement | null = null;
+    const art = (onClick?: () => void): HTMLElement =>
+      createContentCard('voucher', v.voucherId, { price: v.price, registry: ctx.registry, onClick });
+    const redeem = buyButton({
+      label: t('game.shop.redeem', { price: v.price }),
+      disabledReason: canAfford(ctx, v.price) ? null : t('game.shop.cantAfford'),
+      testId: `shop-redeem-${slot}`,
+      focusKey: `redeem-${slot}`,
+      describedBy: `${testId}-name`,
+      onClick: () => void ctx.act({ type: 'buyVoucher', slot }),
+    });
+    const openDetail = detailOpener(
+      () => li,
+      () => art(),
+      () => contentTooltip('voucher', v.voucherId, { registry: ctx.registry, price: v.price }),
+    );
+    li = h(
       'li',
       { class: ['shop-slot', 'shop-slot--voucher', v.extra ? 'has-badge' : ''], 'data-testid': testId },
       // Kupón navíc z Úředního poukazu platí jen v této Večerce.
@@ -253,26 +338,17 @@ export function renderShop(ctx: GameCtx): HTMLElement {
             t('game.shop.badgeExtra'),
           )
         : null,
-      h(
-        'div',
-        { class: 'shop-slot__card' },
-        createContentCard('voucher', v.voucherId, { price: v.price, registry: ctx.registry }),
-      ),
+      h('div', { class: 'shop-slot__card' }, art(openDetail)),
       h('p', { class: 'shop-slot__name', id: `${testId}-name` }, name),
-      h(
-        'div',
-        { class: 'shop-slot__actions' },
-        buyButton({
-          label: t('game.shop.redeem', { price: v.price }),
-          disabledReason: canAfford(ctx, v.price) ? null : t('game.shop.cantAfford'),
-          testId: `shop-redeem-${slot}`,
-          focusKey: `redeem-${slot}`,
-          describedBy: `${testId}-name`,
-          onClick: () => void ctx.act({ type: 'buyVoucher', slot }),
-        }),
-      ),
+      h('div', { class: 'shop-slot__actions' }, redeem),
+      blockReasonsLine([redeem]),
     );
+    markDetailTriggers(li, '.shop-slot__card');
+    return li;
   });
+
+  // Tlačítka v sekci v jedné linii, i když jen některý slot vysvětluje, proč nejde koupit.
+  for (const list of [items, boosters, vouchers]) alignReasonLines(list);
 
   const anyLeft =
     (shop?.items ?? []).some((i) => !i.sold) ||

@@ -13,6 +13,11 @@ export interface UnlockProgress {
   met: boolean;
   progress: number;
   target: number;
+  /**
+   * Hodnota, kterou má každý profil od začátku (úroveň kombinace 1). Postup do ní není hráčova zásluha — UI ho
+   * neukazuje („(1 / 6)“ na čistém profilu mátlo). Výchozí 0.
+   */
+  base?: number;
 }
 
 /** Kontext vyhodnocení: run (pokud běží), registr a položka, jejíž podmínka se vyhodnocuje (tier 2 kupónu). */
@@ -33,11 +38,15 @@ export const CHALLENGE_UNLOCK_GROUP = 5;
 export const VOUCHER_TIER2_RUNS = 2;
 export const VOUCHER_TIER2_WINS = 3;
 
-function progress(value: number, target: number): UnlockProgress {
+function progress(value: number, target: number, base = 0): UnlockProgress {
   const t = Math.max(1, target);
   const v = Number.isFinite(value) ? value : 0;
-  return { met: v >= t, progress: Math.max(0, Math.min(v, t)), target: t };
+  const p: UnlockProgress = { met: v >= t, progress: Math.max(0, Math.min(v, t)), target: t };
+  return base > 0 ? { ...p, base } : p;
 }
+
+/** Úroveň kombinace začíná na 1 (výchozí stav, ne postup). */
+const HAND_LEVEL_BASE = 1;
 
 function flag(met: boolean): UnlockProgress {
   return { met, progress: met ? 1 : 0, target: 1 };
@@ -135,7 +144,7 @@ const BUILTIN_CUSTOM_UNLOCKS: Record<string, CustomUnlockFn> = {
   /** Vetešnický: prodej celkem 25 žolíků. */
   jokersSold25: (p) => progress(p.stats.totals.jokersSold, customParam('jokersSold25', 'count')),
   /** Kalendářový: zvyš libovolnou kombinaci na úroveň 6. */
-  handLevel6: (p) => progress(maxHandLevel(p), customParam('handLevel6', 'level')),
+  handLevel6: (p) => progress(maxHandLevel(p), customParam('handLevel6', 'level'), HAND_LEVEL_BASE),
   /** Pivní sommelier: zahraj 8 různých kombinací (napříč runy — ochutnávka se nemusí stihnout za jeden večer). */
   distinctHands8: (p) => progress(distinctHandsPlayed(p), customParam('distinctHands8', 'count')),
   /**
@@ -215,7 +224,7 @@ export function evaluateUnlock(
     }
     case 'handLevel': {
       const level = cond.hand ? (s.records.handLevels[cond.hand] ?? 1) : maxHandLevel(profile);
-      return progress(level, cond.level);
+      return progress(level, cond.level, HAND_LEVEL_BASE);
     }
     case 'beatBoss':
       return progress(
