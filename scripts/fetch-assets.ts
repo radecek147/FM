@@ -690,11 +690,11 @@ function renderAssetsMd(
       `beze změny glyfů; vybrány subsety ${FONT_SUBSETS.join(' + ')} a váhy ${FONT_WEIGHTS.join(' a ')}, vlastní \`fonts.css\``,
     ]),
     row([
-      'Písmo Karban Digits (číslice 0–9, Z, Ž): `src/ui/art/digitFont.ts`',
+      'Písmo Karban Digits (číslice 0–9, C, c, Z a písmena s háčkem a kroužkem): `src/ui/art/digitFont.ts`',
       `odvozeno z písma ${FONT_FAMILY} výše; binárka TrueType se skládá za běhu (FontFace API), nic se nestahuje`,
       `${FONT_DESIGNER} — ${font.attribution}; úpravy autoři projektu Karban`,
       'SIL Open Font License 1.1 (`OFL-1.1`) — odvozené dílo, bez rezervovaného jména původního písma',
-      'obrysy přepsané do pixelové mřížky; „5“, „2“, „7“ a „Z“ překreslené kvůli čitelnosti (5 ≠ S, Z ≠ 2), háček „Ž“ původní',
+      'číslice přepsané do pixelové mřížky; „5“, „2“, „3“, „6“, „7“, „9“, „0“ a „Z“ překreslené kvůli čitelnosti (5 ≠ S, Z ≠ 2, 3 ≠ 8, 0 ≠ O); „C“ a „c“ s větším otvorem; Č č Ď Ě ě Ň ň Ř ř Š š Ť Ů ů Ž ž = původní základ + nový širší háček / kroužek',
     ]),
     row([
       `Ikony (${icons.icons.length}): \`src/assets/icons/*.svg\`, \`src/assets/icons/index.ts\``,
