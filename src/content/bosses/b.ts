@@ -14,10 +14,13 @@ import { HAND_TYPES } from '../../engine/types';
 
 /** Běžný násobek cíle šéfa (DESIGN 8.1) — pro text Šanonu na šanonu. */
 const NORMAL_TARGET_MULT = 2;
-/** Nová vyhláška: úroveň, na které se počítají všechny kombinace. */
-const DECREE_LEVEL = 1;
-/** Nová vyhláška: nižší cíl (bez úrovní kombinací byla 2× ~22% letalita — balanc simulací, DECISIONS). */
-const DECREE_TARGET_MULT = 1.1;
+/**
+ * Nová vyhláška: úrovně všech kombinací se v kole počítají jen z této části (zaokrouhleno nahoru, nejméně 1) — 1.0.1:
+ * dřív se úrovně vynulovaly úplně (letalita ~22 % i při nižším cíli, pozdní build přišel o všechno).
+ */
+const DECREE_LEVEL_DIVISOR = 2;
+/** Nová vyhláška: nižší cíl (polovina úrovní pořád bolí; kalibruje simulace). */
+const DECREE_TARGET_MULT = 1.5;
 /** Šanon na šanonu: násobek základního cíle patra. */
 const BINDER_TARGET_MULT = 3;
 /** Zabijačka: kolik náhodných skórujících karet se po ruce zničí. */
@@ -43,6 +46,11 @@ const ODD_RANKS: readonly number[] = [14, 3, 5, 7, 9];
 export const INFLUENCER_FLAG = 'influencer.hand';
 
 // ─────────────────────────── Pomocníci ───────────────────────────
+
+/** Úroveň kombinace podle Nové vyhlášky: dělená `DECREE_LEVEL_DIVISOR`, zaokrouhlená nahoru, nejméně 1. */
+export function decreeLevel(level: number): number {
+  return Math.max(1, Math.ceil(level / DECREE_LEVEL_DIVISOR));
+}
 
 /** Poloviční základ zaokrouhlený nahoru (DESIGN 8.2: „Poloviční hodnoty se zaokrouhlují nahoru.“). */
 function halfBase(base: { chips: number; mult: number }): { chips: number; mult: number } {
@@ -93,14 +101,14 @@ export function mostPlayedHand(ctx: BossCtx): HandType | null {
 
 export const BOSSES_B: BossDef[] = [
   {
-    // 14 — Všechny kombinace se v tomto kole počítají na úrovni 1.
+    // 14 — Všechny kombinace se v tomto kole počítají na polovině úrovně (nahoru, nejméně 1).
     id: 'new_decree',
     minAnte: 3,
     targetMult: DECREE_TARGET_MULT,
-    params: { level: DECREE_LEVEL },
+    params: { divisor: DECREE_LEVEL_DIVISOR },
     color: '#5b6b8c',
     hooks: {
-      modifyBase: (ctx) => ctx.api.handBase(ctx.hand.type, DECREE_LEVEL),
+      modifyBase: (ctx) => ctx.api.handBase(ctx.hand.type, decreeLevel(ctx.state.handLevels[ctx.hand.type]?.level ?? 1)),
     },
     art: { icon: 'scroll-unfurled', prop: 'gavel', bg: '#2b2f3a', fg: '#e8e2c9', pattern: 'grid' },
   },

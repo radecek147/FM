@@ -89,7 +89,7 @@ function discard(game: Game, cards: readonly Card[]) {
 describe('šéfové 1–13 – definice podle DESIGN 8.2', () => {
   const TABLE: [string, number, number][] = [
     // [id, od patra, násobek cíle] — cíle laděné simulací (DESIGN 8.2, DECISIONS „Fáze 6: ladění se šéfy“)
-    ['tax_audit', 1, 2.25],
+    ['tax_audit', 1, 2],
     ['track_closure', 2, 1],
     ['inventory', 1, 2],
     ['drilling_neighbor', 1, 2],
@@ -97,8 +97,8 @@ describe('šéfové 1–13 – definice podle DESIGN 8.2', () => {
     ['superstitious_granny', 1, 2],
     ['black_cat', 2, 2],
     ['elbe_fog', 2, 2],
-    ['parking_fee', 1, 2.25],
-    ['studio_flat', 2, 1.35],
+    ['parking_fee', 1, 2],
+    ['studio_flat', 2, 1.6],
     ['village_drought', 2, 2],
     ['pickpocket', 2, 2.25],
     ['bailiff', 2, 1.75],
@@ -125,7 +125,7 @@ describe('šéfové 1–13 – definice podle DESIGN 8.2', () => {
       black_cat: { cards: 2 },
       elbe_fog: { min: 2, max: 5 },
       parking_fee: { fee: 1 },
-      studio_flat: { handSize: 1, select: 4 },
+      studio_flat: { handSize: 2 },
       village_drought: { discards: 0, hands: 1 },
     });
   });
@@ -147,9 +147,8 @@ describe('šéfové 1–13 – definice podle DESIGN 8.2', () => {
     }
     expect(t('bosses.track_closure.rule')).toContain('druhá');
     expect(t('bosses.tax_audit.rule', { fee: 1 })).toContain(`1${NBSP}Kč`);
-    expect(t('bosses.studio_flat.rule', { handSize: 1, select: 4 })).toBe(
-      `−1${NBSP}karta v${NBSP}ruce a${NBSP}vybrat jde nejvýš 4${NBSP}karty.`,
-    );
+    expect(t('bosses.studio_flat.rule', { handSize: 2 })).toBe(`−2${NBSP}karty v${NBSP}ruce.`);
+    expect(t('bosses.parking_fee.rule', { fee: 1 })).toContain('× číslo patra');
     expect(t('bosses.black_cat.rule', { cards: 5 })).toContain(`5${NBSP}náhodných karet`);
     expect(t('bosses.tax_audit.death').replaceAll(NBSP, ' ')).toBe('Doklady k tomu nemáte, že?');
     expect(hasKey('bosses.drilling_neighbor.blocked')).toBe(true);
@@ -185,15 +184,22 @@ describe('šéfové 1–13 – definice podle DESIGN 8.2', () => {
 // ─────────────────────────── 1 Kontrola z finančáku ───────────────────────────
 
 describe('Kontrola z finančáku (tax_audit)', () => {
-  it('každá zahraná ruka stojí 1 Kč, zahození nic', () => {
-    const { game } = bossGame('tax_audit', { money: 10 });
+  it('každá zahraná karta stojí 1 Kč (srážka po ruce), zahození nic', () => {
+    const { game } = bossGame('tax_audit', { money: 20 });
     const { events } = play(game, [game.state.round!.hand[0]!]);
-    expect(game.state.money).toBe(9);
-    expect(events).toContainEqual({ type: 'moneyChanged', delta: -1, money: 9, reason: 'boss' });
-    play(game, [game.state.round!.hand[0]!]);
-    expect(game.state.money).toBe(8);
+    expect(game.state.money).toBe(19);
+    expect(events).toContainEqual({ type: 'moneyChanged', delta: -1, money: 19, reason: 'boss' });
+    const { events: ev3 } = play(game, game.state.round!.hand.slice(0, 3));
+    expect(game.state.money).toBe(16);
+    expect(ev3).toContainEqual({ type: 'moneyChanged', delta: -3, money: 16, reason: 'boss' });
     expect(discard(game, [hand(game)[0]!]).ok).toBe(true);
-    expect(game.state.money).toBe(8);
+    expect(game.state.money).toBe(16);
+  });
+
+  it('daň se strhne jen do dluhového limitu (2 Kč a 5 karet → 0 Kč)', () => {
+    const { game } = bossGame('tax_audit', { money: 2 });
+    play(game, game.state.round!.hand.slice(0, 5));
+    expect(game.state.money).toBe(0);
   });
 
   it('bez peněz (a bez dluhového limitu) nestrhne nic; po Odvolání neplatí', () => {
@@ -472,14 +478,22 @@ describe('Mlha nad Labem (elbe_fog)', () => {
 // ─────────────────────────── 9 Parkovné ───────────────────────────
 
 describe('Parkovné (parking_fee)', () => {
-  it('každé zahození stojí 1 Kč (bez ohledu na počet karet), zahrání nic', () => {
+  it('v patře 1 stojí každé zahození 1 Kč (bez ohledu na počet karet), zahrání nic', () => {
     const { game } = bossGame('parking_fee', { money: 10 });
+    expect(game.state.ante).toBe(1);
     expect(discard(game, hand(game).slice(0, 3)).ok).toBe(true);
     expect(game.state.money).toBe(9);
     expect(discard(game, hand(game).slice(0, 1)).ok).toBe(true);
     expect(game.state.money).toBe(8);
     play(game, [hand(game)[0]!]);
     expect(game.state.money).toBe(8);
+  });
+
+  it('poplatek roste s patrem: v patře 4 stojí zahození 4 Kč', () => {
+    const { game } = bossGame('parking_fee', { money: 10 });
+    game._core.state.ante = 4;
+    expect(discard(game, hand(game).slice(0, 2)).ok).toBe(true);
+    expect(game.state.money).toBe(6);
   });
 
   it('bez peněz nestrhne nic; po Odvolání zahození nic nestojí', () => {
@@ -496,24 +510,19 @@ describe('Parkovné (parking_fee)', () => {
 // ─────────────────────────── 10 Garsonka 1+kk ───────────────────────────
 
 describe('Garsonka 1+kk (studio_flat)', () => {
-  it('ruka 7 karet a nejvýš 4 vybrané karty (5 = neplatný výběr)', () => {
+  it('ruka 6 karet, ale vybrat jde dál 5 karet (Postupka i Barva zůstávají)', () => {
     const { game } = bossGame('studio_flat');
-    expect(hand(game)).toHaveLength(7);
-    expect(game.modifiers().maxSelect).toBe(4);
+    expect(hand(game)).toHaveLength(6);
+    expect(game.modifiers().maxSelect).toBe(5);
     const ids = game.state.round!.hand;
-    expect(game.dispatch({ type: 'play', cardIds: ids.slice(0, 5) })).toMatchObject({
-      ok: false,
-      error: 'invalidSelection',
-    });
-    expect(game.dispatch({ type: 'discard', cardIds: ids.slice(0, 5) }).ok).toBe(false);
-    expect(game.dispatch({ type: 'play', cardIds: ids.slice(0, 4) }).ok).toBe(true);
-    expect(hand(game)).toHaveLength(7);
+    expect(game.dispatch({ type: 'play', cardIds: ids.slice(0, 5) }).ok).toBe(true);
+    expect(hand(game)).toHaveLength(6);
   });
 
-  it('strop 4 platí i se žolíkem +1 výběr; −1 karta se sčítá s většími rukama', () => {
+  it('výběr se žolíkem +1 neomezí; −2 karty se sčítají s většími rukama', () => {
     const { game } = bossGame('studio_flat', { jokers: ['wide_grip', 'big_hand'] });
-    expect(game.modifiers().maxSelect).toBe(4);
-    expect(hand(game)).toHaveLength(9);
+    expect(game.modifiers().maxSelect).toBe(6);
+    expect(hand(game)).toHaveLength(8);
   });
 
   it('Odvolání vrátí výběr i velikost ruky', () => {

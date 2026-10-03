@@ -9,17 +9,17 @@ import type { TextTree } from '../../cs';
 export const bossesA = {
   tax_audit: {
     name: 'Kontrola z finančáku',
-    rule: 'Každá zahraná ruka stojí {fee|money}.',
-    intro: 'Dobrý den, finanční úřad. Účtenky máte?',
+    rule: 'Každá zahraná karta stojí {fee|money} (srážka po každé ruce).',
+    intro: 'Dobrý den, finanční úřad. Účtenky máte? Ke každé kartě zvlášť.',
     defeat: 'Tentokrát bez pokuty. Tentokrát.',
     death: 'Doklady k tomu nemáte, že?',
   },
   track_closure: {
     name: 'Výluka na trati',
     rule: 'Každá druhá líznutá karta přijde lícem dolů.',
-    intro: 'Polovina karet jede náhradní autobusovou dopravou.',
+    intro: 'Mezi Kolínem a tvou rukou se pracuje na trati. Každá druhá karta jede oklikou.',
     defeat: 'Provoz obnoven. Zpoždění neuvedeno.',
-    death: 'Náhradní doprava nejela.',
+    death: 'Výluka se prodlužuje až do odvolání. Tvůj run taky.',
   },
   inventory: {
     name: 'Inventura',
@@ -75,14 +75,14 @@ export const bossesA = {
   },
   parking_fee: {
     name: 'Parkovné',
-    rule: 'Každé zahození stojí {fee|money}.',
-    intro: 'Modrá zóna. Zahazovat jen s parkovací kartou.',
+    rule: 'Každé zahození stojí {fee|money} × číslo patra.',
+    intro: 'Modrá zóna. Čím výš, tím dráž – jako v každém centru.',
     defeat: 'Za stěračem tentokrát nic.',
     death: 'Odtaženo na náklady provozovatele.',
   },
   studio_flat: {
     name: 'Garsonka 1+kk',
-    rule: '−{handSize|plural:karta,karty,karet} v ruce a vybrat jde nejvýš {select|plural:kartu,karty,karet}.',
+    rule: '−{handSize|plural:karta,karty,karet} v ruce.',
     intro: 'Vítej v bytě, kde se kuchyni říká roh.',
     defeat: 'Stěhuješ se? Nech tu klíče.',
     death: 'Výpověď z nájmu. Na vyklizení máš do pondělí.',

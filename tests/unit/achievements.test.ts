@@ -308,10 +308,7 @@ const CASES: Record<string, Case> = {
   },
   night_watchman: { before: (e) => void e.ante(11), after: (e) => void e.ante(12) },
   rooster_crows: { before: (e) => void e.ante(15), after: (e) => void e.ante(16) },
-  heat_death: {
-    before: (e) => void e.play({ score: 1e300 }),
-    after: (e) => void e.play({ score: Number.MAX_VALUE }),
-  },
+  heat_death: { before: (e) => void e.ante(29), after: (e) => void e.ante(30) },
 
   // ── skóre ──
   score_1k: scoreCase('score_1k'),

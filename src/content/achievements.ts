@@ -37,6 +37,11 @@ import { HAND_TYPES, SECRET_HAND_TYPES } from '../engine/types';
 const HALFTIME_ANTE = 5;
 const NIGHT_ANTE = 12;
 const ROOSTER_ANTE = 16;
+/**
+ * Tepelná smrt vesmíru: patro nekonečného režimu (1.0.1 — dřív skóre ruky ≥ Number.MAX_VALUE, se stropem ×mult
+ * z opakování a mírnějším růstem cílů nesplnitelné; cíl šéfa patra 30 je ≈ 1,2e14).
+ */
+const HEAT_DEATH_ANTE = 30;
 const SCORE_TIERS = {
   score_1k: 1_000,
   score_10k: 10_000,
@@ -213,10 +218,13 @@ const PROGRESS: AchievementDef[] = [
     ({ profile }) => prog(profile.stats.records.highestAnte, ROOSTER_ANTE),
     { params: { ante: ROOSTER_ANTE } },
   ),
-  // Skóre ruky se při přetečení ořízne na Number.MAX_VALUE (nekonečno by JSON uložil jako null).
-  a('heat_death', 'progress', 'fire', ({ profile }) => bestHand(profile) >= Number.MAX_VALUE, {
-    hidden: true,
-  }),
+  a(
+    'heat_death',
+    'progress',
+    'fire',
+    ({ profile }) => prog(profile.stats.records.highestAnte, HEAT_DEATH_ANTE),
+    { hidden: true, params: { ante: HEAT_DEATH_ANTE } },
+  ),
 ];
 
 const SCORE: AchievementDef[] = [

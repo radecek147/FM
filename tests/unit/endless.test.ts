@@ -1,7 +1,7 @@
 /**
  * Nekonečný režim se skutečným obsahem hry (docs/DESIGN.md kap. 1.3 a 2.3.3): cíle pater 9–24 pro všechny tři
  * křivky, průchod patry 9–24 po výhře (finálový šéf v patrech 16 a 24, jinde běžní šéfové, porážka už není výhra),
- * přetečení cíle i skóre na `Number.MAX_VALUE` (≈ patro 210) a jeho zobrazení jako „∞“, uložení a načtení.
+ * přetečení cíle i skóre na `Number.MAX_VALUE` (≈ patro 393) a jeho zobrazení jako „∞“, uložení a načtení.
  * Základní tabulka pater 9–16 je i v tests/unit/targets.test.ts, zrychlený průchod s testovacím obsahem
  * v tests/unit/game.test.ts.
  */
@@ -26,24 +26,24 @@ import { addJokers, joker, play, selectBoss } from './fixtures/registry';
 const reg = buildRegistry();
 
 /** Patro, od kterého se cíl (i Malé útraty) přestane vejít do konečného čísla — ve všech křivkách. */
-const OVERFLOW_ANTE = 210;
+const OVERFLOW_ANTE = 393;
 
 // [patro, křivka 1: malá, velká, šéf, křivka 2: malá, velká, šéf, křivka 3: malá, velká, šéf]
-// Přepočítáno nezávisle podle vzorce DESIGN 1.3: base(a) = nice(base(8) × g(a)^(a − 8)), g(a) = 2,2 + 0,15 × (a − 9).
+// Přepočítáno nezávisle podle vzorce DESIGN 1.3: base(a) = nice(base(8) × g(a)^(a − 8)), g(a) = 2,3 + 0,01 × (a − 9).
 type Row = [number, number, number, number, number, number, number, number, number, number];
 const ROWS: Row[] = [
-  [9, 210e3, 320e3, 420e3, 240e3, 360e3, 480e3, 250e3, 380e3, 500e3],
-  [10, 520e3, 780e3, 1.05e6, 610e3, 920e3, 1.2e6, 640e3, 960e3, 1.3e6],
-  [11, 1.5e6, 2.3e6, 3e6, 1.7e6, 2.6e6, 3.4e6, 1.8e6, 2.7e6, 3.6e6],
-  [12, 4.7e6, 7.1e6, 9.4e6, 5.4e6, 8.1e6, 11e6, 5.7e6, 8.6e6, 11.5e6],
-  [13, 16.5e6, 25e6, 33e6, 19e6, 29e6, 38e6, 20e6, 30e6, 40e6],
-  [14, 63e6, 95e6, 125e6, 72e6, 110e6, 145e6, 76e6, 115e6, 150e6],
-  [15, 260e6, 390e6, 520e6, 300e6, 450e6, 600e6, 320e6, 480e6, 640e6],
-  [16, 1.2e9, 1.8e9, 2.4e9, 1.35e9, 2e9, 2.7e9, 1.45e9, 2.2e9, 2.9e9],
-  [17, 5.8e9, 8.7e9, 11.5e9, 6.7e9, 10e9, 13.5e9, 7e9, 10.5e9, 14e9],
-  [18, 30e9, 45e9, 60e9, 35e9, 53e9, 70e9, 37e9, 56e9, 74e9],
-  [19, 170e9, 260e9, 340e9, 195e9, 290e9, 390e9, 200e9, 300e9, 400e9],
-  [20, 1000e9, 1500e9, 2000e9, 1150e9, 1750e9, 2300e9, 1200e9, 1800e9, 2400e9],
+  [9, 220e3, 330e3, 440e3, 250e3, 380e3, 500e3, 260e3, 390e3, 520e3],
+  [10, 510e3, 770e3, 1e6, 590e3, 890e3, 1.2e6, 610e3, 920e3, 1.2e6],
+  [11, 1.2e6, 1.8e6, 2.4e6, 1.35e6, 2e6, 2.7e6, 1.45e6, 2.2e6, 2.9e6],
+  [12, 2.8e6, 4.2e6, 5.6e6, 3.2e6, 4.8e6, 6.4e6, 3.4e6, 5.1e6, 6.8e6],
+  [13, 6.7e6, 10e6, 13.5e6, 7.7e6, 11.5e6, 15.5e6, 8.1e6, 12e6, 16e6],
+  [14, 16e6, 24e6, 32e6, 18.5e6, 28e6, 37e6, 19.5e6, 29e6, 39e6],
+  [15, 39e6, 59e6, 78e6, 45e6, 68e6, 90e6, 47e6, 71e6, 94e6],
+  [16, 95e6, 145e6, 190e6, 110e6, 165e6, 220e6, 115e6, 175e6, 230e6],
+  [17, 230e6, 350e6, 460e6, 270e6, 410e6, 540e6, 280e6, 420e6, 560e6],
+  [18, 580e6, 870e6, 1.15e9, 670e6, 1e9, 1.35e9, 700e6, 1.05e9, 1.4e9],
+  [19, 1.45e9, 2.2e9, 2.9e9, 1.65e9, 2.5e9, 3.3e9, 1.75e9, 2.6e9, 3.5e9],
+  [20, 3.6e9, 5.4e9, 7.2e9, 4.2e9, 6.3e9, 8.4e9, 4.4e9, 6.6e9, 8.8e9],
 ];
 
 describe('nekonečný režim – cíle pater 9–20 (DESIGN 1.3, 2.3.3)', () => {
@@ -57,29 +57,30 @@ describe('nekonečný režim – cíle pater 9–20 (DESIGN 1.3, 2.3.3)', () => 
     }
   });
 
-  it('základ je nice(base(8) × g(a)^(a − 8)) a poměr mezi patry roste (nadexponenciální růst)', () => {
-    expect([ENDLESS_GROWTH_BASE, ENDLESS_GROWTH_STEP]).toEqual([2.2, 0.15]);
+  it('základ je nice(base(8) × g(a)^(a − 8)) a poměr mezi patry je téměř konstantní (×2,3 → nejvýš ×3)', () => {
+    expect([ENDLESS_GROWTH_BASE, ENDLESS_GROWTH_STEP]).toEqual([2.3, 0.01]);
     for (const curve of [1, 2, 3]) {
       const base8 = TARGET_CURVES[curve - 1]![7]!;
       let prevRatio = 0;
       for (let ante = 9; ante <= 40; ante++) {
-        const g = 2.2 + 0.15 * (ante - 9);
+        const g = 2.3 + 0.01 * (ante - 9);
         expect(anteBase(ante, curve)).toBe(niceRound(base8 * g ** (ante - 8)));
-        // Poměr sousedních pater (bez zaokrouhlení) roste: ×2,2 v patře 9, ×4,5 kolem patra 16.
-        const ratio = g ** (ante - 8) / (ante === 9 ? 1 : (g - 0.15) ** (ante - 9));
-        expect(ratio).toBeGreaterThan(prevRatio);
+        // Poměr sousedních pater (bez zaokrouhlení) mírně roste: ×2,3 v patře 9, ×2,4 v patře 16, ×2,9 v patře 40.
+        const ratio = g ** (ante - 8) / (ante === 9 ? 1 : (g - 0.01) ** (ante - 9));
+        expect(ratio).toBeGreaterThanOrEqual(prevRatio);
+        expect(ratio).toBeLessThan(3);
         prevRatio = ratio;
       }
     }
   });
 
-  it('orientační čísla z DESIGN 2.3.3 (křivka 1): patro 24 ≈ 2,2e15, 32 ≈ 1,05e23, 40 ≈ 5,2e31', () => {
-    expect(anteBase(24, 1)).toBe(2.2e15);
-    expect(anteBase(32, 1)).toBe(1.05e23);
-    expect(anteBase(40, 1)).toBe(5.2e31);
+  it('orientační čísla z DESIGN 2.3.3 (křivka 1): patro 24 ≈ 1,6e11, 32 ≈ 4,5e14, 40 ≈ 2e18', () => {
+    expect(anteBase(24, 1)).toBe(1.6e11);
+    expect(anteBase(32, 1)).toBe(4.5e14);
+    expect(anteBase(40, 1)).toBe(2e18);
     // Od 1e15 vědecký zápis s čárkou.
-    expect(formatNumber(blindTarget(24, 'boss', 1))).toBe('4,4e15');
-    expect(formatNumber(anteBase(32, 1))).toBe('1,05e23');
+    expect(formatNumber(blindTarget(40, 'boss', 1))).toBe('4e18');
+    expect(formatNumber(anteBase(40, 1))).toBe('2e18');
   });
 });
 
@@ -169,14 +170,14 @@ describe('nekonečný režim – průchod patry 9–24 se skutečným obsahem', 
     expect(loaded.state.endless).toBe(true);
     expect(loaded.state.ante).toBe(9);
     loaded.dispatch({ type: 'selectBlind' });
-    expect(loaded.state.round!.target).toBe(210_000);
+    expect(loaded.state.round!.target).toBe(220_000);
   });
 });
 
 // ─────────────────────────── Přetečení ───────────────────────────
 
-describe('nekonečný režim – přetečení (≈ patro 210)', () => {
-  it('cíl Malé útraty v patře 209 je konečný (šéfa do 208), od patra 210 Number.MAX_VALUE ve všech křivkách; UI ukáže „∞“', () => {
+describe('nekonečný režim – přetečení (≈ patro 393)', () => {
+  it('cíl Malé útraty i šéfa v patře 392 je konečný, od patra 393 Number.MAX_VALUE ve všech křivkách; UI ukáže „∞“', () => {
     for (const curve of [1, 2, 3]) {
       expect(Number.isFinite(blindTarget(OVERFLOW_ANTE - 1, 'small', curve))).toBe(true);
       expect(blindTarget(OVERFLOW_ANTE - 1, 'small', curve)).toBeLessThan(Number.MAX_VALUE);
@@ -188,7 +189,7 @@ describe('nekonečný režim – přetečení (≈ patro 210)', () => {
         expect(blindTarget(OVERFLOW_ANTE, kind, curve)).toBe(Number.MAX_VALUE);
         expect(blindTarget(OVERFLOW_ANTE + 50, kind, curve)).toBe(Number.MAX_VALUE);
       }
-      // I násobek šéfa ×4,5 (víc než nejvyšší ve hře, Fronta na banány ×3,5) se v patře 208 vejde.
+      // I násobek šéfa ×4,5 (víc než nejvyšší ve hře, Šanon na šanonu ×3) se v patře 391 vejde.
       expect(blindTarget(OVERFLOW_ANTE - 2, 'boss', curve, { bossMult: 4.5 })).toBeLessThan(Number.MAX_VALUE);
     }
     expect(formatNumber(blindTarget(OVERFLOW_ANTE, 'boss', 1))).toBe('∞');
@@ -234,12 +235,12 @@ describe('nekonečný režim – přetečení (≈ patro 210)', () => {
     expect(after.endless).toBe(true);
   });
 
-  it('finálový šéf i za přetečením: patra 208 a 216 mají finálového šéfa, 210 běžného', () => {
+  it('finálový šéf i za přetečením: patra 392 a 400 mají finálového šéfa, 393 běžného', () => {
     const g = endlessGame('ENDLESSFINALS');
     for (const [ante, final] of [
-      [208, true],
-      [210, false],
-      [216, true],
+      [392, true],
+      [393, false],
+      [400, true],
     ] as const) {
       g._core.api.changeAnte(ante - g.state.ante);
       expect(g.state.ante).toBe(ante);

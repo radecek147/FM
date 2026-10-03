@@ -153,7 +153,7 @@ describe('každý šéf × Odvolání uprostřed kola', () => {
   const ruled = BOSS_IDS.filter((id) => bossHasRule(reg.bosses[id]!));
 
   it('Odvolání má smysl u všech šéfů kromě těch, kteří jen zvyšují cíl', () => {
-    expect(BOSS_IDS.filter((id) => !ruled.includes(id))).toEqual(['banana_queue', 'binder_tower']);
+    expect(BOSS_IDS.filter((id) => !ruled.includes(id))).toEqual(['binder_tower']);
   });
 
   it.each(ruled.map((id) => [id]))(
@@ -396,9 +396,16 @@ describe('nekonečný režim: finálový šéf v patře 16', () => {
           seen.add('mayor');
           expect(typeof r.flags['mayor.lastScore'], id).toBe('number');
         }
+        if (id === 'banana_queue') {
+          const played = events.find((e) => e.type === 'handPlayed');
+          if (played?.type === 'handPlayed' && r.handsPlayed > 1 && played.result.score > 0) {
+            seen.add('banana');
+            expect(played.result.steps.at(-1), id).toMatchObject({ source: 'boss', defId: 'banana_queue' });
+          }
+        }
       }
       expect(g.state.phase, id).not.toBe('round');
-      if (id !== 'banana_queue') expect(seen.size, `${id}: pravidlo se projevilo`).toBe(1);
+      expect(seen.size, `${id}: pravidlo se projevilo`).toBe(1);
     },
     30_000,
   );

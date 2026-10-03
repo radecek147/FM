@@ -11,10 +11,12 @@ import type { BossCtx, BossDef } from '../../engine/content-types';
 // ─────────────────────────── Čísla ───────────────────────────
 
 /**
- * Fronta na banány: násobek základního cíle patra. Fáze 10: 4,5 → 3,5 — s cíli patra 8 fáze 10 a silnějšími boty
- * letalita 55 % (pásmo 20–40 %, DECISIONS „Fáze 10: balanc…“).
+ * Fronta na banány (1.0.1): banány docházejí — každá další ruka kola se započítá o `BANANA_STEP_PCT` % méně (první
+ * celá, nejméně `BANANA_MIN_PCT` %). Dřív bez pravidla, jen cíl 3,5× (fáze 10: 4,5 → 3,5).
  */
-const BANANA_QUEUE_TARGET_MULT = 3.5;
+const BANANA_QUEUE_TARGET_MULT = 2.5;
+const BANANA_STEP_PCT = 20;
+const BANANA_MIN_PCT = 20;
 /**
  * Cíle finálových šéfů laděné simulací na letalitu 20–40 % (docs/DESIGN.md 12.1, DECISIONS „Fáze 6: ladění se
  * šéfy“): Pan starosta, Krajský úřad a Velká voda měli s 2× ~16–19 %, Bílá paní ~35–48 %. Fáze 10: Bílá paní 1,5 → 1,25
@@ -23,7 +25,8 @@ const BANANA_QUEUE_TARGET_MULT = 3.5;
 const MAYOR_TARGET_MULT = 2.5;
 const OFFICE_TARGET_MULT = 2.25;
 const FLOOD_TARGET_MULT = 2.5;
-const WHITE_LADY_TARGET_MULT = 1.25;
+/** Bílá paní: 1.0.1 bez zamíchání (karty jen otočí), proto vyšší cíl než 1,25× z fáze 10 (kalibruje simulace). */
+const WHITE_LADY_TARGET_MULT = 1.6;
 /** Velká voda: o kolik karet se po každé zahrané ruce zmenší ruka (do konce kola). */
 const FLOOD_HAND_SIZE = 1;
 /** Krajský úřad: kolik fungujících žolíků se po každé ruce vypne. */
@@ -39,10 +42,17 @@ function flagNumber(ctx: BossCtx, key: string): number {
   return typeof v === 'number' && Number.isFinite(v) ? v : 0;
 }
 
-/** Bílá paní: všechny karty v ruce lícem dolů a zamíchat (karty dobrané potom přijdou lícem nahoru). */
+/**
+ * Bílá paní: všechny karty v ruce lícem dolů — bez zamíchání, pořadí zůstává (karty dobrané potom přijdou lícem
+ * nahoru), takže si hráč může pamatovat, co kde držel.
+ */
 function hauntHand(ctx: BossCtx): void {
   for (const card of ctx.api.handCards()) ctx.api.setCardFaceDown(card.id, true);
-  ctx.api.shuffleHand();
+}
+
+/** Fronta na banány: kolik procent skóre se započítá ruce s pořadím `handIndex` v kole (0 = první). */
+export function bananaShare(handIndex: number): number {
+  return Math.max(BANANA_MIN_PCT, 100 - BANANA_STEP_PCT * Math.max(0, handIndex));
 }
 
 // ─────────────────────────── Šéfové ───────────────────────────
@@ -90,13 +100,16 @@ export const BOSSES_FINAL: BossDef[] = [
     art: { icon: 'bank', prop: 'stamper', bg: '#1d2433', fg: '#d7e1f2', pattern: 'grid' },
   },
   {
-    // F3 — Vyšší cíl (4,5× místo 2×), žádné další pravidlo.
+    // F3 — Každá další ruka kola se započítá o 20 % méně (první celá, nejméně 20 %); ruka zakázaná jiným pravidlem
+    // se počítá taky (fronta se posunula).
     id: 'banana_queue',
     final: true,
     targetMult: BANANA_QUEUE_TARGET_MULT,
-    params: { target: BANANA_QUEUE_TARGET_MULT },
+    params: { step: BANANA_STEP_PCT, min: BANANA_MIN_PCT },
     color: '#c9a227',
-    hooks: {},
+    hooks: {
+      adjustHandScore: (ctx, score) => Math.floor((score * bananaShare(ctx.round.handsPlayed)) / 100),
+    },
     art: { icon: 'hourglass', prop: 'shopping-cart', bg: '#3a3220', fg: '#fde68a', pattern: 'stripes' },
   },
   {
@@ -117,7 +130,7 @@ export const BOSSES_FINAL: BossDef[] = [
     art: { icon: 'raining', prop: 'canoe', bg: '#0f2a3d', fg: '#a9d8f5', pattern: 'waves' },
   },
   {
-    // F5 — Po každé zahrané ruce i zahození se všechny karty v ruce otočí lícem dolů a zamíchají.
+    // F5 — Po každé zahrané ruce i zahození se všechny karty v ruce otočí lícem dolů (bez zamíchání).
     // Platí pro karty, které v ruce zůstaly; nově dobrané přijdou lícem nahoru (hráč si musí pamatovat, co držel).
     id: 'white_lady',
     final: true,

@@ -45,9 +45,9 @@ export const achievements = {
   },
   heat_death: {
     name: 'Tepelná smrt vesmíru',
-    desc: 'Získej jednou rukou tolik bodů, že skóre přeteče do nekonečna.',
-    hint: 'Některá čísla jsou větší než jiná. Tohle je největší.',
-    flavor: 'Fyzici pláčou, kalkulačka se kouří.',
+    desc: 'Dosáhni patra {ante} v nekonečném režimu.',
+    hint: 'Za osmým patrem to nekončí. Za dvacátým taky ne.',
+    flavor: 'Cíl má víc nul než státní rozpočet. Fyzici pláčou, kalkulačka se kouří.',
   },
 
   // ── skóre ──

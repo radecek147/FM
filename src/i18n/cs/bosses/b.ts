@@ -9,8 +9,8 @@ import type { TextTree } from '../../cs';
 export const bossesB = {
   new_decree: {
     name: 'Nová vyhláška',
-    rule: 'Všechny kombinace se v tomto kole počítají na úrovni {level}.',
-    intro: 'Na základě nové vyhlášky se úrovně ruší.',
+    rule: 'Úrovně všech kombinací se v tomto kole dělí {divisor} (zaokrouhleno nahoru, nejméně 1).',
+    intro: 'Na základě nové vyhlášky se úrovně krátí na polovinu. Druhá polovina je ve schvalovacím řízení.',
     defeat: 'Vyhláška zrušena soudem.',
     death: 'Neznalost vyhlášky neomlouvá.',
   },

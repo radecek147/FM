@@ -5,10 +5,13 @@ import { SUITS } from '../../engine/types';
 
 // ─────────────────────────── Čísla pravidel (shodná s texty) ───────────────────────────
 
-/** Kontrola z finančáku: cena každé zahrané ruky v Kč. */
+/**
+ * Kontrola z finančáku: daň v Kč za každou zahranou kartu (1.0.1: dřív 1 Kč za ruku — to nic nestálo; teď pětikaretní
+ * ruka stojí 5 Kč a vyplatí se hrát méně karet).
+ */
 const TAX_AUDIT_FEE = 1;
-/** Kontrola z finančáku: mírné pravidlo, proto vyšší cíl (2× měl ~3% letalitu — balanc simulací). */
-const TAX_AUDIT_TARGET = 2.25;
+/** Kontrola z finančáku: běžný cíl — pravidlo už bolí samo (1.0: 2,25× při 1 Kč za ruku). */
+const TAX_AUDIT_TARGET = 2;
 /** Výluka na trati: lícem dolů přijde každá N-tá líznutá karta kola (text: „každá druhá“). */
 const TRACK_CLOSURE_EVERY = 2;
 /**
@@ -24,18 +27,21 @@ const BLACK_CAT_CARDS = 2;
 /** Mlha nad Labem: hodnoty, které se lížou lícem dolů. */
 const ELBE_FOG_MIN = 2;
 const ELBE_FOG_MAX = 5;
-/** Parkovné: cena každého zahození v Kč. */
+/** Parkovné: cena zahození v Kč za každé patro (v patře 4 stojí zahození 4 Kč; 1.0: vždy 1 Kč). */
 const PARKING_FEE = 1;
-/** Parkovné a Kapsář v tramvaji: mírné pravidlo, proto vyšší cíl (2× měl ~2% letalitu — balanc simulací). */
-const PARKING_TARGET = 2.25;
+/** Parkovné: běžný cíl — poplatek roste s patrem (1.0: 2,25× při 1 Kč). */
+const PARKING_TARGET = 2;
+/** Kapsář v tramvaji: mírné pravidlo, proto vyšší cíl (2× měl ~2% letalitu — balanc simulací). */
 const PICKPOCKET_TARGET = 2.25;
 /** Exekutor: nižší cíl (bez nejcennějšího žolíka byla 2× ~1,5× smrtelnější než průměrný šéf). */
 const BAILIFF_TARGET = 1.75;
-/** Garsonka 1+kk: menší ruka a strop vybraných karet. */
-const STUDIO_HAND_SIZE = 1;
-const STUDIO_MAX_SELECT = 4;
-/** Garsonka 1+kk: nižší cíl (bez Postupek a Barev byla 2× ~20% letalita — balanc simulací). */
-const STUDIO_TARGET = 1.35;
+/**
+ * Garsonka 1+kk: menší ruka (1.0.1: jen jedno omezení — dřív −1 karta a navíc nejvýš 4 vybrané karty, což vyřadilo
+ * Postupky i Barvy a pro barvaře měla šéfka letalitu 37,5 %).
+ */
+const STUDIO_HAND_SIZE = 2;
+/** Garsonka 1+kk: nižší cíl (menší ruka ztěžuje skládání; kalibruje simulace). */
+const STUDIO_TARGET = 1.6;
 /** Sucho v obci: zahození na nulu, ruka navíc. */
 const DROUGHT_DISCARDS = 0;
 const DROUGHT_HANDS = 1;
@@ -49,7 +55,6 @@ const FLAG_TRACK_DRAWN = 'track_closure.drawn';
 const FLAG_LUNCH_CUT = 'lunch_break.cut';
 const FLAG_GRANNY_SUIT = 'superstitious_granny.suit';
 const FLAG_CAT_CARDS = 'black_cat.cards';
-const FLAG_STUDIO_CUT = 'studio_flat.cut';
 const FLAG_DROUGHT_CUT = 'village_drought.cut';
 
 // ─────────────────────────── Pomocníci ───────────────────────────
@@ -73,14 +78,14 @@ function flagSuit(round: Readonly<RoundState>, key: string): Suit | null {
 }
 
 /**
- * Strop modifikátoru do konce kola („jen 1 ruka“, „0 zahození“, „nejvýš 4 karty“). Na začátku kola spočítá, o kolik
+ * Strop modifikátoru do konce kola („jen 1 ruka“, „0 zahození“). Na začátku kola spočítá, o kolik
  * je hodnota (bez vlastního stropu) nad stropem, a uloží to do `round.flags`; `passive` šéfa pak přesně tolik ubere.
  * Díky tomu strop platí i s kupóny, balíčkem a žolíky, které hodnotu zvyšují, a Odvolání (`disableBoss`) vrátí
  * rozdíl jako u každého `passive`. Efekty, které ruce nebo zahození přidají až během kola, platí navíc.
  */
 function capAtRoundStart(
   ctx: BossCtx,
-  key: 'hands' | 'discards' | 'maxSelect',
+  key: 'hands' | 'discards',
   flag: string,
   cap: number,
 ): void {
@@ -89,7 +94,7 @@ function capAtRoundStart(
 }
 
 /** Delta stropu z `capAtRoundStart` (prázdná, dokud kolo nezačalo). */
-function capDelta(ctx: BossCtx, key: 'hands' | 'discards' | 'maxSelect', flag: string): ModifierDelta {
+function capDelta(ctx: BossCtx, key: 'hands' | 'discards', flag: string): ModifierDelta {
   const cut = flagNum(ctx.round, flag);
   const delta: ModifierDelta = {};
   if (cut > 0) delta[key] = -cut;
@@ -129,14 +134,14 @@ function mostValuableJoker(ctx: BossCtx): JokerInstance | null {
 
 export const BOSSES_A: BossDef[] = [
   {
-    // 1 — Kontrola z finančáku: každá zahraná ruka stojí 1 Kč (srážka do dluhového limitu).
+    // 1 — Kontrola z finančáku: každá zahraná karta stojí 1 Kč (srážka do dluhového limitu).
     id: 'tax_audit',
     minAnte: 1,
     targetMult: TAX_AUDIT_TARGET,
     color: '#2f4a6d',
     params: { fee: TAX_AUDIT_FEE },
     hooks: {
-      afterHandPlayed: (ctx) => ctx.api.addMoney(-TAX_AUDIT_FEE, 'boss'),
+      afterHandPlayed: (ctx) => ctx.api.addMoney(-TAX_AUDIT_FEE * ctx.played.length, 'boss'),
     },
     art: {
       icon: 'magnifying-glass',
@@ -299,14 +304,14 @@ export const BOSSES_A: BossDef[] = [
     },
   },
   {
-    // 9 — Parkovné: každé zahození stojí 1 Kč (srážka do dluhového limitu).
+    // 9 — Parkovné: každé zahození stojí 1 Kč × číslo patra (srážka do dluhového limitu).
     id: 'parking_fee',
     minAnte: 1,
     targetMult: PARKING_TARGET,
     color: '#1d5fa8',
     params: { fee: PARKING_FEE },
     hooks: {
-      onDiscard: (ctx) => ctx.api.addMoney(-PARKING_FEE, 'boss'),
+      onDiscard: (ctx) => ctx.api.addMoney(-PARKING_FEE * Math.max(1, ctx.state.ante), 'boss'),
     },
     art: {
       icon: 'city-car',
@@ -318,15 +323,14 @@ export const BOSSES_A: BossDef[] = [
     },
   },
   {
-    // 10 — Garsonka 1+kk: −1 karta v ruce a nejvýš 4 vybrané karty (strop přes `passive`).
+    // 10 — Garsonka 1+kk: −2 karty v ruce (vybrat jde dál až 5 karet).
     id: 'studio_flat',
     minAnte: 2,
     targetMult: STUDIO_TARGET,
     color: '#9c6b4e',
-    params: { handSize: STUDIO_HAND_SIZE, select: STUDIO_MAX_SELECT },
+    params: { handSize: STUDIO_HAND_SIZE },
     hooks: {
-      passive: (ctx) => ({ handSize: -STUDIO_HAND_SIZE, ...capDelta(ctx, 'maxSelect', FLAG_STUDIO_CUT) }),
-      onRoundStart: (ctx) => capAtRoundStart(ctx, 'maxSelect', FLAG_STUDIO_CUT, STUDIO_MAX_SELECT),
+      passive: () => ({ handSize: -STUDIO_HAND_SIZE }),
     },
     art: {
       icon: 'window',
