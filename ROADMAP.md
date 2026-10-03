@@ -7,7 +7,7 @@
 
 _Aktualizováno: 2026-10-03 (1.0.1: kalibrace obtížnosti)_
 
-**1.0.1 — kalibrace obtížnosti je hotová** (DECISIONS 2026-10-03 „Kalibrace 1.0.1 (obtížnost po odlišení od
+**Verze 1.0.1 je hotová** (`package.json` 1.0.1): opravy UI, čitelnosti a logiky z testu 1.0, odlišení od Balatra a designové opravy (DECISIONS 2026-10-03 „Oprava UI po testu 1.0“, „Oprava logických chyb po testu 1.0“, „Odlišení od Balatra a designové opravy po testu 1.0“); všechny položky sekce „Opravy po testu 1.0 (1.0.1)“ jsou odškrtnuté. **Kalibrace obtížnosti je hotová** (DECISIONS 2026-10-03 „Kalibrace 1.0.1 (obtížnost po odlišení od
 Balatra)“, DESIGN 2.3, 4.3, 4.10, 8, 9, 10, 12.2): boti oceňují kupóny a štítky 1.0.1 (splátka Půjčky, tombola,
 přelosování šéfa; `src/engine/sim/{value,bots}.ts`), křivky cílů mají patra 4–7 o 30–45 % výš
 (`src/engine/run/targets.ts`), 18 cílů běžných a 4 finálových šéfů, Speciál 35 %, Doppelbock 32 %, Imperial ×1,15
@@ -31,7 +31,7 @@ Source = GitHub Actions), pak stačí znovu spustit workflow „Deploy to GitHub
 adresa bude https://radecek147.github.io/FM/.
 **Další krok:** po zapnutí Pages ověřit nasazení a odškrtnout ho; pak obsahové patche (sekce „Obsahové patche
 (po 1.0)“ níže, nápady v `docs/IDEAS.md`).
-Pozn.: e2e spouštět vždy jen z jednoho procesu (sdílený port 4173). Simulace: `npm run simulate -- --runs 300
+Pozn.: e2e spouštět z jednoho procesu na port, souběžné běhy přes `KARBAN_E2E_PORT` (výchozí 4173). Simulace: `npm run simulate -- --runs 300
 --stake 1 --bot all --seed-prefix A` trvá ~25 min (run ~1 s na bota).
 
 **Fáze 0–2 jsou hotové** (commity `chore: …`, `feat(engine): complete phase 1 …`, `feat(engine): complete phase 2 …`).
