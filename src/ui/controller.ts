@@ -16,9 +16,9 @@ import type {
   NewRunOptions,
   RunState,
 } from '../engine';
-import { Game, deserializeRun, serializeRun } from '../engine';
+import { Game, deserializeRun, serializeRun, validateRunState } from '../engine';
 import type { KeyValueStore } from './storage';
-import { STORAGE_KEYS } from './storage';
+import { RUN_BACKUP_PREFIX, STORAGE_KEYS, writeBackup } from './storage';
 
 export type Presenter = (events: readonly GameEvent[], controller: GameController) => Promise<void>;
 
@@ -51,6 +51,8 @@ export class GameController {
   selected: number[] = [];
   private listeners = new Set<Listener>();
   private animating = false;
+  /** Pořadí přehrávání událostí; `cancelPresentation` ho posune, takže dobíhající přehrávání už nic neovlivní. */
+  private presentSeq = 0;
   private presenter: Presenter;
   private observer: RunObserver | null;
   private eventListeners = new Set<(events: readonly GameEvent[]) => void>();
@@ -70,13 +72,23 @@ export class GameController {
     return c;
   }
 
-  /** Obnoví rozehraný run z úložiště, nebo vrátí null. */
+  /**
+   * Obnoví rozehraný run z úložiště, nebo vrátí null. Kromě obálky a verze (`deserializeRun`) ověří i vnitřní
+   * konzistenci (`validateRunState`: karty v ruce a hromádkách, `round`, data fáze…) — poškozený run by jinak spadl
+   * až při Zahrát. Neznámý obsah (žolík odebraný v nové verzi) načtení nebrání, engine ho snese. Uložená data
+   * nemaže: zálohu a úklid nečitelného runu dělá volající (`backupSavedRun`).
+   */
   static resume(deps: ControllerDeps): GameController | null {
     const raw = deps.store.get(STORAGE_KEYS.run);
     if (!raw) return null;
     try {
       const state = deserializeRun(raw);
       if (state.phase === 'game_over') return null;
+      const broken = validateRunState(state).filter((i) => i.kind === 'corrupt');
+      if (broken.length > 0) {
+        console.warn('[save] Rozehraný run je poškozený', broken.map((i) => i.path).join(', '));
+        return null;
+      }
       return new GameController(Game.fromState(state, deps.registry), deps);
     } catch (e) {
       console.warn('[save] Nepodařilo se načíst rozehraný run', e);
@@ -182,15 +194,35 @@ export class GameController {
     for (const fn of [...this.eventListeners]) this.observe(() => fn(res.events));
     const hand = this.handIds();
     this.selected = this.selected.filter((id) => hand.includes(id));
+    const seq = ++this.presentSeq;
     this.animating = true;
     try {
       await this.presenter(res.events, this);
     } finally {
-      this.animating = false;
+      // Zrušené přehrávání (hráč mezitím odešel z herní obrazovky) už vstup neblokuje ani neodblokuje.
+      if (seq === this.presentSeq) this.animating = false;
     }
+    if (seq !== this.presentSeq) return res;
+    this.settle();
+    return res;
+  }
+
+  /** Konec přehrávání: překreslení a odložená oznámení pozorovatele (odemčení až po animacích). */
+  private settle(): void {
     this.notify();
     this.observe(() => this.observer?.onSettled?.(this));
-    return res;
+  }
+
+  /**
+   * Zruší běžící přehrávání událostí (herní obrazovka se zavírá — odchod do menu během skórování): vstup se hned
+   * odblokuje, odložená oznámení se ukážou a dobíhající presenter už stav controlleru nezmění. Stav enginu je po
+   * akci hotový od začátku (animace jen dohánějí obrazovku), takže po návratu do hry se hraje hned dál.
+   */
+  cancelPresentation(): void {
+    if (!this.animating) return;
+    this.presentSeq++;
+    this.animating = false;
+    this.settle();
   }
 
   /** Zavolá pozorovatele; jeho chyba (meta vrstva) nesmí shodit rozehranou hru. */
@@ -226,5 +258,18 @@ export class GameController {
   /** Smaže uložený run (např. po prohře nebo při startu nového). */
   static clearSaved(store: KeyValueStore): void {
     store.remove(STORAGE_KEYS.run);
+  }
+
+  /**
+   * Uložený run, který nejde načíst (poškozený, z novější verze…), zazálohuje do `karban.run.backup.<ms>` a teprve
+   * pak ho smaže — data se neztratí a jdou do exportu. Když zálohu nejde zapsat (plné úložiště), run nechá na místě.
+   * Vrací klíč zálohy, nebo null (nebylo co zálohovat / záloha selhala).
+   */
+  static backupSavedRun(store: KeyValueStore, now: Date = new Date()): string | null {
+    const raw = store.get(STORAGE_KEYS.run);
+    if (raw === null) return null;
+    const key = writeBackup(store, RUN_BACKUP_PREFIX, raw, now);
+    if (key) store.remove(STORAGE_KEYS.run);
+    return key;
   }
 }

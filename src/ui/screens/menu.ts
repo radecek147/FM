@@ -121,8 +121,12 @@ export const menuScreen: ScreenFactory = (app) => {
         disabled: !canContinue,
         onClick: () => {
           if (!continueRun(app)) {
-            toast(t('menu.continue.failed'), { kind: 'error' });
-            GameController.clearSaved(app.store);
+            // Nečitelný run se nemaže bez zálohy (`karban.run.backup.<ms>`, jde do exportu).
+            const backup = GameController.backupSavedRun(app.store);
+            toast(t(backup ? 'menu.continue.backedUp' : 'menu.continue.failed'), {
+              kind: 'error',
+              testId: 'toast-continue-failed',
+            });
             const btn = nav.querySelector<HTMLButtonElement>('[data-testid="menu-continue"]');
             if (btn) btn.disabled = true;
           }

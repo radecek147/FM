@@ -8,6 +8,9 @@ export const STORAGE_KEYS = {
   settings: 'karban.settings',
 } as const;
 
+/** Předpona záloh nečitelného rozehraného runu (`karban.run.backup.<ms>`) — jdou do exportu, reset je nemaže. */
+export const RUN_BACKUP_PREFIX = `${STORAGE_KEYS.run}.backup.`;
+
 export interface KeyValueStore {
   get(key: string): string | null;
   set(key: string, value: string): boolean;
@@ -78,4 +81,16 @@ export function memoryStore(initial: Record<string, string> = {}): KeyValueStore
     remove: (k) => void data.delete(k),
     keys: () => [...data.keys()],
   };
+}
+
+/**
+ * Zapíše zálohu `raw` pod klíč `<prefix><ms>` a vrátí ho, nebo null, když ji úložiště odmítlo. Dvě zálohy v jedné
+ * milisekundě se nepřepíšou (klíč se posune o 1 ms); stejný obsah pod stejným klíčem se nezdvojuje.
+ */
+export function writeBackup(store: KeyValueStore, prefix: string, raw: string, now: Date): string | null {
+  let ms = now.getTime();
+  let key = `${prefix}${ms}`;
+  for (let existing = store.get(key); existing !== null && existing !== raw; existing = store.get(key))
+    key = `${prefix}${++ms}`;
+  return store.set(key, raw) ? key : null;
 }

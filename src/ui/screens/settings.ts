@@ -18,6 +18,7 @@ import {
   deserializeRun,
   serializeProfile,
   serializeRun,
+  validateRunState,
 } from '../../engine';
 import { mergeDailyRecords, restartTutorial } from '../../engine/meta';
 import { t } from '../../i18n/cs';
@@ -31,7 +32,7 @@ import { h } from '../dom';
 import type { Settings } from '../settings';
 import { DEFAULT_SETTINGS, PROFILE_BACKUP_PREFIX, sanitizeSettings, writeProfileBackup } from '../settings';
 import type { KeyValueStore } from '../storage';
-import { STORAGE_KEYS } from '../storage';
+import { RUN_BACKUP_PREFIX, STORAGE_KEYS } from '../storage';
 
 // ─────────────────────────── Export / import (bez DOM, testovatelné) ───────────────────────────
 
@@ -55,6 +56,8 @@ export interface ExportPayload {
    * prohlížeč (profil se nikdy nesmí ztratit). Import je ignoruje.
    */
   profileBackups?: Record<string, string>;
+  /** Zálohy nečitelného rozehraného runu (`karban.run.backup.<ms>` → surová data). Import je ignoruje. */
+  runBackups?: Record<string, string>;
 }
 
 function parseStored(raw: string | null): unknown {
@@ -78,17 +81,24 @@ export function buildExport(store: KeyValueStore, settings: Settings, now: Date)
     profile: parseStored(store.get(STORAGE_KEYS.profile)),
     run: parseStored(store.get(STORAGE_KEYS.run)),
   };
-  const backups: Record<string, string> = {};
-  for (const key of store.keys().sort()) {
-    if (!key.startsWith(PROFILE_BACKUP_PREFIX)) continue;
-    const raw = store.get(key);
-    if (raw !== null) backups[key] = raw;
-  }
-  if (Object.keys(backups).length > 0) payload.profileBackups = backups;
+  const backups = (prefix: string): Record<string, string> | undefined => {
+    const out: Record<string, string> = {};
+    for (const key of store.keys().sort()) {
+      if (!key.startsWith(prefix)) continue;
+      const raw = store.get(key);
+      if (raw !== null) out[key] = raw;
+    }
+    return Object.keys(out).length > 0 ? out : undefined;
+  };
+  const profileBackups = backups(PROFILE_BACKUP_PREFIX);
+  if (profileBackups) payload.profileBackups = profileBackups;
+  const runBackups = backups(RUN_BACKUP_PREFIX);
+  if (runBackups) payload.runBackups = runBackups;
   return payload;
 }
 
-export type ImportErrorCode = SaveError['code'] | 'unknownContent' | 'readFailed' | 'backupFailed';
+export type ImportErrorCode =
+  SaveError['code'] | 'unknownContent' | 'corruptRun' | 'readFailed' | 'backupFailed';
 
 export class ImportError extends Error {
   constructor(readonly code: ImportErrorCode) {
@@ -131,7 +141,11 @@ function validateProfile(raw: unknown, now: Date): string {
   }
 }
 
-/** Ověří uložený run (obálka, migrace, tvar, známý obsah, jde načíst) a vrátí ho serializovaný. */
+/**
+ * Ověří uložený run (obálka, migrace, tvar, vnitřní konzistence a známý obsah — `validateRunState`, jde načíst)
+ * a vrátí ho serializovaný. Poškozený run (karty v ruce, které nejsou v balíčku, kolo bez `round`…) = `corruptRun`,
+ * obsah, který registr nezná = `unknownContent`.
+ */
 function validateRun(raw: unknown, registry: ContentRegistry, now: Date): string | null {
   let state;
   try {
@@ -139,8 +153,9 @@ function validateRun(raw: unknown, registry: ContentRegistry, now: Date): string
   } catch (e) {
     throw new ImportError(e instanceof SaveError ? e.code : 'invalidFormat');
   }
-  const stakeKnown = Object.values(registry.stakes).some((s) => s.level === state.stake);
-  if (!registry.decks[state.deckId] || !stakeKnown) throw new ImportError('unknownContent');
+  const issues = validateRunState(state, registry);
+  if (issues.some((i) => i.kind === 'corrupt')) throw new ImportError('corruptRun');
+  if (issues.length > 0) throw new ImportError('unknownContent');
   if (state.phase === 'game_over') return null;
   try {
     Game.fromState(state, registry);
@@ -230,14 +245,20 @@ export function backupStoredProfile(app: App, now: Date = new Date()): string | 
 
 /**
  * Začne s čistým profilem a výchozím nastavením: smaže profil, rozehranou hru a ostatní data hry. Profil předtím
- * zazálohuje (`karban.profile.backup.<ms>`) a zálohy nechá na místě — jdou do exportu, nic se neztratí.
+ * zazálohuje (`karban.profile.backup.<ms>`) a zálohy profilu i nečitelného runu (`karban.run.backup.<ms>`) nechá na
+ * místě — jdou do exportu, nic se neztratí.
  * Vrací klíč nové zálohy (null = nebylo co zálohovat). Když zálohu nejde zapsat, vyhodí `ProfileBackupError`
  * a nesmaže nic.
  */
 export function resetProfile(app: App, now: Date = new Date()): string | null {
   const backupKey = backupStoredProfile(app, now);
   for (const key of app.store.keys())
-    if (key.startsWith(STORAGE_PREFIX) && !key.startsWith(PROFILE_BACKUP_PREFIX)) app.store.remove(key);
+    if (
+      key.startsWith(STORAGE_PREFIX) &&
+      !key.startsWith(PROFILE_BACKUP_PREFIX) &&
+      !key.startsWith(RUN_BACKUP_PREFIX)
+    )
+      app.store.remove(key);
   app.controller = null;
   app.profiles.reset({ ...DEFAULT_SETTINGS });
   app.updateSettings({ ...DEFAULT_SETTINGS });

@@ -18,6 +18,12 @@ export {
 } from './cards/cards';
 export { shopPrice, rerollPrice, roundHalfUp } from './shop/prices';
 export { serializeRun, deserializeRun, SaveError, SAVE_FORMAT } from './save/save';
+export {
+  validateRunState,
+  isPlayableRunState,
+  type RunStateIssue,
+  type RunStateIssueKind,
+} from './save/validate';
 export { generateSeed, dailySeed } from './rng/rng';
 export * from './meta';
 export { EventBus } from './events';
