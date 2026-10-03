@@ -508,7 +508,7 @@ export const TAGS: TagDef[] = [
     },
   },
   {
-    // 20 — Náhodný běžný žolík; bez volného slotu +4 Kč.
+    // 20 — Náhodný běžný žolík; bez volného slotu +8 Kč.
     id: 'roadside_bazaar',
     params: { money: BAZAAR_MONEY },
     hooks: {

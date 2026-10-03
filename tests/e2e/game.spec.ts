@@ -750,7 +750,7 @@ test('pitva bez animací: run do konce jednou kartou, Nová hra vede na výběr 
     await idle(page);
   }
   await expect(game(page)).toHaveAttribute('data-phase', 'game_over');
-  await expect(page.getByTestId('death-quote')).toContainText('Malé útratě');
+  await expect(page.getByTestId('death-quote')).toHaveText(blindDeathQuote('small', 'PTVAPTVA'));
   await expect(page.getByTestId('run-seed')).toHaveText('PTVAPTVA');
   await page.getByTestId('game-over-new').click();
   await expect(page.locator('#app')).toHaveAttribute('data-screen', 'newGame');

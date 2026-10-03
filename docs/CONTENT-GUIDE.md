@@ -285,32 +285,36 @@ Kupóny jsou **páry**: základ (`tier: 1`) a vylepšení (`tier: 2`, `requires:
 trvalý na celý run — obvykle `passive` (delta `Modifiers`), jednorázové věci v `onRedeem`.
 
 ```ts
-const DISCOUNT_BASE = 20;
-const DISCOUNT_RELABELED = 40;
+const LOYALTY_EVERY = 5;
+const REGULAR_EVERY = 3;
 
-export const yellowPrice: VoucherDef = {
-  id: 'yellow_price',
+export const loyaltyCard: VoucherDef = {
+  id: 'loyalty_card',
   tier: 1,
   cost: 10,
-  params: { pct: DISCOUNT_BASE },
-  passive: () => ({ shopDiscountPct: DISCOUNT_BASE }),
+  params: { every: LOYALTY_EVERY },
+  passive: () => ({ freePurchaseEvery: LOYALTY_EVERY }),
   art: { icon: 'ticket', bg: '#1f3b3a', fg: '#e8f1d4', pattern: 'dots' },
 };
 
-export const relabeledPrice: VoucherDef = {
-  id: 'relabeled_price',
+export const regularCustomer: VoucherDef = {
+  id: 'regular_customer',
   tier: 2,
-  requires: 'yellow_price',
+  requires: 'loyalty_card',
   cost: 13,
-  params: { pct: DISCOUNT_RELABELED },
-  // modifikátory se sčítají: 20 + 20 = 40 %
-  passive: () => ({ shopDiscountPct: DISCOUNT_RELABELED - DISCOUNT_BASE }),
+  params: { every: REGULAR_EVERY, from: LOYALTY_EVERY },
+  // modifikátory se sčítají: 5 + (3 − 5) = každý 3. nákup
+  passive: () => ({ freePurchaseEvery: REGULAR_EVERY - LOYALTY_EVERY }),
   art: { icon: 'ticket', bg: '#3b2f12', fg: '#ffe9a8', pattern: 'rays' },
 };
 ```
 
-Text: **Žlutá cenovka** — Zboží ve Večerce je o {pct} % levnější. _Žlutá barva, menší číslo. Víc vědět nepotřebuješ._
-Test: cena ve Večerce po uplatnění, tier 2 nejde koupit bez tier 1.
+Text: **Věrnostní kartička** — Každý {every}. nákup ve Večerce je zdarma… _Za každý nákup razítko. Za plnou kartičku
+rohlík a nová kartička._ Test: cena ve Večerce po uplatnění, tier 2 nejde koupit bez tier 1.
+
+Kupón, který reaguje na dění ve hře, dostane `hooks` (`VoucherHooks`: `afterHandPlayed`, `onBossDefeated`) — např.
+Kniha stížností zvýší úroveň kombinace zahrané v runu poprvé, Jarní úklid po porážce šéfa vyleští žolíka. Náhoda
+v hooku jen přes `ctx.rng`.
 
 Kupón, který má smysl jen za určitých podmínek, dostane `available(ctx)` — čistou funkci (bez RNG a změn stavu),
 kterou engine kontroluje při losování kupónu patra i při koupi (Úřední škrt: `ctx.state.ante >= 2`). `passive` smí
@@ -332,7 +336,7 @@ patra se nabízí.
 - Peníze v rozpisu odměn = `roundEndMoney`; spotřebovat se dá v `onRoundEnd`, který běží až po rozpisu.
 
 ```ts
-const COAT_CHANGE_MONEY = 6;
+const COAT_CHANGE_MONEY = 12;
 
 // Drobné v kabátě (docs/DESIGN.md kap. 7) — spotřebuje se hned po získání.
 export const coatChange: TagDef = {
@@ -348,7 +352,7 @@ export const coatChange: TagDef = {
 };
 ```
 
-Text (`desc: 'Dostaneš {money|money}.'`): **Drobné v kabátě** — Dostaneš 6 Kč. _Z loňské zimy, ještě
+Text (`desc: 'Dostaneš {money|money}.'`): **Drobné v kabátě** — Dostaneš 12 Kč. _Z loňské zimy, ještě
 s účtenkou._ Test: peníze přibudou a štítek zmizí.
 
 ## 8. Jak přidat balíček
@@ -390,8 +394,8 @@ export const offlineWeek: ChallengeDef = {
   id: 'offline_week',
   deckId: 'pub',
   extraModifiers: { shopCardSlots: -1, rerollCostStep: 2 },
-  bannedVouchers: ['yellow_price'],
-  ruleKeys: ['fewerSlots', 'pricierReroll', 'noDiscount'],
+  bannedVouchers: ['loyalty_card'],
+  ruleKeys: ['fewerSlots', 'pricierReroll', 'noLoyalty'],
   art: { icon: 'old-lantern', bg: '#1d2430', fg: '#dfe6f0', pattern: 'grid' },
 };
 ```
@@ -475,7 +479,7 @@ Osvědčené vzorce (vlastní příklady formátu **Název** — mechanika. _Fla
 - **Pomlčky:** rozsah bez mezer `2–4`, `Po–St`; větná pomlčka je **krátká** `–` (U+2013) s mezerami — dlouhá
   `—` (U+2014) se v české sazbě nepoužívá a v textech hry být nesmí (hlídá to `tests/unit/i18n.test.ts`);
   zápor ve statickém textu `−1 zahození` (U+2212). Trojtečka `…` (U+2026). (Dokumentace v `docs/` smí `—` používat.)
-- **Velká písmena:** v názvech jen první slovo a vlastní jména („Přelepená cenovka“, „Martin na koni“,
+- **Velká písmena:** v názvech jen první slovo a vlastní jména („Vyřízená stížnost“, „Martin na koni“,
   „Svatý Václav“). Herní pojmy s velkým písmenem jako v UI: názvy kombinací (Dvojice, Full house), útrat
   (Malá útrata, Velká útrata, Šéf), Večerka. Figury a barvy v textu malými („za každého krále“, „kárová
   karta“).

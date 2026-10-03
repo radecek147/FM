@@ -387,18 +387,27 @@ simulacemi. Seřazeno podle priority.
 
 **Balanc a design**
 
-- [ ] Dechovka + skleněné karty = auto-win (Trojice 3× sklo ≈ 96 milionů, Čtveřice ≈ 2,3e12); omezit opakování
-      ×mult z karet
+- [x] Dechovka + skleněné karty = auto-win (Trojice 3× sklo ≈ 96 milionů, Čtveřice ≈ 2,3e12); omezit opakování
+      ×mult z karet — ×mult z karty jen v prvních 2 aktivacích (`MAX_XMULT_ACTIVATIONS_PER_CARD`), Trojice 187 264,
+      Čtveřice 2 234 880; regresní test `balance-101.test.ts` (DECISIONS 2026-10-03)
 - [ ] Patro 8 je zeď (42–59 % runů, které tam dojdou, padne) a patra 1–5 jsou bez napětí (14 z 23 kol vyhráno
-      první rukou); přeladit růst cílů a finální šéfy (Fronta na banány 3,5×)
-- [ ] Garsonka 1+kk zabíjí Barvu (37,5 % pro bota flush); Nová vyhláška; Bílá paní bez zamíchání
-- [ ] Ruce jsou levné (−1 ruka nic nestojí), žolíci „na první ruku“ platí skoro vždy
-- [ ] Přeskakování za štítky se nevyplácí; legendární žolíci se skoro neobjeví
-- [ ] Systémový obsah blízko Balatru (kupóny, štítky, nálepky, tabulka kombinací, váhy obchodu ±10 %) —
-      nahradit část vlastními mechanikami a čísly
-- [ ] Nekonečný režim končí na patře 10–11; achievement „Tepelná smrt vesmíru“ (1,8e308) je nesplnitelný
-- [ ] Texty: kolize názvů Zabijačka (žolík i šéf), opakované motivy, anglické slovní hříčky (piky, káry),
-      „Hrací automat“ → „Hudební automat“, pitva Malé a Velké útraty potřebuje víc hlášek
+      první rukou); přeladit růst cílů a finální šéfy (Fronta na banány 3,5×) — Fronta na banány má vlastní pravidlo
+      (ruce 100 → 20 %, 2,5×), zeď patra 8 zůstává → kalibrace
+- [x] Garsonka 1+kk zabíjí Barvu (37,5 % pro bota flush); Nová vyhláška; Bílá paní bez zamíchání — Garsonka −2 karty
+      bez limitu výběru (1,6×), Nová vyhláška půlí úrovně (1,5×), Bílá paní jen otáčí (1,6×); Kontrola z finančáku
+      za kartu a Parkovné × patro (2×); letalita na velké sadě → kalibrace
+- [ ] Ruce jsou levné (−1 ruka nic nestojí), žolíci „na první ruku“ platí skoro vždy → kalibrace
+- [x] Přeskakování za štítky se nevyplácí; legendární žolíci se skoro neobjeví — peněžní štítky ~×2, Pouťová tombola
+      (od patra 4) dá legendárku; boti Půjčku od tchána přeceňují a tombolu podceňují → kalibrace botů
+- [x] Systémový obsah blízko Balatru (kupóny, štítky, nálepky, tabulka kombinací, váhy obchodu ±10 %) —
+      nahradit část vlastními mechanikami a čísly — vlastní tabulka kombinací, váhy Večerky, vzácnosti, edice,
+      Šťastná, 5 párů kupónů, 7 štítků, nálepka Na splátky, 5 žolíků; migrace run v2 / profil v2 (DESIGN 2.2.1, 2.5.3,
+      2.6, 2.7, 4.6, 4.10, 6, 7)
+- [x] Nekonečný režim končí na patře 10–11; achievement „Tepelná smrt vesmíru“ (1,8e308) je nesplnitelný —
+      `g(a) = 2,3 + 0,01 × (a − 9)` (patro 16 = 95 milionů), Tepelná smrt = patro 30; tempo proti hráčům → kalibrace
+- [x] Texty: kolize názvů Zabijačka (žolík i šéf), opakované motivy, anglické slovní hříčky (piky, káry),
+      „Hrací automat“ → „Hudební automat“, pitva Malé a Velké útraty potřebuje víc hlášek — Řezník z rohu, Červená
+      a černá, Hudební automat, nové flavory, 8 + 8 hlášek pitvy podle seedu (`src/i18n/death.ts`)
 
 ---
 
