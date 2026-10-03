@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = 4173;
+// Port preview serveru; `KARBAN_E2E_PORT` umožní souběžné běhy (např. víc pracovních stromů naráz).
+const PORT = Number(process.env.KARBAN_E2E_PORT ?? 4173);
 
 export default defineConfig({
   testDir: 'tests/e2e',
