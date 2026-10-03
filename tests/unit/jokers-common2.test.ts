@@ -226,14 +226,14 @@ describe('běžní žolíci fáze 7 – definice', () => {
       thirteenth_salary: { money: 8 },
       temp_worker: { money: 2 },
       fisherman: { chance: 1, odds: 2 },
-      garbage_man: { chips: 1, rank: 5 },
-      jukebox: { retriggers: 1 },
+      garbage_man: { chips: 2, rank: 5 },
+      jukebox: { retriggers: 2 },
       tool_shed: { slots: 1 },
       replacement_bus: { max: 2, cards: 1 },
       pig_slaughter: { money: 2 },
-      derby_fans: { mult: 8 },
+      derby_fans: { mult: 7 },
       pub_quiz: { chips: 10 },
-      scrap_yard: { mult: 3, max: 21 },
+      scrap_yard: { mult: 3, max: 18 },
     });
   });
 
@@ -333,14 +333,14 @@ describe('běžní žolíci fáze 7 – texty', () => {
       thirteenth_salary: 'Po porážce šéfa dostaneš v odměnách navíc 8 Kč.',
       temp_worker: 'Na konci kola +2 Kč za každou ruku zahranou v tomto kole.',
       fisherman: 'Po každém zahození 1 ze 2, že něco chytí: náhodnou babskou radu (potřebuje volný slot).',
-      garbage_man: 'Každá zahozená karta s hodnotou nejvýš 5 mu trvale přidá +1 čip (teď +0 čipů).',
-      jukebox: 'Skórující karty s nejvyšší hodnotou skórují ještě 1×.',
+      garbage_man: 'Každá zahozená karta s hodnotou nejvýš 5 mu trvale přidá +2 čipy (teď +0 čipů).',
+      jukebox: 'Skórující karty s nejvyšší hodnotou skórují ještě 2×.',
       tool_shed: '+1 slot spotřebky.',
       replacement_bus: 'Každé z prvních 2 zahození v kole zvětší do konce kola ruku o 1 kartu.',
       pig_slaughter: 'Na konci kola zničí nejnižší kartu bez vylepšení drženou v ruce a dá za ni 2 Kč.',
-      derby_fans: '+8 mult, pokud mezi skórujícími kartami je červená i černá barva.',
+      derby_fans: '+7 mult, pokud mezi skórujícími kartami je červená i černá barva.',
       pub_quiz: '+10 čipů za každou různou hodnotu mezi skórujícími kartami.',
-      scrap_yard: 'Za každou zničenou hrací kartu trvale +3 mult, nejvýš +21 mult (teď +0 mult).',
+      scrap_yard: 'Za každou zničenou hrací kartu trvale +3 mult, nejvýš +18 mult (teď +0 mult).',
     });
   });
 
@@ -890,14 +890,14 @@ describe('Rybář (fisherman)', () => {
 });
 
 describe('Popelář (garbage_man)', () => {
-  it('každá zahozená karta s hodnotou nejvýš 5 trvale +1 čip', () => {
+  it('každá zahozená karta s hodnotou nejvýš 5 trvale +2 čipy', () => {
     const game = roundGame(['garbage_man']);
     const cards = setupRound(game, '2S 5H 6D 3C:stone AS');
     ok(game.dispatch({ type: 'discard', cardIds: cards.map((c) => c.id) }));
     // 2 a 5 ano; 6, kamenná (bez hodnoty) a eso ne.
-    expect(joker(game, 'garbage_man').state).toEqual({ chips: 2 });
+    expect(joker(game, 'garbage_man').state).toEqual({ chips: 4 });
     const r = playHand(game, 'KS');
-    expect([r.chips, r.mult]).toEqual([18, 1]);
+    expect([r.chips, r.mult]).toEqual([20, 1]);
   });
 
   it('bez nasbíraných čipů nic; kopie stav nezdvojí; přežije uložení a načtení', () => {
@@ -905,28 +905,28 @@ describe('Popelář (garbage_man)', () => {
     let game = roundGame(['copier', 'garbage_man']);
     const cards = setupRound(game, '2S 3H 4D');
     ok(game.dispatch({ type: 'discard', cardIds: cards.map((c) => c.id) }));
-    expect(joker(game, 'garbage_man').state).toEqual({ chips: 3 });
+    expect(joker(game, 'garbage_man').state).toEqual({ chips: 6 });
     game = reload(game);
-    expect(playHand(game, 'KS').chips).toBe(16 + 3 + 3);
+    expect(playHand(game, 'KS').chips).toBe(16 + 6 + 6);
   });
 });
 
 describe('Hudební automat (jukebox)', () => {
-  it('skórující karty s nejvyšší hodnotou skórují ještě 1×', () => {
-    // Dvojice králů: 12 + 2 × (10 + 10).
+  it('skórující karty s nejvyšší hodnotou skórují ještě 2×', () => {
+    // Dvojice králů: 12 + 3 × (10 + 10).
     const r = playHand(roundGame(['jukebox']), 'KS KH');
-    expect([r.chips, r.mult, r.score]).toEqual([52, 2, 104]);
-    // Barva: jen kluk (73 + 10).
-    expect(playHand(roundGame(['jukebox']), '2H 5H 7H 9H JH').chips).toBe(83);
-    // Dvě dvojice: králové ano, pětky ne (54 + 20).
-    expect(playHand(roundGame(['jukebox']), 'KS KH 5C 5D').chips).toBe(74);
+    expect([r.chips, r.mult, r.score]).toEqual([72, 2, 144]);
+    // Barva: jen kluk (73 + 2 × 10).
+    expect(playHand(roundGame(['jukebox']), '2H 5H 7H 9H JH').chips).toBe(93);
+    // Dvě dvojice: králové ano, pětky ne (54 + 2 × 20).
+    expect(playHand(roundGame(['jukebox']), 'KS KH 5C 5D').chips).toBe(94);
   });
 
   it('kamenná karta ani debuffnutá karta se nepočítá', () => {
-    // 12 + 10 + 10 + 50 (kamenná) + 20 (opakovaní králové).
-    expect(playHand(roundGame(['jukebox']), 'KS KH 2C:stone').chips).toBe(102);
-    // Debuffnuté eso nedá nic, nejvyšší je druhé eso: 12 + 0 + 11 + 11.
-    expect(playHand(roundGame(['jukebox']), 'AS! AH').chips).toBe(34);
+    // 12 + 10 + 10 + 50 (kamenná) + 2 × 20 (opakovaní králové).
+    expect(playHand(roundGame(['jukebox']), 'KS KH 2C:stone').chips).toBe(122);
+    // Debuffnuté eso nedá nic, nejvyšší je druhé eso: 12 + 0 + 3 × 11.
+    expect(playHand(roundGame(['jukebox']), 'AS! AH').chips).toBe(45);
   });
 });
 
@@ -999,11 +999,11 @@ describe('Řezník z rohu (pig_slaughter)', () => {
 });
 
 describe('Červená a černá (derby_fans)', () => {
-  it('+8 mult, když skóruje červená i černá barva', () => {
+  it('+7 mult, když skóruje červená i černá barva', () => {
     const r = playHand(roundGame(['derby_fans']), 'KS KH');
-    expect([r.chips, r.mult, r.score]).toEqual([32, 10, 320]);
+    expect([r.chips, r.mult, r.score]).toEqual([32, 9, 288]);
     // Divoká karta je obě barvy zároveň.
-    expect(jokerDelta(playHand(roundGame(['derby_fans']), 'KS:wild KC'), 'derby_fans').mult).toBe(8);
+    expect(jokerDelta(playHand(roundGame(['derby_fans']), 'KS:wild KC'), 'derby_fans').mult).toBe(7);
   });
 
   it('jedna barva, kamenná karta, kopa ani debuffnutá karta nestačí', () => {
@@ -1044,11 +1044,11 @@ describe('Sběrna surovin (scrap_yard)', () => {
     expect([r.chips, r.mult, r.score]).toEqual([16, 7, 112]);
   });
 
-  it('strop +21 mult (7 karet), dál neroste', () => {
+  it('strop +18 mult (6 karet), dál neroste', () => {
     const game = roundGame(['scrap_yard']);
     for (const c of game.state.deck.slice(0, 9)) game._core.api.destroyCard(c.id, 'test');
-    expect(joker(game, 'scrap_yard').state).toEqual({ mult: 21 });
-    expect(playHand(game, 'KS').mult).toBe(22);
+    expect(joker(game, 'scrap_yard').state).toEqual({ mult: 18 });
+    expect(playHand(game, 'KS').mult).toBe(19);
   });
 
   it('kopie stav nezdvojí, ale efekt ano', () => {

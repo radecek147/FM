@@ -21,15 +21,18 @@ const HEARTS_MAN_MULT = 2;
 /** Hrobník: za každou skórující ♠. */
 const GRAVEDIGGER_SUIT: Suit = 'S';
 const GRAVEDIGGER_CHIPS = 20;
-/** Klenotník: trvalé čipy pro každou skórující ♦. */
+/**
+ * Klenotník: trvalé čipy pro každou skórující ♦. 1.0.1: 5 → 10 — s „čipovou“ tabulkou kombinací (ruce ~100 čipů v patrech
+ * 1–3, ~350 v 6–8) bylo +5 pod pásmem běžného (R1 5 %, R2 7 %; DECISIONS „Kalibrace 1.0.1“).
+ */
 const JEWELER_SUIT: Suit = 'D';
-const JEWELER_CHIPS = 5;
+const JEWELER_CHIPS = 10;
 /** Křižák: +mult, když skóruje aspoň tolik ♣. */
 const CRUSADER_SUIT: Suit = 'C';
 const CRUSADER_MULT = 12;
 const CRUSADER_CLUBS = 2;
-/** Ranní ptáče: první ruka kola. */
-const EARLY_BIRD_MULT = 8;
+/** Ranní ptáče: první ruka kola. 1.0.1: 8 → 7 (R1 107 % nad pásmem běžného — kola dřív trvala ~1,5 ruky). */
+const EARLY_BIRD_MULT = 7;
 /** Noční směna: každá ruka v kole se šéfem (den = Malá a Velká útrata, noc = šéf). */
 const NIGHT_SHIFT_MULT = 14;
 /** Meteorolog: +mult za každou úroveň zahrané kombinace nad první (první placená úroveň je 2). */

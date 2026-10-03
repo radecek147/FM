@@ -65,10 +65,11 @@ function fake(v: Partial<JokerValue> & Pick<JokerValue, 'rarity'>): JokerValue {
 
 describe('hodnota žolíků – projekce na referenční ruce (DESIGN 4.2)', () => {
   it('ukázky z DESIGN 4.3: Pivní tácek, Srdcař (2,5 ♥ na ruku), Zpožděný rychlík (×1,5 s šancí 5/6)', () => {
-    expect(REFERENCE).toEqual({ r1: { chips: 60, mult: 8 }, r2: { chips: 200, mult: 40 } });
-    expect(projectValue(REFERENCE.r1, { chips: 10, mult: 2, xmult: 1 })).toBeCloseTo(45.83, 2);
-    expect(projectValue(REFERENCE.r2, { chips: 10, mult: 2, xmult: 1 })).toBeCloseTo(10.25, 2);
-    expect(projectValue(REFERENCE.r1, { chips: 12.5, mult: 5, xmult: 1 })).toBeCloseTo(96.35, 2);
+    // 1.0.1: referenční ruce podle mediánů zahraných rukou s „čipovou“ tabulkou kombinací (R1 100 × 7, R2 350 × 26).
+    expect(REFERENCE).toEqual({ r1: { chips: 100, mult: 7 }, r2: { chips: 350, mult: 26 } });
+    expect(projectValue(REFERENCE.r1, { chips: 10, mult: 2, xmult: 1 })).toBeCloseTo(41.43, 2);
+    expect(projectValue(REFERENCE.r2, { chips: 10, mult: 2, xmult: 1 })).toBeCloseTo(10.77, 2);
+    expect(projectValue(REFERENCE.r1, { chips: 12.5, mult: 5, xmult: 1 })).toBeCloseTo(92.86, 2);
     const train = 1 + (0.5 * 5) / 6;
     expect(projectValue(REFERENCE.r1, { chips: 0, mult: 0, xmult: train })).toBeCloseTo(41.67, 2);
     expect(projectValue(REFERENCE.r2, { chips: 0, mult: 0, xmult: train })).toBeCloseTo(41.67, 2);
@@ -138,11 +139,11 @@ describe('hodnota žolíků – hodnocení podle pravidel 1–3 a ekonomiky', ()
 describe('hodnota žolíků – měření na skutečném obsahu (kouřový test)', { timeout: 60_000 }, () => {
   const cache: BaseCache = new Map();
 
-  it('Pivní tácek: každá ruka přesně +10 čipů a +2 mult → R1 +45,8 %, R2 +9,7 %; měření je deterministické', () => {
+  it('Pivní tácek: každá ruka přesně +10 čipů a +2 mult → R1 +41,4 %, R2 +10,8 %; měření je deterministické', () => {
     const v = measureJoker(reg, 'beer_mat', opts, cache);
     expect(v.r1.hands).toBeGreaterThan(0);
-    expect(v.r1.avg).toBeCloseTo(45.83, 1);
-    expect(v.r2.avg).toBeCloseTo(9.69, 1);
+    expect(v.r1.avg).toBeCloseTo(41.43, 1);
+    expect(v.r2.avg).toBeCloseTo(10.77, 1);
     expect(v.r1.fired).toBe(1);
     expect(v.r1.effect).toEqual({ chips: 10, mult: 2, xmult: 1 });
     expect(v.sim.runs).toBe(3);
