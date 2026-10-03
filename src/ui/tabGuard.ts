@@ -70,7 +70,9 @@ export class TabGuard {
 
   /** Převezme hru: zapíše se jako vlastník (ostatní karty se zablokují) a odblokuje se. */
   claim(): void {
-    this.base.set(TAB_OWNER_KEY, this.tabId);
+    // Plné úložiště zápis odmítne: starý vlastník se smaže (to jde vždy), jinak by se karta zablokovala sama
+    // o sobě. Bez vlastníka pak hlídání jen nebrání v hraní (zapisovat se stejně skoro nedá).
+    if (!this.base.set(TAB_OWNER_KEY, this.tabId)) this.base.remove(TAB_OWNER_KEY);
     if (this.lostControl) {
       this.lostControl = false;
       this.emit();

@@ -447,6 +447,20 @@ describe('TabGuard — jedna aktivní karta', () => {
     a.handleStorage(STORAGE_KEYS.profile, 'cizi');
     expect(a.active).toBe(false);
   });
+
+  it('plné úložiště (vlastníka nejde zapsat): karta se nezablokuje sama o sobě', () => {
+    const shared = memoryStore({ [TAB_OWNER_KEY]: 'STARA' });
+    const full: KeyValueStore = {
+      ...shared,
+      set: (k, v) => (k === TAB_OWNER_KEY ? false : shared.set(k, v)),
+    };
+    const a = new TabGuard(full, { tabId: 'A' });
+    a.claim();
+    expect(shared.get(TAB_OWNER_KEY)).toBeNull();
+    expect(a.store.set(STORAGE_KEYS.run, 'A1')).toBe(true);
+    expect(shared.get(STORAGE_KEYS.run)).toBe('A1');
+    expect(a.active).toBe(true);
+  });
 });
 
 describe('modal „Hra je otevřená v jiné kartě“', () => {
