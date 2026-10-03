@@ -121,7 +121,7 @@ describe('Doppelbock: popisek ceny zapůjčeného žolíka sedí s cenou ve Več
   it('obtížnosti mají `params` přímo v `StakeDef` (registr je nese bez přetypování)', () => {
     const special = reg.stakes.special!;
     const params: Record<string, number | string> | undefined = special.params;
-    expect(params).toEqual({ perishable: 40, rounds: 6 });
+    expect(params).toEqual({ perishable: 35, rounds: 6 });
   });
 });
 

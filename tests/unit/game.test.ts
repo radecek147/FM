@@ -1127,8 +1127,8 @@ describe('výhra v patře 8 a nekonečný režim (DESIGN 1.2, 1.3)', () => {
     ok(game.dispatch({ type: 'leaveShop' }));
     expect(game.registry.bosses[game.state.blinds[2]!.bossId!]!.final).not.toBe(true);
     ok(game.dispatch({ type: 'selectBlind' }));
-    // Cíle nekonečného režimu (DESIGN 2.3.3): patro 9, křivka 1, Malá 220 000.
-    expect(game.state.round!.target).toBe(220_000);
+    // Cíle nekonečného režimu (DESIGN 2.3.3): patro 9, křivka 1, Malá 160 000.
+    expect(game.state.round!.target).toBe(160_000);
   });
 
   it('v nekonečném režimu má patro 16 finálového šéfa, ale jeho porážka už není výhra', () => {
@@ -1140,7 +1140,7 @@ describe('výhra v patře 8 a nekonečný režim (DESIGN 1.2, 1.3)', () => {
     const events = beatBossAt(game, 16);
     expect(game.state.round!.bossId).toBe('final_boss');
     expect(events.target).toBe(blindTarget(16, 'boss', 1));
-    expect(events.target).toBe(190_000_000);
+    expect(events.target).toBe(18_000_000);
     expect(game.state.phase).toBe('round_end');
     expect(types(events)).not.toContain('victory');
   });

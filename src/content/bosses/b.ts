@@ -19,10 +19,10 @@ const NORMAL_TARGET_MULT = 2;
  * dřív se úrovně vynulovaly úplně (letalita ~22 % i při nižším cíli, pozdní build přišel o všechno).
  */
 const DECREE_LEVEL_DIVISOR = 2;
-/** Nová vyhláška: nižší cíl (polovina úrovní pořád bolí; kalibruje simulace). */
+/** Nová vyhláška: nižší cíl (polovina úrovní pořád bolí; kalibrace 1.0.1: s 1,5× průměrná letalita). */
 const DECREE_TARGET_MULT = 1.5;
-/** Šanon na šanonu: násobek základního cíle patra. */
-const BINDER_TARGET_MULT = 3;
+/** Šanon na šanonu: násobek základního cíle patra (kalibrace 1.0.1: 3× měl ~1,5× průměrné letality → 2,4×). */
+const BINDER_TARGET_MULT = 2.4;
 /** Zabijačka: kolik náhodných skórujících karet se po ruce zničí. */
 const SLAUGHTER_CARDS = 1;
 /** Zabijačka: pravidlo bolí až v dalších kolech, proto vyšší cíl (2× měl ~4% letalitu — balanc simulací). */
@@ -32,13 +32,22 @@ const DERBY_TARGET_MULT = 1.75;
 /** Normalizace: čipy každé skórující karty. */
 const NORMALIZATION_CHIPS = 5;
 /** Jednooký hejtman: nižší cíl (s polovinou žolíků byla 2× ~26% letalita — balanc simulací, DECISIONS). */
-const HETMAN_TARGET_MULT = 1.4;
+const HETMAN_TARGET_MULT = 1.6;
 /** Tchyně na návštěvě: kolik náhodných karet z ruky zahodí každé zahození navíc. */
 const MOTHER_IN_LAW_CARDS = 1;
 /** Tchyně na návštěvě: mírné pravidlo, proto vyšší cíl (2× měl ~3% letalitu — balanc simulací). */
 const MOTHER_IN_LAW_TARGET_MULT = 2.25;
 /** Kocovina: ruce méně. */
 const HANGOVER_HANDS = 1;
+/**
+ * Cíle šéfů s pravidlem, které bolí míň nebo víc než průměr (kalibrace 1.0.1, letalita normovaná podle patra):
+ * Bílá hora, Normalizace, Výpadek proudu a Sudé dny s 2× ~0,55–0,8× průměru, Influencerka ~1,5×.
+ */
+const WHITE_MOUNTAIN_TARGET_MULT = 2.45;
+const NORMALIZATION_TARGET_MULT = 2.2;
+const INFLUENCER_TARGET_MULT = 1.75;
+const BLACKOUT_TARGET_MULT = 2.1;
+const EVEN_DAYS_TARGET_MULT = 2.1;
 /** Sudé dny: liché hodnoty (eso je 14, ale počítá se jako 1 = liché). */
 const ODD_RANKS: readonly number[] = [14, 3, 5, 7, 9];
 
@@ -165,6 +174,7 @@ export const BOSSES_B: BossDef[] = [
     // 18 — Vylepšení hracích karet v tomto kole nefungují.
     id: 'white_mountain',
     minAnte: 3,
+    targetMult: WHITE_MOUNTAIN_TARGET_MULT,
     color: '#9aa3b5',
     hooks: {
       passive: () => ({ disableEnhancements: true }),
@@ -175,6 +185,7 @@ export const BOSSES_B: BossDef[] = [
     // 19 — Každá skórující karta dává právě 5 čipů (vylepšení a edice fungují).
     id: 'normalization',
     minAnte: 2,
+    targetMult: NORMALIZATION_TARGET_MULT,
     params: { chips: NORMALIZATION_CHIPS },
     color: '#7d7d7d',
     hooks: {
@@ -216,6 +227,7 @@ export const BOSSES_B: BossDef[] = [
     // 22 — Nejčastěji hraná kombinace runu má v tomto kole poloviční základní čipy i mult.
     id: 'influencer',
     minAnte: 2,
+    targetMult: INFLUENCER_TARGET_MULT,
     color: '#d0508f',
     hooks: {
       // Kombinace se vybere jednou na začátku kola (během kola se nemění, i když se počty srovnají).
@@ -249,6 +261,7 @@ export const BOSSES_B: BossDef[] = [
     // 24 — Žolíci nefungují v první ruce kola (ani při zahazování před ní).
     id: 'blackout',
     minAnte: 1,
+    targetMult: BLACKOUT_TARGET_MULT,
     color: '#3b3f4a',
     hooks: {
       isJokerDebuffed: (ctx) => ctx.round.handsPlayed === 0,
@@ -259,6 +272,7 @@ export const BOSSES_B: BossDef[] = [
     // 25 — Liché karty (A, 3, 5, 7, 9) jsou mimo provoz; figury ani kamenné karty liché nejsou.
     id: 'even_days',
     minAnte: 1,
+    targetMult: EVEN_DAYS_TARGET_MULT,
     color: '#4f7a96',
     hooks: {
       isCardDebuffed: (ctx, card) => {

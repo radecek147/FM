@@ -88,20 +88,20 @@ function discard(game: Game, cards: readonly Card[]) {
 
 describe('šéfové 1–13 – definice podle DESIGN 8.2', () => {
   const TABLE: [string, number, number][] = [
-    // [id, od patra, násobek cíle] — cíle laděné simulací (DESIGN 8.2, DECISIONS „Fáze 6: ladění se šéfy“)
-    ['tax_audit', 1, 2],
-    ['track_closure', 2, 1],
+    // [id, od patra, násobek cíle] — cíle laděné simulací (DESIGN 8.2, DECISIONS „Kalibrace 1.0.1“)
+    ['tax_audit', 1, 2.3],
+    ['track_closure', 2, 0.9],
     ['inventory', 1, 2],
-    ['drilling_neighbor', 1, 2],
-    ['lunch_break', 2, 0.65],
-    ['superstitious_granny', 1, 2],
-    ['black_cat', 2, 2],
-    ['elbe_fog', 2, 2],
-    ['parking_fee', 1, 2],
-    ['studio_flat', 2, 1.6],
+    ['drilling_neighbor', 1, 1.8],
+    ['lunch_break', 2, 0.6],
+    ['superstitious_granny', 1, 2.5],
+    ['black_cat', 2, 2.25],
+    ['elbe_fog', 2, 2.1],
+    ['parking_fee', 1, 2.5],
+    ['studio_flat', 2, 1.15],
     ['village_drought', 2, 2],
-    ['pickpocket', 2, 2.25],
-    ['bailiff', 2, 1.75],
+    ['pickpocket', 2, 2.5],
+    ['bailiff', 2, 1.7],
   ];
 
   it('13 šéfů v pořadí tabulky, od patra a cíle podle tabulky, odměna výchozí, nikdo finálový', () => {
@@ -320,13 +320,13 @@ describe('Soused s vrtačkou (drilling_neighbor)', () => {
 // ─────────────────────────── 5 Polední pauza ───────────────────────────
 
 describe('Polední pauza (lunch_break)', () => {
-  it('jen 1 ruka a cíl 0,65× základ patra', () => {
+  it('jen 1 ruka a cíl 0,6× základ patra', () => {
     const { game } = bossGame('lunch_break');
     const r = game.state.round!;
     expect(r.handsLeft).toBe(1);
     expect(game.modifiers().hands).toBe(1);
-    expect(game.blindTarget('boss', 'lunch_break')).toBe(niceRound(anteBase(1, 1) * 0.65));
-    expect(game.blindTarget('boss', 'lunch_break')).toBe(165);
+    expect(game.blindTarget('boss', 'lunch_break')).toBe(niceRound(anteBase(1, 1) * 0.6));
+    expect(game.blindTarget('boss', 'lunch_break')).toBe(150);
   });
 
   it('strop platí i se žolíkem +1 ruka (pořád 1 ruka); zahození zůstávají', () => {

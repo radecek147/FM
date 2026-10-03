@@ -10,38 +10,46 @@ import { SUITS } from '../../engine/types';
  * ruka stojí 5 Kč a vyplatí se hrát méně karet).
  */
 const TAX_AUDIT_FEE = 1;
-/** Kontrola z finančáku: běžný cíl — pravidlo už bolí samo (1.0: 2,25× při 1 Kč za ruku). */
-const TAX_AUDIT_TARGET = 2;
+/** Kontrola z finančáku: cíl (1.0: 2,25× při 1 Kč za ruku; 1.0.1 kalibrace: s 2× ~0,6× průměrné letality → 2,3×). */
+const TAX_AUDIT_TARGET = 2.3;
 /** Výluka na trati: lícem dolů přijde každá N-tá líznutá karta kola (text: „každá druhá“). */
 const TRACK_CLOSURE_EVERY = 2;
 /**
  * Výluka na trati: nižší cíl (balanc simulací — s polovinou ruky zakrytou byla 2× ~26% letalita proti ~8 % u běžného
  * šéfa; docs/DECISIONS.md „Fáze 6: ladění se šéfy“).
  */
-const TRACK_CLOSURE_TARGET = 1;
+const TRACK_CLOSURE_TARGET = 0.9;
 /** Polední pauza: počet rukou a nižší cíl (1 ruka; 1,25× měla ~27% letalitu — balanc simulací). */
 const LUNCH_BREAK_HANDS = 1;
-const LUNCH_BREAK_TARGET = 0.65;
+const LUNCH_BREAK_TARGET = 0.6;
 /** Černá kočka: kolik karet v ruce po každé zahrané ruce vyřadí z provozu. */
 const BLACK_CAT_CARDS = 2;
+/** Černá kočka: vyšší cíl (s 2× ~0,4× průměrné letality — kalibrace 1.0.1). */
+const BLACK_CAT_TARGET = 2.25;
+/** Soused s vrtačkou: nižší cíl (s 2× ~1,4× průměrné letality — kalibrace 1.0.1). */
+const DRILLING_TARGET = 1.8;
+/** Pověrčivá babka: vyšší cíl (jedna barva mimo provoz s 2× jen ~0,6× průměrné letality — kalibrace 1.0.1). */
+const GRANNY_TARGET = 2.5;
 /** Mlha nad Labem: hodnoty, které se lížou lícem dolů. */
 const ELBE_FOG_MIN = 2;
 const ELBE_FOG_MAX = 5;
+/** Mlha nad Labem: vyšší cíl (s 2× ~0,75× průměrné letality — kalibrace 1.0.1). */
+const ELBE_FOG_TARGET = 2.1;
 /** Parkovné: cena zahození v Kč za každé patro (v patře 4 stojí zahození 4 Kč; 1.0: vždy 1 Kč). */
 const PARKING_FEE = 1;
-/** Parkovné: běžný cíl — poplatek roste s patrem (1.0: 2,25× při 1 Kč). */
-const PARKING_TARGET = 2;
-/** Kapsář v tramvaji: mírné pravidlo, proto vyšší cíl (2× měl ~2% letalitu — balanc simulací). */
-const PICKPOCKET_TARGET = 2.25;
+/** Parkovné: cíl (1.0: 2,25× při 1 Kč; kalibrace 1.0.1: s 2× ~0,3–0,8× průměrné letality → 2,5×). */
+const PARKING_TARGET = 2.5;
+/** Kapsář v tramvaji: mírné pravidlo, proto vyšší cíl (2× měl ~2% letalitu — balanc simulací; 1.0.1 2,25 → 2,5×). */
+const PICKPOCKET_TARGET = 2.5;
 /** Exekutor: nižší cíl (bez nejcennějšího žolíka byla 2× ~1,5× smrtelnější než průměrný šéf). */
-const BAILIFF_TARGET = 1.75;
+const BAILIFF_TARGET = 1.7;
 /**
  * Garsonka 1+kk: menší ruka (1.0.1: jen jedno omezení — dřív −1 karta a navíc nejvýš 4 vybrané karty, což vyřadilo
  * Postupky i Barvy a pro barvaře měla šéfka letalitu 37,5 %).
  */
 const STUDIO_HAND_SIZE = 2;
-/** Garsonka 1+kk: nižší cíl (menší ruka ztěžuje skládání; kalibruje simulace). */
-const STUDIO_TARGET = 1.6;
+/** Garsonka 1+kk: nižší cíl (menší ruka ztěžuje skládání; kalibrace 1.0.1: s 1,6× ~1,8× průměrné letality → 1,15×). */
+const STUDIO_TARGET = 1.15;
 /** Sucho v obci: zahození na nulu, ruka navíc. */
 const DROUGHT_DISCARDS = 0;
 const DROUGHT_HANDS = 1;
@@ -193,6 +201,7 @@ export const BOSSES_A: BossDef[] = [
     // 4 — Soused s vrtačkou: kombinace už zahraná v tomto kole neskóruje (ruka se spotřebuje).
     id: 'drilling_neighbor',
     minAnte: 1,
+    targetMult: DRILLING_TARGET,
     color: '#7a7d80',
     hooks: {
       validateHand: (ctx) =>
@@ -231,6 +240,7 @@ export const BOSSES_A: BossDef[] = [
     // 6 — Pověrčivá babka: na začátku kola vylosuje barvu (stream `boss`); karty té barvy jsou mimo provoz.
     id: 'superstitious_granny',
     minAnte: 1,
+    targetMult: GRANNY_TARGET,
     color: '#6a3d7a',
     hooks: {
       onRoundStart: (ctx) => {
@@ -256,6 +266,7 @@ export const BOSSES_A: BossDef[] = [
     // 7 — Černá kočka: po každé zahrané ruce 2 náhodné karty, které zůstaly v ruce, do konce kola mimo provoz.
     id: 'black_cat',
     minAnte: 2,
+    targetMult: BLACK_CAT_TARGET,
     color: '#26262e',
     params: { cards: BLACK_CAT_CARDS },
     hooks: {
@@ -281,6 +292,7 @@ export const BOSSES_A: BossDef[] = [
     // 8 — Mlha nad Labem: karty s hodnotou 2–5 se lížou lícem dolů (kamenná hodnotu nemá).
     id: 'elbe_fog',
     minAnte: 2,
+    targetMult: ELBE_FOG_TARGET,
     color: '#8a9aa6',
     params: { min: ELBE_FOG_MIN, max: ELBE_FOG_MAX },
     hooks: {

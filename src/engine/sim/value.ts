@@ -202,9 +202,16 @@ const PRIOR_SHARE: Partial<Record<HandType, number>> = {
 };
 const FAVOR_PRIOR = 2;
 
-/** Zbývající kola hlavní hry (patro 8 = poslední; v nekonečném režimu aspoň 1). */
+/**
+ * V nekonečném režimu bot plánuje na tolik kol dopředu (3 patra): s horizontem 1 kola (jako na konci hlavní hry)
+ * utratil vše a nic nebudoval, takže padal v patře 9–10 i s buildem, který by hráč dál rozvíjel (kalibrace 1.0.1).
+ */
+export const ENDLESS_ROUNDS_AHEAD = 9;
+
+/** Zbývající kola hlavní hry (patro 8 = poslední); v nekonečném režimu pevný horizont `ENDLESS_ROUNDS_AHEAD`. */
 export function roundsLeft(game: Game): number {
   const s = game.state;
+  if (s.endless) return ENDLESS_ROUNDS_AHEAD;
   return Math.max(1, (FINAL_ANTE - s.ante) * 3 + (3 - s.blindIndex));
 }
 
