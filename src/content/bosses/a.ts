@@ -10,8 +10,11 @@ import { SUITS } from '../../engine/types';
  * ruka stojí 5 Kč a vyplatí se hrát méně karet).
  */
 const TAX_AUDIT_FEE = 1;
-/** Kontrola z finančáku: cíl (1.0: 2,25× při 1 Kč za ruku; 1.0.1 kalibrace: s 2× ~0,6× průměrné letality → 2,3×). */
-const TAX_AUDIT_TARGET = 2.3;
+/**
+ * Kontrola z finančáku: cíl (1.0: 2,25× při 1 Kč za ruku; kalibrace 1.0.1: s 2× ~0,2× průměrné letality, s 2,3× ~0,6×
+ * a 2,8 % při setkání → 2,5×).
+ */
+const TAX_AUDIT_TARGET = 2.5;
 /** Výluka na trati: lícem dolů přijde každá N-tá líznutá karta kola (text: „každá druhá“). */
 const TRACK_CLOSURE_EVERY = 2;
 /**
@@ -37,8 +40,8 @@ const ELBE_FOG_MAX = 5;
 const ELBE_FOG_TARGET = 2.1;
 /** Parkovné: cena zahození v Kč za každé patro (v patře 4 stojí zahození 4 Kč; 1.0: vždy 1 Kč). */
 const PARKING_FEE = 1;
-/** Parkovné: cíl (1.0: 2,25× při 1 Kč; kalibrace 1.0.1: s 2× ~0,3–0,8× průměrné letality → 2,5×). */
-const PARKING_TARGET = 2.5;
+/** Parkovné: cíl (1.0: 2,25× při 1 Kč; kalibrace 1.0.1: s 2× ~0,6× průměrné letality, s 2,5× 3,6 % při setkání → 2,6×). */
+const PARKING_TARGET = 2.6;
 /** Kapsář v tramvaji: mírné pravidlo, proto vyšší cíl (2× měl ~2% letalitu — balanc simulací; 1.0.1 2,25 → 2,5×). */
 const PICKPOCKET_TARGET = 2.5;
 /** Exekutor: nižší cíl (bez nejcennějšího žolíka byla 2× ~1,5× smrtelnější než průměrný šéf). */

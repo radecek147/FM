@@ -6,11 +6,12 @@ import type { BlindKind } from '../types';
  * Základ patra 1–8 pro křivky 1–3 (index křivky je 1-based). Kalibrace 1.0.1 (docs/DECISIONS.md 2026-10-03): patra 4–7
  * o 30–45 % výš a patro 8 o ~5 % (křivka 1: 2 700 / 6 500 / 16 000 / 39 000 / 95 000 → 3 600 / 9 400 / 23 000 / 51 000
  * / 100 000) — dřív se patra 1–5 vyhrávala první rukou a patro 8 bylo zeď (49 % proher runů, které ho dosáhly); křivka 3
- * je o ~15 % nad křivkou 2, aby Bock nebyl prázdný krok proti Ležáku. Hodnoty musí být „hezká“ čísla (`niceRound`).
+ * je o ~15–19 % nad křivkou 2, aby Bock nebyl prázdný krok proti Ležáku (křivka 2 má proto v patrech 6–7 menší odstup
+ * od křivky 1, +12–13 %). Hodnoty musí být „hezká“ čísla (`niceRound`).
  */
 export const TARGET_CURVES: readonly (readonly number[])[] = [
   [250, 600, 1300, 3600, 9400, 23000, 51000, 100000],
-  [250, 600, 1400, 4100, 11000, 27000, 59000, 115000],
+  [250, 600, 1400, 4100, 11000, 26000, 57000, 115000],
   [250, 650, 1550, 4700, 12500, 31000, 68000, 135000],
 ];
 

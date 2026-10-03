@@ -34,10 +34,11 @@ export const PERISHABLE_CHANCE = 0.35;
  * Doppelbock: šance na přibitého a zapůjčeného žolíka. Dřív 20 % a 15 % — Doppelbock (5,75 %) i Imperial (4 %) byly
  * nad pásmem; s 25 % / 25 % a vyšší křivkou 3 jsou v pásmu (DECISIONS 2026-10-02 „Balanc po fázi 7“). Ne 30 %:
  * to je číslo žebříčku předlohy (DESIGN příloha A). Kalibrace 1.0.1: 25 → 35 % — „na splátky“ (akontace a 5 splátek)
- * je mírnější než dřívější nájem navždy a Doppelbock vycházel stejně jako Bock (DECISIONS 2026-10-03).
+ * je mírnější než dřívější nájem navždy a Doppelbock vycházel stejně jako Bock; po zmírnění pater 7–8 pak 35 → 32 %
+ * (s 35 % nejlepší bot 2,9 %, těsně pod pásmem 3–6 %; DECISIONS 2026-10-03 „Kalibrace 1.0.1“).
  */
-export const ETERNAL_CHANCE = 0.35;
-export const RENTAL_CHANCE = 0.35;
+export const ETERNAL_CHANCE = 0.32;
+export const RENTAL_CHANCE = 0.32;
 
 /**
  * Imperial: násobek cílů útrat Šéf (vedle pravidla šéfa ve Velké útratě). Po fázi 7 ×1,2; s cíli fáze 10 (patro 8

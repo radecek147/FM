@@ -174,9 +174,9 @@ describe('obtížnosti – každá úroveň přidává právě své ztížení',
     expect(modsDiff(6)).toEqual(modsDiff(5));
   });
 
-  it('7 Doppelbock: 35 % přibitých a 35 % žolíků na splátky (zvětrávání ze Speciálu zůstává)', () => {
+  it('7 Doppelbock: 32 % přibitých a 32 % žolíků na splátky (zvětrávání ze Speciálu zůstává)', () => {
     expect(stakeStickerChance(newGame(6)._core)).toEqual({ perishable: 0.35 });
-    expect(stakeStickerChance(newGame(7)._core)).toEqual({ perishable: 0.35, eternal: 0.35, rental: 0.35 });
+    expect(stakeStickerChance(newGame(7)._core)).toEqual({ perishable: 0.35, eternal: 0.32, rental: 0.32 });
     expect(modsDiff(7)).toEqual(modsDiff(6));
   });
 
@@ -208,7 +208,7 @@ describe('obtížnosti – kumulace', () => {
     expect(g.targetCurve()).toBe(3);
     expect(g.modifiers().rerollBaseCost).toBe(BASE_MODIFIERS.rerollBaseCost + 1);
     expect(g.modifiers().moneyPerUnusedHand).toBe(0);
-    expect(stakeStickerChance(g._core)).toEqual({ perishable: 0.35, eternal: 0.35, rental: 0.35 });
+    expect(stakeStickerChance(g._core)).toEqual({ perishable: 0.35, eternal: 0.32, rental: 0.32 });
     expect(Object.values(reg.stakes).some((s) => s.level <= 8 && s.bigBlindBoss)).toBe(true);
   });
 
@@ -221,7 +221,7 @@ describe('obtížnosti – kumulace', () => {
       expect(g.modifiers().rerollBaseCost).toBe(BASE_MODIFIERS.rerollBaseCost + (stake >= 2 ? 1 : 0));
       expect(g.modifiers().moneyPerUnusedHand).toBe(stake >= 5 ? 0 : 1);
       expect(stakeStickerChance(g._core).perishable ?? 0).toBe(stake >= 4 ? 0.35 : 0);
-      expect(stakeStickerChance(g._core).eternal ?? 0).toBe(stake >= 7 ? 0.35 : 0);
+      expect(stakeStickerChance(g._core).eternal ?? 0).toBe(stake >= 7 ? 0.32 : 0);
     }
   });
 

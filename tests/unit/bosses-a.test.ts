@@ -89,7 +89,7 @@ function discard(game: Game, cards: readonly Card[]) {
 describe('šéfové 1–13 – definice podle DESIGN 8.2', () => {
   const TABLE: [string, number, number][] = [
     // [id, od patra, násobek cíle] — cíle laděné simulací (DESIGN 8.2, DECISIONS „Kalibrace 1.0.1“)
-    ['tax_audit', 1, 2.3],
+    ['tax_audit', 1, 2.5],
     ['track_closure', 2, 0.9],
     ['inventory', 1, 2],
     ['drilling_neighbor', 1, 1.8],
@@ -97,7 +97,7 @@ describe('šéfové 1–13 – definice podle DESIGN 8.2', () => {
     ['superstitious_granny', 1, 2.5],
     ['black_cat', 2, 2.25],
     ['elbe_fog', 2, 2.1],
-    ['parking_fee', 1, 2.5],
+    ['parking_fee', 1, 2.6],
     ['studio_flat', 2, 1.15],
     ['village_drought', 2, 2],
     ['pickpocket', 2, 2.5],

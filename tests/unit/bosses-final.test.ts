@@ -58,7 +58,7 @@ describe('fináloví šéfové – data (DESIGN 8.3)', () => {
   it('id, finálový příznak a cíl odpovídají tabulce', () => {
     const table: Record<string, number> = {
       mayor: 2.3,
-      regional_office: 1.85,
+      regional_office: 1.9,
       great_flood: 2.5,
       white_lady: 1.3,
       banana_queue: 2.35,

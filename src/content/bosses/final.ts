@@ -21,10 +21,10 @@ const BANANA_MIN_PCT = 20;
  * Cíle finálových šéfů laděné simulací na letalitu 20–40 % (docs/DESIGN.md 12.1, DECISIONS „Fáze 6: ladění se
  * šéfy“): Pan starosta, Krajský úřad a Velká voda měli s 2× ~16–19 %, Bílá paní ~35–48 %. Fáze 10: Bílá paní 1,5 → 1,25
  * (letalita 54 %). Kalibrace 1.0.1 (patro 8 už není zeď — DECISIONS 2026-10-03): Pan starosta 2,5 → 2,3, Krajský úřad
- * 2,25 → 1,85, Velká voda 2,5, letalita všech pěti 22–32 %.
+ * 2,25 → 1,9 (s 1,85 18–28 % podle sady), Velká voda 2,5, Bílá paní 1,3, letalita všech pěti 20–38 %.
  */
 const MAYOR_TARGET_MULT = 2.3;
-const OFFICE_TARGET_MULT = 1.85;
+const OFFICE_TARGET_MULT = 1.9;
 const FLOOD_TARGET_MULT = 2.5;
 /** Bílá paní: 1.0.1 bez zamíchání (karty jen otočí), proto vyšší cíl než 1,25× z fáze 10 (kalibrace 1.0.1: 1,3× — s 1,4× 39 % proher, bot barvy 56 %). */
 const WHITE_LADY_TARGET_MULT = 1.3;
