@@ -414,22 +414,24 @@ describe('sbírka', () => {
   it('štítek „Nové“: na položce i záložce; detail ho sundá, odchod ze záložky taky', () => {
     const [a, b] = Object.keys(REG.jokers);
     app.profile.discovered.jokers = [a!, b!];
-    app.profile.unseen = [`jokers:${a}`, `jokers:${b}`, 'decks:pub'];
+    app.profile.unseen = [`jokers:${a}`, `jokers:${b}`, 'jokers:odebrany_zolik', 'decks:pub'];
     app.go('collection');
     const tab = q('[data-testid="codex-tab-jokers"]');
-    expect(tab.querySelector('.tabs__badge')?.textContent).toBe('2');
+    // Cedulka říká „2 nové“ (ne holé číslo vedle počtu „x / y“); neznámé id z profilu se nepočítá.
+    expect(tab.querySelector('.tabs__badge')?.textContent).toBe(t('meta.collection.newBadgeCount', { n: 2 }));
+    expect(tab.querySelector('.tabs__badge')?.textContent?.replace(/\s/g, ' ')).toBe('2 nové');
     expect(q(`[data-testid="codex-item-${a}"]`).classList.contains('is-new')).toBe(true);
     q(`[data-testid="codex-item-${a}"]`).click();
     closeAllModals();
     expect(app.profile.unseen).not.toContain(`jokers:${a}`);
     expect(q(`[data-testid="codex-item-${a}"]`).classList.contains('is-new')).toBe(false);
-    expect(tab.querySelector('.tabs__badge')?.textContent).toBe('1');
+    expect(tab.querySelector('.tabs__badge')?.textContent).toBe(t('meta.collection.newBadgeCount', { n: 1 }));
     // Přepnutí záložky: zbytek viděných novinek se sundá (balíček zůstává, dokud se na něj nepodívá).
     q('[data-testid="codex-tab-decks"]').click();
-    expect(app.profile.unseen).toEqual(['decks:pub']);
+    expect(app.profile.unseen).toEqual(['jokers:odebrany_zolik', 'decks:pub']);
     expect((tab.querySelector('.tabs__badge') as HTMLElement).hidden).toBe(true);
     app.go('menu');
-    expect(app.profile.unseen).toEqual([]);
+    expect(app.profile.unseen).toEqual(['jokers:odebrany_zolik']);
   });
 
   it('filtr podle vzácnosti a zaměření, řazení podle názvu', () => {

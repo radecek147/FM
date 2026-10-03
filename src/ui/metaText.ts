@@ -117,8 +117,11 @@ export function unlockInfo(
     progress: p.progress,
     target: p.target,
     met: p.met,
+    // Postup jen nad výchozí hodnotou (úroveň kombinace 1 není zásluha — „(1 / 6)“ na čistém profilu mátlo).
     progressText:
-      p.target > 1 ? t('meta.collection.progress', { progress: p.progress, target: p.target }) : null,
+      p.target > 1 && (p.base === undefined || p.progress > p.base)
+        ? t('meta.collection.progress', { progress: p.progress, target: p.target })
+        : null,
   };
 }
 

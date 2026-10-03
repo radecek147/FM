@@ -675,8 +675,19 @@ function achievementOptional(def: AchievementDef, field: 'flavor' | 'hint'): str
 
 /** Kategorie profilu, které záložka zobrazuje (štítek „Nové“ na záložce). */
 function tabUnseen(tab: CollectionTab, profile: Readonly<Profile>, registry: ContentRegistry): number {
+  // Jen položky, které registr zná (štítek „Nové“ u nich opravdu svítí) — klíče obsahu odebraného od uložení ne.
+  const known = (prefix: string, id: string): boolean => {
+    const table = (registry as unknown as Record<string, Record<string, unknown> | undefined>)[
+      prefix === 'hands' ? 'handTypes' : prefix
+    ];
+    return !table || Object.hasOwn(table, id);
+  };
   const count = (prefix: string, keep: (id: string) => boolean = () => true): number =>
-    profile.unseen.filter((k) => k.startsWith(`${prefix}:`) && keep(k.slice(prefix.length + 1))).length;
+    profile.unseen.filter((k) => {
+      if (!k.startsWith(`${prefix}:`)) return false;
+      const id = k.slice(prefix.length + 1);
+      return known(prefix, id) && keep(id);
+    }).length;
   const kind = CONSUMABLE_TABS[tab];
   if (kind) return count('consumables', (id) => registry.consumables[id]?.kind === kind);
   if (tab === 'mods') return count('enhancements') + count('seals') + count('editions');
@@ -926,7 +937,8 @@ export const collectionScreen: ScreenFactory = (app: App, params) => {
     const n = tabUnseen(tab, app.profile, registry);
     return n > 0
       ? {
-          badge: formatNumber(n),
+          // „48 nových“ — samotné číslo vedle počtu „41 / 101“ mátlo (vypadalo jako další počet položek).
+          badge: t('meta.collection.newBadgeCount', { n }),
           badgeLabel: `${t(`meta.collection.tabs.${tab}`)}, ${t('meta.collection.newCount', { n })}`,
         }
       : { badge: null };

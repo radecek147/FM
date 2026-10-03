@@ -52,7 +52,7 @@ export const meta = {
     title: 'Novinky z tohoto runu',
     empty: 'Tentokrát nic nového. Štamgast říká, že příště to určitě klapne.',
     notCounted:
-      'Run se zadaným seedem ani denní run mimo soutěž se do statistik, odemykání a achievementů nepočítá. Jen do historie.',
+      'Run se zadaným seedem ani denní run mimo soutěž se do statistik, odemykání a achievementů nepočítá (výjimkou je „Semínko zaseto“). Jen do historie.',
     dailyTitle: 'Výsledek denního runu',
     dailyUnofficial: 'Mimo soutěž – oficiální je jen první pokus dne.',
   },
@@ -310,6 +310,8 @@ export const meta = {
     count: '{n} / {total}',
     countLabel: 'Objeveno {n} {total|z}',
     newBadge: 'Nové',
+    /** Cedulka na záložce: počet nových položek (ne celkový počet). */
+    newBadgeCount: '{n|plural:nová,nové,nových}',
     newCount: '{n|plural:nová položka,nové položky,nových položek}',
     locked: 'Zamčeno',
     unknownName: '???',
