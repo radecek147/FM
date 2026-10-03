@@ -100,7 +100,7 @@ describe('balíčky – seznam a texty', () => {
 
   it('Úřednický: popisek jmenuje přesně startovní kupóny (názvy z textů kupónů)', () => {
     const clerk = DECKS.find((d) => d.id === 'clerk')!;
-    expect(clerk.startingVouchers).toEqual(['complaints_book', 'village_newsletter']);
+    expect(clerk.startingVouchers).toEqual(['village_newsletter', 'deposit_bottle']);
     const desc = t('decks.clerk.desc');
     for (const v of clerk.startingVouchers!) {
       expect(reg.vouchers[v], v).toBeDefined();
@@ -184,7 +184,7 @@ describe('balíčky – pravidla', () => {
     expect(g.state.round!.hand).toHaveLength(7);
   });
 
-  it('Notářský: −1 slot spotřebky, ~6 % karet s náhodnou pečetí, deterministicky podle seedu', () => {
+  it('Notářský: −1 slot spotřebky, ~4 % karet s náhodnou pečetí, deterministicky podle seedu', () => {
     expect(modsDiff('notary')).toEqual({ consumableSlots: 1 });
     const a = newGame('notary', 'NOTARY1');
     const b = newGame('notary', 'NOTARY1');
@@ -202,18 +202,13 @@ describe('balíčky – pravidla', () => {
           kinds.add(c.seal);
         }
     }
-    expect(sealed / total).toBeGreaterThan(0.04);
-    expect(sealed / total).toBeLessThan(0.08);
+    expect(sealed / total).toBeGreaterThan(0.025);
+    expect(sealed / total).toBeLessThan(0.055);
     expect([...kinds].sort()).toEqual(Object.keys(reg.seals).sort());
   });
 
-  it('Zbohatlík: odměny ×2, úrok ×1,5, nevyužitá ruka o 1 Kč víc, 2 ruce', () => {
-    expect(modsDiff('nouveau_riche')).toEqual({
-      hands: 2,
-      blindRewardMult: 2,
-      interestMult: 1.5,
-      moneyPerUnusedHand: 2,
-    });
+  it('Zbohatlík: odměny ×2, 2 ruce (úrok a nevyužité ruce beze změny — kalibrace 1.0.1)', () => {
+    expect(modsDiff('nouveau_riche')).toEqual({ hands: 2, blindRewardMult: 2 });
     const g = newGame('nouveau_riche');
     g.dispatch({ type: 'selectBlind' });
     expect(g.state.round!.handsLeft).toBe(2);
@@ -221,8 +216,8 @@ describe('balíčky – pravidla', () => {
     g.dispatch({ type: 'play', cardIds: [g.state.round!.hand[0]!] });
     const r = g.state.rewards!;
     expect(r.blindReward).toBe(6);
-    expect(r.unusedHands).toBe(2);
-    // Úrok 1 Kč × 1,5 = 1,5 → dolů na celé koruny.
+    expect(r.unusedHands).toBe(1);
+    // Úrok 1 Kč (5 Kč na startu), bez násobku.
     expect(r.interest).toBe(1);
   });
 
@@ -267,23 +262,23 @@ function beatBoss(g: Game): GameEvent[] {
 const pranostikaHand = (defId: string): HandType | undefined => reg.consumables[defId]?.hand;
 
 describe('balíčky fáze 7 – pravidla', () => {
-  it('Úřednický: start s kupóny Kniha stížností a Zpravodaj obce (zdarma, s jejich efekty)', () => {
+  it('Úřednický: start s kupóny Zpravodaj obce a Zálohovaná lahev (zdarma, s jejich efekty)', () => {
     const g = newGame('clerk');
-    expect(g.state.vouchers).toEqual(['complaints_book', 'village_newsletter']);
+    expect(g.state.vouchers).toEqual(['village_newsletter', 'deposit_bottle']);
     expect(g.state.money).toBe(5);
     expect(g.state.deck).toHaveLength(52);
-    expect(modsDiff('clerk')).toEqual({ bossRerollsPerAnte: 1 });
+    expect(modsDiff('clerk')).toEqual({ bossRerollsPerAnte: 1, consumableSellFull: true });
     // Přelosování šéfa zdarma je k dispozici hned v patře 1 (jednou, ne dvakrát).
     expect(g.state.flags.bossRerolls).toBe(1);
     // Kupón patra nikdy nenabídne to, co už balíček dal.
     for (let i = 0; i < 30; i++) {
       const offered = newGame('clerk', `CLERK${i}`).state.anteVouchers;
       expect(offered).not.toContain('village_newsletter');
-      expect(offered).not.toContain('complaints_book');
+      expect(offered).not.toContain('deposit_bottle');
     }
     // Uložení a načtení: kupóny zůstanou, pravidla také.
     const loaded = Game.fromState(deserializeRun(serializeRun(g.state as RunState)), reg);
-    expect(loaded.state.vouchers).toEqual(['complaints_book', 'village_newsletter']);
+    expect(loaded.state.vouchers).toEqual(['village_newsletter', 'deposit_bottle']);
     expect(loaded.modifiers()).toEqual(g.modifiers());
   });
 

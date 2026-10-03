@@ -36,17 +36,18 @@ export const COURT_HAND_SIZE = -1;
 export const COURT_TARGET_MULT = 2.1;
 /**
  * Notářský: šance na náhodnou pečeť u každé karty; −1 slot spotřebky. Fáze 10: s 25 % 59 % výher (Hospodský 29 %;
- * silnější boti pečetě i karty s úpravami — Pan farář — využijí naplno), s 12 % 42 %, se 6 % 37 %.
+ * silnější boti pečetě i karty s úpravami — Pan farář — využijí naplno), s 12 % 42 %, se 6 % 37 %. Kalibrace 1.0.1:
+ * 6 → 4 % (6 %: +8 p. b. nad Hospodským v průměru botů, 4 %: +6 p. b.).
  */
-export const NOTARY_SEAL_CHANCE = 0.06;
+export const NOTARY_SEAL_CHANCE = 0.04;
 export const NOTARY_CONSUMABLE_SLOTS = -1;
 /**
- * Zbohatlík: odměny za útraty ×2, úrok ×1,5, nevyužitá ruka +1 Kč navíc, −2 ruce. Fáze 10: s úrokem ×2 48 % výher
- * (Hospodský 29 %), s ×1,5 35 %; odměny i úrok ×1,5 jen 17,5 % (DECISIONS „Fáze 10: balanc…“).
+ * Zbohatlík: odměny za útraty ×2, −2 ruce. Fáze 10: s úrokem ×2 48 % výher (Hospodský 29 %), s ×1,5 35 %; odměny i úrok
+ * ×1,5 jen 17,5 % (DECISIONS „Fáze 10: balanc…“). Kalibrace 1.0.1 (DECISIONS 2026-10-03): úrok ×1,5 a nevyužitá ruka
+ * +1 Kč navíc dávaly 35,8 % proti 24,8 % Hospodského (ruce jsou se Zbohatlíkem pořád dost) — bez úroku navíc 27,3 %, bez
+ * úroku i bonusu za ruku 18,5 %; Zbohatlík nemá vyhrávat víc než Hospodský, proto jen odměny ×2.
  */
 export const RICH_REWARD_MULT = 2;
-export const RICH_INTEREST_MULT = 1.5;
-export const RICH_UNUSED_HAND_BONUS = 1;
 export const RICH_HANDS = -2;
 /** Dlužník: start −10 Kč, dluh až do −20 Kč, úrok ×2 (jen z kladného zůstatku — to hlídá engine). */
 export const DEBTOR_STARTING_MONEY = -10;
@@ -56,9 +57,11 @@ export const DEBTOR_INTEREST_MULT = 2;
  * Úřednický: startovní kupóny (1.0.1: Kniha stížností, Zpravodaj obce; před 1.0.1 Trhací kalendář a Kamarád za
  * pultem). Ještě dřív Žlutá cenovka (sleva 20 %) + Trhací
  * kalendář — bot s nimi vyhrával 66,5 % proti 34 % Hospodského (sleva od prvního nákupu je nejsilnější ekonomika);
- * s Kamarádem za pultem 34,5 %, v rozmezí ostatních balíčků (DECISIONS 2026-10-02 „Balanc po fázi 7“).
+ * s Kamarádem za pultem 34,5 %, v rozmezí ostatních balíčků (DECISIONS 2026-10-02 „Balanc po fázi 7“). Kalibrace
+ * 1.0.1: Kniha stížností od prvního kola dá +1 úroveň skoro každé kombinaci (sama +23 p. b., se Zpravodajem 54 % proti
+ * 26 % Hospodského) → Zpravodaj obce a Zálohovaná lahev (25,5 %; s Kontejnerem 38,5 %) — DECISIONS 2026-10-03.
  */
-export const CLERK_VOUCHERS: readonly string[] = ['complaints_book', 'village_newsletter'];
+export const CLERK_VOUCHERS: readonly string[] = ['village_newsletter', 'deposit_bottle'];
 /**
  * Babiččin: +1 slot spotřebky, start s 1 náhodnou babskou radou. Fáze 10: se 2 radami 41 % výher (Hospodský 29 %),
  * s 1 radou 36–38 %; bez slotu navíc (2 rady) 39 % — slot navíc sílu nedělá, takže zůstává.
@@ -201,18 +204,8 @@ export const DECKS: DeckDef[] = [
   },
   {
     id: 'nouveau_riche',
-    passive: () => ({
-      blindRewardMult: RICH_REWARD_MULT,
-      interestMult: RICH_INTEREST_MULT,
-      moneyPerUnusedHand: RICH_UNUSED_HAND_BONUS,
-      hands: RICH_HANDS,
-    }),
-    params: {
-      reward: RICH_REWARD_MULT,
-      interest: RICH_INTEREST_MULT,
-      hand: RICH_UNUSED_HAND_BONUS,
-      hands: -RICH_HANDS,
-    },
+    passive: () => ({ blindRewardMult: RICH_REWARD_MULT, hands: RICH_HANDS }),
+    params: { reward: RICH_REWARD_MULT, hands: -RICH_HANDS },
     art: { icon: 'money-stack', bg: '#14532d', fg: '#f0fdf4', accent: '#eab308', pattern: 'stripes' },
     unlock: { type: 'haveMoney', atLeast: 50 },
   },

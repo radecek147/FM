@@ -15,8 +15,8 @@ export const decks = {
   },
   clerk: {
     name: 'Úřednický',
-    // Názvy kupónů musí odpovídat `vouchers.complaints_book|village_newsletter.name` (hlídá tests/unit/decks.test.ts).
-    desc: 'Start s kupóny Kniha stížností a Zpravodaj obce.',
+    // Názvy kupónů musí odpovídat `vouchers.village_newsletter|deposit_bottle.name` (hlídá tests/unit/decks.test.ts).
+    desc: 'Start s kupóny Zpravodaj obce a Zálohovaná lahev.',
     flavor: 'Všechno vyřízeno předem. Na razítko.',
   },
   tourist: {
@@ -42,7 +42,7 @@ export const decks = {
   },
   nouveau_riche: {
     name: 'Zbohatlík',
-    desc: 'Odměny za útraty {reward|x} a úrok {interest|x}, každá nevyužitá ruka dává o {hand|money} víc. Zato o {hands|plural:ruku,ruce,rukou} méně v každém kole.',
+    desc: 'Odměny za útraty {reward|x}. Zato o {hands|plural:ruku,ruce,rukou} méně v každém kole.',
     flavor: 'Peníze jsou, čas není.',
   },
   debtor: {
