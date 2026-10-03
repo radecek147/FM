@@ -117,7 +117,7 @@ describe('epičtí žolíci — definice a texty', () => {
   it('popisky čtou čísla z params a stav z describe', () => {
     expect(descOf('snowman')).toBe('×2,5 mult; po každém kole −×0,25, při ×1 roztaje a zničí se (teď ×2,5).');
     expect(descOf('mushroom_picker')).toBe(
-      '×1 mult a navíc +×0,22 za každou hrací kartu zničenou od jeho koupě (teď ×1).',
+      '×1 mult a navíc +×0,18 za každou hrací kartu zničenou od jeho koupě (teď ×1).',
     );
     expect(descOf('impersonator')).toBe(
       'Při získání bez edice dostane duhovou; v každém kole kopíruje tvého nejdražšího běžného nebo vzácného žolíka.',
@@ -129,7 +129,7 @@ describe('epičtí žolíci — definice a texty', () => {
       state,
     });
     expect(descOf('snowman', inst('snowman', { xmult: 1.75 }))).toContain('(teď ×1,75)');
-    expect(descOf('mushroom_picker', inst('mushroom_picker', { destroyed: 3 }))).toContain('(teď ×1,66)');
+    expect(descOf('mushroom_picker', inst('mushroom_picker', { destroyed: 3 }))).toContain('(teď ×1,54)');
     expect(hasKey('jokers.snowman.melted')).toBe(true);
   });
 
@@ -203,15 +203,15 @@ describe('Sběrač hub (mushroom_picker)', () => {
     expect(jokerSteps(r, 'mushroom_picker')).toEqual([]);
   });
 
-  it('+×0,22 za každou zničenou hrací kartu: 2 karty → 32 × 2 × 1,44 = 92', () => {
+  it('+×0,18 za každou zničenou hrací kartu: 2 karty → 32 × 2 × 1,36 = 87', () => {
     const g = game(['mushroom_picker']);
     const [a, b] = g.state.deck;
     g._core.api.destroyCard(a!.id, 'test');
     g._core.api.destroyCard(b!.id, 'test');
     expect(g.state.jokers[0]!.state.destroyed).toBe(2);
     const r = hand(g, 'KS KH');
-    expect(jokerSteps(r, 'mushroom_picker')).toMatchObject([{ xmult: 1 + 0.22 * 2 }]);
-    expect(r.score).toBe(92);
+    expect(jokerSteps(r, 'mushroom_picker')).toMatchObject([{ xmult: 1 + 0.18 * 2 }]);
+    expect(r.score).toBe(87);
   });
 
   it('počítá i prasklé sklo ve skórování (od příští ruky)', () => {
@@ -220,7 +220,7 @@ describe('Sběrač hub (mushroom_picker)', () => {
     // Dvojice pětek se skleněnou: (12 + 5 + 5) × 2 × 2 = 88; Sběrač je ještě na ×1
     expect(hand(g, '5H:glass 5S').score).toBe(88);
     expect(g.state.jokers[0]!.state.destroyed).toBe(1);
-    expect(hand(g, 'KS KH').score).toBe(Math.floor(32 * 2 * 1.22));
+    expect(hand(g, 'KS KH').score).toBe(Math.floor(32 * 2 * 1.18));
   });
 
   it('karty zničené před koupí se nepočítají; kopie nepočítá dvakrát; uložení a načtení', () => {
@@ -231,8 +231,8 @@ describe('Sběrač hub (mushroom_picker)', () => {
     g._core.api.destroyCard(g.state.deck[0]!.id, 'test');
     expect(g.state.jokers[1]!.state.destroyed).toBe(1);
     g = reload(g);
-    // kopie i originál ×1,22: 32 × 2 × 1,22 × 1,22 = 95
-    expect(hand(g, 'KS KH').score).toBe(Math.floor(32 * 2 * 1.22 * 1.22));
+    // kopie i originál ×1,18: 32 × 2 × 1,18 × 1,18 = 89
+    expect(hand(g, 'KS KH').score).toBe(Math.floor(32 * 2 * 1.18 * 1.18));
   });
 });
 

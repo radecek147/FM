@@ -204,7 +204,7 @@ describe('vzácní žolíci fáze 7 – definice', () => {
       glassblower: { cards: 1 },
       notary_public: {},
       witch: {},
-      water_goblin: { mult: 1 },
+      water_goblin: { mult: 0.75 },
       will_o_wisp: { xmult: 2 },
       noon_witch: { xmult: 2 },
       klekanice: { xmult: 2 },
@@ -219,7 +219,7 @@ describe('vzácní žolíci fáze 7 – definice', () => {
       carbon_paper: {},
       defenestration: { money: 5 },
       brno_native: { xmult: 1.5 },
-      social_bubble: { chips: 15 },
+      social_bubble: { chips: 30 },
     });
   });
 
@@ -319,7 +319,7 @@ describe('vzácní žolíci fáze 7 – texty', () => {
       notary_public:
         'První ruka Malé a Velké útraty dá ještě před skórováním první skórující kartě bez pečeti zlatou pečeť.',
       witch: 'Po porážce šéfa vytvoří náhodné úřední razítko (potřebuje volný slot).',
-      water_goblin: 'Každá zahozená srdcová karta mu trvale přidá +1 mult (teď +0 mult).',
+      water_goblin: 'Každá zahozená srdcová karta mu trvale přidá +0,75 mult (teď +0 mult).',
       will_o_wisp: 'V kole se šéfem dá každá ruka ×2 mult.',
       noon_witch: 'Druhá ruka kola dá ×2 mult.',
       klekanice: '×2 mult, pokud ti po zahrání v ruce nezůstala žádná figura.',
@@ -337,7 +337,7 @@ describe('vzácní žolíci fáze 7 – texty', () => {
       defenestration: 'Každé zahození, ve kterém je aspoň jedna figura, dá 5 Kč.',
       brno_native: '×1,5 mult, pokud stojí v řadě žolíků úplně vlevo.',
       social_bubble:
-        'Když mají všechny skórující karty stejnou barvu nebo stejnou hodnotu, každá dá +15 čipů.',
+        'Když mají všechny skórující karty stejnou barvu nebo stejnou hodnotu, každá dá +30 čipů.',
     });
   });
 });
@@ -594,15 +594,15 @@ describe('Čarodějnice (witch)', () => {
 });
 
 describe('Vodník (water_goblin)', () => {
-  it('každá zahozená srdcová karta (i divoká) trvale +1 mult', () => {
+  it('každá zahozená srdcová karta (i divoká) trvale +0,75 mult', () => {
     const game = roundGame(['water_goblin']);
     const cards = setupRound(game, '2H 5S:wild 6S 3C 9H!');
     ok(game.dispatch({ type: 'discard', cardIds: cards.map((c) => c.id) }));
     // 2♥, divoká a debuffnutá 9♥ ano; pika a kříž ne.
-    expect(joker(game, 'water_goblin').state).toEqual({ mult: 3 });
+    expect(joker(game, 'water_goblin').state).toEqual({ mult: 2.25 });
     const r = playHand(game, 'KS');
-    expect([r.chips, r.mult]).toEqual([16, 4]);
-    expect(descOf('water_goblin', joker(game, 'water_goblin'))).toContain('(teď +3 mult)');
+    expect([r.chips, r.mult]).toEqual([16, 3.25]);
+    expect(descOf('water_goblin', joker(game, 'water_goblin'))).toContain('(teď +2,25 mult)');
   });
 
   it('bez nasbíraného multu nic; kopie stav nezdvojí; přežije uložení a načtení', () => {
@@ -610,9 +610,9 @@ describe('Vodník (water_goblin)', () => {
     let game = roundGame(['copier', 'water_goblin']);
     const cards = setupRound(game, '2H 3H');
     ok(game.dispatch({ type: 'discard', cardIds: cards.map((c) => c.id) }));
-    expect(joker(game, 'water_goblin').state).toEqual({ mult: 2 });
+    expect(joker(game, 'water_goblin').state).toEqual({ mult: 1.5 });
     game = reload(game);
-    expect(playHand(game, 'KS').mult).toBe(1 + 2 + 2);
+    expect(playHand(game, 'KS').mult).toBe(1 + 1.5 + 1.5);
   });
 });
 
@@ -951,24 +951,24 @@ describe('Brňák (brno_native)', () => {
 describe('Sociální bublina (social_bubble)', () => {
   const chips = (hand: string, jokers = ['social_bubble']) => playHand(roundGame(jokers), hand).chips;
 
-  it('když mají všechny skórující karty stejnou barvu nebo hodnotu, každá dá +15 čipů', () => {
-    // Barva: 40 + 2 + 5 + 7 + 9 + 10 + 5 × 15 = 148.
-    expect(chips('2H 5H 7H 9H JH')).toBe(148);
-    // Dvojice (stejná hodnota): 12 + 20 + 2 × 15.
-    expect(chips('KS KH')).toBe(62);
-    // Jedna skórující karta (kopa se nepočítá): 6 + 10 + 15.
-    expect(chips('KS 5H')).toBe(31);
-    // Červená pečeť = dvě aktivace: 6 + 2 × (10 + 15).
-    expect(chips('KS@red')).toBe(56);
+  it('když mají všechny skórující karty stejnou barvu nebo hodnotu, každá dá +30 čipů', () => {
+    // Barva: 40 + 2 + 5 + 7 + 9 + 10 + 5 × 30 = 223.
+    expect(chips('2H 5H 7H 9H JH')).toBe(223);
+    // Dvojice (stejná hodnota): 12 + 20 + 2 × 30.
+    expect(chips('KS KH')).toBe(92);
+    // Jedna skórující karta (kopa se nepočítá): 6 + 10 + 30.
+    expect(chips('KS 5H')).toBe(46);
+    // Červená pečeť = dvě aktivace: 6 + 2 × (10 + 30).
+    expect(chips('KS@red')).toBe(86);
   });
 
   it('dvě dvojice ani kamenná karta podmínku nesplní; divoká a sloučené barvy ano; debuffnutá se přeskočí', () => {
     expect(chips('2S 2H 3C 3D')).toBe(34);
     expect(chips('KS 2C:stone')).toBe(66);
-    expect(chips('2H 5H 7H 9H JS:wild')).toBe(148);
-    expect(chips('2H 5D 7H 9D JH', ['colorblind_uncle', 'social_bubble'])).toBe(148);
-    // Debuffnutý K♥ nic, zbylý K♠ sám splní podmínku: 12 + 10 + 15.
-    expect(chips('KS KH!')).toBe(37);
+    expect(chips('2H 5H 7H 9H JS:wild')).toBe(223);
+    expect(chips('2H 5D 7H 9D JH', ['colorblind_uncle', 'social_bubble'])).toBe(223);
+    // Debuffnutý K♥ nic, zbylý K♠ sám splní podmínku: 12 + 10 + 30.
+    expect(chips('KS KH!')).toBe(52);
   });
 });
 

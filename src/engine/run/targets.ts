@@ -2,11 +2,17 @@
 import { BLIND_TARGET_MULT } from '../constants';
 import type { BlindKind } from '../types';
 
-/** Základ patra 1–8 pro křivky 1–3 (index křivky je 1-based). */
+/**
+ * Základ patra 1–8 pro křivky 1–3 (index křivky je 1-based). Kalibrace 1.0.1 (docs/DECISIONS.md 2026-10-03): patra 4–7
+ * o 30–45 % výš a patro 8 o ~5 % (křivka 1: 2 700 / 6 500 / 16 000 / 39 000 / 95 000 → 3 600 / 9 400 / 23 000 / 51 000
+ * / 100 000) — dřív se patra 1–5 vyhrávala první rukou a patro 8 bylo zeď (49 % proher runů, které ho dosáhly); křivka 3
+ * je o ~15–19 % nad křivkou 2, aby Bock nebyl prázdný krok proti Ležáku (křivka 2 má proto v patrech 6–7 menší odstup
+ * od křivky 1, +12–13 %). Hodnoty musí být „hezká“ čísla (`niceRound`).
+ */
 export const TARGET_CURVES: readonly (readonly number[])[] = [
-  [250, 550, 1100, 2700, 6500, 16000, 39000, 95000],
-  [250, 550, 1200, 3100, 7500, 18500, 45000, 110000],
-  [250, 600, 1300, 3300, 7800, 19000, 47000, 115000],
+  [250, 600, 1300, 3600, 9400, 23000, 51000, 100000],
+  [250, 600, 1400, 4100, 11000, 26000, 57000, 115000],
+  [250, 650, 1550, 4700, 12500, 31000, 68000, 135000],
 ];
 
 /** Re-export pro starší importy — násobky útrat žijí v engine/constants.ts. */
@@ -15,12 +21,14 @@ export { BLIND_TARGET_MULT };
 export const DEFAULT_BOSS_TARGET_MULT = BLIND_TARGET_MULT.boss;
 
 /**
- * Růst nekonečného režimu: g(a) = ENDLESS_GROWTH_BASE + ENDLESS_GROWTH_STEP × (a − 9). 1.0.1 téměř konstantní
- * (2,3 v patře 9 → 2,51 v patře 30); dřív 2,2 + 0,15 × (a − 9) a v patře 16 už ×4,5 za patro, takže typický build
- * padl v patře 10–11 (docs/DECISIONS.md 2026-10-03).
+ * Růst nekonečného režimu: g(a) = ENDLESS_GROWTH_BASE + ENDLESS_GROWTH_STEP × (a − 9), base(a) = base(8) × g(a)^(a − 8).
+ * Kalibrace 1.0.1 (docs/DECISIONS.md 2026-10-03): 1,5 + 0,035 × (a − 9) — mírný začátek (patro 9 ×1,5 proti patru 8,
+ * patro 16 ×2 za patro), pak zrychluje (patro 30 ×3,1 za patro, základ 4,8e12 — „Tepelná smrt vesmíru“ je extrémní, ale
+ * ne nemožná). S 2,3 + 0,01 × (a − 9) padal vítězný build botů v patře 9–10 (medián), s 2,2 + 0,15 × (a − 9) (do 1.0)
+ * v patře 10–11 a patro 30 bylo nedosažitelné.
  */
-export const ENDLESS_GROWTH_BASE = 2.3;
-export const ENDLESS_GROWTH_STEP = 0.01;
+export const ENDLESS_GROWTH_BASE = 1.5;
+export const ENDLESS_GROWTH_STEP = 0.035;
 
 /**
  * „Hezké“ zaokrouhlení cílů (docs/DESIGN.md kap. 2.3.2): pod 100 na násobek 5, jinak na 2 platné
@@ -42,7 +50,7 @@ export function niceRound(x: number): number {
 
 /**
  * Základ patra. Patro < 1 (kupón „o patro zpět“) = 40 % prvního patra.
- * Nekonečný režim (patro a ≥ 9): base(a) = nice(base(8) × g(a)^(a − 8)), g(a) = 2,3 + 0,01 × (a − 9).
+ * Nekonečný režim (patro a ≥ 9): base(a) = nice(base(8) × g(a)^(a − 8)), g(a) = 1,5 + 0,035 × (a − 9).
  */
 export function anteBase(ante: number, curve: number): number {
   const c = TARGET_CURVES[Math.max(0, Math.min(TARGET_CURVES.length - 1, curve - 1))]!;

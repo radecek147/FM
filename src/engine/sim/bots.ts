@@ -64,7 +64,9 @@ import {
   probeSeed,
   roundsLeft,
   sampledDelta,
+  heldTagMoney,
   stateDelta,
+  voucherWorth,
   type Delta,
   type TargetPlan,
   type ValueView,
@@ -342,6 +344,12 @@ const SKIP_PROBES = 2;
 const DEFERRED_TAG_KC = 4;
 /** Nižší cíl šéfa (Šéf má chřipku): Kč za celý cíl (× poměrné snížení). */
 const BOSS_TARGET_KC = 40;
+/**
+ * Přelosovat šéfa, když odhad „síla × ruce / cíl“ pod jeho pravidlem klesne pod tolikanásobek téhož odhadu bez pravidla
+ * (běžný šéf 2×) a zároveň pod `BOSS_REROLL_SAFE` (s velkou rezervou není co řešit).
+ */
+const BOSS_REROLL_RATIO = 0.75;
+const BOSS_REROLL_SAFE = 3;
 
 /**
  * Otisk stavu pro RNG rozhodnutí: hodnoty, které se mění s postupem runu (peníze, uid, ruka, statistiky, Večerka,
@@ -820,21 +828,59 @@ class StrategyBot implements Bot {
     const s = game.state;
     const blind = s.blinds[s.blindIndex];
     const select: Action = { type: 'selectBlind' };
-    if (
-      !blind ||
-      blind.kind === 'boss' ||
-      !blind.skipTagId ||
-      !this.style.skipBlinds ||
-      s.stats.handsPlayed < SKIP_MIN_HANDS
-    )
+    if (blind?.kind === 'boss') return this.bossReroll(game, rng) ?? select;
+    if (!blind || !blind.skipTagId || !this.style.skipBlinds || s.stats.handsPlayed < SKIP_MIN_HANDS)
       return select;
     const next = blind.kind === 'small' ? s.blinds[1] : s.blinds[2];
     if (!next) return select;
     const need = SKIP_SAFETY * game.blindTarget(next.kind, next.bossId);
     const hands = game.modifiers().hands;
     if (s.stats.bestHandScore * hands < need) return select;
-    if (this.tagWorth(game) < SKIP_VALUE_RATIO * this.skipCost(game, blind.kind)) return select;
-    return this.buildStrength(game, rng) * hands >= need ? { type: 'skipBlind' } : select;
+    const cost = SKIP_VALUE_RATIO * this.skipCost(game, blind.kind);
+    let sell: number | null = null;
+    if (this.tagWorth(game) < cost) {
+      // Štítek, který dá žolíka jen do volného slotu (Pouťová tombola), s plnými sloty: hráč nejdřív prodá
+      // nejslabšího žolíka, když se mu to i se ztrátou vyplatí — pak už (s volným slotem) přeskočí.
+      const weakest = this.style.buysJokers && !jokerRoom(game) ? this.weakestJoker(game) : null;
+      if (weakest === null || this.tagWorth(game, weakest) < cost) return select;
+      sell = weakest;
+    }
+    if (this.buildStrength(game, rng) * hands < need) return select;
+    return sell !== null ? { type: 'sellJoker', uid: sell } : { type: 'skipBlind' };
+  }
+
+  /**
+   * Přelosovat šéfa (kupóny Zpravodaj obce, Obecní rozhlas)? Jen na výběru útraty Šéf (bot ví nejvíc o buildu). Odhad
+   * „síla × ruce / cíl“ (kopie hry v kole šéfa: nejlepší tah z rozdané ruky) pod pravidlem šéfa a bez něj (běžný šéf
+   * 2×): když pravidlo tomuto buildu vezme víc než průměrný šéf (pod `BOSS_REROLL_RATIO` × odhad bez pravidla) a build
+   * nemá velkou rezervu (`BOSS_REROLL_SAFE`), je náhodný jiný šéf lepší sázka. Bot pravidla nepoznává podle id.
+   */
+  private bossReroll(game: Game, rng: Rng): Action | null {
+    const left = game.state.flags.bossRerolls;
+    if (typeof left !== 'number' || left <= 0) return null;
+    const ruled = this.roundEstimate(game, rng);
+    // Totéž kolo bez pravidla šéfa (běžný šéf 2×) — srovnání odliší „těžký šéf“ od „slabého buildu“.
+    const plain = this.roundEstimate(game, rng, (st) => {
+      const slot = st.blinds[st.blindIndex];
+      if (slot) slot.bossId = null;
+    });
+    if (!ruled || !plain || ruled.target <= 0 || plain.target <= 0) return null;
+    const r = (ruled.strength * ruled.hands) / ruled.target;
+    const p = (plain.strength * plain.hands) / plain.target;
+    return r < BOSS_REROLL_RATIO * p && r < BOSS_REROLL_SAFE ? { type: 'rerollBoss' } : null;
+  }
+
+  /** Nejslabší vlastní žolík, kterého jde prodat (měřená ztráta sestavy bez něj + nečíselná složka), nebo null. */
+  private weakestJoker(game: Game): number | null {
+    const jokers = game.state.jokers;
+    const v = this.lab(game).variants(this.ordered(game, [...jokers]));
+    let best: { uid: number; kc: number } | null = null;
+    for (const j of jokers) {
+      if (j.stickers.includes('eternal')) continue;
+      const kc = this.powerKc(v.without(j.uid), v.total) + this.extrasKc(game, j);
+      if (!best || kc < best.kc) best = { uid: j.uid, kc };
+    }
+    return best?.uid ?? null;
   }
 
   /** O co bot přeskočením útraty přijde (Kč): odměna, nevyužité ruce, úrok a návštěva Večerky. */
@@ -850,24 +896,41 @@ class StrategyBot implements Bot {
   /**
    * Hodnota štítku útraty (Kč) sondou — bot štítky nepoznává podle id: přeskočení zkusí na kopii hry a ocení změnu
    * stavu (peníze, úrovně, žolíci, spotřebky); obálku zdarma odhadem její hodnoty; štítek, který zůstal čekat,
-   * podle nižšího cíle šéfa, jinak paušálem `DEFERRED_TAG_KC`.
+   * podle nižšího cíle šéfa, podle peněz, které vyplatí nebo strhne v rozpisu odměn (`heldTagMoney` — splátka Půjčky
+   * od tchána, Brigáda na chmelu), jinak paušálem `DEFERRED_TAG_KC`. `sellUid`: hodnota „prodat žolíka, pak
+   * přeskočit“ (štítek, který dá žolíka jen do volného slotu).
    */
-  private tagWorth(game: Game): number {
+  private tagWorth(game: Game, sellUid: number | null = null): number {
     const s = game.state;
     const view = this.view(game);
     const snapshot = JSON.stringify(s);
     const boss = s.blinds[2];
+    const owned = new Set(s.tags.map((t) => t.uid));
     let total = 0;
     for (let k = 0; k < SKIP_PROBES; k++) {
-      const clone = probe(game, { type: 'skipBlind' }, probeSeed(game, `skip:${k}`), snapshot);
+      const seed = probeSeed(game, `skip:${k}`);
+      let clone = probe(
+        game,
+        sellUid === null ? { type: 'skipBlind' } : { type: 'sellJoker', uid: sellUid },
+        seed,
+        snapshot,
+      );
+      if (clone && sellUid !== null && !clone.dispatch({ type: 'skipBlind' }).ok) clone = null;
       if (!clone) return 0;
       let v = stateDelta(view, clone).total;
       const opened = clone.state.phase === 'booster' ? clone.state.booster : null;
       if (opened) v += this.boosterWorth(clone, view, game.registry.boosters[opened.boosterId]);
-      if (clone.state.tags.length > s.tags.length) {
+      const held = clone.state.tags.filter((t) => !owned.has(t.uid)).map((t) => t.uid);
+      if (held.length > 0) {
         const before = boss ? game.blindTarget('boss', boss.bossId) : 0;
         const after = boss ? clone.blindTarget('boss', boss.bossId) : 0;
-        v += before > 0 && after < before ? BOSS_TARGET_KC * (1 - after / before) : DEFERRED_TAG_KC;
+        if (before > 0 && after < before) v += BOSS_TARGET_KC * (1 - after / before);
+        else {
+          // Štítek, který vyplácí nebo strhává v rozpisu odměn (Brigáda na chmelu, splátka Půjčky od tchána):
+          // dohrát kopii a sečíst rozpis; jinak paušál za štítek „na později“.
+          const money = heldTagMoney(cloneGame(clone, rngFromState([...seed])), new Set(held));
+          v += money !== 0 ? money : DEFERRED_TAG_KC;
+        }
       }
       total += v;
     }
@@ -879,16 +942,29 @@ class StrategyBot implements Bot {
    * s přeseedovaným RNG (bot nezná pořadí balíčku) a ohodnotí stejně jako v kole — vč. žolíků a úrovní kombinací.
    */
   private buildStrength(game: Game, rng: Rng): number {
+    return this.roundEstimate(game, rng)?.strength ?? 0;
+  }
+
+  /** Odhad kola aktuální útraty na kopii hry: síla buildu (viz `buildStrength`), ruce a cíl kola (i s pravidlem šéfa). */
+  private roundEstimate(
+    game: Game,
+    rng: Rng,
+    mutate?: (state: RunState) => void,
+  ): { strength: number; hands: number; target: number } | null {
     let sum = 0;
+    let hands = 0;
+    let target = 0;
     for (let k = 0; k < STRENGTH_SAMPLES; k++) {
-      const clone = cloneGame(game, rng);
+      const clone = cloneGame(game, rng, undefined, mutate);
       const round = clone.dispatch({ type: 'selectBlind' }).ok ? clone.state.round : null;
-      if (!round || clone.state.phase !== 'round') return 0;
+      if (!round || clone.state.phase !== 'round') return null;
+      hands = round.handsLeft;
+      target = round.target;
       const env = makeEnv(clone, this.handPref(clone));
       const hand = cardsOf(clone, round.hand).map((c) => cardValue(c, env));
       sum += this.rankedPlays(clone, rng, env, hand, drawInfo(hand, suitFavor(clone)), true)[0]?.raw ?? 0;
     }
-    return sum / STRENGTH_SAMPLES;
+    return { strength: sum / STRENGTH_SAMPLES, hands, target };
   }
 
   // ── kolo ──
@@ -1358,8 +1434,10 @@ class StrategyBot implements Bot {
       const v = shop.vouchers[i]!;
       if (v.sold || !this.affordable(game, v.price)) continue;
       const action: Action = { type: 'buyVoucher', slot: i };
-      const d = sampledDelta(view, action, `voucher:${v.voucherId}`, 1, snapshot);
-      if (d && this.worthBuying(game, d.total + v.price, v.price, VOUCHER_RATIO)) return action;
+      const clone = probe(game, action, probeSeed(game, `voucher:${v.voucherId}:0`), snapshot);
+      if (!clone) continue;
+      const worth = voucherWorth(view, clone, reg.vouchers[v.voucherId]);
+      if (this.worthBuying(game, worth, v.price, VOUCHER_RATIO)) return action;
     }
 
     // 3) žolíci (nákup, výměna)

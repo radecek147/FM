@@ -5,9 +5,22 @@
 
 ## Aktuální stav
 
-_Aktualizováno: 2026-10-02 (fáze 10: vydání 1.0)_
+_Aktualizováno: 2026-10-03 (1.0.1: kalibrace obtížnosti)_
 
-**Shrnutí:** fáze 0–10 jsou hotové, **verze 1.0.0** je hotová (tag `v1.0.0` zatím jen lokálně). Fáze 10 (DECISIONS „Fáze 10 (výkon,
+**1.0.1 — kalibrace obtížnosti je hotová** (DECISIONS 2026-10-03 „Kalibrace 1.0.1 (obtížnost po odlišení od
+Balatra)“, DESIGN 2.3, 4.3, 4.10, 8, 9, 10, 12.2): boti oceňují kupóny a štítky 1.0.1 (splátka Půjčky, tombola,
+přelosování šéfa; `src/engine/sim/{value,bots}.ts`), křivky cílů mají patra 4–7 o 30–45 % výš
+(`src/engine/run/targets.ts`), 18 cílů běžných a 4 finálových šéfů, Speciál 35 %, Doppelbock 32 %, Imperial ×1,15
+(`src/content/stakes.ts`), balíčky Úřednický, Zbohatlík a Notářský, 15 čísel žolíků, nekonečný režim
+`g(a) = 1,5 + 0,035 × (a − 9)`. Výsledek (Hospodský, sady A–C): Desítka 27,8 %, Jedenáctka 26 %, Dvanáctka 20 %,
+Speciál 15,1 %, Ležák 7,6 %, Bock 5,6 %, Doppelbock 4 %, Imperial 2 % — všech osm v pásmech a monotónně; vrchol
+proher v patrech 6–8 (patro 8 ztratí 37 % runů, které ho dosáhnou, dřív 49 %); balíčky −5,8 až +5 p. b. od
+Hospodského v průměru botů (Notářský pečeť 2,5 %), šéfové normovaně 0,64–1,26×, nekonečný režim s mediánem pádu
+vítězů v patře 11. Body „→ kalibrace“ v sekci „Opravy po testu 1.0 (1.0.1)“ jsou odškrtnuté; co zůstává mimo pásmo
+(šéfové s `minAnte 1` pod 4 %, Bílá paní a Velká voda pro bota `flush`, ekonomika, Kořenářka), je v DECISIONS.
+**Další krok:** deploy na GitHub Pages (níže, čeká na zapnutí Pages vlastníkem), pak obsahové patche.
+
+**Shrnutí (1.0):** fáze 0–10 jsou hotové, **verze 1.0.0** je hotová (tag `v1.0.0` zatím jen lokálně). Fáze 10 (DECISIONS „Fáze 10 (výkon,
 offline, přístupnost, bugfix)“, „Fáze 10: README, snímky a GIF, licence MIT“, „Fáze 10: balanc (silnější boti, cíle
 patra 8, žolíci, balíčky)“ a „Fáze 10: korektura textů, předložka z/ze, vydání 1.0“): code splitting a offline
 (service worker), Lighthouse > 90, README se snímky a GIFem, balanc (Desítka 31,2 %, Imperial 2,0 %, všech
@@ -407,21 +420,32 @@ simulacemi. Seřazeno podle priority.
 - [x] Dechovka + skleněné karty = auto-win (Trojice 3× sklo ≈ 96 milionů, Čtveřice ≈ 2,3e12); omezit opakování
       ×mult z karet — ×mult z karty jen v prvních 2 aktivacích (`MAX_XMULT_ACTIVATIONS_PER_CARD`), Trojice 187 264,
       Čtveřice 2 234 880; regresní test `balance-101.test.ts` (DECISIONS 2026-10-03)
-- [ ] Patro 8 je zeď (42–59 % runů, které tam dojdou, padne) a patra 1–5 jsou bez napětí (14 z 23 kol vyhráno
+- [x] Patro 8 je zeď (42–59 % runů, které tam dojdou, padne) a patra 1–5 jsou bez napětí (14 z 23 kol vyhráno
       první rukou); přeladit růst cílů a finální šéfy (Fronta na banány 3,5×) — Fronta na banány má vlastní pravidlo
-      (ruce 100 → 20 %, 2,5×), zeď patra 8 zůstává → kalibrace
+      (ruce 100 → 20 %, 2,5×); _kalibrace 1.0.1: patra 4–7 o 30–45 % výš, patro 8 o 5 % (křivka 1 končí na 100 000),
+      finální šéfové 1,3–2,5×; patro 8 ztratí 35–38 % runů, které ho dosáhnou (dřív 49 %), vrchol proher v patrech
+      6–8 (DECISIONS 2026-10-03 „Kalibrace 1.0.1“)_
 - [x] Garsonka 1+kk zabíjí Barvu (37,5 % pro bota flush); Nová vyhláška; Bílá paní bez zamíchání — Garsonka −2 karty
       bez limitu výběru (1,6×), Nová vyhláška půlí úrovně (1,5×), Bílá paní jen otáčí (1,6×); Kontrola z finančáku
-      za kartu a Parkovné × patro (2×); letalita na velké sadě → kalibrace
-- [ ] Ruce jsou levné (−1 ruka nic nestojí), žolíci „na první ruku“ platí skoro vždy → kalibrace
+      za kartu a Parkovné × patro (2×); _kalibrace 1.0.1: 18 cílů běžných šéfů podle letality normované na patro
+      a po botech — Garsonka 1,15× (6,9 %, boti 5,8–7,5 %), Nová vyhláška 1,5× (9,6 %), Kontrola 2,5× (3,9 %),
+      Parkovné 2,6× (4,0 %); normovaná letalita běžných šéfů 0,64–1,26× (dřív 0,17–2,37×), fináloví 23–37 %_
+- [x] Ruce jsou levné (−1 ruka nic nestojí), žolíci „na první ruku“ platí skoro vždy — _kalibrace 1.0.1: změřeno,
+      že −1 ruka po celý run stojí 62–69 % výher (dojem „levných rukou“ dělá průměrné kolo v patrech 1–4); systémové
+      řešení je křivka cílů — kola v patrech 5–8 trvají 1,8–2,1 ruky (první rukou se v patrech 6–8 vyhraje 34–37 % kol), Ranní
+      ptáče +8 → +7 mult; 4 ruce a 1 Kč za nevyužitou ruku zůstávají (CLAUDE.md kap. 3)_
 - [x] Přeskakování za štítky se nevyplácí; legendární žolíci se skoro neobjeví — peněžní štítky ~×2, Pouťová tombola
-      (od patra 4) dá legendárku; boti Půjčku od tchána přeceňují a tombolu podceňují → kalibrace botů
+      (od patra 4) dá legendárku; _kalibrace 1.0.1: boti vidí splátku Půjčky (0,26 → 0,007 přeskočení za run) a s plnými
+      sloty prodají nejslabšího žolíka kvůli tombole (0,008 → 0,03 za run); kupóny 1.0.1 oceňují (1,85 → 3,6 za run)
+      a přelosují šéfa, který jim sedí nejhůř_
 - [x] Systémový obsah blízko Balatru (kupóny, štítky, nálepky, tabulka kombinací, váhy obchodu ±10 %) —
       nahradit část vlastními mechanikami a čísly — vlastní tabulka kombinací, váhy Večerky, vzácnosti, edice,
       Šťastná, 5 párů kupónů, 7 štítků, nálepka Na splátky, 5 žolíků; migrace run v2 / profil v2 (DESIGN 2.2.1, 2.5.3,
       2.6, 2.7, 4.6, 4.10, 6, 7)
 - [x] Nekonečný režim končí na patře 10–11; achievement „Tepelná smrt vesmíru“ (1,8e308) je nesplnitelný —
-      `g(a) = 2,3 + 0,01 × (a − 9)` (patro 16 = 95 milionů), Tepelná smrt = patro 30; tempo proti hráčům → kalibrace
+      `g(a) = 2,3 + 0,01 × (a − 9)` (patro 16 = 95 milionů), Tepelná smrt = patro 30; _kalibrace 1.0.1:
+      `g(a) = 1,5 + 0,035 × (a − 9)` — vítězové botů padají na mediánu v patře 11 (p75 13–14, p90 15–16, nejdál 20;
+      s první verzí 1.0.1 v patře 10), patro 30 ≈ 4,8e12 na Malou útratu_
 - [x] Texty: kolize názvů Zabijačka (žolík i šéf), opakované motivy, anglické slovní hříčky (piky, káry),
       „Hrací automat“ → „Hudební automat“, pitva Malé a Velké útraty potřebuje víc hlášek — Řezník z rohu, Červená
       a černá, Hudební automat, nové flavory, 8 + 8 hlášek pitvy podle seedu (`src/i18n/death.ts`)

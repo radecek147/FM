@@ -11,6 +11,7 @@ import type { ContentRegistry } from '../../src/engine/content-types';
 import { MSG } from '../../src/engine/constants';
 import { bossFitsAnte, bossHasRule } from '../../src/engine/run/bosses';
 import { Game } from '../../src/engine/run/game';
+import { niceRound } from '../../src/engine/run/targets';
 import type { GameEvent, ScoreResult } from '../../src/engine/types';
 import { hasKey, t } from '../../src/i18n/cs';
 import { formatNumber } from '../../src/i18n/format';
@@ -80,17 +81,17 @@ describe('běžní šéfové 14–25 – data (DESIGN 8.2)', () => {
   it('id, od patra a cíl odpovídají tabulce', () => {
     const table: Record<string, [number, number]> = {
       new_decree: [3, 1.5],
-      binder_tower: [2, 3],
+      binder_tower: [2, 2.4],
       regional_derby: [2, 1.75],
       pig_slaughter: [3, 2.5],
-      white_mountain: [3, 2],
-      normalization: [2, 2],
-      one_eyed_hetman: [3, 1.4],
+      white_mountain: [3, 2.45],
+      normalization: [2, 2.2],
+      one_eyed_hetman: [3, 1.6],
       mother_in_law: [1, 2.25],
-      influencer: [2, 2],
+      influencer: [2, 1.75],
       hangover: [1, 2],
-      blackout: [1, 2],
-      even_days: [1, 2],
+      blackout: [1, 2.1],
+      even_days: [1, 2.1],
     };
     expect(BOSSES_B.map((b) => b.id)).toEqual(Object.keys(table));
     for (const b of BOSSES_B) {
@@ -131,7 +132,7 @@ describe('běžní šéfové 14–25 – data (DESIGN 8.2)', () => {
     }
     const rule = (id: string): string => t(`bosses.${id}.rule`, BOSSES_B.find((b) => b.id === id)?.params);
     expect(rule('normalization')).toContain('5\u00a0čipů');
-    expect(rule('binder_tower')).toContain('3× základ patra místo 2×');
+    expect(rule('binder_tower')).toContain('2,4× základ patra místo 2×');
     expect(rule('hangover')).toContain('o\u00a01\u00a0ruku méně');
     expect(rule('mother_in_law')).toContain('1\u00a0náhodnou kartu');
     expect(rule('pig_slaughter')).toContain('1\u00a0náhodná skórující karta');
@@ -170,11 +171,12 @@ describe('Nová vyhláška (new_decree)', () => {
 // ─────────────────────────── 15 Šanon na šanonu ───────────────────────────
 
 describe('Šanon na šanonu (binder_tower)', () => {
-  it('cíl je 3× základ patra (běžný šéf 2×), odměna 5 Kč', () => {
+  it('cíl je 2,4× základ patra (běžný šéf 2×), odměna 5 Kč', () => {
     const g = bossGame('binder_tower');
     const small = g.blindTarget('small');
-    expect(g.state.round!.target).toBe(3 * small);
-    expect(g.blindTarget('boss', 'binder_tower')).toBe(1.5 * g.blindTarget('boss', 'hangover'));
+    expect(g.state.round!.target).toBe(niceRound(2.4 * small));
+    expect(g.blindTarget('boss', 'binder_tower')).toBe(600);
+    expect(g.blindTarget('boss', 'hangover')).toBe(500);
     expect(g.blindReward('boss', 'binder_tower')).toBe(5);
   });
 });

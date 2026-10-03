@@ -94,10 +94,10 @@ describe('obtížnosti – seznam (DESIGN kap. 10)', () => {
     expect(t('stakes.jedenactka.desc', STAKES[1]!.params)).toContain(typo('od 2. patra'));
     expect(t('stakes.jedenactka.desc', STAKES[1]!.params)).toContain(typo('přehození ve Večerce o 1 Kč víc'));
     expect(t('stakes.lezak.desc', STAKES[4]!.params)).toContain(typo('od 3. patra'));
-    expect(t('stakes.special.desc', STAKES[3]!.params)).toContain('40 %');
+    expect(t('stakes.special.desc', STAKES[3]!.params)).toContain('35 %');
     expect(t('stakes.special.desc', STAKES[3]!.params)).toContain('6 kolech');
-    expect(t('stakes.dvanactka.desc', STAKES[2]!.params)).toContain(formatNumber(110_000));
-    expect(t('stakes.imperial.desc', STAKES[7]!.params)).toContain(typo('cíle šéfů jsou o 10 % vyšší'));
+    expect(t('stakes.dvanactka.desc', STAKES[2]!.params)).toContain(formatNumber(115_000));
+    expect(t('stakes.imperial.desc', STAKES[7]!.params)).toContain(typo('cíle šéfů jsou o 15 % vyšší'));
   });
 });
 
@@ -105,7 +105,7 @@ describe('obtížnosti – každá úroveň přidává právě své ztížení',
   it('1 Desítka: základní pravidla, křivka cílů 1', () => {
     expect(modsDiff(1)).toEqual({});
     expect(newGame(1).targetCurve()).toBe(1);
-    expect(finalSmallTarget(1)).toBe(95_000);
+    expect(finalSmallTarget(1)).toBe(100_000);
     const g = newGame(1);
     expect([g.blindTarget('small'), g.blindTarget('big'), g.blindTarget('boss')]).toEqual([250, 380, 500]);
     expect(stakeStickerChance(g._core)).toEqual({});
@@ -144,13 +144,13 @@ describe('obtížnosti – každá úroveň přidává právě své ztížení',
   it('3 Dvanáctka: křivka cílů 2', () => {
     expect(modsDiff(3)).toEqual({ rerollBaseCost: BASE_MODIFIERS.rerollBaseCost + 1 });
     expect(newGame(3).targetCurve()).toBe(2);
-    expect(finalSmallTarget(3)).toBe(110_000);
-    expect(finalSmallTarget(2)).toBe(95_000);
+    expect(finalSmallTarget(3)).toBe(115_000);
+    expect(finalSmallTarget(2)).toBe(100_000);
   });
 
-  it('4 Speciál: 40 % žolíků zvětrávajících', () => {
+  it('4 Speciál: 35 % žolíků zvětrávajících', () => {
     expect(stakeStickerChance(newGame(3)._core)).toEqual({});
-    expect(stakeStickerChance(newGame(4)._core)).toEqual({ perishable: 0.4 });
+    expect(stakeStickerChance(newGame(4)._core)).toEqual({ perishable: 0.35 });
     expect(modsDiff(4)).toEqual(modsDiff(3));
     expect(newGame(4).targetCurve()).toBe(2);
   });
@@ -170,13 +170,13 @@ describe('obtížnosti – každá úroveň přidává právě své ztížení',
   it('6 Bock: křivka cílů 3', () => {
     expect(newGame(5).targetCurve()).toBe(2);
     expect(newGame(6).targetCurve()).toBe(3);
-    expect(finalSmallTarget(6)).toBe(115_000);
+    expect(finalSmallTarget(6)).toBe(135_000);
     expect(modsDiff(6)).toEqual(modsDiff(5));
   });
 
-  it('7 Doppelbock: 25 % přibitých a 25 % zapůjčených žolíků (zvětrávání ze Speciálu zůstává)', () => {
-    expect(stakeStickerChance(newGame(6)._core)).toEqual({ perishable: 0.4 });
-    expect(stakeStickerChance(newGame(7)._core)).toEqual({ perishable: 0.4, eternal: 0.25, rental: 0.25 });
+  it('7 Doppelbock: 32 % přibitých a 32 % žolíků na splátky (zvětrávání ze Speciálu zůstává)', () => {
+    expect(stakeStickerChance(newGame(6)._core)).toEqual({ perishable: 0.35 });
+    expect(stakeStickerChance(newGame(7)._core)).toEqual({ perishable: 0.35, eternal: 0.32, rental: 0.32 });
     expect(modsDiff(7)).toEqual(modsDiff(6));
   });
 
@@ -195,10 +195,10 @@ describe('obtížnosti – každá úroveň přidává právě své ztížení',
       expect(bossHasRule(def)).toBe(true);
       expect(g8.blindTarget('big')).toBe(g7.blindTarget('big'));
       expect(g8.blindTarget('small')).toBe(g7.blindTarget('small'));
-      // Cíl šéfa: 500 × 1,1 = 550 (patro 1, výchozí násobek šéfa 2×).
-      expect([g7.blindTarget('boss'), g8.blindTarget('boss')]).toEqual([500, 550]);
+      // Cíl šéfa: nice(500 × 1,15) = 580 (patro 1, výchozí násobek šéfa 2×).
+      expect([g7.blindTarget('boss'), g8.blindTarget('boss')]).toEqual([500, 580]);
     }
-    expect(modsDiff(8)).toEqual({ ...modsDiff(7), bossTargetMult: 1.1 });
+    expect(modsDiff(8)).toEqual({ ...modsDiff(7), bossTargetMult: 1.15 });
   });
 });
 
@@ -208,7 +208,7 @@ describe('obtížnosti – kumulace', () => {
     expect(g.targetCurve()).toBe(3);
     expect(g.modifiers().rerollBaseCost).toBe(BASE_MODIFIERS.rerollBaseCost + 1);
     expect(g.modifiers().moneyPerUnusedHand).toBe(0);
-    expect(stakeStickerChance(g._core)).toEqual({ perishable: 0.4, eternal: 0.25, rental: 0.25 });
+    expect(stakeStickerChance(g._core)).toEqual({ perishable: 0.35, eternal: 0.32, rental: 0.32 });
     expect(Object.values(reg.stakes).some((s) => s.level <= 8 && s.bigBlindBoss)).toBe(true);
   });
 
@@ -220,8 +220,8 @@ describe('obtížnosti – kumulace', () => {
       prevCurve = g.targetCurve();
       expect(g.modifiers().rerollBaseCost).toBe(BASE_MODIFIERS.rerollBaseCost + (stake >= 2 ? 1 : 0));
       expect(g.modifiers().moneyPerUnusedHand).toBe(stake >= 5 ? 0 : 1);
-      expect(stakeStickerChance(g._core).perishable ?? 0).toBe(stake >= 4 ? 0.4 : 0);
-      expect(stakeStickerChance(g._core).eternal ?? 0).toBe(stake >= 7 ? 0.25 : 0);
+      expect(stakeStickerChance(g._core).perishable ?? 0).toBe(stake >= 4 ? 0.35 : 0);
+      expect(stakeStickerChance(g._core).eternal ?? 0).toBe(stake >= 7 ? 0.32 : 0);
     }
   });
 

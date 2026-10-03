@@ -23,8 +23,8 @@ const SWEEP_MULT = 6;
 const SWEEP_SUITS: readonly Suit[] = ['S', 'C'];
 /** Sklář: kolik skleněných karet přidá do balíčku při získání. */
 const GLASSBLOWER_CARDS = 1;
-/** Vodník: trvalý mult za každou zahozenou srdcovou kartu. */
-const WATER_GOBLIN_MULT = 1;
+/** Vodník: trvalý mult za každou zahozenou srdcovou kartu. 1.0.1: 1 → 0,75 (R2 71 % nad pásmem vzácného, Δ výher +23 p. b.). */
+const WATER_GOBLIN_MULT = 0.75;
 const WATER_GOBLIN_SUIT: Suit = 'H';
 /** Bludička: ×mult v kole se šéfem („svítí jen v noci“, rodina s Noční směnou). */
 const WISP_XMULT = 2;
@@ -49,8 +49,11 @@ const VIRAL_CHIPS = 64;
 const DEFENESTRATION_MONEY = 5;
 /** Brňák: ×mult, když stojí v řadě žolíků úplně vlevo. */
 const BRNO_XMULT = 1.5;
-/** Sociální bublina: +čipy za každou skórující kartu, když mají všechny skórující stejnou barvu nebo hodnotu. */
-const BUBBLE_CHIPS = 15;
+/**
+ * Sociální bublina: +čipy za každou skórující kartu, když mají všechny skórující stejnou barvu nebo hodnotu. 1.0.1: 15 → 30
+ * (R1 32 %, R2 11 % — pod pásmem vzácného s „čipovou“ tabulkou kombinací).
+ */
+const BUBBLE_CHIPS = 30;
 
 /** Hlášky žolíků (i18n klíče). */
 const MSG_CONNECTION = 'jokers.office_connection.rerolled';

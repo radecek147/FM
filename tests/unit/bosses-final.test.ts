@@ -57,11 +57,11 @@ function reload(g: Game): Game {
 describe('fináloví šéfové – data (DESIGN 8.3)', () => {
   it('id, finálový příznak a cíl odpovídají tabulce', () => {
     const table: Record<string, number> = {
-      mayor: 2.5,
-      regional_office: 2.25,
+      mayor: 2.3,
+      regional_office: 1.9,
       great_flood: 2.5,
-      white_lady: 1.6,
-      banana_queue: 2.5,
+      white_lady: 1.3,
+      banana_queue: 2.35,
     };
     expect(BOSSES_FINAL.map((b) => b.id).sort()).toEqual(Object.keys(table).sort());
     for (const b of BOSSES_FINAL) {
@@ -192,11 +192,11 @@ describe('Krajský úřad (regional_office)', () => {
 // ─────────────────────────── F3 Fronta na banány ───────────────────────────
 
 describe('Fronta na banány (banana_queue)', () => {
-  it('cíl je 2,5× základ patra (hezky zaokrouhlený, DESIGN 2.3.2)', () => {
+  it('cíl je 2,35× základ patra (hezky zaokrouhlený, DESIGN 2.3.2)', () => {
     const g = bossGame('banana_queue');
-    expect(g.state.round!.target).toBe(niceRound(anteBase(1, 1) * 2.5));
+    expect(g.state.round!.target).toBe(niceRound(anteBase(1, 1) * 2.35));
     g._core.state.ante = 8;
-    expect(g.blindTarget('boss', 'banana_queue')).toBe(niceRound(anteBase(8, 1) * 2.5));
+    expect(g.blindTarget('boss', 'banana_queue')).toBe(niceRound(anteBase(8, 1) * 2.35));
   });
 
   it('banány docházejí: 1. ruka celá, 2. ruka 80 %, 3. ruka 60 % … nejméně 20 %', () => {

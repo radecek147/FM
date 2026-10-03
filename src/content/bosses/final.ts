@@ -12,21 +12,22 @@ import type { BossCtx, BossDef } from '../../engine/content-types';
 
 /**
  * Fronta na banány (1.0.1): banány docházejí — každá další ruka kola se započítá o `BANANA_STEP_PCT` % méně (první
- * celá, nejméně `BANANA_MIN_PCT` %). Dřív bez pravidla, jen cíl 3,5× (fáze 10: 4,5 → 3,5).
+ * celá, nejméně `BANANA_MIN_PCT` %). Dřív bez pravidla, jen cíl 3,5× (fáze 10: 4,5 → 3,5). Kalibrace 1.0.1: 2,35×.
  */
-const BANANA_QUEUE_TARGET_MULT = 2.5;
+const BANANA_QUEUE_TARGET_MULT = 2.35;
 const BANANA_STEP_PCT = 20;
 const BANANA_MIN_PCT = 20;
 /**
  * Cíle finálových šéfů laděné simulací na letalitu 20–40 % (docs/DESIGN.md 12.1, DECISIONS „Fáze 6: ladění se
  * šéfy“): Pan starosta, Krajský úřad a Velká voda měli s 2× ~16–19 %, Bílá paní ~35–48 %. Fáze 10: Bílá paní 1,5 → 1,25
- * (letalita 54 %).
+ * (letalita 54 %). Kalibrace 1.0.1 (patro 8 už není zeď — DECISIONS 2026-10-03): Pan starosta 2,5 → 2,3, Krajský úřad
+ * 2,25 → 1,9 (s 1,85 18–28 % podle sady), Velká voda 2,5, Bílá paní 1,3, letalita všech pěti 20–38 %.
  */
-const MAYOR_TARGET_MULT = 2.5;
-const OFFICE_TARGET_MULT = 2.25;
+const MAYOR_TARGET_MULT = 2.3;
+const OFFICE_TARGET_MULT = 1.9;
 const FLOOD_TARGET_MULT = 2.5;
-/** Bílá paní: 1.0.1 bez zamíchání (karty jen otočí), proto vyšší cíl než 1,25× z fáze 10 (kalibruje simulace). */
-const WHITE_LADY_TARGET_MULT = 1.6;
+/** Bílá paní: 1.0.1 bez zamíchání (karty jen otočí), proto vyšší cíl než 1,25× z fáze 10 (kalibrace 1.0.1: 1,3× — s 1,4× 39 % proher, bot barvy 56 %). */
+const WHITE_LADY_TARGET_MULT = 1.3;
 /** Velká voda: o kolik karet se po každé zahrané ruce zmenší ruka (do konce kola). */
 const FLOOD_HAND_SIZE = 1;
 /** Krajský úřad: kolik fungujících žolíků se po každé ruce vypne. */

@@ -872,10 +872,10 @@ describe('hraniční případy', () => {
   it('Jak z vody: ×mult žolík (Sběrač hub) od ×5', () => {
     const e = new Env();
     e.start();
-    // +×0,22 za kartu (fáze 10): 18 karet = ×4,96, 19 karet = ×5,18.
-    e.jokers([e.joker('mushroom_picker', { state: { destroyed: 18 } })]);
+    // +×0,18 za kartu (kalibrace 1.0.1): 22 karet = ×4,96, 23 karet = ×5,14.
+    e.jokers([e.joker('mushroom_picker', { state: { destroyed: 22 } })]);
     expect(e.has('like_water')).toBe(false);
-    e.jokers([e.joker('mushroom_picker', { state: { destroyed: 19 } })]);
+    e.jokers([e.joker('mushroom_picker', { state: { destroyed: 23 } })]);
     expect(e.has('like_water')).toBe(true);
   });
 

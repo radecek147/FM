@@ -269,8 +269,8 @@ const voucherPrivatization: JokerDef = {
 // ─────────────────────────── Lázeňský host ───────────────────────────
 
 const SPA_BASE = 1;
-/** Fáze 10: 0,15 → 0,13 (R2 127 % nad pásmem epického, DECISIONS „Fáze 10: balanc…“). */
-const SPA_XMULT = 0.13;
+/** Fáze 10: 0,15 → 0,13 (R2 127 % nad pásmem epického, DECISIONS „Fáze 10: balanc…“); 1.0.1: 0,13 → 0,12 (R2 115 %). */
+const SPA_XMULT = 0.12;
 
 const spaXmult = (self: JokerInstance): number => cents(SPA_BASE + SPA_XMULT * stateNum(self, 'rounds'));
 
@@ -420,8 +420,9 @@ const EXCHANGE_XMULT = 0.1;
 const EXCHANGE_CHIPS = 15;
 /**
  * Fáze 10: strop 2,5 → 2,1 — s dvojnásobnými přírůstky úrovní mají ruce víc čipů a strop platil skoro vždy (R2 122 %).
+ * 1.0.1: 2,1 → 1,9 — „čipová“ tabulka kombinací dává ještě víc čipů (R2 118 %).
  */
-const EXCHANGE_MAX = 2.1;
+const EXCHANGE_MAX = 1.9;
 
 /**
  * Čipy v okamžiku kroku 4 na pozici Směnárny (`ctx.chips`: základ, karty, žolíci nalevo a vlastní lesklá edice — edice
@@ -455,7 +456,8 @@ const exchangeOffice: JokerDef = {
 // ─────────────────────────── Silvestr ───────────────────────────
 
 const NYE_BASE = 1;
-const NYE_XMULT = 0.2;
+/** 1.0.1: 0,2 → 0,18 (R2 117 % nad pásmem epického; fáze 10 už těsně na hranici). */
+const NYE_XMULT = 0.18;
 
 const nyeXmult = (self: JokerInstance): number => cents(NYE_BASE + NYE_XMULT * stateNum(self, 'bosses'));
 

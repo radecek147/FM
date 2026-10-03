@@ -126,10 +126,12 @@ describe('vzácní žolíci — definice a texty', () => {
     expect(descOf('head_waiter')).toBe('×2 mult, pokud zahraná ruka má nejvýš 3 karty.');
     expect(descOf('old_guard')).toBe('×1,5 mult, pokud má zahraná kombinace úroveň aspoň 3.');
     expect(descOf('herbalist')).toBe(
-      'Po každé použité babské radě trvale +2 mult; po kole, ve kterém se žádná rada nepoužila, bylinky zvadnou: −1 mult (teď +0 mult).',
+      'Po každé použité babské radě trvale +1,5 mult; po kole, ve kterém se žádná rada nepoužila, bylinky zvadnou: −1 mult (teď +0 mult).',
     );
-    expect(descOf('regular')).toBe('+1 mult za každé kolo, které od koupě strávil ve slotu (teď +0 mult).');
-    expect(descOf('beer_belly')).toBe('Po každé zahrané ruce trvale +2 čipy (teď +0 čipů).');
+    expect(descOf('regular')).toBe(
+      '+0,75 mult za každé kolo, které od koupě strávil ve slotu (teď +0 mult).',
+    );
+    expect(descOf('beer_belly')).toBe('Po každé zahrané ruce trvale +3 čipy (teď +0 čipů).');
     expect(descOf('carousel')).toBe(
       'Postupka smí jít kolem dokola (např. Q-K-A-2-3) a každá Postupka dá +14 mult.',
     );
@@ -145,7 +147,7 @@ describe('vzácní žolíci — definice a texty', () => {
     const g = game();
     const inst = (id: string, state: JokerInstance['state']) => ({ ...newJokerInstance(g._core, id), state });
     expect(descOf('herbalist', inst('herbalist', { mult: 6 }))).toContain('(teď +6 mult)');
-    expect(descOf('regular', inst('regular', { rounds: 4 }))).toContain('(teď +4 mult)');
+    expect(descOf('regular', inst('regular', { rounds: 4 }))).toContain('(teď +3 mult)');
     expect(descOf('beer_belly', inst('beer_belly', { chips: 22 }))).toContain('(teď +22 čipů)');
     expect(descOf('beer_belly', inst('beer_belly', { chips: 4 }))).toContain('(teď +4 čipy)');
   });
@@ -255,19 +257,19 @@ describe('Kořenářka (herbalist)', () => {
     ok(g.dispatch({ type: 'useConsumable', uid: c!.uid }));
   }
 
-  it('začíná na +0; každá babská rada trvale +2 mult, jiné spotřebky nic', () => {
+  it('začíná na +0; každá babská rada trvale +1,5 mult, jiné spotřebky nic', () => {
     const g = game(['herbalist']);
     const r0 = hand(g, 'KS KH');
     expect(r0.score).toBe(64);
     expect(jokerSteps(r0, 'herbalist')).toEqual([]);
     useConsumable(g, 'rada_a');
-    expect(hand(g, 'KS KH').score).toBe(32 * 4);
+    expect(hand(g, 'KS KH').score).toBe(32 * 3.5);
     useConsumable(g, 'pr_pair'); // pranostika (Dvojice +1 úroveň) — Kořenářku nezajímá
     useConsumable(g, 'stamp'); // razítko taky ne
-    expect(g.state.jokers[0]!.state.mult).toBe(2);
+    expect(g.state.jokers[0]!.state.mult).toBe(1.5);
     useConsumable(g, 'rada_b');
-    // Dvojice úr. 2 = 40 + 20 = 60 čipů, mult 4 + 4 = 8
-    expect(hand(g, 'KS KH').score).toBe(60 * 8);
+    // Dvojice úr. 2 = 40 + 20 = 60 čipů, mult 4 + 3 = 7
+    expect(hand(g, 'KS KH').score).toBe(60 * 7);
   });
 
   it('bylinky vadnou: kolo bez babské rady −1 mult (nejméně 0), kolo s radou ne', () => {
@@ -275,10 +277,10 @@ describe('Kořenářka (herbalist)', () => {
     useConsumable(g, 'rada_a');
     winRound(g);
     // V kole se rada použila → beze ztráty.
-    expect(g.state.jokers[0]!.state.mult).toBe(2);
+    expect(g.state.jokers[0]!.state.mult).toBe(1.5);
     nextRound(g);
     winRound(g);
-    expect(g.state.jokers[0]!.state.mult).toBe(1);
+    expect(g.state.jokers[0]!.state.mult).toBe(0.5);
     nextRound(g);
     winRound(g);
     nextRound(g);
@@ -289,32 +291,32 @@ describe('Kořenářka (herbalist)', () => {
   it('kopie nenavyšuje počítadlo, ale bonus kopíruje; stav přežije uložení a načtení', () => {
     let g = game(['copier', 'herbalist']);
     useConsumable(g, 'rada_a');
-    expect(g.state.jokers[1]!.state.mult).toBe(2);
+    expect(g.state.jokers[1]!.state.mult).toBe(1.5);
     g = reload(g);
-    expect(g.state.jokers[1]!.state.mult).toBe(2);
-    // +2 (kopie) +2 (originál): 32 × 6 = 192
-    expect(hand(g, 'KS KH').score).toBe(192);
+    expect(g.state.jokers[1]!.state.mult).toBe(1.5);
+    // +1,5 (kopie) +1,5 (originál): 32 × 5 = 160
+    expect(hand(g, 'KS KH').score).toBe(160);
     winRound(g);
     // vadne jen originál, jednou
-    expect(g.state.jokers[1]!.state.mult).toBe(2);
+    expect(g.state.jokers[1]!.state.mult).toBe(1.5);
   });
 });
 
 // ─────────────────────────── #20 Stálý host ───────────────────────────
 
 describe('Stálý host (regular)', () => {
-  it('+1 mult za každé dokončené kolo ve slotu', () => {
+  it('+0,75 mult za každé dokončené kolo ve slotu', () => {
     const g = game(['regular']);
     expect(hand(g, 'KS KH').score).toBe(64);
     winRound(g);
     expect(g.state.jokers[0]!.state.rounds).toBe(1);
     nextRound(g);
-    expect(hand(g, 'KS KH').score).toBe(32 * 3);
+    expect(hand(g, 'KS KH').score).toBe(32 * 2.75);
     winRound(g);
     nextRound(g);
-    expect(hand(g, 'KS KH').score).toBe(32 * 4);
+    expect(hand(g, 'KS KH').score).toBe(32 * 3.5);
     // Ruce v rámci kola stav nemění.
-    expect(hand(g, 'KS KH').score).toBe(32 * 4);
+    expect(hand(g, 'KS KH').score).toBe(32 * 3.5);
   });
 
   it('kopie počítadlo nezvedá; stav přežije uložení a načtení', () => {
@@ -323,25 +325,25 @@ describe('Stálý host (regular)', () => {
     nextRound(g);
     g = reload(g);
     expect(g.state.jokers[1]!.state.rounds).toBe(1);
-    // +1 (kopie) +1 (originál): 32 × 4 = 128
-    expect(hand(g, 'KS KH').score).toBe(128);
+    // +0,75 (kopie) +0,75 (originál): 32 × 3,5 = 112
+    expect(hand(g, 'KS KH').score).toBe(112);
   });
 });
 
 // ─────────────────────────── #21 Pivní břicho ───────────────────────────
 
 describe('Pivní břicho (beer_belly)', () => {
-  it('po každé ruce trvale +2 čipy, začíná na +0, platí i přes kola', () => {
+  it('po každé ruce trvale +3 čipy, začíná na +0, platí i přes kola', () => {
     const g = game(['beer_belly']);
     const r1 = hand(g, 'KS KH');
     expect(r1.score).toBe(64);
     expect(jokerSteps(r1, 'beer_belly')).toEqual([]);
-    expect(hand(g, 'KS KH').score).toBe(34 * 2);
-    expect(hand(g, 'KS KH').score).toBe(36 * 2);
-    winRound(g); // 4. ruka (+6 čipů) → stav 8
-    expect(g.state.jokers[0]!.state.chips).toBe(8);
+    expect(hand(g, 'KS KH').score).toBe(35 * 2);
+    expect(hand(g, 'KS KH').score).toBe(38 * 2);
+    winRound(g); // 4. ruka (+9 čipů) → stav 12
+    expect(g.state.jokers[0]!.state.chips).toBe(12);
     nextRound(g);
-    expect(hand(g, 'KS KH').score).toBe(40 * 2);
+    expect(hand(g, 'KS KH').score).toBe(44 * 2);
   });
 
   it('kopie nepřičítá dvakrát; uložení a načtení', () => {
@@ -349,9 +351,9 @@ describe('Pivní břicho (beer_belly)', () => {
     hand(g, 'KS KH');
     hand(g, 'KS KH');
     g = reload(g);
-    expect(g.state.jokers[1]!.state.chips).toBe(4);
-    // +4 (kopie) +4 (originál): (32 + 8) × 2 = 80
-    expect(hand(g, 'KS KH').score).toBe(80);
+    expect(g.state.jokers[1]!.state.chips).toBe(6);
+    // +6 (kopie) +6 (originál): (32 + 12) × 2 = 88
+    expect(hand(g, 'KS KH').score).toBe(88);
   });
 });
 

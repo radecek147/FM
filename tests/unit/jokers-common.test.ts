@@ -136,9 +136,9 @@ describe('běžní žolíci – definice podle DESIGN 4.7', () => {
       beer_mat: { chips: 10, mult: 2 },
       hearts_man: { chips: 5, mult: 2, suit: 'H' },
       gravedigger: { chips: 20, suit: 'S' },
-      jeweler: { chips: 5, suit: 'D' },
+      jeweler: { chips: 10, suit: 'D' },
       crusader: { mult: 12, count: 2, suit: 'C' },
-      early_bird: { mult: 8 },
+      early_bird: { mult: 7 },
       night_shift: { mult: 14 },
       meteorologist: { mult: 2, level: 2 },
       pe_teacher: { chips: 8 },
@@ -217,11 +217,11 @@ describe('běžní žolíci – texty', () => {
   it('popisky čtou čísla z params (česky formátované, správné tvary slov)', () => {
     expect(descOf('beer_mat')).toBe('+10 čipů a +2 mult. Jako jediný žolík se smí v nabídce opakovat.');
     expect(descOf('hearts_man')).toBe('Každá skórující srdcová karta dá +5 čipů a +2 mult.');
-    expect(descOf('jeweler')).toBe('Každá skórující kárová karta trvale získá +5 čipů.');
+    expect(descOf('jeweler')).toBe('Každá skórující kárová karta trvale získá +10 čipů.');
     expect(descOf('crusader')).toBe('+12 mult, pokud skórují aspoň 2 křížové karty.');
     expect(descOf('gardener')).toBe('Na konci kola +2 Kč za každé 3 karty držené v ruce.');
     expect(descOf('flea_trader')).toBe('Na konci kola +3 Kč za každý prázdný slot žolíka.');
-    expect(descOf('early_bird')).toBe('První ruka kola dá +8 mult.');
+    expect(descOf('early_bird')).toBe('První ruka kola dá +7 mult.');
     expect(descOf('golem')).toBe(
       'Při získání přidá do balíčku 2 kamenné karty; každá skórující kamenná karta dá +20 čipů navíc.',
     );
@@ -301,23 +301,23 @@ describe('Hrobník (gravedigger)', () => {
 });
 
 describe('Klenotník (jeweler)', () => {
-  it('skórující ♦ trvale získá +5 čipů; projeví se při příští aktivaci karty', () => {
+  it('skórující ♦ trvale získá +10 čipů; projeví se při příští aktivaci karty', () => {
     const game = roundGame(['jeweler']);
     const [ad, ah] = setupRound(game, 'AD AH');
     const r = play(game, [ad!, ah!]).result;
     // V téže aktivaci se čipy karty už započítaly: 12 + 11 + 11 = 34.
     expect([r.chips, r.mult]).toEqual([34, 2]);
     expect(jokerDelta(r, 'jeweler').messages).toEqual(['jokers.jeweler.polished']);
-    expect(game._core.card(ad!.id)!.bonusChips).toBe(5);
+    expect(game._core.card(ad!.id)!.bonusChips).toBe(10);
     expect(game._core.card(ah!.id)!.bonusChips).toBe(0);
   });
 
   it('opakovaná aktivace už vidí vyleštěnou kartu (červená pečeť)', () => {
     const game = roundGame(['jeweler']);
     const [ad] = setupRound(game, 'AD@red');
-    // Vysoká karta 6 + 11 (1. aktivace) + 16 (2. aktivace, +5 z první) = 33.
-    expect(play(game, [ad!]).result.chips).toBe(33);
-    expect(game._core.card(ad!.id)!.bonusChips).toBe(10);
+    // Vysoká karta 6 + 11 (1. aktivace) + 21 (2. aktivace, +10 z první) = 38.
+    expect(play(game, [ad!]).result.chips).toBe(38);
+    expect(game._core.card(ad!.id)!.bonusChips).toBe(20);
   });
 
   it('bonus vydrží do další ruky i přes uložení a načtení; divoká ano, kamenná ne', () => {
@@ -325,17 +325,17 @@ describe('Klenotník (jeweler)', () => {
     const [ad] = setupRound(game, 'AD');
     expect(play(game, [ad!]).result.chips).toBe(17);
     game = reload(game);
-    // Vrátit tutéž kartu z odhazovací hromádky do ruky a zahrát znovu: 6 + 11 + 5.
+    // Vrátit tutéž kartu z odhazovací hromádky do ruky a zahrát znovu: 6 + 11 + 10.
     const round = game._core.state.round!;
     round.discardPile = round.discardPile.filter((id) => id !== ad!.id);
     round.hand.push(ad!.id);
-    expect(play(game, [ad!.id]).result.chips).toBe(22);
-    expect(game._core.card(ad!.id)!.bonusChips).toBe(10);
+    expect(play(game, [ad!.id]).result.chips).toBe(27);
+    expect(game._core.card(ad!.id)!.bonusChips).toBe(20);
 
     const g2 = roundGame(['jeweler']);
     const [wild, stone] = setupRound(g2, 'KS:wild 2D:stone');
     play(g2, [wild!, stone!]);
-    expect(g2._core.card(wild!.id)!.bonusChips).toBe(5);
+    expect(g2._core.card(wild!.id)!.bonusChips).toBe(10);
     expect(g2._core.card(stone!.id)!.bonusChips).toBe(0);
   });
 });
@@ -358,10 +358,10 @@ describe('Křižák (crusader)', () => {
 });
 
 describe('Ranní ptáče (early_bird) a Noční směna (night_shift)', () => {
-  it('Ranní ptáče: jen první ruka kola dá +8 mult', () => {
+  it('Ranní ptáče: jen první ruka kola dá +7 mult', () => {
     const game = roundGame(['early_bird']);
     const first = playHand(game, 'KS');
-    expect([first.chips, first.mult, first.score]).toEqual([16, 9, 144]);
+    expect([first.chips, first.mult, first.score]).toEqual([16, 8, 128]);
     const second = playHand(game, 'KS');
     expect([second.chips, second.mult]).toEqual([16, 1]);
   });
@@ -396,7 +396,7 @@ describe('Ranní ptáče (early_bird) a Noční směna (night_shift)', () => {
     const game = makeGame({ registry: reg, jokers: ['early_bird', 'night_shift'] });
     selectBoss(game, 'wall');
     game._core.state.round!.target = 1e9;
-    expect(playHand(game, 'KS').mult).toBe(1 + 8 + 14);
+    expect(playHand(game, 'KS').mult).toBe(1 + 7 + 14);
   });
 });
 

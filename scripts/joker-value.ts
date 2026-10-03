@@ -14,7 +14,8 @@
  *    se přepočítá na kopiích stavu se stejným RNG:
  *    nejlepší tah jen se žolíkem proti nejlepšímu tahu bez žolíků (bez karet a čipů karet, které žolík přinesl).
  *    Izolovaný efekt (Δčipy, Δmult, nebo ×mult u žolíků se štítkem `xmult`) se promítne na referenční ruce
- *    DESIGN 4.2: `navýšení = (Rč + Δč)(Rm + Δm)·×/(Rč·Rm) − 1`, R1 = 60 × 8 (patra 1–3), R2 = 200 × 40.
+ *    DESIGN 4.2: `navýšení = (Rč + Δč)(Rm + Δm)·×/(Rč·Rm) − 1`, R1 = 100 × 7 (patra 1–3), R2 = 350 × 26
+ *    (1.0.1: mediány zahraných rukou se „čipovou“ tabulkou kombinací — dřív 60 × 8 a 200 × 40).
  *    - R1: ruce z pater 1–3, úrovně kombinací střídavě 1 a 2 (definice R1);
  *    - R2: všechny ruce větve (runy patra 6–8 zatím skoro nedosáhnou), úrovně kombinací `--r2-level`
  *      (bez pranostik zůstávají na 1 — odhad do fáze 5); škálující žolíci mají stav lineárně extrapolovaný
@@ -54,10 +55,14 @@ import { hasKey, t } from '../src/i18n/cs';
 
 // ─────────────────────────── Konstanty DESIGN 4.2–4.3 ───────────────────────────
 
-/** Referenční ruce (DESIGN 4.2): R1 patra 1–3, R2 patra 6–8 (souhrnný ×3 ostatních žolíků se v poměru zkrátí). */
+/**
+ * Referenční ruce (DESIGN 4.2): R1 patra 1–3, R2 patra 6–8 (souhrnný ×3 ostatních žolíků se v poměru zkrátí). 1.0.1:
+ * mediány čipů a multu zahraných rukou botů na Desítce s vlastní „čipovou“ tabulkou kombinací (R1 108 × 7, R2 358 × 78
+ * = 26 × 3); dřív 60 × 8 a 200 × 40 — s novou tabulkou by čipoví žolíci vycházeli dvakrát silnější, než jsou.
+ */
 export const REFERENCE = {
-  r1: { chips: 60, mult: 8 },
-  r2: { chips: 200, mult: 40 },
+  r1: { chips: 100, mult: 7 },
+  r2: { chips: 350, mult: 26 },
 } as const;
 
 type Range = readonly [number, number];
@@ -81,6 +86,8 @@ export const BANDS: Readonly<Record<JokerRarity, Band>> = {
   legendary: { r1: [150, 350], r2: [100, 300], money: null, sim: [12, 25] },
 };
 
+/** Navýšení skóre (%), pod kterým se ekonomický žolík (s Kč za kolo) hodnotí penězi — menší rozdíl je šum. */
+export const ECON_HAND_NOISE = 5;
 /** Poslední patro okna R1. */
 const R1_LAST_ANTE = 3;
 /** Kol od koupě v patře 2 do průměru pater 6–8 (3 kola na patro: 12 … 20, průměr 16). */
@@ -839,7 +846,10 @@ export function verdict(v: JokerValue): Verdict {
   const band = BANDS[v.rarity];
   const r1 = v.r1.avg;
   const r2 = v.r2.avg;
-  const handEffect = (r1 !== null && Math.abs(r1) > 0.05) || (r2 !== null && Math.abs(r2) > 0.05);
+  // Ekonomický žolík nemá vlastní efekt na skóre; malé navýšení (pod `ECON_HAND_NOISE` %) je jen šum jiné volby tahu
+  // nebo jiného hodu (Šťastná karta 1.0.1 hází častěji) — hodnotí se penězi.
+  const eps = v.money && band.money ? ECON_HAND_NOISE : 0.05;
+  const handEffect = (r1 !== null && Math.abs(r1) > eps) || (r2 !== null && Math.abs(r2) > eps);
   if (!handEffect && v.money && band.money) {
     const m = v.money.all;
     return { kind: m < band.money[0] ? 'low' : m > band.money[1] ? 'high' : 'ok', basis: 'money' };
@@ -878,7 +888,7 @@ export function reportText(values: readonly JokerValue[], opts: JokerValueOption
   const lines = [
     'Karban — hodnota žolíků (docs/DESIGN.md 4.2–4.3)',
     `${opts.runs} seedů JV-${opts.seedPrefix}-1…${opts.runs} · balíček ${opts.deck} · síla piva ${opts.stake} · R2 úroveň kombinací ${opts.r2Level}`,
-    'R1 = 60 × 8 (patra 1–3, úrovně 1–2) · R2 = 200 × 40 (všechny ruce, škálování extrapolované na 16 kol od koupě)',
+    `R1 = ${REFERENCE.r1.chips} × ${REFERENCE.r1.mult} (patra 1–3, úrovně 1–2) · R2 = ${REFERENCE.r2.chips} × ${REFERENCE.r2.mult} (všechny ruce, škálování extrapolované na 16 kol od koupě)`,
     '',
   ];
   const header = [

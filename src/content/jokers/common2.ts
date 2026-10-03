@@ -61,11 +61,14 @@ const TEMP_MONEY = 2;
 /** Rybář: po každém zahození („nahození udice“) „1 z 2“, že přinese náhodnou babskou radu. */
 const FISHER_CHANCE = 1;
 const FISHER_ODDS = 2;
-/** Popelář: trvalé čipy za každou zahozenou kartu s hodnotou nejvýš GARBAGE_RANK („odpad“). */
-const GARBAGE_CHIPS = 1;
+/**
+ * Popelář: trvalé čipy za každou zahozenou kartu s hodnotou nejvýš GARBAGE_RANK („odpad“). 1.0.1: 1 → 2 (R2 8 %, na dolní
+ * hranici běžného — čipy s „čipovou“ tabulkou kombinací znamenají míň).
+ */
+const GARBAGE_CHIPS = 2;
 const GARBAGE_RANK: Rank = 5;
-/** Hudební automat: kolikrát navíc skórují karty s nejvyšší hodnotou. */
-const JUKEBOX_RETRIGGERS = 1;
+/** Hudební automat: kolikrát navíc skórují karty s nejvyšší hodnotou. 1.0.1: 1 → 2 (R1 18 %, R2 7 % — pod pásmem běžného). */
+const JUKEBOX_RETRIGGERS = 2;
 /** Kůlna: sloty spotřebek navíc. */
 const SHED_SLOTS = 1;
 /** Náhradní autobus: prvních N zahození v kole zvětší ruku o tolik karet. */
@@ -73,13 +76,14 @@ const BUS_DISCARDS = 2;
 const BUS_CARDS = 1;
 /** Řezník z rohu: Kč za zničenou kartu na konci kola. */
 const SLAUGHTER_MONEY = 2;
-/** Červená a černá: +mult, když skórují červená i černá barva. */
-const DERBY_MULT = 8;
+/** Červená a černá: +mult, když skórují červená i černá barva. 1.0.1: 8 → 7 (R1 102 % nad pásmem běžného). */
+const DERBY_MULT = 7;
 /** Hospodský kvíz: +čipy za každou různou hodnotu mezi skórujícími kartami. */
 const QUIZ_CHIPS = 10;
 /** Sběrna surovin: trvalý mult za každou zničenou hrací kartu, nejvýš SCRAP_MAX (strop kvůli Zabijačce). */
 const SCRAP_MULT = 3;
-const SCRAP_MAX = 21;
+/** 1.0.1: strop 21 → 18 (R2 33 % nad pásmem běžného). */
+const SCRAP_MAX = 18;
 
 /** Hlášky žolíků (i18n klíče). */
 const MSG_AUNT = 'jokers.helpline_aunt.advice';

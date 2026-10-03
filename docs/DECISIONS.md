@@ -3424,3 +3424,186 @@ nekonečného režimu proti skutečným hráčům.
 
 **Proč:** CLAUDE.md kap. 0, 5 a 7 (vlastní dílo, žádná převzatá čísla), kap. 8 (žádný auto-win, žádný bezcenný
 obsah) a výsledky testu 1.0.
+
+## 2026-10-03 — Kalibrace 1.0.1 (obtížnost po odlišení od Balatra)
+
+**Kontext:** odlišení od předlohy (vlastní tabulka kombinací, kupóny, štítky, nálepka Na splátky, pět žolíků; sekce
+výše) změnilo čísla, na kterých stála kalibrace fáze 10, a ROADMAP „Opravy po testu 1.0 (1.0.1)“ nechal otevřené
+body „→ kalibrace“: patro 8 jako zeď, patra 1–5 bez napětí, letalita nových pravidel šéfů, „levné ruce“, boti, kteří
+nevidí splátku Půjčky od tchána a podceňují Pouťovou tombolu, a tempo nekonečného režimu. Měřeno skriptem nad
+`src/engine/sim` (stejní boti, stejné seedy `SIM-<sada>-<i>` jako `npm run simulate`, výstup do JSONL), Hospodský,
+sady A–C: Desítka 200 runů na sadu a bota `max`, `flush`, `pairs` (1 800 runů), ostatní síly piva 150 runů na sadu
+a bota `max`, `flush` (900 runů), balíčky 100 runů na sadu A, B a bota `max`, `flush` (400 runů). Měnila se jen
+čísla (a ocenění v botech), ne architektura.
+
+**1. Boti** (`src/engine/sim/value.ts`, `src/engine/sim/bots.ts`, test `tests/unit/sim-calibration-101.test.ts`):
+
+- Držený štítek po přeskočení sonda dohraje na kopii hry přes příští kola (`heldTagMoney`): bot vidí splátku Půjčky
+  od tchána (−15 Kč) i výplaty Brigády na chmelu (+2 × 6 Kč). Přeskočení kvůli Půjčce 0,26 → 0,007 za run.
+- S plnými sloty smí bot prodat nejslabšího žolíka, aby vzal štítek, který dá žolíka (Pouťová tombola):
+  0,008 → 0,03 legendárek z tomboly za run.
+- Kupóny 1.0.1 se oceňují podle modifikátorů (`voucherWorth`): každý N-tý nákup zdarma, přelosování šéfa, prodej
+  za plnou cenu, trvale nižší cíl šéfa; kupón jen s hooky (Kniha stížností, Jarní úklid) dostane apriorní hodnotu
+  0,7 Kč za zbývající kolo. Kupónů za run 1,85 → 3,6.
+- Přelosování šéfa: bot porovná odhad kola s pravidlem šéfa a bez něj a přelosuje, když pravidlo vezme víc než
+  průměrný šéf (pod 0,75×) a build nemá velkou rezervu (pod 3×).
+- V nekonečném režimu plánuje bot 9 kol dopředu (`ENDLESS_ROUNDS_AHEAD`) místo dohrávání „posledního kola“.
+
+Samotní lepší boti (čísla obsahu beze změny) zvedli Desítku z 33,5 na 40,3 % (nejlepší bot, 1 800 runů) — proto
+všechny další kroky ladí obsah proti těmto botům.
+
+**2. Křivka cílů** (`src/engine/run/targets.ts`, DESIGN 2.3.1; test `tests/unit/targets.test.ts`):
+
+| Křivka (základ patra 2–8) | Před                                                    | Po                                                       |
+| ------------------------- | ------------------------------------------------------- | -------------------------------------------------------- |
+| 1 (Desítka, Jedenáctka)   | 550 / 1 100 / 2 700 / 6 500 / 16 000 / 39 000 / 95 000  | 600 / 1 300 / 3 600 / 9 400 / 23 000 / 51 000 / 100 000  |
+| 2 (od Dvanáctky)          | 550 / 1 200 / 3 100 / 7 500 / 18 500 / 45 000 / 110 000 | 600 / 1 400 / 4 100 / 11 000 / 26 000 / 57 000 / 115 000 |
+| 3 (od Bocku)              | 600 / 1 300 / 3 300 / 7 800 / 19 000 / 47 000 / 115 000 | 650 / 1 550 / 4 700 / 12 500 / 31 000 / 68 000 / 135 000 |
+
+Patra 4–7 o 30–45 % výš, patro 8 o 4–17 %: dřív se patra 1–5 vyhrávala první rukou (72–74 % kol) a o run se
+rozhodovalo v patře 8 (49 % runů, které ho dosáhly, tam padlo). Křivka 3 je o 11–19 % nad křivkou 2, aby Bock nebyl
+prázdný krok za Ležákem (dřív byl Bock lehčí než Ležák). Mezikrok s patry 7–8 na 53 000 / 105 000 (křivka 1) po
+přeměření žolíků srazil Desítku na 25,8 % (patro 8 ztratilo 38–43 % runů, které ho dosáhly) — proto patra 7–8 o 3–5 %
+níž a Bílá paní 1,4 → 1,3×; křivka 2 má v patrech 6–7 menší odstup od křivky 1 (+12–13 %), aby Ležák zůstal v pásmu.
+
+**3. Šéfové** (`src/content/bosses/{a,b,final}.ts`, DESIGN 8.2–8.3; testy `bosses-a`, `bosses-b`, `bosses-final`):
+letalita při setkání normovaná podle patra (podíl proher se šéfem / průměr proher všech šéfů ve stejném patře).
+Před kalibrací 0,17–2,37× (Výluka na trati 2,37×, Garsonka 2,10× s 11,1 % pro bota `max`, Soused s vrtačkou 1,63×,
+Šanon 1,56×; Kontrola z finančáku 0,17× s 0,5 %, Bílá hora 0,41×, Normalizace 0,43×, Kapsář 0,48×, Parkovné 0,58×).
+Upraveno 18 cílů běžných šéfů (Kontrola 2 → 2,5×, Výluka 1 → 0,9×, Soused 2 → 1,8×, Polední pauza 0,65 → 0,6×,
+Babka 2 → 2,5×, Černá kočka 2 → 2,25×, Mlha 2 → 2,1×, Parkovné 2 → 2,6×, Garsonka 1,6 → 1,15×, Kapsář 2,25 → 2,5×,
+Exekutor 1,75 → 1,7×, Šanon 3 → 2,4×, Bílá hora 2 → 2,45×, Normalizace 2 → 2,2×, Hejtman 1,4 → 1,6×, Influencerka
+2 → 1,75×, Výpadek proudu a Sudé dny 2 → 2,1×) a všech 5 finálových (Pan starosta 2,5 → 2,3×, Krajský úřad
+2,25 → 1,9×, Fronta na banány 2,5 → 2,35×, Velká voda 2,5×, Bílá paní 1,6 → 1,3×). Po kalibraci (Desítka, 1 800
+runů):
+
+| Šéf                  | Před (letalita, boti) | Po (letalita, boti `flush` / `max` / `pairs`) | Pásmo   |
+| -------------------- | --------------------- | --------------------------------------------- | ------- |
+| Garsonka 1+kk        | 7,7 % (5,8–11,1 %)    | 6,9 % (7,3 / 7,5 / 5,8 %)                     | 4–15 %  |
+| Nová vyhláška        | 5,0 % (3,6–6,7 %)     | 9,6 % (10,5 / 9,5 / 8,7 %)                    | 4–15 %  |
+| Kontrola z finančáku | 0,5 % (0–1,0 %)       | 3,9 % (4,1 / 4,3 / 3,4 %)                     | 4–15 %  |
+| Parkovné             | 1,5 % (0,6–2,3 %)     | 4,0 % (3,0 / 5,3 / 3,6 %)                     | 4–15 %  |
+| Fronta na banány     | 41,2 % (39–42 %)      | 34,1 % (33,3 / 34,1 / 34,7 %)                 | 20–40 % |
+| Bílá paní            | 42,8 % (35–49 %)      | 36,5 % (44,0 / 37,0 / 28,8 %)                 | 20–40 % |
+
+Normovaná letalita běžných šéfů je teď **0,64–1,26×** (nejvýš Sucho v obci a Nová vyhláška, nejníž Šanon na šanonu
+a Bílá hora), finálových 23–37 % (Krajský úřad 22,9 %, Pan starosta 27,2 %, Velká voda 33,1 %, Fronta 34,1 %,
+Bílá paní 36,5 %).
+
+**4. Síly piva** (`src/content/stakes.ts`, DESIGN 10; test `tests/unit/stakes.test.ts`): Speciál zvětrávání 40 →
+35 % (s tvrdšími patry 4–7 byl Speciál na spodní hraně pásma), Doppelbock přibití a splátky 25 → 32 % („na splátky“
+je mírnější než dřívější nájem navždy a Doppelbock vycházel jako Bock; s 35 % byl 2,9 %, těsně pod pásmem), Imperial
+cíle šéfů ×1,1 → ×1,15 (se silnějšími boty nad 3 %). Nejlepší bot (souhrn sad; v závorce sady A / B / C):
+
+| Síla piva  | Pásmo   | Před: nejlepší bot (průměr `max`/`flush`) | Po: nejlepší bot (sady A / B / C)     | Po: průměr `max`/`flush` | Patro 8 ztratí (před → po) |
+| ---------- | ------- | ----------------------------------------: | ------------------------------------- | -----------------------: | -------------------------: |
+| Desítka    | 25–35 % |                   33,5 % `pairs` (31,3 %) | **27,8 %** `flush` (29,5 / 27 / 29,5) |                   26,9 % |              49,2 → 36,9 % |
+| Jedenáctka | 20–30 % |                   31,3 % `flush` (30,2 %) | **26 %** `flush` (23,3 / 28 / 26,7)   |                     25 % |              48,7 → 38,2 % |
+| Dvanáctka  | 14–22 % |                     20 % `flush` (19,5 %) | **20 %** `flush` (20,7 / 18,7 / 20,7) |                     19 % |              60,6 → 42,6 % |
+| Speciál    | 10–17 % |                     16,3 % `max` (15,2 %) | **15,1 %** `flush` (18 / 16,7 / 14,7) |                   13,7 % |                63 → 48,3 % |
+| Ležák      | 7–12 %  |                       7,3 % `max` (6,8 %) | **7,6 %** `flush` (6,7 / 9,3 / 6,7)   |                    6,3 % |              76,7 → 59,6 % |
+| Bock       | 4–8 %   |                       9,3 % `max` (8,8 %) | **5,6 %** `flush` (6,7 / 5,3 / 6)     |                    4,9 % |              66,7 → 58,5 % |
+| Doppelbock | 3–6 %   |                         8 % `max` (6,7 %) | **4 %** `flush` (2,7 / 3,3 / 6)       |                    3,2 % |              75,3 → 59,7 % |
+| Imperial   | < 3 %   |                         4 % `flush` (4 %) | **2 %** `flush` (1,3 / 2,7 / 2)       |                    1,6 % |                74,2 → 60 % |
+
+„Před“ = 1.0.1 po odlišení, ale před kalibrací i před úpravou botů (Desítka 600 runů na bota `max`, `flush`, `pairs`,
+ostatní 300 runů na bota `max`, `flush`). Všech osm je v pásmech a monotónních; Bock byl dřív lehčí než Ležák
+a Doppelbock (9,3 / 7,3 / 8 %), teď je mezi nimi zřetelný krok (7,6 → 5,6 → 4 %). Sady (150–200 runů na bota) se liší
+až o 5 p. b. (směrodatná chyba ~3 p. b. na sadu), rozhoduje souhrn. Kontrolní boti na Desítce: `nojoker` padá
+na mediánu v patře 4 (pásmo 3–4), `random` v 99 % runů v patře 1 (pásmo > 90 % v patrech 1–2).
+
+**5. Rozložení proher** (Desítka, bot `max`, % všech runů, které skončily v patře 1–8):
+
+| Patro          |   1 |   2 |   3 |   4 |    5 |    6 |    7 |    8 |
+| -------------- | --: | --: | --: | --: | ---: | ---: | ---: | ---: |
+| Před kalibrací | 1,5 | 1,7 | 1,8 | 1,5 |  3,5 | 11,0 | 16,3 | 31,0 |
+| Po kalibraci   | 2,3 | 3,2 | 2,2 | 4,5 | 13,0 | 17,5 | 15,7 | 15,7 |
+
+Patra 1–2 berou 5,5 % runů (pásmo < 10 %), vrchol je v patrech 6–8 místo zdi v patře 8; patro 8 ztratí 35–38 %
+runů, které ho dosáhnou (dřív 49–50 %), na vyšších silách piva 38–60 % (dřív 49–77 %). Vítězové mají v patře 8
+medián nejlepší ruky 195 000–224 000 (p90 473 000–533 000) a kolo finálového šéfa končí na mediánu 1,09–1,11× cíle
+— závěr je těsný, ne loterie.
+
+**6. „Ruce jsou levné“:** pokus −1 ruka po celý run (Desítka, 400 runů na variantu) stál se starou křivkou 69 %
+výher (38,0 → 11,8 %) a s novou 62 % (24,8 → 9,5 %) — ruka levná není, dojem dělala průměrná kola v patrech 1–4.
+Systémové řešení je křivka (bod 2): vyhrané kolo trvá 1,64 ruky (dřív 1,50), v patrech 5–8 1,8–2,1 ruky (dřív
+1,47–2,07); první rukou se v patrech 1–4 vyhraje 59–70 % kol (dřív 73–80 %), v patrech 6–8 34–37 % (dřív 33–48 %).
+Žolík „na první ruku“ Ranní ptáče +8 → +7 mult (R1 107 % nad pásmem). Zvažováno: 3 ruce (CLAUDE.md kap. 3 chce 4),
+0 Kč za nevyužitou ruku (dýško je pravidlo Ležáku), nižší ruce jen na šéfech (duplikát Polední pauzy).
+
+**7. Balíčky** (`src/content/decks.ts`, `src/i18n/cs/decks.ts`, DESIGN 9; test `tests/unit/decks.test.ts`):
+Úřednický startoval s Knihou stížností (úrovně od prvního kola) a vyhrával 54 % proti 26 % Hospodského → start se
+Zpravodajem obce a Zálohovanou lahví. Zbohatlík (35,8 % proti 25,8 %) přišel o úrok ×1,5 a +1 Kč za nevyužitou ruku,
+odměny ×2 a −2 ruce zůstaly. Notářský pečeť 6 → **2,5 %**: rozklad ukázal, že pečetě mají pro boty cenu ~+12 p. b.
+(hlavně modrá — pranostika každé kolo; balíčky s modrou pečetí 42 % proti 29 %) a −1 slot spotřebky ~−3 p. b.; nad
+Hospodským v průměru botů bylo se 4 % +9, se 3 % +8 a s 2,5 % +5 p. b. Popisek ukazuje procenta na desetiny
+(„2,5% šanci“). Výsledek (100 runů na sadu A, B a bota; průměr `max` a `flush` / nejlepší bot; „před“ = mezikrok
+s novou křivkou a šéfy, balíčky ještě beze změny):
+
+| Balíček     | Před: průměr / nejlepší (Δ)   | Po: průměr / nejlepší | Po: Δ průměr / Δ nejlepší |
+| ----------- | ----------------------------- | --------------------- | ------------------------- |
+| Hospodský   | 25,8 / 27,0 % (+0,0 / +0,0)   | 25,0 / 25,5 %         | +0,0 / +0,0 p. b.         |
+| Štamgastův  | 26,5 / 27,5 % (+0,8 / +0,5)   | 23,2 / 23,5 %         | −1,8 / −2,0 p. b.         |
+| Úřednický   | 54,0 / 54,5 % (+28,2 / +27,5) | 28,5 / 31,5 %         | +3,5 / +6,0 p. b.         |
+| Turistický  | 24,2 / 24,5 % (−1,5 / −2,5)   | 24,5 / 26,5 %         | −0,5 / +1,0 p. b.         |
+| Mariášový   | 30,8 / 31,0 % (+5,0 / +4,0)   | 29,5 / 31,0 %         | +4,5 / +5,5 p. b.         |
+| Obrázkový   | 27,0 / 30,5 % (+1,2 / +3,5)   | 25,8 / 29,0 %         | +0,8 / +3,5 p. b.         |
+| Notářský    | 34,0 / 34,0 % (+8,2 / +7,0)   | 30,0 / 30,0 %         | +5,0 / +4,5 p. b.         |
+| Zbohatlík   | 35,8 / 37,5 % (+10,0 / +10,5) | 20,2 / 22,5 %         | −4,8 / −3,0 p. b.         |
+| Dlužník     | 25,0 / 26,5 % (−0,8 / −0,5)   | 26,0 / 27,5 %         | +1,0 / +2,0 p. b.         |
+| Babiččin    | 29,0 / 30,5 % (+3,2 / +3,5)   | 28,8 / 32,5 %         | +3,8 / +7,0 p. b.         |
+| Vetešnický  | 20,2 / 22,0 % (−5,5 / −5,0)   | 19,2 / 20,0 %         | −5,8 / −5,5 p. b.         |
+| Kalendářový | 27,8 / 29,5 % (+2,0 / +2,5)   | 26,0 / 27,0 %         | +1,0 / +1,5 p. b.         |
+
+Všech 12 balíčků je v pásmu kap. 12.1: průměr botů −5,8 až +5,0 p. b. od Hospodského (pásmo ±7), nejlepší bot
+−5,5 až +7,0 p. b. (pásmo ≤ +10); Zbohatlík je 4,8 p. b. pod Hospodským (dřív +10). Rozptyl je při 400 runech
+na balíček ~±3 p. b.
+
+**8. Žolíci** (`src/content/jokers/*`, `scripts/joker-value.ts`, DESIGN 4.2–4.3, 4.10; testy `jokers-*`,
+`jokers-value`): referenční ruce R1 60 × 8 → **100 × 7**, R2 200 × 40 → **350 × 26** (mediány zahraných rukou botů
+s „čipovou“ tabulkou kombinací: R1 108 × 7, R2 358 × 78 = 26 × 3); ekonomičtí žolíci s efektem na ruku pod 5 %
+(`ECON_HAND_NOISE`) se hodnotí penězi. Pod pásmem byli Klenotník, Popelář, Hudební automat, Pivní břicho, Sociální
+bublina, nad ním Ranní ptáče, Červená a černá, Sběrna surovin, Kořenářka, Vodník, Stálý host, Sběrač hub, Lázeňský
+host, Směnárna a Silvestr — upraveno 15 čísel (Klenotník +5 → +10 čipů, Popelář +1 → +2, Hudební automat 1× → 2×,
+Pivní břicho +2 → +3, Sociální bublina +15 → +30, Ranní ptáče a Červená a černá +8 → +7, Sběrna strop +21 → +18,
+Kořenářka +2 → +1,5, Vodník a Stálý host +1 → +0,75, Sběrač hub +×0,22 → +×0,18, Lázeňský host +×0,13 → +×0,12,
+Směnárna strop ×2,1 → ×1,9, Silvestr +×0,2 → +×0,18); hodnoty před a po v DESIGN 4.10. Desetinná čísla jsou
+v binárním zápisu přesná (0,75, 1,5), aby se skóre nezaokrouhlilo o bod níž.
+
+**9. Nekonečný režim** (`ENDLESS_GROWTH_BASE` / `ENDLESS_GROWTH_STEP`, DESIGN 1.3, 2.3.3; test
+`tests/unit/endless.test.ts`): `g(a) = 2,3 + 0,01 × (a − 9)` → **`1,5 + 0,035 × (a − 9)`** — mírný začátek (×1,5 za
+patro v patře 9), zrychlení později (×2 v patře 16, ×3,1 v patře 30). Vítězové hlavní hry (227 vyhraných runů botů `max`, `flush`, `pairs` na Desítce, sady A–C) padají na mediánu
+v patře 11 (podle bota 11–12; čtvrtina až v patře 13–14, desetina v 15–16, nejdál 20); s `2,3 + 0,01 × (a − 9)`
+padali v patře 10 (p75 12, p90 14), s 1.0 v patře 10–11. Nejlepší ruka v nekonečném režimu má medián 730 000
+a maximum 3,2e8. Patro 30 („Tepelná smrt vesmíru“)
+chce ~4,8e12 na Malou útratu — o čtyři řády víc než nejlepší ruce botů, tedy jen záměrně „rozbitý“ build; přetečení
+na `Number.MAX_VALUE` v patře 295 (dřív 393).
+
+**Zůstává mimo pásmo (a proč):**
+
+- **Ležák 7,6 % a Doppelbock 4 %** jsou v pásmu díky botovi `flush`; bot `max` má 5,1 % a 2,4 %. Ležák má jediné
+  ztížení (bez dýška od patra 3) a jeho cena závisí na tom, kolik rukou bot nechá nevyužitých; další úleva by přes
+  kumulaci posunula i Bock až Imperial, kde je rezerva malá (Imperial 2 %, sada B 2,7 %).
+- **Šéfové s `minAnte 1` pod 4 % při setkání** (Výpadek proudu 3,3 %, Sudé dny 3,7 %, Kontrola z finančáku 3,9 %):
+  potkávají hráče hlavně v patrech 1–3, kde se skoro neumírá; normovanou letalitu mají 0,72–0,86×, v rozpětí
+  ostatních. Vyšší cíl by z nich udělal zeď prvních pater (prohry v patrech 1–2 jsou 5,5 % runů, pásmo < 10 %).
+- **Bílá paní a Velká voda pro bota `flush`** 44 % a 48 % (pásmo finálových šéfů 20–40 %): obě pravidla berou hlavně
+  Barvy (karty lícem dolů, menší ruka); souhrn botů je 36,5 a 33,1 % a na bota připadá ~45 setkání (směrodatná chyba
+  ~7 p. b.). Nižší cíl by ostatní boty stáhl k dolní hraně pásma (u Bílé paní bot `pairs` 28,8 %, u Velké vody bot
+  `max` 21,6 %).
+- **Kořenářka** R2 62 % (pásmo vzácného 20–60 %): s +1 by byla pod středem pásma, +1,5 je nejbližší „hezké“ číslo.
+  **Opakovače** (Ozvěna z propasti, Šťastná sedmička, Spartakiáda, Dechovka) mají R2 9–17 %, ale ve skutečných
+  sestavách 50–88 % — izolovaný efekt opakované karty na čipově těžké referenční ruce je podhodnocený (DESIGN 4.10).
+- **Ekonomika:** peníze při vstupu do Večerky v patře 4 mají medián 31–32 Kč (pásmo 15–30) a úrok tvoří 28 % příjmů
+  (pásmo 15–25 %) — stejně jako před kalibrací (32 Kč, 29–30 %). Úrok 1 Kč za 5 Kč se stropem 5 Kč je pravidlo
+  CLAUDE.md kap. 3 a boti šetří na strop úroku důsledněji než člověk; mimo rozsah kalibrace obtížnosti.
+- **Délka runu:** výhra trvá 23,7–24 kol (pásmo ≈ 24), ale jen 36–37 zahraných rukou (DESIGN 12.1 odhaduje 60–80
+  u člověka; dřív 32–33). Bot hraje nejsilnější ruku hned; 60–80 rukou by znamenalo kola na 2,5–3,3 ruky, tedy cíle
+  na hraně možností buildu a výhry pod pásmy.
+
+**Testy:** upravené `targets`, `endless`, `game`, `stakes`, `bosses-a`, `bosses-b`, `bosses-final`, `decks`,
+`achievements`, `review2-rules`, `jokers-common`, `jokers-rare`, `jokers-epic`, `jokers-combos`, `jokers-value`; nový
+`sim-calibration-101` (Půjčka −15 Kč, Brigáda +12 Kč, ocenění kupónů, přelosování šéfa).
+
+**Proč:** CLAUDE.md kap. 3 (patro 8 řádově statisíce, 4 ruce), kap. 8 (Desítka 25–35 %, Imperial < 3 %, žádný
+bezcenný ani „auto-win“ obsah) a pásma DESIGN 12.1.

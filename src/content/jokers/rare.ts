@@ -92,9 +92,10 @@ const oldGuard: JokerDef = {
 
 /**
  * 1.0.1: +2 mult za babskou radu, ale bylinky vadnou — kolo bez použité rady −1 mult (nejméně 0). Fáze 10 měla +1 bez
- * vadnutí (+2 bez vadnutí bylo nad pásmem vzácného).
+ * vadnutí (+2 bez vadnutí bylo nad pásmem vzácného). Kalibrace 1.0.1: +2 → +1,5 (R2 95 % nad pásmem vzácného, Δ výher
+ * +17 p. b.).
  */
-const HERBALIST_MULT = 2;
+const HERBALIST_MULT = 1.5;
 const HERBALIST_WILT = 1;
 /** Klíč stavu: použila se v tomto kole babská rada? */
 const HERBALIST_FRESH = 'fresh';
@@ -138,7 +139,11 @@ const herbalist: JokerDef = {
 
 // ─────────────────────────── #20 Stálý host ───────────────────────────
 
-const REGULAR_MULT = 1;
+/**
+ * Kalibrace 1.0.1: 1 → 0,75 — s referenční rukou R2 350 × 26 (mult „čipové“ tabulky kombinací) byl +16 mult po 16 kolech
+ * R2 67 % nad pásmem vzácného (60 %). 0,75 je v binárním zápisu přesně, skóre se tak nezaokrouhlí o bod níž.
+ */
+const REGULAR_MULT = 0.75;
 
 const regular: JokerDef = {
   id: 'regular',
@@ -173,7 +178,8 @@ const regular: JokerDef = {
 
 // ─────────────────────────── #21 Pivní břicho ───────────────────────────
 
-const BEER_BELLY_CHIPS = 2;
+/** 1.0.1: 2 → 3 (R2 16 % pod pásmem vzácného — čipy s „čipovou“ tabulkou kombinací znamenají míň). */
+const BEER_BELLY_CHIPS = 3;
 
 const beerBelly: JokerDef = {
   id: 'beer_belly',
