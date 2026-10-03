@@ -72,31 +72,65 @@ export function dailyRunSetup(date: Date | string, registry: ContentRegistry): D
 }
 
 /** Kódy chyb zadání seedu (texty v i18n). */
-export type SeedErrorCode = 'empty' | 'invalidChars' | 'tooShort' | 'tooLong' | 'invalidDate' | 'reserved';
+export type SeedErrorCode =
+  | 'empty'
+  | 'invalidChars'
+  | 'tooShort'
+  | 'tooLong'
+  | 'invalidDate'
+  | 'reserved'
+  | 'dailyToday'
+  | 'dailyFuture';
 
 export type SeedParseResult =
   | { ok: true; kind: 'custom'; seed: string }
   | { ok: true; kind: 'daily'; seed: string; dateKey: string }
   | { ok: false; error: SeedErrorCode };
 
+export interface ParseSeedOptions {
+  /**
+   * Dnešní klíč dne `YYYYMMDD` (UTC, `dailyDateKey(now)`) — engine hodiny nečte, datum dodá UI. Je-li zadaný,
+   * denní seed dneška (`dailyToday`) ani budoucího dne (`dailyFuture`) ručně zadat nejde: dnešek se hraje jen jako
+   * Denní run (jeden oficiální pokus), jinak by šel předem natrénovat se stejným balíčkem, rukou i náhodou. Minulé
+   * dny jdou dál přehrát mimo soutěž.
+   */
+  todayKey?: string;
+}
+
 /**
  * Zadání seedu hráčem (DESIGN 11.6): mezery se ignorují, písmena se převedou na velká; platný je seed
- * `SEED_LENGTH` znaků z `SEED_ALPHABET` (bez I, O, 0, 1), nebo seed denního runu `DEN-YYYYMMDD` (přehraje daný den
- * mimo soutěž). Jiné tvary s pomlčkou (např. `SIM-…`) hra odmítne (`reserved`). Prázdné zadání = `empty`
- * (UI pak vygeneruje náhodný seed).
+ * `SEED_LENGTH` znaků z `SEED_ALPHABET` (bez I, O, 0, 1), nebo seed denního runu `DEN-YYYYMMDD` minulého dne
+ * (přehraje daný den mimo soutěž; dnešek a budoucnost viz `ParseSeedOptions.todayKey`). Jiné tvary s pomlčkou
+ * (např. `SIM-…`) hra odmítne (`reserved`). Prázdné zadání = `empty` (UI pak vygeneruje náhodný seed).
  */
-export function parseSeedInput(input: string): SeedParseResult {
+export function parseSeedInput(input: string, opts: ParseSeedOptions = {}): SeedParseResult {
   const s = input.replace(/\s+/g, '').toUpperCase();
   if (s === '') return { ok: false, error: 'empty' };
   if (s.includes('-')) {
     if (!s.startsWith(DAILY_SEED_PREFIX)) return { ok: false, error: 'reserved' };
     const key = dailyKeyFromSeed(s);
-    return key ? { ok: true, kind: 'daily', seed: s, dateKey: key } : { ok: false, error: 'invalidDate' };
+    if (!key) return { ok: false, error: 'invalidDate' };
+    const practice = dailyPracticeError(key, opts.todayKey);
+    return practice ? { ok: false, error: practice } : { ok: true, kind: 'daily', seed: s, dateKey: key };
   }
   for (const ch of s) if (!SEED_ALPHABET.includes(ch)) return { ok: false, error: 'invalidChars' };
   if (s.length < SEED_LENGTH) return { ok: false, error: 'tooShort' };
   if (s.length > SEED_LENGTH) return { ok: false, error: 'tooLong' };
   return { ok: true, kind: 'custom', seed: s };
+}
+
+/**
+ * Smí se denní run dne `dateKey` hrát jako trénink (ručně zadaný seed, mimo soutěž)? Jen minulé dny: dnešek je
+ * vyhrazený oficiálnímu pokusu (`dailyToday`), budoucnost by šla natrénovat předem (`dailyFuture`). Bez `todayKey`
+ * (nástroje, testy) nic neomezuje. Vrací kód chyby, nebo null.
+ */
+export function dailyPracticeError(
+  dateKey: string,
+  todayKey: string | undefined,
+): Extract<SeedErrorCode, 'dailyToday' | 'dailyFuture'> | null {
+  if (todayKey === undefined) return null;
+  if (dateKey === todayKey) return 'dailyToday';
+  return dateKey > todayKey ? 'dailyFuture' : null;
 }
 
 /** Má hráč dnes (UTC) ještě oficiální pokus denního runu? */
