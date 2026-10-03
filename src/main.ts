@@ -26,6 +26,8 @@ import { h, mount, qs } from './ui/dom';
 import { menuScreen } from './ui/screens/menu';
 import { showMetaNotices } from './ui/profile';
 import { browserStore } from './ui/storage';
+import { TabGuard, watchStorageEvents } from './ui/tabGuard';
+import { installTabLock } from './ui/tabLock';
 import { registerServiceWorker } from './ui/serviceWorker';
 import { installTutorial } from './ui/tutorial';
 // „Šťáva“ (fáze 9) až za styly obrazovek a karet — přebíjí je při stejné specifičnosti.
@@ -69,10 +71,16 @@ function boot(): void {
   mount(root, h('p', { class: 'boot-loading', role: 'status' }, t('app.loading')));
 
   const reg = registry();
+  // Jedna aktivní karta (src/ui/tabGuard.ts): tahle karta hru převezme ještě před načtením profilu; jiná otevřená
+  // karta se zablokuje a nic nepřepíše.
+  const guard = new TabGuard(browserStore());
+  guard.claim();
+  watchStorageEvents(guard);
   // Oznámení odemčení mají ikony — počkají na jejich chunk (pak už jde o jeden mikrotask).
-  const app = new App(root, browserStore(), reg, {
+  const app = new App(root, guard.store, reg, {
     notify: (notices) => void loadIcons().then(() => showMetaNotices(notices, reg)),
   });
+  installTabLock(app, guard);
   // Zvuk (DESIGN 13.6): AudioContext vznikne až po prvním gestu hráče, hudba podle obrazovky.
   installAudio(app);
   app.register('menu', menuScreen);

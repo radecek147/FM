@@ -61,8 +61,12 @@ if (!res.ok) ui.toast(t(`errors.${res.error}`));
   takže obsah vidí v ruce jen zbylé karty a událost `cardsDiscarded` hráčova zahození přijde před reakcemi.
 - Dotazy pro UI bez změny stavu: `blindTarget(kind, bossId)` a `blindReward(kind, bossId)` (výběr útrat ukazuje
   stejná čísla, jaká pak použije kolo a rozpis odměn), `preview(cardIds)`, `sellValue(uid)`,
-  `canUseConsumable(uid, targets)`, `modifiers()`. `preview` vrací i `blockedReason` (i18n klíč), když by šéf ruku
-  zakázal (`validateHand`, Soused s vrtačkou) — čistý hook se volá v `readOnly`, takže dotaz neposune RNG.
+  `canUseConsumable(uid, targets)`, `consumableTargetRange(defId)` (rozsah cílů i s limitem výběru `maxSelect`),
+  `shopSellValue(slot)` (prodejní cena zboží, jako by hráč koupil jen ho), `modifiers()`. `preview` vrací i
+  `blockedReason` (i18n klíč), když by šéf ruku zakázal (`validateHand`, Soused s vrtačkou) — čistý hook se volá
+  v `readOnly`, takže dotaz neposune RNG. `check(action)` zkusí libovolnou akci nad kopií stavu a vrátí výsledek
+  (úspěch bez událostí / kód chyby) — UI se tak ptá přímo enginu („Koupit a použít“ ve Večerce, „Použít“ v obálce)
+  a nemůže s ním nesouhlasit.
 
 ### 2.3 RNG
 
@@ -298,7 +302,12 @@ flavor a že texty dodržují typografii.
 - `src/ui/app.ts` — router obrazovek (menu, nová hra, hra, sbírka, statistiky, nastavení, titulky); obrazovky mimo
   menu se načítají líně jako samostatné chunky (kap. 8.1).
 - `src/ui/controller.ts` — drží instanci `Game`, předává akce, řadí události do fronty animací,
-  po každé akci autosave.
+  po každé akci autosave. Odchod z herní obrazovky během animace přehrávání zruší (`cancelPresentation` + přeskočení
+  fronty), takže po návratu hra hned reaguje.
+- `src/ui/tabGuard.ts` + `src/ui/tabLock.ts` — jedna aktivní karta prohlížeče: vlastník hry v `karban.tab` (id karty),
+  ostatní karty se z události `storage` zablokují modalem „Hra je otevřená v jiné kartě“ a jejich zápisy klíčů hry
+  chráněné úložiště zahodí (před každým zápisem ověří vlastníka); „Hrát tady“ hru převezme a znovu načte profil
+  i run z úložiště (`App.reloadFromStorage`).
 - Obrazovky v `src/ui/screens/*`, komponenty v `src/ui/components/*`.
 - Animace: CSS transform/opacity + `src/ui/fx/` („šťáva“, DESIGN 13.6):
   - `motion.ts` — jediné místo pro pohybové předvolby (animace, rychlost, screen shake, `prefers-reduced-motion`),
@@ -335,7 +344,8 @@ flavor a že texty dodržují typografii.
 
 ## 5. Ukládání
 
-- `localStorage`: `karban.profile` (profil, odemčení, statistiky, nastavení) a `karban.run` (rozehraný run).
+- `localStorage`: `karban.profile` (profil, odemčení, statistiky, nastavení), `karban.run` (rozehraný run)
+  a `karban.tab` (id karty prohlížeče, která smí zapisovat — kap. 4).
 - Formát `{ format: 'karban-save', kind: 'run' | 'profile', version: N, savedAt, data }` (`src/engine/save/save.ts`:
   `serializeRun`, `deserializeRun`, `SaveError`). `savedAt` dodá volající (engine nečte hodiny). Migrace
   `RUN_MIGRATIONS` ve stejném souboru (čisté funkce `vN → vN+1`, aplikují se postupně, každá musí vrátit objekt;
@@ -345,6 +355,12 @@ flavor a že texty dodržují typografii.
   `migrationFailed` (`tests/unit/save.test.ts`). Profil se nikdy nesmí ztratit: při chybě načtení se poškozená data
   zálohují do `karban.profile.backup.<timestamp>` (`writeProfileBackup`: klíč z jedné ms se nepřepíše); bez zapsané
   zálohy se poškozená data nepřepíšou (profil jen v paměti) a reset ani import neproběhnou (`ProfileBackupError`).
+- Hloubková kontrola runu `src/engine/save/validate.ts` (`validateRunState`): tvar vnořených objektů, id karet
+  v ruce, hromádkách a ruce obálky proti balíčku (každá karta nejvýš jednou), unikátní id/uid, data fáze (kolo bez
+  `round`, Večerka bez nabídky…) a s registrem i neznámý obsah. Nálezy `corrupt` = run nejde hrát (autosave se
+  nenačte, import se odmítne `corruptRun`), `unknownContent` = import se odmítne, autosave se načte (engine neznámý
+  obsah snese). Nečitelný autosave se před smazáním zazálohuje do `karban.run.backup.<ms>` (`backupSavedRun`; bez
+  zapsané zálohy se nesmaže), zálohy jdou do exportu (`runBackups`) a reset je nechá.
 - Export/import JSON z nastavení.
 
 ### 5.1 Profil a meta vrstva (`src/engine/meta`)

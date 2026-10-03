@@ -370,15 +370,21 @@ simulacemi. Seřazeno podle priority.
       (`src/ui/art/digitFont.ts`, malé velikosti v levém panelu)
 - [ ] Toasty (achievementy, odemčení) se zobrazují uprostřed plochy a zakrývají obálku, zboží, skórování i výhru
       a jsou i nad modály — přesunout do rohu, pod modaly, během skórování pozdržet
-- [ ] „Koupit a použít“ ve Večerce počítá použitelnost se vším zbožím naráz (`src/ui/screens/game/shop.ts`
+- [x] „Koupit a použít“ ve Večerce počítá použitelnost se vším zbožím naráz (`src/ui/screens/game/shop.ts`
       `prospective()`) — Výjimka z vyhlášky zamčená, Zaklepat na dřevo hlásí chybu
+      _(1.0.1: rozhoduje engine po položkách — `Game.check` nad kopií stavu, `Game.shopSellValue`)_
 - [ ] Pan starosta: náhled nevaruje, že ruka nepřekoná předchozí; ukázat „Překonej: X“
-- [ ] Denní run jde natrénovat ručním seedem `DEN-dnešek` a zadat i budoucí den (`src/engine/meta/daily.ts`)
-- [ ] Dvě karty prohlížeče si přepisují profil i run (chybí posluchač `storage` / zámek)
-- [ ] Návrat do hry po odchodu do menu během animace: hra až několik sekund nereaguje
-      (`src/ui/controller.ts`, presenter se neruší)
-- [ ] Import runu: hlubší validace (karty v ruce, `round`, neznámí žolíci) — dnes import projde a hra pak padá
-- [ ] Obálka: „Použít“ nekontroluje `canUse`; Minimalista + Babiččina barva: UI pustí 3 cíle, rada chce až 4
+- [x] Denní run jde natrénovat ručním seedem `DEN-dnešek` a zadat i budoucí den (`src/engine/meta/daily.ts`)
+      _(1.0.1: `parseSeedInput(…, { todayKey })` → `dailyToday` / `dailyFuture`; pojistka v `ProfileController.newRun`)_
+- [x] Dvě karty prohlížeče si přepisují profil i run (chybí posluchač `storage` / zámek)
+      _(1.0.1: `src/ui/tabGuard.ts` + modal „Hra je otevřená v jiné kartě“ s „Hrát tady“, `src/ui/tabLock.ts`)_
+- [x] Návrat do hry po odchodu do menu během animace: hra až několik sekund nereaguje
+      (`src/ui/controller.ts`, presenter se neruší) _(1.0.1: `cancelPresentation` + přeskočení fronty při zavření)_
+- [x] Import runu: hlubší validace (karty v ruce, `round`, neznámí žolíci) — dnes import projde a hra pak padá
+      _(1.0.1: `src/engine/save/validate.ts` při importu i načtení autosave; nečitelný autosave se před smazáním
+      zazálohuje do `karban.run.backup.<ms>`)_
+- [x] Obálka: „Použít“ nekontroluje `canUse`; Minimalista + Babiččina barva: UI pustí 3 cíle, rada chce až 4
+      _(1.0.1: „Použít“ přes `Game.check`; limit výběru `maxSelect` platí i pro cíle — `consumableTargetRange`)_
 - [ ] Velká čísla v levém panelu se lámou uprostřed skupiny číslic; focus po výběru útraty padá na `<body>`
 - [ ] Nová hra: zamčené balíčky zaberou obrazovku, chyba seedu je mimo viewport pod plovoucím tlačítkem;
       achievement „Semínko zaseto“ odporuje nápovědě o seedovaných runech

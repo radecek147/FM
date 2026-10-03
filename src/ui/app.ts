@@ -27,6 +27,7 @@ import { ProfileController } from './profile';
 import type { Settings } from './settings';
 import { applySettingsToDocument } from './settings';
 import type { KeyValueStore } from './storage';
+import { STORAGE_KEYS } from './storage';
 
 export type ScreenId =
   'menu' | 'newGame' | 'game' | 'settings' | 'credits' | 'collection' | 'stats' | 'challenges' | 'daily';
@@ -193,6 +194,10 @@ export class App {
   updateSettings(patch: Partial<Settings>): void {
     this.profiles.updateSettings(patch);
     applySettingsToDocument(this.settings);
+    this.emitSettings();
+  }
+
+  private emitSettings(): void {
     for (const fn of [...this.settingsListeners]) {
       try {
         fn(this.settings);
@@ -200,6 +205,24 @@ export class App {
         console.error('[app] Posluchač změny nastavení selhal', e);
       }
     }
+  }
+
+  /**
+   * Znovu načte profil (i s nastavením) a rozehraný run z úložiště — po převzetí hry z jiné karty prohlížeče
+   * (src/ui/tabLock.ts): co tahle karta drží v paměti, je staré. Obrazovka se postaví znovu: herní s obnoveným
+   * runem (bez uloženého runu menu), jinak ta, na které hráč byl.
+   */
+  reloadFromStorage(): void {
+    const from = this.current?.id ?? 'menu';
+    // Rozehraný run v paměti patří starému stavu; herní obrazovka si ho po přechodu obnoví z úložiště.
+    this.controller?.cancelPresentation();
+    this.controller = null;
+    this.profiles.reload();
+    applySettingsToDocument(this.settings);
+    this.emitSettings();
+    this.tutorial?.refresh();
+    if (from === 'game') this.go(this.store.get(STORAGE_KEYS.run) !== null ? 'game' : 'menu');
+    else this.go(from);
   }
 
   /** Zavolá `fn` po každé změně nastavení (zvuk — hlasitosti živě). Vrací odhlášení. */

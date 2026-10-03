@@ -62,6 +62,14 @@ const app = {
   footerNote: 'Při výrobě nebyl zraněn žádný žolík.',
   /** Service worker stáhl novou verzi (převezme ji při příštím spuštění, src/ui/serviceWorker.ts). */
   updateReady: 'Dorazila nová verze Karbanu. Naskočí při příštím spuštění, rozehranou hru ti nikdo nebere.',
+  /** Hru převzala jiná karta prohlížeče (src/ui/tabGuard.ts, src/ui/tabLock.ts). */
+  tabLock: {
+    title: 'Hra je otevřená v jiné kartě',
+    message:
+      'Karban teď běží v jiné kartě prohlížeče. Hraje se jen u jednoho stolu – dva štamgasti nad jedním táckem by si čárky přepisovali.',
+    hint: 'Hrát tady znamená převzít hru: načte se poslední uložený stav a druhá karta si počká.',
+    takeOver: 'Hrát tady',
+  },
 };
 
 // Hlavní menu, nová hra, nastavení, titulky a společné popisky UI žijí v ./cs/ui.ts.
