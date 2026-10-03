@@ -88,17 +88,19 @@ Po porážce šéfa patra 8 → VÝHRA (titulky, statistika) → nabídka Nekone
 - Základ patra `a ≥ 9`:
 
   ```
-  base(a) = nice( base(8) × g(a)^(a − 8) ),   g(a) = 2,3 + 0,01 × (a − 9)
+  base(a) = nice( base(8) × g(a)^(a − 8) ),   g(a) = 1,5 + 0,035 × (a − 9)
   ```
 
-  kde `base(8)` je základ patra 8 zvolené křivky (95 000 / 110 000 / 115 000, kalibrace fáze 10 — kap. 2.3.1).
-  Růst je od 1.0.1 téměř konstantní: ×2,3 za patro v patře 9, ×2,37 v patře 16, ×2,51 v patře 30 (dřív
-  2,2 + 0,15 × (a − 9), tedy už ×4,5 za patro v patře 16 — typický build padl v patře 10–11 a „Tepelná smrt
-  vesmíru“ byla prakticky nedosažitelná; `docs/DECISIONS.md` 2026-10-03).
+  kde `base(8)` je základ patra 8 zvolené křivky (100 000 / 115 000 / 135 000, kalibrace 1.0.1 — kap. 2.3.1).
+  Kalibrace 1.0.1: začátek je mírný (patro 9 je ×1,5 proti patru 8, patro 12 ×1,7 za patro, patro 16 ×2), pak růst
+  zrychluje (patro 20 ×2,3, patro 30 ×3,1 za patro). Vítězné runy botů na Desítce padají v nekonečném režimu
+  na mediánu v patře 11 (čtvrtina až v patře 13–14, desetina v 15–16, nejdál 20); s 2,3 + 0,01 × (a − 9) (první verze
+  1.0.1) padaly v patře 10 a s 2,2 + 0,15 × (a − 9) (1.0) v patře 10–11, kde „Tepelná smrt vesmíru“ byla
+  nedosažitelná (`docs/DECISIONS.md` „Kalibrace 1.0.1“).
 
 - `nice(x)` je stejné zaokrouhlení jako v hlavní hře (kap. 2.3.2). Útraty pak `nice(base × 1 / 1,5 / 2)`.
 - **Finálový šéf** se objevuje v každém 8. patře (16, 24, 32…), ostatní patra mají běžné šéfy.
-- **Přetečení:** pokud by cíl nebo skóre přestalo být konečné číslo (≈ patro 393), použije se
+- **Přetečení:** pokud by cíl nebo skóre přestalo být konečné číslo (≈ patro 295), použije se
   `Number.MAX_VALUE` a UI ukáže „nekonečno“. Achievement „Tepelná smrt vesmíru“ je od 1.0.1 za dosažení patra 30 (kap. 11.2).
 - Statistika nekonečného režimu: nejvyšší dosažené patro (per balíček a síla piva).
 
@@ -231,16 +233,30 @@ Cíl útraty = `nice(base(patro) × násobek útraty × Modifiers.targetMult)`. 
 | Patro | Křivka 1: Malá |   Velká |     Šéf | Křivka 2: Malá |   Velká |     Šéf | Křivka 3: Malá |   Velká |     Šéf |
 | ----: | -------------: | ------: | ------: | -------------: | ------: | ------: | -------------: | ------: | ------: |
 |     1 |            250 |     380 |     500 |            250 |     380 |     500 |            250 |     380 |     500 |
-|     2 |            550 |     830 |   1 100 |            550 |     830 |   1 100 |            600 |     900 |   1 200 |
-|     3 |          1 100 |   1 650 |   2 200 |          1 200 |   1 800 |   2 400 |          1 300 |   1 950 |   2 600 |
-|     4 |          2 700 |   4 100 |   5 400 |          3 100 |   4 700 |   6 200 |          3 300 |   5 000 |   6 600 |
-|     5 |          6 500 |   9 800 |  13 000 |          7 500 |  11 500 |  15 000 |          7 800 |  11 500 |  15 500 |
-|     6 |         16 000 |  24 000 |  32 000 |         18 500 |  28 000 |  37 000 |         19 000 |  29 000 |  38 000 |
-|     7 |         39 000 |  59 000 |  78 000 |         45 000 |  68 000 |  90 000 |         47 000 |  71 000 |  94 000 |
-|     8 |         95 000 | 145 000 | 190 000 |        110 000 | 165 000 | 220 000 |        115 000 | 175 000 | 230 000 |
+|     2 |            600 |     900 |   1 200 |            600 |     900 |   1 200 |            650 |     980 |   1 300 |
+|     3 |          1 300 |   1 950 |   2 600 |          1 400 |   2 100 |   2 800 |          1 550 |   2 300 |   3 100 |
+|     4 |          3 600 |   5 400 |   7 200 |          4 100 |   6 200 |   8 200 |          4 700 |   7 100 |   9 400 |
+|     5 |          9 400 |  14 000 |  19 000 |         11 000 |  16 500 |  22 000 |         12 500 |  19 000 |  25 000 |
+|     6 |         23 000 |  35 000 |  46 000 |         26 000 |  39 000 |  52 000 |         31 000 |  47 000 |  62 000 |
+|     7 |         51 000 |  77 000 | 100 000 |         57 000 |  86 000 | 115 000 |         68 000 | 100 000 | 135 000 |
+|     8 |        100 000 | 150 000 | 200 000 |        115 000 | 175 000 | 230 000 |        135 000 | 200 000 | 270 000 |
 
 Engine má v tabulce jen základy křivek (sloupce „Malá“); Velkou a Šéfa počítá přes `nice()`. Celá tabulka slouží
 jako test.
+
+**Kalibrace 1.0.1 (2026-10-03; `docs/DECISIONS.md` „Kalibrace 1.0.1 (obtížnost po odlišení od Balatra)“):** po
+odlišení od předlohy (vlastní tabulka kombinací, kupóny, štítky) a s boty, kteří nové kupóny a štítky oceňují
+realisticky, byla patra 1–5 bez napětí (72–74 % kol vyhraných první rukou, v průměru 1,5 ruky na kolo) a patro 8 zeď
+(49 % runů, které ho dosáhly, tam padlo; 30–32 % všech runů). Patra 4–7 jsou proto o 30–45 % výš a patro 8 o 5 %
+(křivka 1: 2 700 / 6 500 / 16 000 / 39 000 / 95 000 → 3 600 / 9 400 / 23 000 / 51 000 / 100 000), patro 2–3 mírně
+(550 → 600, 1 100 → 1 300); křivka 2 je od patra 3 o 8–17 % nad křivkou 1 a křivka 3 o 11–19 % nad křivkou 2, aby
+Bock nebyl prázdný krok proti Ležáku. Desítka (sady A–C, 1 800 runů): nejlepší bot **27,8 %** (sady 29,5 / 27 /
+29,5 %); prohry podle pater 1–8 (bot `max`, % runů) 2,3 / 3,2 / 2,2 / 4,5 / 13,0 / 17,5 / 15,7 / 15,7 — vrchol v patrech
+6–8 místo zdi v patře 8 (dřív 1,5 / 1,7 / 1,8 / 1,5 / 3,5 / 11,0 / 16,3 / 31,0); patro 8 ztratí 35–38 % runů, které
+ho dosáhnou (dřív 49–50 %). Vyhrané kolo trvá v průměru 1,64 ruky (dřív 1,50), v patrech 5–8 1,8–2,1 ruky; první
+rukou se v patrech 1–4 vyhraje 59–70 % kol (dřív 73–80 %), v patrech 6–8 34–37 %. Vítězové mají v patře 8 medián
+nejlepší ruky **195 000–224 000** (p90 473 000–533 000) a kolo finálového šéfa končí na mediánu 1,09–1,11× cíle —
+patro 8 je řádově statisíce (CLAUDE.md kap. 3).
 
 **Kalibrace fáze 10 (2026-10-02; `docs/DECISIONS.md` „Fáze 10: balanc (silnější boti, cíle patra 8, žolíci,
 balíčky)“):** se silnějšími boty (laboratoř buildu, kap. 12.2) a dvojnásobnými přírůstky úrovní kombinací (2.2.1)
@@ -273,23 +289,26 @@ z balíčků, výzev a kupónů, nekonečný režim).
 
 #### 2.3.3 Ukázka nekonečného režimu (patra 9–16)
 
-`g(a) = 2,3 + 0,01 × (a − 9)`, `base(a) = nice(base(8) × g(a)^(a − 8))`.
+`g(a) = 1,5 + 0,035 × (a − 9)`, `base(a) = nice(base(8) × g(a)^(a − 8))`.
 
-| Patro |    g | Křivka 1: Malá |       Velká |         Šéf | Křivka 2: Malá |         Šéf | Křivka 3: Malá |         Šéf |
-| ----: | ---: | -------------: | ----------: | ----------: | -------------: | ----------: | -------------: | ----------: |
-|     9 | 2,30 |        220 000 |     330 000 |     440 000 |        250 000 |     500 000 |        260 000 |     520 000 |
-|    10 | 2,31 |        510 000 |     770 000 |   1 000 000 |        590 000 |   1 200 000 |        610 000 |   1 200 000 |
-|    11 | 2,32 |      1 200 000 |   1 800 000 |   2 400 000 |      1 350 000 |   2 700 000 |      1 450 000 |   2 900 000 |
-|    12 | 2,33 |      2 800 000 |   4 200 000 |   5 600 000 |      3 200 000 |   6 400 000 |      3 400 000 |   6 800 000 |
-|    13 | 2,34 |      6 700 000 |  10 000 000 |  13 500 000 |      7 700 000 |  15 500 000 |      8 100 000 |  16 000 000 |
-|    14 | 2,35 |     16 000 000 |  24 000 000 |  32 000 000 |     18 500 000 |  37 000 000 |     19 500 000 |  39 000 000 |
-|    15 | 2,36 |     39 000 000 |  59 000 000 |  78 000 000 |     45 000 000 |  90 000 000 |     47 000 000 |  94 000 000 |
-|    16 | 2,37 |     95 000 000 | 145 000 000 | 190 000 000 |    110 000 000 | 220 000 000 |    115 000 000 | 230 000 000 |
+| Patro |     g | Křivka 1: Malá |      Velká |        Šéf | Křivka 2: Malá |        Šéf | Křivka 3: Malá |        Šéf |
+| ----: | ----: | -------------: | ---------: | ---------: | -------------: | ---------: | -------------: | ---------: |
+|     9 |  1,50 |        150 000 |    230 000 |    300 000 |        175 000 |    350 000 |        200 000 |    400 000 |
+|    10 | 1,535 |        240 000 |    360 000 |    480 000 |        270 000 |    540 000 |        320 000 |    640 000 |
+|    11 |  1,57 |        390 000 |    590 000 |    780 000 |        450 000 |    900 000 |        520 000 |  1 050 000 |
+|    12 | 1,605 |        660 000 |    990 000 |  1 300 000 |        760 000 |  1 500 000 |        900 000 |  1 800 000 |
+|    13 |  1,64 |      1 200 000 |  1 800 000 |  2 400 000 |      1 350 000 |  2 700 000 |      1 600 000 |  3 200 000 |
+|    14 | 1,675 |      2 200 000 |  3 300 000 |  4 400 000 |      2 500 000 |  5 000 000 |      3 000 000 |  6 000 000 |
+|    15 |  1,71 |      4 300 000 |  6 500 000 |  8 600 000 |      4 900 000 |  9 800 000 |      5 800 000 | 11 500 000 |
+|    16 | 1,745 |      8 600 000 | 13 000 000 | 17 000 000 |      9 900 000 | 20 000 000 |     11 500 000 | 23 000 000 |
 
-Pro orientaci (křivka 1, Malá útrata): patro 20 ≈ 3 600 000 000, patro 24 ≈ 160 000 000 000, patro 30
-(„Tepelná smrt vesmíru“) ≈ 59 000 000 000 000, patro 32 ≈ 4,5e14, patro 40 ≈ 2e18 (zápis jako ve hře: od 1e15
-vědecky, koncové nuly mantisy se ořezávají). Cíl Malé útraty i šéfa přeteče na `Number.MAX_VALUE` („∞“) v patře 393.
-Do 1.0 (g = 2,2 + 0,15 × (a − 9)) bylo patro 16 na 1 200 000 000 a přetečení v patře 210.
+Pro orientaci (křivka 1, Malá útrata): patro 20 ≈ 200 000 000, patro 24 ≈ 8 000 000 000, patro 30
+(„Tepelná smrt vesmíru“) ≈ 4 800 000 000 000, patro 32 ≈ 51 000 000 000 000, patro 40 ≈ 1,6e18 (zápis jako ve hře: od
+1e15 vědecky, koncové nuly mantisy se ořezávají). Cíl Malé útraty přeteče na `Number.MAX_VALUE` („∞“) v patře 295.
+Nejlepší vítězné runy botů dojdou do patra 17–20 (nejlepší ruka 1e8–3e8); patro 30 chce zhruba 5e12 na Malou útratu —
+o čtyři řády víc, tedy jen záměrně „rozbitý“ build (sklo a ocel s opakováním, legendární ×mult, vysoké úrovně).
+Do 1.0 (g = 2,2 + 0,15 × (a − 9)) bylo patro 16 na 1 200 000 000 a přetečení v patře 210; v první verzi 1.0.1
+(g = 2,3 + 0,01 × (a − 9)) patro 16 na 95 000 000 a přetečení v patře 393.
 
 ### 2.4 Kolo a peníze
 
@@ -615,13 +634,18 @@ tažením (akce `reorderJokers`), klik otevře detail s tlačítkem Prodat.
 
 Hodnotu žolíka měříme jako **průměrné procentní navýšení skóre ruky** proti referenční ruce:
 
-- **R1 (patra 1–3):** 60 čipů × 8 mult = 480 bodů (kombinace úr. 1–2 + 1–2 slabší žolíci).
-- **R2 (patra 6–8):** 200 čipů × 40 mult × 3 (souhrnný ×mult ostatních žolíků) = 24 000 bodů.
+- **R1 (patra 1–3):** 100 čipů × 7 mult = 700 bodů (kombinace úr. 1–2 + 1–2 slabší žolíci).
+- **R2 (patra 6–8):** 350 čipů × 26 mult × 3 (souhrnný ×mult ostatních žolíků) = 27 300 bodů.
+
+**1.0.1 (kalibrace, 2026-10-03):** referenční ruce jsou mediány čipů a multu všech zahraných rukou botů na Desítce
+(1 800 runů; R1 108 × 7, R2 358 × 78 = 26 × 3). S vlastní „čipovou“ tabulkou kombinací (2.2.1) mají ruce zhruba
+dvakrát víc čipů než dřívější R1 60 × 8 a R2 200 × 40; se starými rukama by čipoví žolíci vycházeli dvakrát silnější,
+než ve hře jsou, a multoví slabší (`docs/DECISIONS.md` „Kalibrace 1.0.1“).
 
 | Efekt                                              | Hodnota vůči R1 | Hodnota vůči R2 |
 | -------------------------------------------------- | --------------: | --------------: |
-| +1 mult                                            |         +12,5 % |          +2,5 % |
-| +10 čipů                                           |         +16,7 % |            +5 % |
+| +1 mult                                            |         +14,3 % |          +3,8 % |
+| +10 čipů                                           |           +10 % |          +2,9 % |
 | ×1,5 mult                                          |           +50 % |           +50 % |
 | 1 Kč za kolo (heuristika: peníze → síla v obchodě) |         ≈ +10 % |          ≈ +2 % |
 
@@ -631,12 +655,12 @@ průměrem za očekávanou dobu držení (koupě v patře 2 → patro 8).
 
 ### 4.3 Cílová průměrná hodnota podle vzácnosti
 
-| Vzácnost   | Patra 1–3: navýšení vůči R1 | ≈ ekvivalent v patrech 1–3                          | Patra 6–8: navýšení vůči R2 | ≈ ekvivalent v patrech 6–8 |   Ekonomika | Δ výher v simulaci (Desítka) |
-| ---------- | --------------------------: | --------------------------------------------------- | --------------------------: | -------------------------- | ----------: | ---------------------------: |
-| Běžný      |               +35 až +100 % | +3 až +8 mult · +20 až +60 čipů · ×1,35–2 podmíněně |                 +8 až +30 % | +3 až +12 mult · ×1,1–1,3  | 2–3 Kč/kolo |               +2 až +6 p. b. |
-| Vzácný     |               +50 až +130 % | +4 až +10 mult · ×1,5–2,3                           |                +20 až +60 % | +8 až +24 mult · ×1,2–1,6  | 3–5 Kč/kolo |              +4 až +10 p. b. |
-| Epický     |               +80 až +180 % | ×1,8–2,8                                            |               +45 až +110 % | ×1,45–2,1                  | 5–7 Kč/kolo |              +7 až +15 p. b. |
-| Legendární |              +150 až +350 % | ×2,5–4,5                                            |              +100 až +300 % | ×2–4                       |           — |             +12 až +25 p. b. |
+| Vzácnost   | Patra 1–3: navýšení vůči R1 | ≈ ekvivalent v patrech 1–3                             | Patra 6–8: navýšení vůči R2 | ≈ ekvivalent v patrech 6–8 |   Ekonomika | Δ výher v simulaci (Desítka) |
+| ---------- | --------------------------: | ------------------------------------------------------ | --------------------------: | -------------------------- | ----------: | ---------------------------: |
+| Běžný      |               +35 až +100 % | +2,5 až +7 mult · +35 až +100 čipů · ×1,35–2 podmíněně |                 +8 až +30 % | +2 až +8 mult · ×1,1–1,3   | 2–3 Kč/kolo |               +2 až +6 p. b. |
+| Vzácný     |               +50 až +130 % | +3,5 až +9 mult · ×1,5–2,3                             |                +20 až +60 % | +5 až +16 mult · ×1,2–1,6  | 3–5 Kč/kolo |              +4 až +10 p. b. |
+| Epický     |               +80 až +180 % | ×1,8–2,8                                               |               +45 až +110 % | ×1,45–2,1                  | 5–7 Kč/kolo |              +7 až +15 p. b. |
+| Legendární |              +150 až +350 % | ×2,5–4,5                                               |              +100 až +300 % | ×2–4                       |           — |             +12 až +25 p. b. |
 
 Pravidla tabulky:
 
@@ -647,8 +671,8 @@ Pravidla tabulky:
    byl ve slotu aspoň 6 kol, proti runům bez něj; normalizováno na patro koupě).
 5. Žolík mimo pásmo v simulaci se ladí změnou čísla v `params` (ne přepisem mechaniky), změna do `DECISIONS.md`.
 
-Ukázky: **Pivní tácek** (+2 mult, +10 čipů) = (70 × 10) / 480 → **+46 %** R1, (210 × 42) / 8 000 → **+10 %** R2 ✔.
-**Srdcař** v „srdcovém“ balíčku (≈ 2,5 skórujících ♥ na ruku): +12,5 čipů a +5 mult → **+96 %** R1, **+19 %** R2 ✔.
+Ukázky: **Pivní tácek** (+2 mult, +10 čipů) = (110 × 9) / 700 → **+41 %** R1, (360 × 28) / 9 100 → **+11 %** R2 ✔.
+**Srdcař** v „srdcovém“ balíčku (≈ 2,5 skórujících ♥ na ruku): +12,5 čipů a +5 mult → **+93 %** R1, **+24 %** R2 ✔.
 **Zpožděný rychlík** (×1,5 s šancí 5/6 = průměr ×1,42): **+42 %** v obou oknech — v R1 pod dolní hranicí vzácného,
 v R2 v pásmu ✔ (typický „pozdní“ žolík).
 
@@ -707,9 +731,9 @@ přibitý → na splátky → zvětrávající (první úspěšný hod vyhrává
 |   1 | Pivní tácek (`beer_mat`)            | běžný    |    4 | +mult           | +10 čipů a +2 mult. Jediný žolík, který se smí v nabídce opakovat.                                            | `onHandPlayed`                     | „Každá čárka se počítá.“                                          |
 |   2 | Srdcař (`hearts_man`)               | běžný    |    5 | +mult           | Každá skórující ♥ dá +5 čipů a +2 mult.                                                                       | `onCardScored`                     | „Srdce na dlani, peněženku v kapse.“                              |
 |   3 | Hrobník (`gravedigger`)             | běžný    |    5 | +čipy           | Každá skórující ♠ dá +20 čipů.                                                                                | `onCardScored`                     | „Pro každou piku kope zvlášť.“                                    |
-|   4 | Klenotník (`jeweler`)               | běžný    |    5 | škálování       | Každá skórující ♦ trvale získá +5 čipů.                                                                       | `onCardScored`                     | „Každou káru nejdřív vyleští.“                                    |
+|   4 | Klenotník (`jeweler`)               | běžný    |    5 | škálování       | Každá skórující ♦ trvale získá +10 čipů.                                                                      | `onCardScored`                     | „Každou káru nejdřív vyleští.“                                    |
 |   5 | Křižák (`crusader`)                 | běžný    |    4 | +mult           | +12 mult, pokud skórují aspoň 2 ♣.                                                                            | `onHandPlayed`                     | „Na výpravu se nechodí sám.“                                      |
-|   6 | Ranní ptáče (`early_bird`)          | běžný    |    4 | +mult           | První ruka kola dá +8 mult.                                                                                   | `onHandPlayed`                     | „Kdo dřív přijde, ten dřív skóruje.“                              |
+|   6 | Ranní ptáče (`early_bird`)          | běžný    |    4 | +mult           | První ruka kola dá +7 mult.                                                                                   | `onHandPlayed`                     | „Kdo dřív přijde, ten dřív skóruje.“                              |
 |   7 | Noční směna (`night_shift`)         | běžný    |    4 | +mult           | V kole se šéfem dá každá ruka +14 mult.                                                                       | `onHandPlayed`                     | „Po půlnoci platí noční tarif. A šéf chodí na kontrolu.“          |
 |   8 | Meteorolog (`meteorologist`)        | běžný    |    5 | +mult           | +2 mult za každou úroveň zahrané kombinace nad 1.                                                             | `onHandPlayed`                     | „Zítra polojasno, místy přeháňky bodů.“                           |
 |   9 | Tělocvikář (`pe_teacher`)           | běžný    |    4 | +čipy           | +8 čipů za každou zahranou kartu (i neskórující).                                                             | `onHandPlayed`                     | „Nastoupit do řady, i s omluvenkou!“                              |
@@ -722,15 +746,15 @@ přibitý → na splátky → zvětrávající (první úspěšný hod vyhrává
 |  16 | Zpožděný rychlík (`late_train`)     | vzácný   |    6 | ×mult           | ×1,5 mult; 1 z 6 efekt „nabere zpoždění“ a nenastane.                                                         | `onHandPlayed`                     | „Mult přijede s mírným zpožděním.“                                |
 |  17 | Pan vrchní (`head_waiter`)          | vzácný   |    7 | ×mult           | ×2 mult, pokud zahraná ruka má nejvýš 3 karty.                                                                | `onHandPlayed`                     | „Platím! — Za tři.“                                               |
 |  18 | Stará garda (`old_guard`)           | vzácný   |    6 | ×mult           | ×1,5 mult, pokud má zahraná kombinace úroveň aspoň 3.                                                         | `onHandPlayed`                     | „My to hráli, když byla Dvojice ještě na jedničce.“               |
-|  19 | Kořenářka (`herbalist`)             | vzácný   |    6 | škálování       | Po každé použité babské radě trvale +2 mult; po kole bez použité rady −1 mult (nejméně 0; 1.0.1).             | `onConsumableUsed`, `onHandPlayed` | „Bylinky sbírá za úplňku. Recepty stahuje z internetu.“           |
-|  20 | Stálý host (`regular`)              | vzácný   |    6 | škálování       | +1 mult za každé kolo, které od koupě strávil ve slotu.                                                       | `onRoundEnd`, `onHandPlayed`       | „Má tu vlastní hrnek i vlastní židli.“                            |
-|  21 | Pivní břicho (`beer_belly`)         | vzácný   |    6 | škálování       | Po každé zahrané ruce trvale +2 čipy (začíná na +0).                                                          | `afterHandScored`, `onHandPlayed`  | „Tohle není břicho, to je dlouhodobá investice.“                  |
+|  19 | Kořenářka (`herbalist`)             | vzácný   |    6 | škálování       | Po každé použité babské radě trvale +1,5 mult; po kole bez použité rady −1 mult (nejméně 0; 1.0.1).           | `onConsumableUsed`, `onHandPlayed` | „Bylinky sbírá za úplňku. Recepty stahuje z internetu.“           |
+|  20 | Stálý host (`regular`)              | vzácný   |    6 | škálování       | +0,75 mult za každé kolo, které od koupě strávil ve slotu.                                                    | `onRoundEnd`, `onHandPlayed`       | „Má tu vlastní hrnek i vlastní židli.“                            |
+|  21 | Pivní břicho (`beer_belly`)         | vzácný   |    6 | škálování       | Po každé zahrané ruce trvale +3 čipy (začíná na +0).                                                          | `afterHandScored`, `onHandPlayed`  | „Tohle není břicho, to je dlouhodobá investice.“                  |
 |  22 | Kolotoč na pouti (`carousel`)       | vzácný   |    6 | úpravy pravidel | Postupka smí jít kolem dokola (např. Q-K-A-2-3) a každá Postupka dá +14 mult.                                 | `passive`, `onHandPlayed`          | „Točí se to dokola jako každý rok.“                               |
 |  23 | Ozvěna z propasti (`echo`)          | vzácný   |    7 | opakování       | Poslední skórující karta skóruje ještě 4×.                                                                    | `retriggerScored`                  | „Haló! …haló …aló …ló …ó.“                                        |
 |  24 | Šťastná sedmička (`lucky_seven`)    | vzácný   |    6 | opakování       | Každá skórující karta: 1 ze 7, že skóruje ještě 7×.                                                           | `retriggerScored`                  | „Automat v nádražce sype jednou za čas. Zato pořádně.“            |
 |  25 | Sekera (`tab`)                      | vzácný   |    6 | ekonomika       | Můžeš jít do mínusu až −15 Kč; +1 mult za každou korunu, která ti chybí do 15 Kč.                             | `passive`, `onHandPlayed`          | „Zapište mi to. Čím míň v kapse, tím víc na tácku.“               |
 |  26 | Sněhulák (`snowman`)                | epický   |    8 | ×mult           | ×2,5 mult; po každém kole −×0,25; při ×1 roztaje (zničí se).                                                  | `onHandPlayed`, `onRoundEnd`       | „Na jaře z něj zbude jen mrkev.“                                  |
-|  27 | Sběrač hub (`mushroom_picker`)      | epický   |    9 | škálování       | ×1 mult a navíc +×0,22 za každou hrací kartu zničenou od jeho koupě (do fáze 10 +×0,25).                      | `onCardDestroyed`, `onHandPlayed`  | „Rostou tam, kde něco zmizelo.“                                   |
+|  27 | Sběrač hub (`mushroom_picker`)      | epický   |    9 | škálování       | ×1 mult a navíc +×0,18 za každou hrací kartu zničenou od jeho koupě (do fáze 10 +×0,25).                      | `onCardDestroyed`, `onHandPlayed`  | „Rostou tam, kde něco zmizelo.“                                   |
 |  28 | Napodobitel (`impersonator`)        | epický   |   10 | kopírování      | Při získání bez edice dostane duhovou; v každém kole kopíruje tvého nejdražšího běžného nebo vzácného žolíka. | `onAcquire`, `copyTarget`          | „V kulturáku napodobí kohokoli, jen na hvězdy mu flitry nestačí.“ |
 |  29 | Hostinský (`innkeeper`)             | epický   |    8 | ×mult           | ×2,2 mult, dokud v tomto kole nikdo nezahazoval.                                                              | `onHandPlayed`                     | „U mě se nic nevylévá.“                                           |
 |  30 | Babiččina truhla (`grandmas_chest`) | epický   |    8 | ×mult           | ×1,3 mult za každou spotřebku, kterou držíš ve slotech.                                                       | `onHandPlayed`                     | „Na půdě je všechno, co jednou bude k něčemu.“                    |
@@ -851,14 +875,32 @@ a Směnárna (122 %), špičku nad 2× horní hranicí měl Pan farář (228 %) 
 pravidla, úrovně Praotce a Krakonoše, špičky čistých ×mult žolíků z jiné volby tahu) nebo těsně na hranici
 (Silvestr R2 110,5 %, Klekánice 61,5 %).
 
+**Přeměření 1.0.1** (kalibrace 2026-10-03; nové referenční ruce R1 100 × 7 a R2 350 × 26 podle „čipové“ tabulky
+kombinací, 30 seedů `JV11`, `docs/DECISIONS.md` „Kalibrace 1.0.1“): se staršími rukama 60 × 8 a 200 × 40 vycházeli
+čipoví žolíci dvakrát silnější a multoví slabší, než ve hře jsou. Pod pásmem byli Klenotník (R2 7 %), Popelář (8 %),
+Hudební automat (R2 6,5 %), Pivní břicho (16 %) a Sociální bublina (11 %), nad pásmem Ranní ptáče (R1 107 %), Červená
+a černá (102 %), Sběrna surovin (R2 33 %), Kořenářka (95 %), Vodník (71 %), Stálý host (66 %), Sběrač hub (136 %),
+Lázeňský host (115 %), Směnárna (118 %) a Silvestr (117 %). Upravená čísla: Klenotník +5 → **+10 čipů**, Popelář +1 →
+**+2**, Hudební automat 1× → **2×**, Pivní břicho +2 → **+3**, Sociální bublina +15 → **+30**, Ranní ptáče +8 → **+7**,
+Červená a černá +8 → **+7**, Sběrna surovin strop +21 → **+18**, Kořenářka +2 → **+1,5**, Vodník +1 → **+0,75**, Stálý
+host +1 → **+0,75**, Sběrač hub +×0,22 → **+×0,18**, Lázeňský host +×0,13 → **+×0,12**, Směnárna strop ×2,1 → **×1,9**,
+Silvestr +×0,2 → **+×0,18**. Po úpravě (R1 / R2): Klenotník 9 / 13 %, Popelář 11 / 16 %, Hudební automat 34 / 10 %,
+Pivní břicho 11 / 23 %, Sociální bublina 70 / 20 %, Ranní ptáče 97 / 24 %, Červená a černá 89 / 27 %, Sběrna 7 / 26 %,
+Vodník 30 / 52 %, Sběrač hub 6 / 109 %, Lázeňský host 14 / 105 %, Směnárna 68 / 101 %, Silvestr 10 / 98 % — v pásmu;
+Stálý host s +0,75 odhadem ~50 % (s +1 67 %), Kořenářka 62 % (těsně nad 60 %, s +1 by byla pod středem pásma).
+Opakovače (Ozvěna z propasti, Šťastná sedmička, Spartakiáda, Dechovka) vycházejí v R2 pod pásmem (9–17 %), protože
+izolovaný efekt opakované karty (její čipy) se na čipově těžké R2 skoro ztratí; ve skutečných sestavách bota
+(sloupec „reálně“) dávají 50–88 %, tedy hodnotu odpovídající své vzácnosti — čísla zůstávají. Ekonomičtí žolíci se od 1.0.1 hodnotí penězi,
+když jejich efekt na ruku je pod 5 % (`ECON_HAND_NOISE`).
+
 |   # | Název (`id`)                                   | Vzácnost   | Cena | Kategorie         | Fáze | Mechanika                                                                                                                                        | Flavor                                                                                |
 | --: | ---------------------------------------------- | ---------- | ---: | ----------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
 |   1 | Pivní tácek (`beer_mat`)                       | běžný      |    4 | +mult             | 4    | +10 čipů a +2 mult. Jako jediný žolík se smí v nabídce opakovat.                                                                                 | „Každá čárka se počítá.“                                                              |
 |   2 | Srdcař (`hearts_man`)                          | běžný      |    5 | +mult             | 4    | Každá skórující srdcová karta dá +5 čipů a +2 mult.                                                                                              | „Srdce na dlani, peněženku v kapse.“                                                  |
 |   3 | Hrobník (`gravedigger`)                        | běžný      |    5 | +čipy             | 4    | Každá skórující piková karta dá +20 čipů.                                                                                                        | „Pro každou piku kope zvlášť.“                                                        |
-|   4 | Klenotník (`jeweler`)                          | běžný      |    5 | škálování         | 4    | Každá skórující kárová karta trvale získá +5 čipů.                                                                                               | „Každou káru nejdřív vyleští.“                                                        |
+|   4 | Klenotník (`jeweler`)                          | běžný      |    5 | škálování         | 4    | Každá skórující kárová karta trvale získá +10 čipů.                                                                                              | „Každou káru nejdřív vyleští.“                                                        |
 |   5 | Křižák (`crusader`)                            | běžný      |    4 | +mult             | 4    | +12 mult, pokud skórují aspoň 2 křížové karty.                                                                                                   | „Na výpravu se nechodí sám.“                                                          |
-|   6 | Ranní ptáče (`early_bird`)                     | běžný      |    4 | +mult             | 4    | První ruka kola dá +8 mult.                                                                                                                      | „Kdo dřív přijde, ten dřív skóruje.“                                                  |
+|   6 | Ranní ptáče (`early_bird`)                     | běžný      |    4 | +mult             | 4    | První ruka kola dá +7 mult.                                                                                                                      | „Kdo dřív přijde, ten dřív skóruje.“                                                  |
 |   7 | Noční směna (`night_shift`)                    | běžný      |    4 | +mult             | 4    | V kole se šéfem dá každá ruka +14 mult.                                                                                                          | „Po půlnoci platí noční tarif. A šéf chodí na kontrolu.“                              |
 |   8 | Meteorolog (`meteorologist`)                   | běžný      |    5 | +mult             | 4    | +2 mult za každou úroveň zahrané kombinace nad první.                                                                                            | „Zítra polojasno, místy přeháňky bodů.“                                               |
 |   9 | Tělocvikář (`pe_teacher`)                      | běžný      |    4 | +čipy             | 4    | +8 čipů za každou zahranou kartu, i za neskórující.                                                                                              | „Nastoupit do řady, i s omluvenkou!“                                                  |
@@ -889,20 +931,20 @@ pravidla, úrovně Praotce a Krakonoše, špičky čistých ×mult žolíků z j
 |  34 | Třináctý plat (`thirteenth_salary`)            | běžný      |    5 | ekonomika         | 7    | Po porážce šéfa dostaneš v odměnách navíc 8 Kč.                                                                                                  | „Prémie za splnění plánu. Plán zněl: porazit šéfa.“                                   |
 |  35 | Brigádník (`temp_worker`)                      | běžný      |    4 | ekonomika         | 7    | Na konci kola +2 Kč za každou ruku zahranou v tomto kole.                                                                                        | „Placený od kusu. Kusů je hodně, kvalita se dořeší.“                                  |
 |  36 | Rybář (`fisherman`)                            | běžný      |    5 | spotřebky/balíček | 7    | Po každém zahození 1 z 2, že něco chytí: náhodnou babskou radu (potřebuje volný slot).                                                           | „Největší kapr mu zase utekl. Domů nese aspoň dobrou radu.“                           |
-|  37 | Popelář (`garbage_man`)                        | běžný      |    4 | škálování         | 7    | Každá zahozená karta s hodnotou nejvýš 5 mu trvale přidá +1 čip.                                                                                 | „Ve čtvrtek v šest ráno odveze všechno. Hlavně tvůj spánek.“                          |
-|  38 | Hudební automat (`jukebox`)                    | běžný      |    5 | opakování         | 7    | Skórující karty s nejvyšší hodnotou skórují ještě 1×.                                                                                            | „Za pětikorunu hraje pořád stejnou písničku. Celou noc.“                              |
+|  37 | Popelář (`garbage_man`)                        | běžný      |    4 | škálování         | 7    | Každá zahozená karta s hodnotou nejvýš 5 mu trvale přidá +2 čipy.                                                                                | „Ve čtvrtek v šest ráno odveze všechno. Hlavně tvůj spánek.“                          |
+|  38 | Hudební automat (`jukebox`)                    | běžný      |    5 | opakování         | 7    | Skórující karty s nejvyšší hodnotou skórují ještě 2×.                                                                                            | „Za pětikorunu hraje pořád stejnou písničku. Celou noc.“                              |
 |  39 | Kůlna (`tool_shed`)                            | běžný      |    4 | úpravy pravidel   | 7    | +1 slot spotřebky.                                                                                                                               | „Vejde se tam všechno. Hlavně to, co pak nikdy nenajdeš.“                             |
 |  40 | Náhradní autobus (`replacement_bus`)           | běžný      |    4 | úpravy pravidel   | 7    | Každé z prvních 2 zahození v kole zvětší do konce kola ruku o 1 kartu.                                                                           | „Pojede to o hodinu déle, ale vejde se celá vesnice i s kozou.“                       |
 |  41 | Řezník z rohu (`pig_slaughter`)                | běžný      |    5 | spotřebky/balíček | 7    | Na konci kola zničí nejnižší kartu bez vylepšení drženou v ruce a dá za ni 2 Kč.                                                                 | „Z prasete se využije všechno kromě kvičení. Z dvojky taky.“                          |
-|  42 | Červená a černá (`derby_fans`)                 | běžný      |    4 | +mult             | 7    | +8 mult, pokud mezi skórujícími kartami je červená i černá barva.                                                                                | „Půlka hospody fandí červeným, půlka černým. Hospodský fandí tržbě.“                  |
+|  42 | Červená a černá (`derby_fans`)                 | běžný      |    4 | +mult             | 7    | +7 mult, pokud mezi skórujícími kartami je červená i černá barva.                                                                                | „Půlka hospody fandí červeným, půlka černým. Hospodský fandí tržbě.“                  |
 |  43 | Hospodský kvíz (`pub_quiz`)                    | běžný      |    4 | +čipy             | 7    | +10 čipů za každou různou hodnotu mezi skórujícími kartami.                                                                                      | „Hlavní cena: sud piva. Cena útěchy: taky sud piva.“                                  |
-|  44 | Sběrna surovin (`scrap_yard`)                  | běžný      |    5 | škálování         | 7    | Za každou zničenou hrací kartu trvale +3 mult, nejvýš +21 mult.                                                                                  | „Za kilo karet dvacet haléřů a pochvala do žákovské.“                                 |
+|  44 | Sběrna surovin (`scrap_yard`)                  | běžný      |    5 | škálování         | 7    | Za každou zničenou hrací kartu trvale +3 mult, nejvýš +18 mult.                                                                                  | „Za kilo karet dvacet haléřů a pochvala do žákovské.“                                 |
 |  45 | Zpožděný rychlík (`late_train`)                | vzácný     |    6 | ×mult             | 4    | ×1,5 mult; 1 z 6, že efekt „nabere zpoždění“ a nenastane.                                                                                        | „Mult přijede s mírným zpožděním.“                                                    |
 |  46 | Pan vrchní (`head_waiter`)                     | vzácný     |    7 | ×mult             | 4    | ×2 mult, pokud zahraná ruka má nejvýš 3 karty.                                                                                                   | „Platím! – Za tři.“                                                                   |
 |  47 | Stará garda (`old_guard`)                      | vzácný     |    6 | ×mult             | 4    | ×1,5 mult, pokud má zahraná kombinace úroveň aspoň 3.                                                                                            | „My to hráli, když byla Dvojice ještě na jedničce.“                                   |
-|  48 | Kořenářka (`herbalist`)                        | vzácný     |    6 | škálování         | 4    | Po každé použité babské radě trvale +2 mult; po kole bez použité rady bylinky zvadnou: −1 mult (nejméně 0).                                      | „Bylinky sbírá za úplňku. Recepty stahuje z internetu.“                               |
-|  49 | Stálý host (`regular`)                         | vzácný     |    6 | škálování         | 4    | +1 mult za každé kolo, které od koupě strávil ve slotu.                                                                                          | „Má tu vlastní hrnek i vlastní židli.“                                                |
-|  50 | Pivní břicho (`beer_belly`)                    | vzácný     |    6 | škálování         | 4    | Po každé zahrané ruce trvale +2 čipy.                                                                                                            | „Tohle není břicho, to je dlouhodobá investice.“                                      |
+|  48 | Kořenářka (`herbalist`)                        | vzácný     |    6 | škálování         | 4    | Po každé použité babské radě trvale +1,5 mult; po kole bez použité rady bylinky zvadnou: −1 mult (nejméně 0).                                    | „Bylinky sbírá za úplňku. Recepty stahuje z internetu.“                               |
+|  49 | Stálý host (`regular`)                         | vzácný     |    6 | škálování         | 4    | +0,75 mult za každé kolo, které od koupě strávil ve slotu.                                                                                       | „Má tu vlastní hrnek i vlastní židli.“                                                |
+|  50 | Pivní břicho (`beer_belly`)                    | vzácný     |    6 | škálování         | 4    | Po každé zahrané ruce trvale +3 čipy.                                                                                                            | „Tohle není břicho, to je dlouhodobá investice.“                                      |
 |  51 | Kolotoč na pouti (`carousel`)                  | vzácný     |    6 | úpravy pravidel   | 4    | Postupka smí jít kolem dokola (např. Q-K-A-2-3) a každá Postupka dá +14 mult.                                                                    | „Točí se to dokola jako každý rok.“                                                   |
 |  52 | Ozvěna z propasti (`echo`)                     | vzácný     |    7 | opakování         | 4    | Poslední skórující karta skóruje ještě 4×.                                                                                                       | „Haló! …haló …aló …ló …ó.“                                                            |
 |  53 | Šťastná sedmička (`lucky_seven`)               | vzácný     |    6 | opakování         | 4    | Každá skórující karta: 1 ze 7, že skóruje ještě 7×.                                                                                              | „Automat v nádražce sype jednou za čas. Zato pořádně.“                                |
@@ -913,7 +955,7 @@ pravidla, úrovně Praotce a Krakonoše, špičky čistých ×mult žolíků z j
 |  58 | Sklář (`glassblower`)                          | vzácný     |    7 | spotřebky/balíček | 7    | Při získání přidá do balíčku 1 skleněnou kartu; každou zničenou skleněnou kartu hned vyfoukne do balíčku znovu.                                  | „Střepy přinášejí štěstí. Hlavně sklářům.“                                            |
 |  59 | Notář (`notary_public`)                        | vzácný     |    6 | ekonomika         | 7    | První ruka Malé a Velké útraty dá ještě před skórováním první skórující kartě bez pečeti zlatou pečeť.                                           | „Podpis ověří za minutu, poplatek naúčtuje za hodinu. Na šéfy nemá úřední hodiny.“    |
 |  60 | Čarodějnice (`witch`)                          | vzácný     |    6 | spotřebky/balíček | 7    | Po porážce šéfa vytvoří náhodné úřední razítko (potřebuje volný slot).                                                                           | „Na Filipojakubskou noc se pálí. Zbytek roku razítkuje.“                              |
-|  61 | Vodník (`water_goblin`)                        | vzácný     |    6 | škálování         | 7    | Každá zahozená srdcová karta mu trvale přidá +1 mult.                                                                                            | „Co hodíš do rybníka, to on schová pod hrníček.“                                      |
+|  61 | Vodník (`water_goblin`)                        | vzácný     |    6 | škálování         | 7    | Každá zahozená srdcová karta mu trvale přidá +0,75 mult.                                                                                         | „Co hodíš do rybníka, to on schová pod hrníček.“                                      |
 |  62 | Bludička (`will_o_wisp`)                       | vzácný     |    6 | ×mult             | 7    | V kole se šéfem dá každá ruka ×2 mult.                                                                                                           | „Svítí jen v té největší tmě. Kam vede, to už neřekne.“                               |
 |  63 | Polednice (`noon_witch`)                       | vzácný     |    6 | ×mult             | 7    | Druhá ruka kola dá ×2 mult.                                                                                                                      | „Kdo v poledne zlobí, toho si odnese. Kdo hraje, tomu zdvojnásobí mult.“              |
 |  64 | Klekánice (`klekanice`)                        | vzácný     |    6 | ×mult             | 7    | ×2 mult, pokud ti po zahrání v ruce nezůstala žádná figura.                                                                                      | „Po klekání mají být všichni doma. Králové, dámy i kluci.“                            |
@@ -928,9 +970,9 @@ pravidla, úrovně Praotce a Krakonoše, špičky čistých ×mult žolíků z j
 |  73 | Kopírák (`carbon_paper`)                       | vzácný     |    7 | kopírování        | 7    | Kopíruje schopnost nejpravějšího běžného nebo vzácného žolíka, kterého jde kopírovat.                                                            | „Průklep je skoro jako originál. Jen trochu modřejší.“                                |
 |  74 | Defenestrace (`defenestration`)                | vzácný     |    6 | ekonomika         | 7    | Každé zahození, ve kterém je aspoň jedna figura, dá 5 Kč.                                                                                        | „Námitky se v Praze tradičně vyřizují oknem.“                                         |
 |  75 | Brňák (`brno_native`)                          | vzácný     |    6 | ×mult             | 7    | ×1,5 mult, pokud stojí v řadě žolíků úplně vlevo.                                                                                                | „Hradec? To je ta vesnice u Brna?“                                                    |
-|  76 | Sociální bublina (`social_bubble`)             | vzácný     |    6 | +čipy             | 7    | Když mají všechny skórující karty stejnou barvu nebo stejnou hodnotu, každá dá +15 čipů.                                                         | „Všichni stejní, všichni souhlasí. Kdo nesouhlasí, ten tu není.“                      |
+|  76 | Sociální bublina (`social_bubble`)             | vzácný     |    6 | +čipy             | 7    | Když mají všechny skórující karty stejnou barvu nebo stejnou hodnotu, každá dá +30 čipů.                                                         | „Všichni stejní, všichni souhlasí. Kdo nesouhlasí, ten tu není.“                      |
 |  77 | Sněhulák (`snowman`)                           | epický     |    8 | ×mult             | 4    | ×2,5 mult; po každém kole −×0,25, při ×1 roztaje a zničí se.                                                                                     | „Na jaře z něj zbude jen mrkev.“                                                      |
-|  78 | Sběrač hub (`mushroom_picker`)                 | epický     |    9 | škálování         | 4    | ×1 mult a navíc +×0,22 za každou hrací kartu zničenou od jeho koupě.                                                                             | „Rostou tam, kde něco zmizelo.“                                                       |
+|  78 | Sběrač hub (`mushroom_picker`)                 | epický     |    9 | škálování         | 4    | ×1 mult a navíc +×0,18 za každou hrací kartu zničenou od jeho koupě.                                                                             | „Rostou tam, kde něco zmizelo.“                                                       |
 |  79 | Napodobitel (`impersonator`)                   | epický     |   10 | kopírování        | 4    | Při získání bez edice dostane duhovou; v každém kole kopíruje tvého nejdražšího běžného nebo vzácného žolíka.                                    | „V kulturáku napodobí kohokoli, jen na hvězdy mu flitry nestačí.“                     |
 |  80 | Hostinský (`innkeeper`)                        | epický     |    8 | ×mult             | 4    | ×2,2 mult, dokud se v tomto kole nezahazovalo.                                                                                                   | „U mě se nic nevylévá.“                                                               |
 |  81 | Babiččina truhla (`grandmas_chest`)            | epický     |    8 | ×mult             | 4    | ×1,3 mult za každou spotřebku, kterou držíš ve slotech.                                                                                          | „Na půdě je všechno, co jednou bude k něčemu.“                                        |
@@ -940,12 +982,12 @@ pravidla, úrovně Praotce a Krakonoše, špičky čistých ×mult žolíků z j
 |  85 | Turistický průvodce (`tour_guide`)             | epický     |    8 | úpravy pravidel   | 7    | Postupka i Barva stačí ze čtyř karet a ruka, která obsahuje Postupku nebo Barvu, dá +40 čipů; když má jen 4 karty, chce průvodce spropitné 1 Kč. | „Značky mají čtyři barvy a jemu to stačí. Pátá cesta stejně vede do hospody.“         |
 |  86 | Spartakiáda (`spartakiada`)                    | epický     |    9 | opakování         | 7    | V první ruce kola skóruje každá skórující karta ještě 2×.                                                                                        | „Tisíc párů trenýrek, jeden pohyb. A pak ještě dvakrát, pro televizi.“                |
 |  87 | Kupónová privatizace (`voucher_privatization`) | epický     |    8 | ekonomika         | 7    | Na konci kola +1 Kč za každých 5 % cíle, o které skóre kola cíl překročilo (nejvýš 8 Kč).                                                        | „Za knížku kupónů slibovali desetinásobek. Fond je mezitím někde u moře.“             |
-|  88 | Lázeňský host (`spa_guest`)                    | epický     |    9 | škálování         | 7    | Za každé kolo, ve kterém se nezahazovalo, trvale +×0,13 mult.                                                                                    | „Kolonáda, oplatka, pramen. Hlavně nic nevyhazovat, pan doktor říkal klid.“           |
+|  88 | Lázeňský host (`spa_guest`)                    | epický     |    9 | škálování         | 7    | Za každé kolo, ve kterém se nezahazovalo, trvale +×0,12 mult.                                                                                    | „Kolonáda, oplatka, pramen. Hlavně nic nevyhazovat, pan doktor říkal klid.“           |
 |  89 | Dechovka (`brass_band`)                        | epický     |    8 | opakování         | 7    | Každá skórující karta skóruje ještě 2× za každou další skórující kartu stejné hodnoty.                                                           | „Hrají pořád tutéž polku. Na třetí sloce už zpívá celá náves.“                        |
 |  90 | Karlův most (`charles_bridge`)                 | epický     |    9 | ×mult             | 7    | ×3 mult, pokud držíš v ruce kartu stejné hodnoty jako některá skórující karta.                                                                   | „Jedna je na Malé Straně, druhá na Starém Městě. Spojuje je most a tisíc turistů.“    |
 |  91 | Dálnice D1 (`d1_motorway`)                     | epický     |    8 | ×mult             | 7    | ×2 mult; v ruce máš o 1 kartu méně.                                                                                                              | „Zúžení do jednoho pruhu, ale pak se jede! Teda, pak se zase stojí.“                  |
-|  92 | Směnárna (`exchange_office`)                   | epický     |    9 | ×mult             | 7    | ×1 mult a navíc +×0,1 za každých 15 čipů, které ruka v tu chvíli má (nejvýš ×2,1).                                                               | „Nula procent provize, kurz drobným písmem. Čipy dáš všechny, mult dostaneš trochu.“  |
-|  93 | Silvestr (`new_years_eve`)                     | epický     |    8 | škálování         | 7    | Po každé porážce šéfa trvale +×0,2 mult.                                                                                                         | „Půlnoc, ohňostroj, předsevzetí. Do Tří králů vydrží jen ta kocovina.“                |
+|  92 | Směnárna (`exchange_office`)                   | epický     |    9 | ×mult             | 7    | ×1 mult a navíc +×0,1 za každých 15 čipů, které ruka v tu chvíli má (nejvýš ×1,9).                                                               | „Nula procent provize, kurz drobným písmem. Čipy dáš všechny, mult dostaneš trochu.“  |
+|  93 | Silvestr (`new_years_eve`)                     | epický     |    8 | škálování         | 7    | Po každé porážce šéfa trvale +×0,18 mult.                                                                                                        | „Půlnoc, ohňostroj, předsevzetí. Do Tří králů vydrží jen ta kocovina.“                |
 |  94 | Praotec Čech (`forefather`)                    | legendární |   16 | škálování         | 7    | První ruka každého kola ještě před skórováním zvýší úroveň zahrané kombinace o 1.                                                                | „Tady se usadíme a tady budeme skórovat.“                                             |
 |  95 | Kněžna Libuše (`libuse`)                       | legendární |   16 | ×mult             | 7    | Každá skórující dáma dá ×1,4 mult; na konci kola promění 1 náhodnou kartu drženou v ruce v dámu.                                                 | „Vidím skóre veliké, jehož sláva hvězd se dotýká.“                                    |
 |  96 | Blaničtí rytíři (`blanik_knights`)             | legendární |   16 | ×mult             | 7    | ×3 mult, dokud skóre kola nedosáhne 50 % cíle.                                                                                                   | „Vyjedou, až bude nejhůř. Na začátku kola je vždycky nejhůř.“                         |
@@ -1188,31 +1230,31 @@ hned, Rentgen od zubaře → Vyleštěné příbory, ostatní 1 : 1 na nové `id
 
 |   # | Název (`id`)                             | Pravidlo                                                                                                                 | Od patra |   Cíl | Příchod                                                                                           | Porážka                                             |
 | --: | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------: | ----: | ------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-|   1 | Kontrola z finančáku (`tax_audit`)       | Každá zahraná karta stojí 1 Kč (srážka po každé ruce).                                                                   |        1 |    2× | „Dobrý den, finanční úřad. Účtenky máte? Ke každé kartě zvlášť.“                                  | „Tentokrát bez pokuty. Tentokrát.“                  |
-|   2 | Výluka na trati (`track_closure`)        | Každá druhá líznutá karta přijde lícem dolů (polovina ruky je zakrytá).                                                  |        2 |    1× | „Mezi Kolínem a tvou rukou se pracuje na trati. Každá druhá karta jede oklikou.“                  | „Provoz obnoven. Zpoždění neuvedeno.“               |
+|   1 | Kontrola z finančáku (`tax_audit`)       | Každá zahraná karta stojí 1 Kč (srážka po každé ruce).                                                                   |        1 |  2,5× | „Dobrý den, finanční úřad. Účtenky máte? Ke každé kartě zvlášť.“                                  | „Tentokrát bez pokuty. Tentokrát.“                  |
+|   2 | Výluka na trati (`track_closure`)        | Každá druhá líznutá karta přijde lícem dolů (polovina ruky je zakrytá).                                                  |        2 |  0,9× | „Mezi Kolínem a tvou rukou se pracuje na trati. Každá druhá karta jede oklikou.“                  | „Provoz obnoven. Zpoždění neuvedeno.“               |
 |   3 | Inventura (`inventory`)                  | Figury (J, Q, K) jsou debuffnuté.                                                                                        |        1 |    2× | „Zavřeno z důvodu inventury. Figury se přepočítávají.“                                            | „Inventura sedí. Až na jednoho kluka.“              |
-|   4 | Soused s vrtačkou (`drilling_neighbor`)  | Kombinace, která už v tomto kole byla zahrána, neskóruje.                                                                |        1 |    2× | „Sobota, osm ráno. Vrrrrr.“                                                                       | „Konečně ticho. Do pondělí.“                        |
-|   5 | Polední pauza (`lunch_break`)            | Máš jen 1 ruku.                                                                                                          |        2 | 0,65× | „Je polední pauza. Máte na to jeden pokus.“                                                       | „Hotovo? Tak to se divím.“                          |
-|   6 | Pověrčivá babka (`superstitious_granny`) | Na začátku kola se vylosuje barva; karty té barvy jsou debuffnuté.                                                       |        1 |    2× | „Dneska ne, dneska je špatný den na {suit}.“                                                      | „Tak to byla holt náhoda.“                          |
-|   7 | Černá kočka (`black_cat`)                | Po každé zahrané ruce se 2 náhodné karty v ruce stanou debuffnutými (do konce kola).                                     |        2 |    2× | „Přeběhla ti přes cestu. Zleva doprava.“                                                          | „Kočka odešla. Smůla zůstala u ní.“                 |
-|   8 | Mlha nad Labem (`elbe_fog`)              | Karty s hodnotou 2–5 se lížou lícem dolů.                                                                                |        2 |    2× | „Viditelnost pod sto metrů, malé karty v mlze.“                                                   | „Mlha se zvedla. Byly to dvojky.“                   |
-|   9 | Parkovné (`parking_fee`)                 | Každé zahození stojí 1 Kč × číslo patra.                                                                                 |        1 |    2× | „Modrá zóna. Čím výš, tím dráž – jako v každém centru.“                                           | „Za stěračem tentokrát nic.“                        |
-|  10 | Garsonka 1+kk (`studio_flat`)            | −2 karty v ruce.                                                                                                         |        2 |  1,6× | „Vítej v bytě, kde se kuchyni říká roh.“                                                          | „Stěhuješ se? Nech tu klíče.“                       |
+|   4 | Soused s vrtačkou (`drilling_neighbor`)  | Kombinace, která už v tomto kole byla zahrána, neskóruje.                                                                |        1 |  1,8× | „Sobota, osm ráno. Vrrrrr.“                                                                       | „Konečně ticho. Do pondělí.“                        |
+|   5 | Polední pauza (`lunch_break`)            | Máš jen 1 ruku.                                                                                                          |        2 |  0,6× | „Je polední pauza. Máte na to jeden pokus.“                                                       | „Hotovo? Tak to se divím.“                          |
+|   6 | Pověrčivá babka (`superstitious_granny`) | Na začátku kola se vylosuje barva; karty té barvy jsou debuffnuté.                                                       |        1 |  2,5× | „Dneska ne, dneska je špatný den na {suit}.“                                                      | „Tak to byla holt náhoda.“                          |
+|   7 | Černá kočka (`black_cat`)                | Po každé zahrané ruce se 2 náhodné karty v ruce stanou debuffnutými (do konce kola).                                     |        2 | 2,25× | „Přeběhla ti přes cestu. Zleva doprava.“                                                          | „Kočka odešla. Smůla zůstala u ní.“                 |
+|   8 | Mlha nad Labem (`elbe_fog`)              | Karty s hodnotou 2–5 se lížou lícem dolů.                                                                                |        2 |  2,1× | „Viditelnost pod sto metrů, malé karty v mlze.“                                                   | „Mlha se zvedla. Byly to dvojky.“                   |
+|   9 | Parkovné (`parking_fee`)                 | Každé zahození stojí 1 Kč × číslo patra.                                                                                 |        1 |  2,6× | „Modrá zóna. Čím výš, tím dráž – jako v každém centru.“                                           | „Za stěračem tentokrát nic.“                        |
+|  10 | Garsonka 1+kk (`studio_flat`)            | −2 karty v ruce.                                                                                                         |        2 | 1,15× | „Vítej v bytě, kde se kuchyni říká roh.“                                                          | „Stěhuješ se? Nech tu klíče.“                       |
 |  11 | Sucho v obci (`village_drought`)         | 0 zahození, ale +1 ruka.                                                                                                 |        2 |    2× | „Zákaz zalévání i zahazování.“                                                                    | „Prší! Tedy aspoň kape.“                            |
-|  12 | Kapsář v tramvaji (`pickpocket`)         | Po každé zahrané ruce se z ruky zahodí karta s nejvyšší hodnotou.                                                        |        2 | 2,25× | „Pozor, ve voze se pohybují kapsáři.“                                                             | „Chytili ho na konečné.“                            |
-|  13 | Exekutor (`bailiff`)                     | Na začátku kola debuffne tvého žolíka s nejvyšší prodejní cenou.                                                         |        2 | 1,75× | „Tohle je zabavené. A tohle taky.“                                                                | „Exekuce zastavena pro nemajetnost exekutora.“      |
+|  12 | Kapsář v tramvaji (`pickpocket`)         | Po každé zahrané ruce se z ruky zahodí karta s nejvyšší hodnotou.                                                        |        2 |  2,5× | „Pozor, ve voze se pohybují kapsáři.“                                                             | „Chytili ho na konečné.“                            |
+|  13 | Exekutor (`bailiff`)                     | Na začátku kola debuffne tvého žolíka s nejvyšší prodejní cenou.                                                         |        2 |  1,7× | „Tohle je zabavené. A tohle taky.“                                                                | „Exekuce zastavena pro nemajetnost exekutora.“      |
 |  14 | Nová vyhláška (`new_decree`)             | Úrovně všech kombinací se v tomto kole dělí 2 (zaokrouhleno nahoru, nejméně 1).                                          |        3 |  1,5× | „Na základě nové vyhlášky se úrovně krátí na polovinu. Druhá polovina je ve schvalovacím řízení.“ | „Vyhláška zrušena soudem.“                          |
-|  15 | Šanon na šanonu (`binder_tower`)         | Vyšší cíl.                                                                                                               |        2 |    3× | „Podklady k útratě: tři šanony a jeden pořadač.“                                                  | „Spis uzavřen a uložen do sklepa.“                  |
+|  15 | Šanon na šanonu (`binder_tower`)         | Vyšší cíl.                                                                                                               |        2 |  2,4× | „Podklady k útratě: tři šanony a jeden pořadač.“                                                  | „Spis uzavřen a uložen do sklepa.“                  |
 |  16 | Krajské derby (`regional_derby`)         | Ruka s červenými (♥ ♦) i černými (♠ ♣) kartami má poloviční základní čipy i mult (divoké a kamenné karty stranu nevolí). |        2 | 1,75× | „Červení proti černým, celý kraj se dívá. Vyber si stranu!“                                       | „Remíza. Slaví obě strany.“                         |
 |  17 | Zabijačka (`pig_slaughter`)              | Po každé zahrané ruce se zničí 1 náhodná skórující karta.                                                                |        3 |  2,5× | „Dneska se dělá ovar. Z tvých karet.“                                                             | „Tlačenka hotová, karty přežily.“                   |
-|  18 | Bílá hora (`white_mountain`)             | Vylepšení hracích karet v tomto kole nefungují.                                                                          |        3 |    2× | „Bitva je prohraná, vylepšení jdou do exilu.“                                                     | „Tentokrát to dopadlo líp.“                         |
-|  19 | Normalizace (`normalization`)            | Každá skórující karta dává právě 5 čipů (vylepšení a edice fungují).                                                     |        2 |    2× | „Všichni jsme si rovni. Po pěti čipech.“                                                          | „Uvolnění! Karty smí být zase různé.“               |
-|  20 | Jednooký hejtman (`one_eyed_hetman`)     | Žolíci v pravé polovině řady nefungují (při lichém počtu prostřední funguje).                                            |        3 |  1,4× | „Na jedno oko nevidí, na druhé nepočítá s tvými žolíky.“                                          | „Hejtman se stáhl na Tábor.“                        |
+|  18 | Bílá hora (`white_mountain`)             | Vylepšení hracích karet v tomto kole nefungují.                                                                          |        3 | 2,45× | „Bitva je prohraná, vylepšení jdou do exilu.“                                                     | „Tentokrát to dopadlo líp.“                         |
+|  19 | Normalizace (`normalization`)            | Každá skórující karta dává právě 5 čipů (vylepšení a edice fungují).                                                     |        2 |  2,2× | „Všichni jsme si rovni. Po pěti čipech.“                                                          | „Uvolnění! Karty smí být zase různé.“               |
+|  20 | Jednooký hejtman (`one_eyed_hetman`)     | Žolíci v pravé polovině řady nefungují (při lichém počtu prostřední funguje).                                            |        3 |  1,6× | „Na jedno oko nevidí, na druhé nepočítá s tvými žolíky.“                                          | „Hejtman se stáhl na Tábor.“                        |
 |  21 | Tchyně na návštěvě (`mother_in_law`)     | Každé zahození ti navíc zahodí 1 náhodnou kartu z ruky (dobírá se normálně).                                             |        1 | 2,25× | „Já jen na kafe. A trochu ti to tu uklidím.“                                                      | „Už jede domů. Bábovku nechala.“                    |
-|  22 | Influencerka Nikča (`influencer`)        | Tvoje nejčastěji hraná kombinace v runu má v tomto kole poloviční základní čipy i mult.                                  |        2 |    2× | „Tohle pořád hraješ? Cringe.“                                                                     | „Odsledováno. Potichu.“                             |
+|  22 | Influencerka Nikča (`influencer`)        | Tvoje nejčastěji hraná kombinace v runu má v tomto kole poloviční základní čipy i mult.                                  |        2 | 1,75× | „Tohle pořád hraješ? Cringe.“                                                                     | „Odsledováno. Potichu.“                             |
 |  23 | Kocovina (`hangover`)                    | −1 ruka.                                                                                                                 |        1 |    2× | „Proč tak řveš? A proč je tu tolik karet?“                                                        | „Okurková voda zabrala.“                            |
-|  24 | Výpadek proudu (`blackout`)              | Žolíci nefungují v první ruce kola.                                                                                      |        1 |    2× | „Vypadly pojistky, žolíci sedí potmě.“                                                            | „Elektrikář dorazil. Za čtyři hodiny, ale dorazil.“ |
-|  25 | Sudé dny (`even_days`)                   | Liché karty (A, 3, 5, 7, 9) jsou debuffnuté; figury nejsou ani liché, ani sudé.                                          |        1 |    2× | „Smogová regulace: dnes hrají jen sudé.“                                                          | „Regulace odvolána, liché zpátky v provozu.“        |
+|  24 | Výpadek proudu (`blackout`)              | Žolíci nefungují v první ruce kola.                                                                                      |        1 |  2,1× | „Vypadly pojistky, žolíci sedí potmě.“                                                            | „Elektrikář dorazil. Za čtyři hodiny, ale dorazil.“ |
+|  25 | Sudé dny (`even_days`)                   | Liché karty (A, 3, 5, 7, 9) jsou debuffnuté; figury nejsou ani liché, ani sudé.                                          |        1 |  2,1× | „Smogová regulace: dnes hrají jen sudé.“                                                          | „Regulace odvolána, liché zpátky v provozu.“        |
 
 Poloviční hodnoty se zaokrouhlují nahoru. Šéfů s `minAnte 1` je 9 (od patra 2 přibude dalších 12, od patra 3
 poslední 4), aby i první patro mělo pestrost a těžší pravidla přišla až se žolíky.
@@ -1221,32 +1263,49 @@ poslední 4), aby i první patro mělo pestrost a těžší pravidla přišla a�
 šéfy“): žádný šéf nemá být výrazně smrtelnější než ostatní, měřeno letalitou při setkání **normovanou podle patra**
 (šéfové s `minAnte 1` potkávají hráče v prvních patrech, kde se skoro neumírá). Tvrdá pravidla (polovina ruky
 zakrytá, jedna ruka, bez úrovní, bez nejcennějšího nebo poloviny žolíků, bez Postupek a Barev) mají nižší cíl, mírná
-pravidla (peníze, karta navíc pryč) vyšší. Šanon na šanonu (3×) má číslo v textu pravidla —
-změna cíle = změna textu v `src/i18n/cs/bosses/`.
+pravidla (peníze, karta navíc pryč) vyšší. Šanon na šanonu (2,4×) má číslo v textu pravidla (`{target}` z `params`) —
+text se přepočítá sám (`src/i18n/cs/bosses/b.ts`).
 
 **1.0.1 (2026-10-03):** Kontrola z finančáku platí za každou zahranou kartu (dřív 1 Kč za ruku, cíl 2,25× → 2×)
 a Parkovné roste s patrem (1 Kč × patro za zahození, 2,25× → 2×) — v pozdních patrech byli bezzubí. Garsonka
 bere jen 2 karty z ruky a už neomezuje výběr na 4 karty (1,35× → 1,6×) a Nová vyhláška úrovně půlí místo
-vynulování (1,1× → 1,5×) — oba trestali hlavně postavený build, ne hru v kole. → kalibrace: letalitu nových
-pravidel ověřit velkou sadou simulací (kap. 12).
+vynulování (1,1× → 1,5×) — oba trestali hlavně postavený build, ne hru v kole.
+
+**Kalibrace 1.0.1 (2026-10-03, `docs/DECISIONS.md` „Kalibrace 1.0.1“):** letalita při setkání normovaná podle patra,
+Desítka, boti `max`, `flush`, `pairs`, 1 800 runů na sadu nastavení. Před kalibrací (nová pravidla, staré cíle) byla
+normovaná letalita 0,17–2,37: nejvýš Výluka na trati 9,3 % (2,37×), Garsonka 7,7 % (2,1×; bot `max` 11,1 %), Šanon na
+šanonu 1,56×, Soused s vrtačkou 1,63×; nejníž Kontrola z finančáku 0,5 % (0,17×), Bílá hora 0,41×, Normalizace 0,43×,
+Kapsář 0,48×, Parkovné 0,58×. Upraveno 18 cílů (sloupec „Cíl“: Kontrola 2,5×, Výluka 0,9×, Soused 1,8×, Polední pauza
+0,6×, Babka 2,5×, Černá kočka 2,25×, Mlha 2,1×, Parkovné 2,6×, Garsonka 1,15×, Kapsář 2,5×, Exekutor 1,7×, Šanon 2,4×,
+Bílá hora 2,45×, Normalizace 2,2×, Hejtman 1,6×, Influencerka 1,75×, Výpadek proudu a Sudé dny 2,1×). Po kalibraci
+(sady A–C, 1 800 runů): letalita 3,3–9,6 % při setkání, normovaná **0,64–1,26×**; Garsonka 6,9 % (boti 5,8–7,5 %), Nová
+vyhláška 9,6 % (8,7–10,5 %), Kontrola z finančáku 3,9 % (3,4–4,3 %; s 2,3× 2,8 %), Parkovné 4,0 % (3,0–5,3 %; s 2,5×
+3,6 %). Pod 4 % zůstávají jen šéfové s `minAnte 1` (Výpadek proudu 3,3 %, Sudé dny 3,7 %, Kontrola 3,9 %), kteří
+potkávají hráče hlavně v patrech 1–3, kde se skoro neumírá — normovanou letalitu mají 0,72–0,86×.
 
 ### 8.3 Finální šéfové (5, jen patro 8 a každé 8. patro)
 
 |   # | Název (`id`)                      | Pravidlo                                                                                                  |   Cíl | Příchod                                                           | Porážka                                           |
 | --: | --------------------------------- | --------------------------------------------------------------------------------------------------------- | ----: | ----------------------------------------------------------------- | ------------------------------------------------- |
-|  F1 | Pan starosta (`mayor`)            | Ruka se započítá, jen když má vyšší skóre než předchozí ruka v tomto kole (první vždy).                   |  2,5× | „Slibuji, že každá další ruka bude lepší než ta předchozí!“       | „Volby prohrál. Funkci si nechal v jiném výboru.“ |
-|  F2 | Krajský úřad (`regional_office`)  | Po každé zahrané ruce se náhodný fungující žolík vypne do konce kola.                                     | 2,25× | „Vaše žolíky prověříme. Jednoho po druhém.“                       | „Kontrola skončila bez nálezu. A bez oběda.“      |
-|  F3 | Fronta na banány (`banana_queue`) | Banány docházejí: každá další ruka kola se započítá o 20 % méně než předchozí (první celá, nejméně 20 %). |  2,5× | „Stojí se od šesti ráno. Banány prý přivezli, ale jen pár beden.“ | „Fronta se pohnula. Banány jsou tvoje.“           |
+|  F1 | Pan starosta (`mayor`)            | Ruka se započítá, jen když má vyšší skóre než předchozí ruka v tomto kole (první vždy).                   |  2,3× | „Slibuji, že každá další ruka bude lepší než ta předchozí!“       | „Volby prohrál. Funkci si nechal v jiném výboru.“ |
+|  F2 | Krajský úřad (`regional_office`)  | Po každé zahrané ruce se náhodný fungující žolík vypne do konce kola.                                     |  1,9× | „Vaše žolíky prověříme. Jednoho po druhém.“                       | „Kontrola skončila bez nálezu. A bez oběda.“      |
+|  F3 | Fronta na banány (`banana_queue`) | Banány docházejí: každá další ruka kola se započítá o 20 % méně než předchozí (první celá, nejméně 20 %). | 2,35× | „Stojí se od šesti ráno. Banány prý přivezli, ale jen pár beden.“ | „Fronta se pohnula. Banány jsou tvoje.“           |
 |  F4 | Velká voda (`great_flood`)        | Každá zahraná ruka zmenší velikost ruky o 1 (do konce kola).                                              |  2,5× | „Voda stoupá! Karty do vyšších pater!“                            | „Voda opadla. Bláto zůstalo.“                     |
-|  F5 | Bílá paní (`white_lady`)          | Po každé zahrané ruce i zahození se všechny karty v ruce otočí lícem dolů (pořadí zůstává).               |  1,6× | „O půlnoci se zjevuje na zámku. A otáčí karty.“                   | „Zmizela. Klíče od sklepa taky.“                  |
+|  F5 | Bílá paní (`white_lady`)          | Po každé zahrané ruce i zahození se všechny karty v ruce otočí lícem dolů (pořadí zůstává).               |  1,3× | „O půlnoci se zjevuje na zámku. A otáčí karty.“                   | „Zmizela. Klíče od sklepa taky.“                  |
 
-Cíle finálových šéfů jsou laděné simulací na letalitu 20–40 % (kap. 12.1): Pan starosta a Velká voda 2,5×,
-Krajský úřad 2,25×. **1.0.1 (2026-10-03):** Fronta na banány má místo „vyššího cíle“ vlastní pravidlo — ruce
-kola se započítají 100 / 80 / 60 / 40 / 20 % (`bananaShare`, `adjustHandScore`), cíl 2,5× (dřív 3,5×, do fáze 10
-4,5×). Bílá paní karty jen otočí, už je nemíchá (hráč si smí pamatovat pořadí), cíl 1,6× (dřív 1,25×, do fáze 10
-1,5×). Fáze 10: s cíli patra 8 fáze 10 a silnějšími boty měly Fronta na banány a Bílá paní letalitu 55 % a 54 %
-(Desítka, 1 800 runů), proto tehdy nižší cíle (`docs/DECISIONS.md` „Fáze 10: balanc…“). Bílá paní měla
-ve zkušební sadě 1.0.1 (100 runů, bot `max`) 11,9 % proher bota → kalibrace s větší sadou.
+Cíle finálových šéfů jsou laděné simulací na letalitu 20–40 % (kap. 12.1). **1.0.1 (2026-10-03):** Fronta na banány má místo „vyššího cíle“ vlastní pravidlo — ruce
+kola se započítají 100 / 80 / 60 / 40 / 20 % (`bananaShare`, `adjustHandScore`; dřív jen cíl 3,5×, do fáze 10
+4,5×). Bílá paní karty jen otočí, už je nemíchá (hráč si smí pamatovat pořadí; dřív 1,25×, do fáze 10 1,5×). Fáze 10:
+s cíli patra 8 fáze 10 a silnějšími boty měly Fronta na banány a Bílá paní letalitu 55 % a 54 % (Desítka, 1 800 runů),
+proto tehdy nižší cíle (`docs/DECISIONS.md` „Fáze 10: balanc…“).
+
+**Kalibrace 1.0.1:** s novými pravidly a starými cíli (Pan starosta a Velká voda 2,5×, Krajský úřad 2,25×, Fronta
+2,5×, Bílá paní 1,6×) byla patro 8 zeď — finálový šéf zabil 34–45 % runů, které ho potkaly (Krajský úřad 44,5 %,
+Bílá paní 42,8 %, Fronta 41,2 %). Teď Pan starosta 2,3×, Krajský úřad 1,9×, Fronta 2,35×, Velká voda 2,5×, Bílá paní
+1,3× (souhrn sad A–C, 1 800 runů): Bílá paní 36,5 % (bot `flush` 44 % — karty lícem dolů vadí hlavně honbě za
+barvou), Fronta 34,1 %, Velká voda 33,1 % (bot `flush` 48 %, menší ruka bere Barvy), Pan starosta 27,2 %, Krajský úřad
+22,9 % (s 1,85× 18 % v sadách A–C a 22–28 % v jiných sadách — kolísání ±4 p. b. při ~140 setkáních). Bot `flush`
+nad 40 % u Bílé paní a Velké vody je ~45 setkání na bota (směrodatná chyba ~7 p. b.).
 
 ## 9. Startovní balíčky (12)
 
@@ -1254,12 +1313,12 @@ ve zkušební sadě 1.0.1 (100 runů, bot `max`) 11,9 % proher bota → kalibrac
 | --: | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------- | --------------------------------------------------- |
 |   1 | Hospodský (`pub`)           | Standardních 52 karet, pravidla beze změny.                                                                                          | od začátku                            | „Lepkavé karty a tácek pod sklenicí.“               |
 |   2 | Štamgastův (`regulars`)     | +1 slot žolíka (6); start s 0 Kč.                                                                                                    | od začátku                            | „Má tu vlastní věšák. Na žolíky.“                   |
-|   3 | Úřednický (`clerk`)         | Start s kupóny Kniha stížností a Zpravodaj obce.                                                                                     | kup celkem 5 kupónů                   | „Všechno vyřízeno předem. Na razítko.“              |
+|   3 | Úřednický (`clerk`)         | Start s kupóny Zpravodaj obce a Zálohovaná lahev.                                                                                    | kup celkem 5 kupónů                   | „Všechno vyřízeno předem. Na razítko.“              |
 |   4 | Turistický (`tourist`)      | Postupka i Barva stačí ze 4 karet; cíle všech útrat ×1,5.                                                                            | zahraj celkem 25 Postupek             | „Po červené, pak po modré, pak se ztratit.“         |
 |   5 | Mariášový (`marias`)        | 32 karet: 7–A ve 4 barvách (bez 2–6). Postupka A-2-3-4-5 tu není možná; cíle všech útrat ×1,2.                                       | zahraj Čtveřici                       | „Kdo nehraje, nevyhraje. Kdo hraje, flekuje.“       |
 |   6 | Obrázkový (`court`)         | 32 karet: J, Q, K, A ve 4 barvách, každá karta 2×; −1 karta v ruce (7); cíle ×2,1.                                                   | vyhraj run s Mariášovým               | „Samí páni, žádní pěšáci.“                          |
-|   7 | Notářský (`notary`)         | Každá karta má při stavbě balíčku 6% šanci na náhodnou pečeť (4 druhy rovnoměrně); −1 slot spotřebky.                                | měj v jednom runu 5 karet s pečetí    | „Ověřeno, orazítkováno, zaplombováno.“              |
-|   8 | Zbohatlík (`nouveau_riche`) | Odměny za útraty ×2, úrok ×1,5, nevyužitá ruka +2 Kč; −2 ruce (2).                                                                   | měj najednou 50 Kč                    | „Peníze jsou, čas není.“                            |
+|   7 | Notářský (`notary`)         | Každá karta má při stavbě balíčku 2,5% šanci na náhodnou pečeť (4 druhy rovnoměrně); −1 slot spotřebky.                              | měj v jednom runu 5 karet s pečetí    | „Ověřeno, orazítkováno, zaplombováno.“              |
+|   8 | Zbohatlík (`nouveau_riche`) | Odměny za útraty ×2; −2 ruce (2).                                                                                                    | měj najednou 50 Kč                    | „Peníze jsou, čas není.“                            |
 |   9 | Dlužník (`debtor`)          | Start −10 Kč; dluh smí jít až do −20 Kč; úrok ×2 (jen z kladného zůstatku).                                                          | dokonči kolo se záporným zůstatkem    | „Půjčka? Já? Jen na chvilku.“                       |
 |  10 | Babiččin (`grandmas`)       | +1 slot spotřebky (3); start s 1 náhodnou babskou radou.                                                                             | použij celkem 30 babských rad         | „Babička ví všechno. A ráda to řekne.“              |
 |  11 | Vetešnický (`junk_shop`)    | Start s 1 náhodným vzácným žolíkem; Večerka má o 1 kartový slot méně (1).                                                            | prodej celkem 25 žolíků               | „Všechno z druhé ruky, něco i ze třetí.“            |
@@ -1273,10 +1332,18 @@ Upřesnění:
   Šéf Inventura je pro tento balíček noční můra — záměrně (¾ balíčku debuffnuté).
 - **Mariášový** a **Obrázkový**: malý balíček se může v kole vyčerpat (8 + 4×5 + 3×5 = 43 > 32) — to je jejich
   přirozená cena. Karetní obálky a hrací karty ve Večerce respektují složení balíčku.
-- **Zbohatlík:** `blindRewardMult ×2`, `interestMult ×1,5` (do fáze 10 ×2), `moneyPerUnusedHand +1`, `hands −2`.
+- **Zbohatlík:** `blindRewardMult ×2`, `hands −2` (do kalibrace 1.0.1 navíc `interestMult ×1,5` — do fáze 10 ×2 — a `moneyPerUnusedHand +1`).
 - **Dlužník:** `startingMoney −10`, `debtLimit +20`, `interestMult ×2`. Odemyká se stejnou podmínkou jako
   achievement „Na sekeru“ (dokončit kolo v mínusu jde se žolíkem Sekera nebo ve výzvě Byrokracie) — dluh si hráč
   musí nejdřív „vyzkoušet“.
+- **Síla balíčků po kalibraci 1.0.1** (2026-10-03, Desítka, boti `max` a `flush`, sady A + B po 100 runech;
+  `docs/DECISIONS.md` „Kalibrace 1.0.1“) — průměr obou botů / nejlepší bot: Hospodský 25 / 25,5 %, Štamgastův 23,2 /
+  23,5 %, Úřednický 28,5 / 31,5 %, Turistický 24,5 / 26,5 %, Mariášový 29,5 / 31 %, Obrázkový 25,8 / 29 %, Notářský
+  30 / 30 %, Zbohatlík 20,2 / 22,5 %, Dlužník 26 / 27,5 %, Babiččin 28,8 / 32,5 %, Vetešnický 19,2 / 20 %, Kalendářový
+  26 / 27 %. Rozpětí proti Hospodskému: průměr botů −5,8 až +5 p. b., nejlepší bot −5,5 až +7 p. b. (pásmo kap. 12.1).
+  Kalibrace zpřísnila Úřednický (start s Knihou stížností vyhrával 54 % → Zpravodaj obce a Zálohovaná lahev),
+  Zbohatlíka (bez úroku ×1,5 a +1 Kč za nevyužitou ruku; dřív 35,8 %) a Notářský (pečeť 6 → 2,5 %; pečetě mají
+  pro boty cenu ~+12 p. b., hlavně modrá, −1 slot spotřebky ~−3 p. b.).
 - **Síla balíčků** (Desítka, boti `max` a `flush`, sady `SIM-A` + `SIM-B` po 200 runech, Hospodský po 300;
   2026-10-02 po kalibraci fáze 10, `docs/DECISIONS.md` „Fáze 10: balanc…“) — nejlepší bot / průměr obou botů:
   Hospodský 28,8 / 28,6 %, Štamgastův 32,3 / 31,8 %, Úřednický 31,5 / 31,4 %, Turistický 30,5 / 30,4 %, Mariášový
@@ -1297,11 +1364,11 @@ odemkne úroveň N + 1 pro tento balíček.** Desítka je odemčená vždy.
 |   1 | Desítka (`desitka`)       | Základní pravidla, křivka cílů 1.                                                                                                                                                         | `targetCurve: 1`                                     |              25–35 % |
 |   2 | Jedenáctka (`jedenactka`) | **Dražší pivo:** od 2. patra stojí každé přehození ve Večerce o 1 Kč víc.                                                                                                                 | `rerollBaseCost +1` od patra 2 (`passive` čte patro) |              20–30 % |
 |   3 | Dvanáctka (`dvanactka`)   | Křivka cílů 2.                                                                                                                                                                            | `targetCurve: 2`                                     |              14–22 % |
-|   4 | Speciál (`special`)       | **Zvětrávání:** 40 % žolíků v obchodě a obálkách je zvětrávajících (po 6 kolech přestanou fungovat).                                                                                      | `stickerChance.perishable: 0,4`                      |              10–17 % |
+|   4 | Speciál (`special`)       | **Zvětrávání:** 35 % žolíků v obchodě a obálkách je zvětrávajících (po 6 kolech přestanou fungovat).                                                                                      | `stickerChance.perishable: 0,35`                     |              10–17 % |
 |   5 | Ležák (`lezak`)           | **Bez dýška:** od 3. patra nevyužité ruce nedávají peníze.                                                                                                                                | `moneyPerUnusedHand −1` od patra 3                   |               7–12 % |
 |   6 | Bock (`bock`)             | Křivka cílů 3.                                                                                                                                                                            | `targetCurve: 3`                                     |                4–8 % |
-|   7 | Doppelbock (`doppelbock`) | **Bazar a splátky:** 25 % žolíků v nabídce je přibitých a 25 % na splátky (akontace 2 Kč, pak 5 splátek po 2 Kč).                                                                         | `stickerChance.eternal: 0,25`, `rental: 0,25`        |                3–6 % |
-|   8 | Imperial (`imperial`)     | **Šéf i ve Velké:** Velká útrata má navíc pravidlo náhodného běžného šéfa (jiného než šéf patra, `minAnte ≤ patro`; její cíl 1,5× a odměna 4 Kč zůstávají) a cíle šéfů jsou o 10 % vyšší. | `bigBlindBoss: true`, `bossTargetMult ×1,1`          |        1–3 % (< 3 %) |
+|   7 | Doppelbock (`doppelbock`) | **Bazar a splátky:** 32 % žolíků v nabídce je přibitých a 32 % na splátky (akontace 2 Kč, pak 5 splátek po 2 Kč).                                                                         | `stickerChance.eternal: 0,32`, `rental: 0,32`        |                3–6 % |
+|   8 | Imperial (`imperial`)     | **Šéf i ve Velké:** Velká útrata má navíc pravidlo náhodného běžného šéfa (jiného než šéf patra, `minAnte ≤ patro`; její cíl 1,5× a odměna 4 Kč zůstávají) a cíle šéfů jsou o 15 % vyšší. | `bigBlindBoss: true`, `bossTargetMult ×1,15`         |        1–3 % (< 3 %) |
 
 - **Jedenáctka a Ležák platí až od 2. / 3. patra** (kalibrace po fázi 7, `docs/DECISIONS.md` „Balanc po fázi 7“):
   ekonomické ztížení od prvního kola srazilo výhry Jedenáctky z ~33 na ~20 % a Ležáku ze ~13 na ~3 % a přes
@@ -1310,6 +1377,16 @@ odemkne úroveň N + 1 pro tento balíček.** Desítka je odemčená vždy.
   o 1 Kč): silnější boti nakupují víc položek za run a plošný příplatek je stál ~20 p. b. (Desítka ~30 % →
   Jedenáctka ~10 %, i s příplatkem až od 6. patra ~21 %); příplatek na přehození stojí ~3–6 p. b. Žolík na splátky
   stojí 2 Kč akontace i na Jedenáctce a výš.
+- **Kalibrace 1.0.1** (2026-10-03, Hospodský, sady A–C; Desítka 200 runů na sadu a bota `max`, `flush`, `pairs`,
+  ostatní 150 runů na sadu a bota `max`, `flush`; `docs/DECISIONS.md` „Kalibrace 1.0.1 (obtížnost po odlišení od
+  Balatra)“) — nejlepší bot souhrnu sad (sady A / B / C): Desítka **27,8 %** (29,5 / 27 / 29,5), Jedenáctka 26 %
+  (23,3 / 28 / 26,7), Dvanáctka 20 % (20,7 / 18,7 / 20,7), Speciál 15,1 % (18 / 16,7 / 14,7), Ležák 7,6 % (6,7 / 9,3 /
+  6,7), Bock 5,6 % (6,7 / 5,3 / 6), Doppelbock 4 % (2,7 / 3,3 / 6), Imperial **2 %** (1,3 / 2,7 / 2). Všech osm
+  v pásmu a monotónních; před kalibrací (1.0.1 po odlišení od předlohy) byly Bock (9,3 %) a Doppelbock (8 %) nad
+  Ležákem (7,3 %) a Imperial nad pásmem (4 %). Změny: křivky (2.3.1), Speciál 40 → 35 % (s tvrdšími patry 4–7 na
+  spodní hraně pásma), Doppelbock 25 → 32 % přibitých i na splátky (splátky jsou mírnější než dřívější nájem;
+  s 35 % 2,9 %), Imperial cíle šéfů ×1,1 → ×1,15. Patro 8 ztratí na Desítce 37 % runů, které ho dosáhnou, na
+  Speciálu a výš 48–60 % (dřív 49 % a 63–77 %).
 - **Kalibrace fáze 10** (Hospodský, `npm run simulate`, sady `SIM-A`–`SIM-C`; Desítka a Imperial 300 runů na bota
   `max`, `flush`, `pairs`, ostatní 200 runů na bota `max` a `flush`; `docs/DECISIONS.md` „Fáze 10: balanc…“) —
   nejlepší bot souhrnu sad (sady A / B / C): Desítka 31,2 % (27,7 / 31,7 / 36), Jedenáctka 28 % (23 / 33 / 28,5),
@@ -1319,10 +1396,10 @@ odemkne úroveň N + 1 pro tento balíček.** Desítka je odemčená vždy.
   změnily cíle (2.3.1), Jedenáctka (jen přehození), Speciál (40 %), Imperial (cíle šéfů ×1,2 → ×1,1); křivky 2 a 3
   drží odstup od křivky 1 (patro 8: +16 % a +21 %), Doppelbock 25 % / 25 % zůstal.
 - Nálepky se losují v pořadí přibitý → na splátky → zvětrávající, takže skutečné podíly na Doppelbocku a výš jsou
-  přibližně 25 % přibitých, 19 % na splátky, 22 % zvětrávajících a 34 % bez nálepky.
+  přibližně 32 % přibitých, 22 % na splátky, 16 % zvětrávajících a 30 % bez nálepky (1.0.1: 32 / 32 / 35 %).
 - **Speciál 40 % (dřív 25 %):** boti fáze 10 oceňují zvětrávajícího žolíka jen za podíl zbytku runu, kdy bude
   fungovat (6 kol), takže 25 % je skoro nebrzdilo (Dvanáctka → Speciál −2 p. b.); 40 % jim bere zhruba každou
-  druhou použitelnou nabídku a stojí ~5–8 p. b.
+  druhou použitelnou nabídku a stojí ~5–8 p. b. Kalibrace 1.0.1: 35 % (viz výše).
 - Imperial: pro Velkou útratu se nelosují šéfové, jejichž pravidlo je jen vyšší cíl (Šanon na šanonu), ani šéf
   téhož patra.
 - Výzvy se hrají na Desítce (pokud výzva neříká jinak), denní run má úroveň danou seedem (kap. 11.7).
@@ -1672,7 +1749,14 @@ enginu:
 - útratu přeskočí jen za štítek, jehož hodnota ze sondy (peníze, úrovně, žolík, obálka zdarma; nižší cíl šéfa;
   jinak paušál za štítek „na později“) převýší ztrátu (odměna, nevyužité ruce, úrok, Večerka), a se silným buildem
   (průměrná nejlepší ruka × ruce ≥ 2,5× cíl následující útraty). Plošné přeskakování se silným buildem stálo
-  ~6 p. b. výher.
+  ~6 p. b. výher;
+- **1.0.1:** štítek, který po přeskočení zůstane držený, sonda dohraje na kopii hry přes příští kola (každé vyhraje
+  „načisto“) a sečte, co vyplatí nebo strhne v rozpisu odměn (`heldTagMoney` — splátka Půjčky od tchána −15 Kč,
+  Brigáda na chmelu +2 × 6 Kč); s plnými sloty bot zkusí i „prodat nejslabšího žolíka, pak přeskočit“ (Pouťová
+  tombola dá legendárku jen do volného slotu) a vyplatí-li se to, žolíka prodá;
+- **přelosování šéfa** (kupóny Zpravodaj obce, Obecní rozhlas): na výběru útraty Šéf bot odhadne „síla × ruce / cíl“
+  na kopii hry s pravidlem šéfa a bez něj; přelosuje, když pravidlo jeho buildu vezme víc než průměrný šéf
+  (pod 0,75× odhadu bez pravidla) a build nemá velkou rezervu (pod 3×).
 
 **Spotřebky, obálky a kupóny** (od fáze 5, `src/engine/sim/value.ts`): boti je nepoznávají podle id. Akci zkusí na
 kopii hry (sonda s přeseedovaným RNG — skutečné hody nezná) a ocení změnu stavu v Kč: peníze, úrovně kombinací
@@ -1682,7 +1766,12 @@ a hned používají; babské rady a razítka s cílem míří na karty s největ
 přeřadí ruku); spotřebku, která dá jen pár korun, nechají na později; kupóny, obálky a spotřebky kupují, když
 hodnota ≥ cena × poměr, a s penězi hluboko nad rezervou na úrok stačí menší poměr (peníze nad stropem úroku nic
 nevydělají). Se žolíkem ×mult za držené spotřebky (Babiččina truhla) spotřebky drží, se žolíkem krmeným spotřebkami
-(Kořenářka) víc kupují babské rady.
+(Kořenářka) víc kupují babské rady. **1.0.1:** kupóny s vlastními mechanikami se oceňují podle modifikátorů — každý
+N-tý nákup zdarma (4,5 Kč útraty za kolo × 1/N), přelosování šéfa za patro (0,8 Kč za kolo), prodej za plnou cenu,
+trvale nižší cíl šéfa (−22 Kč × ln poměru) — a kupón, jehož účinek sonda nevidí (jen hooky: Kniha stížností, Jarní
+úklid), dostane apriorních 0,7 Kč za zbývající kolo (tier 2 × 0,6). Dřív je boti skoro nekupovali (1,85 kupónu za run
+proti 3,6 teď). V nekonečném režimu plánují boti 9 kol dopředu (`ENDLESS_ROUNDS_AHEAD`), ne 1 kolo jako na konci hlavní
+hry.
 
 ### 12.3 Výstup `npm run simulate`
 
