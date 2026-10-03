@@ -1756,6 +1756,39 @@
   justify-content: center;
 }
 
+/* Krátká hláška u tlačítek (nejvýš 5 karet, nejdřív vyber karty) — naskočí jen průhledností. */
+.gb-mid {
+  position: relative;
+}
+
+/* Přes řádek „Vybráno x/5“ (o výběr jde), bez posunu rozvržení. */
+.gb-alert {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  z-index: 2;
+  max-width: min(26rem, 90vw);
+  padding: 0.1rem 0.6rem;
+  text-align: center;
+  translate: -50% 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--danger);
+  border-radius: 999px;
+  animation: gb-alert-in var(--t-fast) ease-out;
+}
+
+@keyframes gb-alert-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.no-anim .gb-alert {
+  animation: none;
+}
+
 /* Velikost ruky; zmenšená (Velká voda, Garsonka) červeně, zvětšená zeleně. */
 .gb-handsize {
   font-size: 0.8rem;

@@ -393,7 +393,7 @@ class GameView implements PresentView {
     if (idx !== null) {
       const id = c.handIds()[idx];
       if (!selecting || id === undefined) return false;
-      c.toggleSelect(id);
+      this.handArea.toggle(id);
       // Výběr klávesou patří ruce: zůstal-li focus na jiném ovládacím prvku (žolík po zavření detailu, Zahodit…),
       // Enter by aktivoval ten prvek místo Zahrát (našel ui-walkthrough). Karta v ruce focus drží dál.
       const onHandCard =
@@ -413,14 +413,17 @@ class GameView implements PresentView {
         e.target.classList.contains('pcard') &&
         this.handArea.el.contains(e.target);
       if (isControl(e.target) && !onHandCard) return false;
-      if (s.phase === 'round') void this.ctx.play();
+      // Enter bez vybraných karet: krátká zpětná vazba místo ticha.
+      if (s.phase === 'round' && c.selected.length === 0) this.handArea.nudge('selectFirst');
+      else if (s.phase === 'round') void this.ctx.play();
       else if (s.phase === 'blind_select') void this.ctx.act({ type: 'selectBlind' });
       else if (s.phase === 'round_end') void this.ctx.act({ type: 'cashOut' });
       else return false;
       return true;
     }
     if (key === 'x' && s.phase === 'round') {
-      void this.ctx.discard();
+      if (c.selected.length === 0) this.handArea.nudge('selectFirst');
+      else void this.ctx.discard();
       return true;
     }
     if ((key === 's' || key === 'b') && selecting) {

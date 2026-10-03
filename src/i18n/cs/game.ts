@@ -117,6 +117,9 @@ export const game = {
     sortSuitLabel: 'Řadit ruku podle barvy (B)',
     sortHint: 'Ruka zůstane seřazená i po dobrání dalších karet. Ruční přesun karty řazení vypne.',
     selected: 'Vybráno {n}/{max}',
+    /** Krátká zpětná vazba u tlačítek (šestá karta, Enter / X bez výběru). */
+    maxSelected: 'Vybrat jde nejvýš {max|plural:kartu,karty,karet}.',
+    selectFirst: 'Nejdřív vyber karty – klávesy 1–8.',
     tableLabel: 'Stůl se zahranými kartami',
     tableHint: 'Vyber až {max|plural:kartu,karty,karet} a zahraj je. Klávesy 1–8 vybírají, Enter hraje.',
     tableHintTouch: 'Ťukni až na {max|plural:kartu,karty,karet} a zahraj je.',
