@@ -15,6 +15,7 @@ import { GameController } from '../../controller';
 import { blindName, bossTexts } from '../../describe';
 import { h } from '../../dom';
 import { runNoveltiesBlock } from '../../metaNotices';
+import { noticeQueue } from '../../profile';
 import { shareBlock } from '../daily';
 import { dailyShareText } from '../stats';
 import type { GameCtx } from './shared';
@@ -120,7 +121,10 @@ function novelties(ctx: GameCtx): HTMLElement {
   const s = ctx.controller.state;
   const profiles = ctx.app.profiles;
   const counted = profiles.runRecord(s)?.counted ?? true;
-  return runNoveltiesBlock(profiles.runNotices(s), ctx.registry, counted);
+  const notices = profiles.runNotices(s);
+  // Co je v seznamu, už se neohlásí toastem (čekající vypadnou z fronty, viditelná se zavřou).
+  noticeQueue(ctx.registry).drop(notices);
+  return runNoveltiesBlock(notices, ctx.registry, counted);
 }
 
 /** Denní run: výsledek ke sdílení („Karban DEN-20261001 · patro 7 · nejlepší ruka 1 234 560“). */

@@ -329,11 +329,16 @@ export class ProfileController implements RunObserver {
     this.pending.push(...notices);
   }
 
-  /** RunObserver: animace akce doběhly — teď je čas na oznámení. */
-  onSettled(): void {
+  /**
+   * RunObserver: animace akce doběhly — teď je čas na oznámení. Na pitvě a výherní obrazovce se novinky
+   * neohlašují toasty: obrazovka je ukazuje v seznamu „Novinky z tohoto runu“ (`runNotices`), dvakrát by překážely.
+   */
+  onSettled(controller?: GameController): void {
     if (this.pending.length === 0) return;
     const notices = this.pending;
     this.pending = [];
+    const phase = controller?.state.phase;
+    if (phase === 'victory' || phase === 'game_over') return;
     this.notifyFn(notices);
   }
 

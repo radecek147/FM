@@ -1,25 +1,29 @@
 /**
  * Oznámení meta vrstvy (DESIGN 11.3): toasty „Odemčeno / Achievement“ s ikonou, názvem a popisem a jejich fronta —
  * nejvýš `META_TOASTS_VISIBLE` naráz, další čekají, až předchozí odejde (oznámení nikdy nepřekryje ovládání:
- * toasty jsou mimo ruku a tlačítka a kliknutí jimi propadne, src/ui/components/toast.ts); přebytek nad
- * `MAX_NOTICE_QUEUE` shrne jedno „…a další novinky“. Navíc souhrn novinek runu pro pitvu a výhru.
+ * toasty jsou v rohu mimo hrací plochu, kliknutí jimi propadne a jako oznámení „na pozadí“ čekají, dokud je
+ * otevřený dialog nebo běží animace, src/ui/components/toast.ts); přebytek nad `MAX_NOTICE_QUEUE` shrne jedno
+ * „…a další novinky“. Navíc souhrn novinek runu pro pitvu a výhru.
  */
 import type { ContentRegistry } from '../engine';
 import type { MetaNotice } from '../engine/meta';
 import { hasKey, t } from '../i18n/cs';
 import { iconElement } from './art/icons';
 import { sound } from './audio/hooks';
-import { toast } from './components/toast';
+import { dismissToasts, toast } from './components/toast';
 import { h } from './dom';
 import { particles } from './fx/particles';
 import { achievementName, deckName, stakeName, unlockSubjectName } from './metaText';
 
-/** Kolik oznámení meta vrstvy visí naráz (zbytek čeká ve frontě). */
-export const META_TOASTS_VISIBLE = 2;
+/**
+ * Kolik oznámení meta vrstvy visí naráz (zbytek čeká ve frontě). Jedno: v herní obrazovce se sloupec vejde do rohu
+ * nad kapsou spotřebek a nezasáhne do panelů fází (Večerka: Přehodit / Pokračovat).
+ */
+export const META_TOASTS_VISIBLE = 1;
 /** Nejdelší fronta — co se nevejde, shrne jedno oznámení „…a další novinky“. */
 export const MAX_NOTICE_QUEUE = 8;
-/** Doba zobrazení oznámení meta vrstvy (ms) — popis achievementu se musí stihnout přečíst. */
-export const META_TOAST_DURATION = 5500;
+/** Doba zobrazení oznámení meta vrstvy (ms) — popis achievementu se stihne přečíst, ale nevisí přes hru. */
+export const META_TOAST_DURATION = 3800;
 
 /** Co oznámení ukáže: štítek nad nadpisem, název, popis a ikona (název z `ICON_NAMES`). */
 export interface NoticeView {
@@ -118,7 +122,6 @@ export function noticeIcon(view: Pick<NoticeView, 'kind' | 'icon'>, className = 
 /** Ukáže jedno oznámení jako toast; `onClose` se zavolá, až odejde. */
 export function showNoticeToast(n: MetaNotice, registry: ContentRegistry, onClose?: () => void): void {
   const view = noticeView(n, registry);
-  sound(n.kind === 'achievement' ? 'achievement' : 'unlock');
   const handle = toast(view.text || view.title, {
     kind: 'success',
     title: view.title,
@@ -127,14 +130,20 @@ export function showNoticeToast(n: MetaNotice, registry: ContentRegistry, onClos
     duration: META_TOAST_DURATION,
     testId: n.kind === 'achievement' ? 'toast-achievement' : 'toast-unlock',
     className: `toast--meta toast--meta-${n.kind}`,
+    background: true,
+    // Achievement = hrst konfet z oznámení (src/ui/fx/particles.ts; bez animací nic). Až když se oznámení opravdu
+    // ukáže (po pozdržení animací / dialogem) a v příštím snímku, až je na místě.
+    onShow: (el) => {
+      sound(n.kind === 'achievement' ? 'achievement' : 'unlock');
+      if (n.kind === 'achievement' && typeof requestAnimationFrame === 'function')
+        requestAnimationFrame(() => {
+          if (el.isConnected) particles().celebrate(el);
+        });
+    },
     onClose,
   });
-  // Achievement = hrst konfet z oznámení (src/ui/fx/particles.ts; bez animací nic). Měří se v příštím snímku,
-  // až je oznámení na místě.
-  if (n.kind === 'achievement' && typeof requestAnimationFrame === 'function')
-    requestAnimationFrame(() => {
-      if (handle.el.isConnected) particles().celebrate(handle.el);
-    });
+  // Klíč novinky — pitva / výhra pak zavře oznámení (i pozdržené), které už ukazuje v seznamu (`NoticeQueue.drop`).
+  handle.el.dataset.notice = noticeKey(n);
 }
 
 type ShowFn = (n: MetaNotice, registry: ContentRegistry, onClose: () => void) => void;
@@ -168,6 +177,18 @@ export class NoticeQueue {
     this.pump();
   }
 
+  /**
+   * Novinky, které už obrazovka ukazuje jinak (seznam „Novinky z tohoto runu“ na pitvě a výhře): vyřadí je z fronty
+   * a viditelná oznámení s nimi zavře — dvakrát totéž by jen překáželo.
+   */
+  drop(notices: readonly MetaNotice[]): void {
+    const keys = new Set(notices.map(noticeKey));
+    if (keys.size === 0) return;
+    this.queue = this.queue.filter((n) => !keys.has(noticeKey(n)));
+    if (typeof document === 'undefined') return;
+    dismissToasts((el) => keys.has(el.dataset.notice ?? ''));
+  }
+
   /** Zahodí čekající oznámení (reset profilu, import). Viditelná dojdou sama. */
   clear(): void {
     this.queue = [];
@@ -197,6 +218,7 @@ export class NoticeQueue {
           kind: 'success',
           testId: 'toast-meta-more',
           className: 'toast--meta',
+          background: true,
           onClose,
         });
       }

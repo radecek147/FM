@@ -33,6 +33,11 @@ export const game = {
     bossDisabled: 'Pravidlo šéfa dnes neplatí.',
     tags: 'Štítky',
     handBlocked: 'Neskóruje: {reason}',
+    /** Pan starosta: laťka pro příští ruku a varování z odhadu náhledu. */
+    scoreToBeat: 'Překonej: {score}',
+    belowBeat: 'Odhad {estimate} nepřekoná {score} – nezapočítá se.',
+    blindBeaten: 'Poraženo! Vyzvedni si odměnu.',
+    bossBeaten: 'Šéf poražen! Vyzvedni si odměnu.',
     target: 'Dosáhni aspoň',
     targetNone: 'Cíl se ukáže po výběru útraty.',
     reward: 'Odměna {n|money}',
@@ -182,6 +187,10 @@ export const game = {
   roundEnd: {
     title: 'Kolo vyhráno!',
     score: 'Skóre {score} z cíle {target}',
+    /** Hned po startu nekonečného režimu: výplata za finálového šéfa. */
+    endlessTitle: 'Nekonečný režim začíná',
+    endlessScore:
+      'Nejdřív odměna za finálového šéfa (skóre {score} z cíle {target}). Pak hurá do dalšího patra.',
     blind: 'Odměna za útratu',
     hands: 'Nevyužité ruce ({n})',
     discards: 'Nevyužitá zahození ({n})',

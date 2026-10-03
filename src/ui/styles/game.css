@@ -93,10 +93,29 @@
     0 3px 0 rgb(0 0 0 / 30%);
 }
 
-.gs-blind[data-blind='boss'] {
+.gs-blind[data-blind='boss']:not(.is-beaten) {
   box-shadow:
     inset 0 0 0 3px var(--danger),
     0 3px 0 rgb(0 0 0 / 30%);
+}
+
+/* Poražená útrata (konec kola) a výhra: zlatý rámeček místo červeného šéfova. */
+.gs-blind.is-beaten,
+.gs-blind[data-blind='victory'] {
+  box-shadow:
+    inset 0 0 0 3px var(--accent),
+    0 3px 0 rgb(0 0 0 / 30%);
+}
+
+.gs-blind.is-beaten .gs-blind__rule {
+  color: var(--accent);
+}
+
+.gs-blind__trophy {
+  width: 100%;
+  height: 100%;
+  padding: 0.35rem;
+  color: var(--accent);
 }
 
 .gs-blind__token {
@@ -156,8 +175,25 @@
   box-shadow: inset 0 2px 6px rgb(0 0 0 / 35%);
 }
 
+/*
+ * Velká čísla (nekonečný režim, 12+ číslic) se nesmí zlomit uprostřed skupiny číslic: jeden řádek a písmo se
+ * zmenší podle délky textu (`--chars` dosadí sidebar.ts `setNumberText`) a šířky políčka (container query `cqi`).
+ */
+.gs-target,
+.gs-score,
+.gs-stat {
+  container-type: inline-size;
+}
+
+.gs-target__value,
+.gs-score__value,
+.gs-stat__value {
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+
 .gs-target__value {
-  font-size: 1.7rem;
+  font-size: clamp(0.75rem, calc(100cqi / (var(--chars, 6) * 0.62)), var(--value-fs, 1.7rem));
   font-weight: 700;
   line-height: 1.1;
   color: var(--accent);
@@ -170,7 +206,7 @@
 }
 
 .gs-score__value {
-  font-size: 1.9rem;
+  font-size: clamp(0.75rem, calc(100cqi / (var(--chars, 6) * 0.62)), var(--value-fs, 1.9rem));
   font-weight: 700;
   line-height: 1.1;
   color: var(--paper);
@@ -243,6 +279,20 @@
   opacity: 0.6;
 }
 
+/* Laťka šéfa (Pan starosta): „Překonej: X“ pod názvem kombinace. */
+.gs-hand__beat {
+  margin-top: 0.2rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* Odhad nepřekoná laťku (Pan starosta): varování jantarové — ruka se zahrát smí, jen se nezapočítá. */
+.gs-hand.is-short .gs-hand__warn {
+  color: var(--ink);
+  background: var(--accent);
+}
+
 /* Šéf by ruku zakázal (Soused s vrtačkou): varování přímo v náhledu kombinace. */
 .gs-hand__warn {
   margin-top: 0.25rem;
@@ -303,7 +353,7 @@
 }
 
 .gs-stat__value {
-  font-size: 1.3rem;
+  font-size: var(--stat-fs, 1.3rem);
   font-weight: 700;
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
@@ -318,6 +368,8 @@
 }
 
 .gs-stat__value--money {
+  /* Velký zůstatek (milion korun) se zmenší, ať se vejde na řádek (`--chars`, viz výš). */
+  font-size: min(var(--stat-fs, 1.3rem), calc(100cqi / (var(--chars, 4) * 0.62)));
   color: #8a6408;
 }
 
@@ -1571,6 +1623,12 @@
   outline: none;
 }
 
+/* Focus z klávesnice na ruce (po výběru útraty Enterem): jemný rámeček kolem karet. */
+.gb-hand:focus-visible {
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 0 3px rgb(232 169 42 / 55%);
+}
+
 .gb-hand {
   display: flex;
   align-items: flex-end;
@@ -2207,7 +2265,7 @@
 
   .gs-target__value,
   .gs-score__value {
-    font-size: 1.45rem;
+    --value-fs: 1.45rem;
   }
 
   .gs-hand__chips,
@@ -2247,11 +2305,11 @@
   }
 
   .ui-large .gs-target__value {
-    font-size: 1.35rem;
+    --value-fs: 1.35rem;
   }
 
   .ui-large .gs-score__value {
-    font-size: 1.45rem;
+    --value-fs: 1.45rem;
   }
 
   .ui-large .gs-hand__calc {
@@ -2280,7 +2338,7 @@
   }
 
   .ui-large .gs-stat__value {
-    font-size: 1.1rem;
+    --stat-fs: 1.1rem;
   }
 
   .ui-large .gs-buttons {
@@ -2318,11 +2376,11 @@
   }
 
   .gs-target__value {
-    font-size: 1.35rem;
+    --value-fs: 1.35rem;
   }
 
   .gs-score__value {
-    font-size: 1.45rem;
+    --value-fs: 1.45rem;
   }
 
   .gs-hand__calc {
@@ -2351,7 +2409,7 @@
   }
 
   .gs-stat__value {
-    font-size: 1.1rem;
+    --stat-fs: 1.1rem;
   }
 
   .gs-buttons {
@@ -2463,7 +2521,7 @@
   }
 
   .gs-stat__value {
-    font-size: 1.05rem;
+    --stat-fs: 1.05rem;
   }
 
   .gs-buttons {
@@ -2478,7 +2536,7 @@
 
   .gs-target__value,
   .gs-score__value {
-    font-size: 1.35rem;
+    --value-fs: 1.35rem;
   }
 
   .gb-controls {
@@ -2579,7 +2637,7 @@
   }
 
   .gs-stat__value {
-    font-size: 0.95rem;
+    --stat-fs: 0.95rem;
   }
 
   .gs-buttons .btn {

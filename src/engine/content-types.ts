@@ -614,6 +614,11 @@ export interface BossHooks {
    * než předchozí). Vrací nové skóre (ořízne se na konečné číslo ≥ 0). Volá se před `afterHandScored`.
    */
   adjustHandScore?(ctx: BossCtx & ScoringInfo, score: number): number;
+  /**
+   * Čistý dotaz pro UI (`Game.scoreToBeat`, náhled ruky): skóre, které musí příští ruka překonat, aby se
+   * započítala (Pan starosta — skóre předchozí ruky), nebo null = žádná laťka. Běží v `GameCore.readOnly`.
+   */
+  scoreToBeat?(ctx: BossCtx): number | null;
   /** Po zahrání ruky (ztráta peněz, zahození náhodných karet…). */
   afterHandPlayed?(ctx: BossCtx & ScoringInfo): void;
   onDiscard?(ctx: BossCtx & { readonly discarded: readonly Card[] }): void;

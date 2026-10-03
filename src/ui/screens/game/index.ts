@@ -18,7 +18,13 @@ import type { App, Screen, ScreenFactory } from '../../app';
 import { tableEmblem } from '../../art/table';
 import { backButton } from '../../components/button';
 import { closeAllModals, isModalOpen } from '../../components/modal';
-import { TOAST_ANCHOR_GAP, setToastAnchor } from '../../components/toast';
+import {
+  TOAST_ANCHOR_GAP,
+  holdToasts,
+  refreshToastPlacement,
+  setToastAnchor,
+  type ToastSpot,
+} from '../../components/toast';
 import { hideTooltip, isTooltipVisible } from '../../components/tooltip';
 import type { GameController } from '../../controller';
 import { h } from '../../dom';
@@ -125,10 +131,9 @@ class GameView implements PresentView {
       this.bossBanner.el,
     );
     this.main = h('div', { class: 'game-main' }, this.topRow.el, stage, this.handArea.el);
-    // Hlášky ve sloupci nahoře uprostřed jeviště — ne přes ruku, tlačítka a balíček (toast.ts). Panel fáze
-    // (Večerka, obálka, výběr útraty…) má tlačítka v záhlaví: sloupec pak začíná pod panelem, když je tam místo,
-    // jinak až pod záhlavím.
-    setToastAnchor((needed) => this.toastRect(stage, needed));
+    // Hlášky v rohu mimo hrací plochu (toast.ts): vpravo nahoře nad kapsou spotřebek — ne přes stůl, skórování,
+    // zboží, obálku, ruku ani tlačítka.
+    setToastAnchor(() => this.toastSpot());
     this.fx = h('div', { class: 'game-fx', 'aria-hidden': 'true' });
     this.live = h('p', { class: 'visually-hidden', 'aria-live': 'polite', 'data-testid': 'game-live' });
     this.el = h(
@@ -148,12 +153,20 @@ class GameView implements PresentView {
     );
 
     const presenter = createPresenter(this);
+    let busyToken = 0;
     controller.setPresenter(async (events, c) => {
       this.el.classList.add('is-busy');
+      // Během animace (skórování, rozdávání, výplata) hlášky čekají a vypustí se až po ní (toast.ts) — až po
+      // překreslení obrazovky (nové rozvržení, panel fáze) a po novinkách meta vrstvy, proto v příští úloze.
+      const token = ++busyToken;
+      holdToasts('game-busy', true);
       try {
         await presenter(events, c);
       } finally {
         this.el.classList.remove('is-busy');
+        window.setTimeout(() => {
+          if (token === busyToken) holdToasts('game-busy', false);
+        }, 0);
       }
     });
     this.unsubscribe = controller.subscribe(() => this.refresh());
@@ -162,7 +175,7 @@ class GameView implements PresentView {
     queueMicrotask(() => {
       // Oznámení z doby před vložením (odemčení při obnovení / založení runu) se přesunou z rohu nad stůl — jinak
       // by do příštího oznámení zakrývala ruku a tlačítko Zahodit.
-      if (stage.isConnected) setToastAnchor((needed) => this.toastRect(stage, needed));
+      if (stage.isConnected) setToastAnchor(() => this.toastSpot());
       const active = document.activeElement;
       if (active && active !== document.body && active.isConnected) return;
       this.panelHost
@@ -196,6 +209,8 @@ class GameView implements PresentView {
     const panel = PANELS[s.phase];
     const key = panel ? `${s.phase}|${panel.key(this.ctx)}` : s.phase;
     if (key !== this.panelKey) {
+      // Nová fáze může změnit rozvržení (pitva a výhra schovají řadu žolíků) — hlášky přeměřit.
+      queueMicrotask(() => refreshToastPlacement());
       const fk = focusKey();
       const wasInside =
         document.activeElement instanceof Node && this.panelHost.contains(document.activeElement);
@@ -207,26 +222,42 @@ class GameView implements PresentView {
       } else {
         this.panelHost.replaceChildren();
         this.panelHost.hidden = true;
+        // Panel s focusem zmizel (výběr útraty → kolo): focus na ruku, ne na <body> — klávesy 1–8, Tab na karty.
+        const active = document.activeElement;
+        const lost = !active || active === document.body || !active.isConnected;
+        if ((wasInside || lost) && s.phase === 'round') this.handArea.focusHand();
       }
     }
   }
 
   /**
-   * Obdélník pro sloupec hlášek vysoký `needed` px: jeviště; u panelu fáze volné místo pod panelem (Večerka na
-   * 1366 × 768 nebo na tabletu — hláška pak nezakryje zboží), a když se tam sloupec nevejde, hned pod záhlavím
-   * panelu (tlačítka v záhlaví zůstanou volná). Null = jeviště není vidět.
+   * Místo pro sloupec hlášek: v rohu mimo hrací plochu. Na širokém rozvržení vpravo nahoře uvnitř řady žolíků
+   * a spotřebek (pravý kraj řady je kapsa spotřebek, žolíci začínají vlevo); na úzkém (tablet na výšku, telefon)
+   * nahoře vpravo v okně. Null = řada není vidět (výchozí roh).
    */
-  private toastRect(stage: HTMLElement, needed: number): DOMRect | null {
-    if (!stage.isConnected) return null;
-    const r = stage.getBoundingClientRect();
-    const panel = this.panelHost.hidden ? null : this.panelHost.firstElementChild;
-    if (!panel) return r;
-    const header = panel.querySelector<HTMLElement>('.game-panel__header');
-    let top = header ? Math.max(r.top, header.getBoundingClientRect().bottom) : r.top;
-    const below = panel.getBoundingClientRect().bottom;
-    const visibleBottom = Math.min(r.bottom, window.innerHeight || r.bottom);
-    if (needed > 0 && visibleBottom - below >= needed + 2 * TOAST_ANCHOR_GAP) top = Math.max(top, below);
-    return new DOMRect(r.left, top, r.width, Math.max(0, r.bottom - top));
+  private toastSpot(): ToastSpot | null {
+    const top = this.topRow.el;
+    if (!top.isConnected) return null;
+    const vw = window.innerWidth || document.documentElement.clientWidth;
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    const narrow = typeof matchMedia === 'function' && matchMedia('(max-width: 900px)').matches;
+    if (narrow) return { right: TOAST_ANCHOR_GAP, top: TOAST_ANCHOR_GAP, width: Math.min(360, vw - 16) };
+    const r = top.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) {
+      // Pitva a výhra (řada žolíků schovaná, panel přes celou plochu): dole v levém panelu, mimo panel.
+      const side = this.sidebar.el.getBoundingClientRect();
+      if (side.width <= 0) return null;
+      return {
+        left: side.left + 4,
+        bottom: Math.max(TOAST_ANCHOR_GAP, vh - side.bottom + 4),
+        width: Math.max(160, side.width - 8),
+      };
+    }
+    return {
+      right: Math.max(TOAST_ANCHOR_GAP, vw - r.right + 4),
+      top: Math.max(TOAST_ANCHOR_GAP, r.top + 4),
+      width: Math.min(360, Math.max(240, r.width * 0.42)),
+    };
   }
 
   // ─────────────────────────── PresentView ───────────────────────────
@@ -393,6 +424,7 @@ class GameView implements PresentView {
 
   dispose(): void {
     setToastAnchor(null);
+    holdToasts('game-busy', false);
     this.bossBanner.hide();
     this.unsubscribe();
     this.controller.setPresenter(async () => undefined);

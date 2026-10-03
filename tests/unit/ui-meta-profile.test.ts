@@ -278,7 +278,7 @@ describe('oznámení', () => {
     expect(texts[5]).toContain('neznamy_achievement');
   });
 
-  it('showMetaNotices: fronta — nejvýš dva toasty naráz, další přijde, až předchozí odejde', () => {
+  it('showMetaNotices: fronta — nejvýš META_TOASTS_VISIBLE toastů naráz, další přijde, až předchozí odejde', () => {
     const ids = Object.keys(REG.challenges).slice(0, 3);
     const notices: MetaNotice[] = ids.map((id) => ({ kind: 'unlock', category: 'challenges', id }));
     showMetaNotices(notices, REG);
@@ -287,15 +287,15 @@ describe('oznámení', () => {
       ...region.querySelectorAll<HTMLElement>('[data-testid="toast-unlock"]:not(.toast--leaving)'),
     ];
     expect(shown()).toHaveLength(META_TOASTS_VISIBLE);
-    expect(noticeQueue(REG).pending).toBe(1);
+    expect(noticeQueue(REG).pending).toBe(notices.length - META_TOASTS_VISIBLE);
     // Ikona, štítek, název a popis.
     const first = shown()[0]!;
     expect(first.querySelector('.toast__media svg')).not.toBeNull();
     expect(first.querySelector('.toast__eyebrow')?.textContent).toBe(t('meta.notice.eyebrow.challenges'));
     expect(first.querySelector('.toast__title')?.textContent).toBe(t(`challenges.${ids[0]!}.name`));
     first.querySelector<HTMLButtonElement>('.toast__close')!.click();
-    expect(noticeQueue(REG).pending).toBe(0);
-    expect(region.textContent).toContain(t(`challenges.${ids[2]!}.name`));
+    expect(noticeQueue(REG).pending).toBe(notices.length - META_TOASTS_VISIBLE - 1);
+    expect(region.textContent).toContain(t(`challenges.${ids[META_TOASTS_VISIBLE]!}.name`));
     noticeQueue(REG).clear();
   });
 

@@ -5,7 +5,8 @@
  *    po něm se pohltí, zrušení (pointercancel) nic nemění,
  *  - Shift + ← / → v kole i v ruce obálky (`pickMoveTarget`, akce `reorderHand`), nápověda kláves,
  *  - náhled balíčku neprozradí karty lícem dolů (`deckPreviewModel`, dialog),
- *  - hlášky: nejvýš 3, opakovaná jen „×2“, kotva nad stolem, doba podle rychlosti hry, bez animací hned pryč,
+ *  - hlášky: nejvýš 3, opakovaná jen „×2“, kotva v rohu mimo hrací plochu (obchází bublinu Štamgasta), doba podle
+ *    rychlosti hry, bez animací hned pryč, pozdržení během animace a novinky na pozadí až po zavření dialogu,
  *  - Večerka: „Koupit a použít“ u spotřebky s cíli je neaktivní a vysvětlí proč; detail spotřebky bez ruky.
  */
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -15,10 +16,12 @@ import { Game, serializeRun } from '../../src/engine';
 import { t } from '../../src/i18n/cs';
 import { App } from '../../src/ui/app';
 import { attachDragSort, dropIndex, moveItem, shiftFor } from '../../src/ui/components/dragSort';
-import { closeAllModals } from '../../src/ui/components/modal';
+import { closeAllModals, openModal } from '../../src/ui/components/modal';
 import {
   MAX_VISIBLE,
   clearToasts,
+  heldToastCount,
+  holdToasts,
   setToastAnchor,
   toast,
   toastDuration,
@@ -398,8 +401,9 @@ describe('náhled balíčku a karty lícem dolů', () => {
 // ─────────────────────────── Hlášky ───────────────────────────
 
 describe('hlášky (toast)', () => {
-  it('nejvýš 3 naráz, nejstarší ustoupí; stejná hláška jen přičte „×n“', () => {
+  it('nejvýš 3 naráz (bez kotvy), nejstarší ustoupí; stejná hláška jen přičte „×n“', () => {
     document.documentElement.classList.add('no-anim');
+    setToastAnchor(null);
     try {
       for (const n of [1, 2, 3, 4, 5]) toast(`Hláška ${n}`);
       const region = toastRegion();
@@ -428,11 +432,11 @@ describe('hlášky (toast)', () => {
   });
 
   it('doba zobrazení: kratší při vyšší rychlosti hry, ale ne pod minimum; čas běží od poslední hlášky', () => {
-    expect(toastDuration('info', 1)).toBe(4000);
-    expect(toastDuration('info', 4)).toBe(2200);
-    expect(toastDuration('warning', 2)).toBe(Math.round(5000 / Math.SQRT2));
-    expect(toastDuration('error', 4)).toBe(4000);
-    expect(toastDuration('info', Number.NaN)).toBe(4000);
+    expect(toastDuration('info', 1)).toBe(3200);
+    expect(toastDuration('info', 4)).toBe(2000);
+    expect(toastDuration('warning', 2)).toBe(Math.round(4000 / Math.SQRT2));
+    expect(toastDuration('error', 4)).toBe(3500);
+    expect(toastDuration('info', Number.NaN)).toBe(3200);
 
     vi.useFakeTimers();
     document.documentElement.classList.add('no-anim');
@@ -443,7 +447,7 @@ describe('hlášky (toast)', () => {
       toast('Rychle pryč'); // obnoví čas
       vi.advanceTimersByTime(1500);
       expect(a.el.isConnected).toBe(true);
-      vi.advanceTimersByTime(800);
+      vi.advanceTimersByTime(600);
       expect(a.el.isConnected).toBe(false); // bez animací hned pryč
     } finally {
       document.documentElement.classList.remove('no-anim');
@@ -451,39 +455,76 @@ describe('hlášky (toast)', () => {
     }
   });
 
-  it('kotva: sloupec nahoře uprostřed jeviště; bez kotvy (nebo bez rozměrů) vpravo dole', () => {
-    const stage = h('section', null);
-    document.body.appendChild(stage);
-    stage.getBoundingClientRect = () => new DOMRect(300, 150, 1000, 400);
-    setToastAnchor(stage);
-    toast('Nad stolem');
+  it('kotva: sloupec v rohu podle kotvy (vpravo nahoře), bez kotvy vpravo dole; bublinu Štamgasta obejde', () => {
+    window.innerWidth = 1366;
+    window.innerHeight = 768;
+    setToastAnchor(() => ({ right: 16, top: 12, width: 340 }));
+    toast('V rohu');
     const region = toastRegion();
     expect(region.classList.contains('toast-region--anchored')).toBe(true);
-    expect(region.style.left).toBe('800px');
-    expect(region.style.top).toBe('158px');
-    expect(region.style.width).toBe('384px');
-    stage.getBoundingClientRect = () => new DOMRect(0, 0, 0, 0);
-    toast('Bez rozměrů');
+    expect(region.style.left).toBe(`${1366 - 16 - 340}px`);
+    expect(region.style.top).toBe('12px');
+    expect(region.style.width).toBe('340px');
+    // Kotva bez místa (řada žolíků není vidět) → výchozí roh.
+    setToastAnchor(() => null);
+    toast('Bez místa');
     expect(region.classList.contains('toast-region--anchored')).toBe(false);
-    // Kotva jako funkce (herní obrazovka: pod záhlavím panelu).
-    setToastAnchor(() => new DOMRect(100, 300, 600, 200));
-    toast('Pod záhlavím');
-    expect(region.style.left).toBe('400px');
-    expect(region.style.top).toBe('308px');
-    // Funkce dostane výšku sloupce (herní obrazovka podle ní volí volné místo pod panelem, nebo záhlaví).
-    const seen: number[] = [];
+    expect(region.style.left).toBe('');
+    // Bublina Štamgasta (data-toast-avoid) přes roh → sloupec se posune pod ni.
+    const bubble = h('div', { 'data-toast-avoid': '' });
+    document.body.appendChild(bubble);
+    bubble.getBoundingClientRect = () => new DOMRect(900, 0, 400, 200);
+    bubble.getClientRects = () => [new DOMRect(900, 0, 400, 200)] as unknown as DOMRectList;
     Object.defineProperty(region, 'offsetHeight', { configurable: true, get: () => 120 });
-    setToastAnchor((needed) => {
-      seen.push(needed);
-      return needed <= 150 ? new DOMRect(100, 500, 600, 200) : new DOMRect(100, 300, 600, 400);
-    });
-    toast('Pod panelem');
-    expect(seen).toContain(120);
-    expect(region.style.top).toBe('508px');
+    setToastAnchor(() => ({ right: 16, top: 12, width: 340 }));
+    toast('Pod bublinou');
+    expect(region.style.top).toBe('208px');
     Reflect.deleteProperty(region, 'offsetHeight');
+    bubble.remove();
     setToastAnchor(null);
     expect(region.style.left).toBe('');
-    stage.remove();
+  });
+
+  it('pozdržení: během animace hlášky čekají (kromě chyb) a po ní se vypustí v pořadí', () => {
+    document.documentElement.classList.add('no-anim');
+    try {
+      holdToasts('test-busy', true);
+      const a = toast('Šéf poražen');
+      const err = toast('Chyba hned', { kind: 'error' });
+      expect(a.el.isConnected).toBe(false);
+      expect(err.el.isConnected).toBe(true);
+      expect(heldToastCount()).toBe(1);
+      // Stejná hláška během pozdržení nepřibude, jen přičte „×2“.
+      expect(toast('Šéf poražen')).toBe(a);
+      holdToasts('test-busy', false);
+      expect(a.el.isConnected).toBe(true);
+      expect(a.el.querySelector('[data-testid="toast-count"]')?.textContent).toBe(
+        t('common.repeated', { n: 2 }),
+      );
+      expect(heldToastCount()).toBe(0);
+    } finally {
+      document.documentElement.classList.remove('no-anim');
+    }
+  });
+
+  it('dialog: novinky na pozadí čekají na zavření, odezva akce v dialogu jde do rohu nad zatemnění', () => {
+    document.documentElement.classList.add('no-anim');
+    try {
+      const shown: string[] = [];
+      const m = openModal({ title: 'Detail' });
+      const news = toast('Achievement', { background: true, onShow: () => shown.push('news') });
+      expect(news.el.isConnected).toBe(false);
+      const done = toast('Prodáno');
+      expect(done.el.isConnected).toBe(true);
+      expect(toastRegion().classList.contains('toast-region--over-modal')).toBe(true);
+      expect(shown).toEqual([]);
+      m.close();
+      expect(news.el.isConnected).toBe(true);
+      expect(shown).toEqual(['news']);
+      expect(toastRegion().classList.contains('toast-region--over-modal')).toBe(false);
+    } finally {
+      document.documentElement.classList.remove('no-anim');
+    }
   });
 });
 
