@@ -31,7 +31,7 @@ import type {
   RunState,
   StickerId,
 } from '../engine/types';
-import { PERISH_ROUNDS, RENTAL_FEE } from '../engine/constants';
+import { PERISH_ROUNDS, RENTAL_FEE, RENTAL_INSTALLMENTS } from '../engine/constants';
 import { registry as defaultRegistry } from '../content';
 import { hasKey, t } from '../i18n/cs';
 import type { I18nParams } from '../i18n/cs';
@@ -164,7 +164,7 @@ function dynamicParams(def: JokerDef, inst: JokerInstance): Record<string, numbe
 }
 
 /** Texty nálepky (`Přibitý: Nejde prodat ani zničit.`); u zvětrávajícího se zbývajícími koly. */
-export function stickerText(id: StickerId, inst?: Pick<JokerInstance, 'perishRounds'>): string {
+export function stickerText(id: StickerId, inst?: Pick<JokerInstance, 'perishRounds' | 'rentalPaid'>): string {
   const name = t(`art.stickers.${id}.name`);
   let desc: string;
   if (id === 'perishable') {
@@ -176,7 +176,8 @@ export function stickerText(id: StickerId, inst?: Pick<JokerInstance, 'perishRou
           ? t('art.stickers.perishable.perished')
           : t('art.stickers.perishable.left', { n: left });
   } else if (id === 'rental') {
-    desc = t('art.stickers.rental.desc', { fee: RENTAL_FEE });
+    const left = Math.max(1, RENTAL_INSTALLMENTS - (inst?.rentalPaid ?? 0));
+    desc = t('art.stickers.rental.desc', { fee: RENTAL_FEE, n: left });
   } else {
     desc = t(`art.stickers.${id}.desc`);
   }

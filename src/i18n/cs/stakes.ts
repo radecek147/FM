@@ -36,8 +36,8 @@ export const stakes = {
   },
   doppelbock: {
     name: 'Doppelbock',
-    desc: 'Bazar a půjčovna: {eternal} % žolíků v nabídce je přibitých (nejdou prodat) a {rental} % zapůjčených (stojí jen {price|money}, ale na konci každého kola si půjčovna řekne o {fee|money}).',
-    flavor: 'Co je přibité, neprodáš. Co je půjčené, platíš.',
+    desc: 'Bazar a splátky: {eternal} % žolíků v nabídce je přibitých (nejdou prodat) a {rental} % na splátky (akontace {price|money}, pak {installments|plural:splátka,splátky,splátek} po {fee|money} na konci kola).',
+    flavor: 'Co je přibité, neprodáš. Co je na splátky, splácíš.',
   },
   imperial: {
     name: 'Imperial',

@@ -237,6 +237,8 @@ export interface JokerInstance {
   stickers: StickerId[];
   /** Zvětrávající žolík: kolik dokončených kol zbývá, než zvětrá (0 = zvětralý, trvale debuffnutý). */
   perishRounds?: number;
+  /** Žolík na splátky (nálepka `rental`): kolik splátek už je zaplaceno (chybí = 0). */
+  rentalPaid?: number;
   debuffed: boolean;
 }
 

@@ -15,7 +15,8 @@
  */
 import type { CardSpec, ChallengeDef, UnlockCondition } from '../engine/content-types';
 import { standardDeckSpecs } from '../engine/cards/cards';
-import { FINAL_ANTE, RENTAL_BUY_PRICE, RENTAL_FEE, RENTAL_SELL_PRICE } from '../engine/constants';
+import { FINAL_ANTE, RENTAL_BUY_PRICE, RENTAL_FEE,
+  RENTAL_INSTALLMENTS, RENTAL_SELL_PRICE } from '../engine/constants';
 import { BASE_MODIFIERS } from '../engine/effects/modifiers';
 import type { HandType, Suit } from '../engine/types';
 import { HAND_TYPES, RANKS, SUITS } from '../engine/types';
@@ -465,14 +466,20 @@ const DEFS: Omit<ChallengeDef, 'unlock'>[] = [
       pattern: 'dots',
     },
   },
-  // 18 — Půjčovna kostýmů: všichni žolíci zapůjčení.
+  // 18 — Půjčovna kostýmů: všichni žolíci na splátky.
   {
     id: 'costume_rental',
     deckId: 'pub',
     startingMoney: COSTUME_RENTAL_MONEY,
     jokerSticker: 'rental',
     ruleKeys: ['rental', 'start'],
-    params: { money: COSTUME_RENTAL_MONEY, buy: RENTAL_BUY_PRICE, fee: RENTAL_FEE, sell: RENTAL_SELL_PRICE },
+    params: {
+      money: COSTUME_RENTAL_MONEY,
+      buy: RENTAL_BUY_PRICE,
+      fee: RENTAL_FEE,
+      installments: RENTAL_INSTALLMENTS,
+      sell: RENTAL_SELL_PRICE,
+    },
     art: {
       icon: 'drama-masks',
       prop: 'ticket',

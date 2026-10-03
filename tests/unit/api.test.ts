@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { TagDef } from '../../src/engine/content-types';
-import { MAX_ACTIVATIONS_PER_CARD, MSG } from '../../src/engine/constants';
+import { MAX_ACTIVATIONS_PER_CARD, MSG, RENTAL_INSTALLMENTS } from '../../src/engine/constants';
 import { handValueAtLevel } from '../../src/engine/hands/levels';
 import { generateShop } from '../../src/engine/shop/shop';
 import type { GameEvent, HandType, ScoreResult } from '../../src/engine/types';
@@ -331,6 +331,34 @@ describe('zapůjčení a zvětrávající žolíci na konci kola (DESIGN 2.4.2, 
     expect(game.state.money).toBe(-10 + 6);
     if (res.ok)
       expect(res.events.some((e) => e.type === 'message' && e.key === MSG.rentalReturned)).toBe(true);
+  });
+
+  it('na splátky: po 5. zaplacené splátce nálepka zmizí a žolík se prodává za běžnou cenu', () => {
+    const game = gameInRound(reg);
+    const j = game._core.api.createJoker({ defId: 'lent', stickers: ['rental'] })!;
+    j.rentalPaid = RENTAL_INSTALLMENTS - 2;
+    winSmall(game);
+    let res = game.dispatch({ type: 'cashOut' });
+    expect(res.ok).toBe(true);
+    expect(game.state.jokers[0]!.stickers).toEqual(['rental']);
+    expect(game.state.jokers[0]!.rentalPaid).toBe(RENTAL_INSTALLMENTS - 1);
+    expect(game.sellValue(j.uid)).toBe(1);
+    // další kolo: poslední splátka
+    expect(game.dispatch({ type: 'leaveShop' }).ok).toBe(true);
+    expect(game.dispatch({ type: 'selectBlind' }).ok).toBe(true);
+    winSmall(game);
+    expect(game.state.rewards!.extra).toContainEqual(expect.objectContaining({ source: 'rental:lent', amount: -2 }));
+    res = game.dispatch({ type: 'cashOut' });
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.events.some((e) => e.type === 'message' && e.key === MSG.rentalPaidOff)).toBe(true);
+    expect(game.state.jokers[0]!.stickers).toEqual([]);
+    expect(game.state.jokers[0]!.rentalPaid).toBeUndefined();
+    expect(game.sellValue(j.uid)).toBeGreaterThan(1);
+    // splacený žolík už nic nestojí
+    expect(game.dispatch({ type: 'leaveShop' }).ok).toBe(true);
+    expect(game.dispatch({ type: 'selectBlind' }).ok).toBe(true);
+    winSmall(game);
+    expect(game.state.rewards!.extra.some((e) => e.source.startsWith('rental'))).toBe(false);
   });
 
   it('zvětrávající žolík po posledním kole zvětrá (trvale debuffnutý)', () => {

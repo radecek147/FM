@@ -4,7 +4,7 @@
  */
 import type { BaseCtx, ConsumableCtx, ContentRegistry, NewRunOptions } from '../content-types';
 import { compareCards } from '../cards/cards';
-import { BLIND_REWARDS, BOSS_REROLL_COST, FINAL_ANTE, MSG, RENTAL_FEE } from '../constants';
+import { BLIND_REWARDS, BOSS_REROLL_COST, FINAL_ANTE, MSG, RENTAL_FEE, RENTAL_INSTALLMENTS } from '../constants';
 import {
   addConsumableInstance,
   addJokerInstance,
@@ -784,7 +784,7 @@ export class Game {
     }
     const sum = () =>
       blindReward + unusedHands + unusedDiscards + interest + extra.reduce((a, e) => a + e.amount, 0);
-    // Krok 6: zapůjčení žolíci (i debuffnutí) — poplatek jen do výše dluhového limitu.
+    // Krok 6: žolíci na splátky (i debuffnutí) — splátka jen do výše dluhového limitu, jinak žolík propadne.
     for (const j of s.jokers) {
       if (!j.stickers.includes('rental')) continue;
       if (s.money + sum() - RENTAL_FEE >= -m.debtLimit) {
@@ -889,13 +889,21 @@ export class Game {
     const total = s.rewards?.total ?? 0;
     if (total) core.api.addMoney(total, 'roundReward');
     core.emit({ type: 'cashedOut', amount: total });
-    // Zapůjčení žolíci, za které nešlo zaplatit, se vracejí do půjčovny.
+    // Žolíci na splátky: zaplacená splátka se připíše (po poslední nálepka zmizí), nezaplacená = žolík propadne.
     for (const e of s.rewards?.extra ?? []) {
-      if (!e.source.startsWith('rentalReturned:') || e.jokerUid === undefined) continue;
+      if (e.jokerUid === undefined) continue;
       const j = s.jokers.find((x) => x.uid === e.jokerUid);
-      if (!j) continue;
-      core.api.destroyJoker(j.uid, 'rental');
-      core.emit({ type: 'message', key: MSG.rentalReturned, params: { joker: j.defId } });
+      if (!j || !j.stickers.includes('rental')) continue;
+      if (e.source.startsWith('rental:')) {
+        j.rentalPaid = (j.rentalPaid ?? 0) + 1;
+        if (j.rentalPaid >= RENTAL_INSTALLMENTS) {
+          core.api.removeJokerStickers(j.uid, ['rental']);
+          core.emit({ type: 'message', key: MSG.rentalPaidOff, params: { joker: j.defId } });
+        }
+      } else if (e.source.startsWith('rentalReturned:')) {
+        core.api.destroyJoker(j.uid, 'rental');
+        core.emit({ type: 'message', key: MSG.rentalReturned, params: { joker: j.defId } });
+      }
     }
     s.rewards = null;
     const wasBoss = round.blind === 'boss';

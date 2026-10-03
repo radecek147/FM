@@ -409,6 +409,7 @@ export function createApi(core: GameCore): EngineApi {
       if (next.length === j.stickers.length) return;
       j.stickers = next;
       if (!next.includes('perishable')) delete j.perishRounds;
+      if (!next.includes('rental')) delete j.rentalPaid;
       // Zvětralý žolík ožije; dočasný debuff z tohoto kola (šéf) trvá dál.
       const before = j.debuffed;
       j.debuffed = core.isPerished(j) || (core.state.round?.jokerDebuffs.includes(uid) ?? false);
@@ -432,6 +433,7 @@ export function createApi(core: GameCore): EngineApi {
         debuffed: false,
       };
       if (src.perishRounds !== undefined) copy.perishRounds = src.perishRounds;
+      if (src.rentalPaid !== undefined) copy.rentalPaid = src.rentalPaid;
       copy.debuffed = core.isPerished(copy);
       addJokerInstance(core, copy, { ignoreSlots: true, acquire: true });
       return copy;

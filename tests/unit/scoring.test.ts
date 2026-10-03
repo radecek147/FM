@@ -327,25 +327,25 @@ describe('krok 2 — vylepšení karet', () => {
     expect(gold).toBeDefined();
   });
 
-  it('Šťastná: s probabilityMult 12 obě šance jistě (+15 mult, +15 Kč)', () => {
+  it('Šťastná: s probabilityMult 6 obě šance jistě (+10 mult, +7 Kč)', () => {
     const game = inRound();
-    game._core.api.addPermanentModifier({ probabilityMult: 12 });
+    game._core.api.addPermanentModifier({ probabilityMult: 6 });
     const money = game.state.money;
     const [a] = setupRound(game, 'AS:lucky');
     const { result } = play(game, [a!]);
     expect(steps(result.steps).slice(1)).toEqual([
       { source: 'card', cardId: a!.id, chips: 11, chipsAfter: 17, multAfter: 1 },
-      { source: 'card', cardId: a!.id, mult: 15, message: MSG.lucky, chipsAfter: 17, multAfter: 16 },
-      { source: 'card', cardId: a!.id, money: 15, message: MSG.luckyMoney, chipsAfter: 17, multAfter: 16 },
+      { source: 'card', cardId: a!.id, mult: 10, message: MSG.lucky, chipsAfter: 17, multAfter: 11 },
+      { source: 'card', cardId: a!.id, money: 7, message: MSG.luckyMoney, chipsAfter: 17, multAfter: 11 },
     ]);
-    expect(result.score).toBe(17 * 16);
-    expect(result.moneyEarned).toBe(15);
-    expect(game.state.money).toBe(money + 15);
+    expect(result.score).toBe(17 * 11);
+    expect(result.moneyEarned).toBe(7);
+    expect(game.state.money).toBe(money + 7);
   });
 
-  it('Šťastná: s probabilityMult 4 je mult jistý, peníze 4 z 12; s 0 nic', () => {
+  it('Šťastná: s probabilityMult 3 je mult jistý, peníze 3 ze 6; s 0 nic', () => {
     const game = inRound();
-    game._core.api.addPermanentModifier({ probabilityMult: 4 });
+    game._core.api.addPermanentModifier({ probabilityMult: 3 });
     game._core.state.round!.target = 1e12;
     let moneyHits = 0;
     for (let i = 0; i < 30; i++) {
@@ -353,7 +353,7 @@ describe('krok 2 — vylepšení karet', () => {
       game._core.state.round!.handsLeft = 2;
       const { result } = play(game, [a!]);
       expect(result.steps.some((s) => s.message === MSG.lucky)).toBe(true);
-      if (result.moneyEarned === 15) moneyHits++;
+      if (result.moneyEarned === 7) moneyHits++;
     }
     expect(moneyHits).toBeGreaterThan(0);
     expect(moneyHits).toBeLessThan(30);
@@ -368,12 +368,12 @@ describe('krok 2 — vylepšení karet', () => {
 
   it('Šťastná s červenou pečetí hází při každé aktivaci', () => {
     const game = inRound();
-    game._core.api.addPermanentModifier({ probabilityMult: 12 });
+    game._core.api.addPermanentModifier({ probabilityMult: 6 });
     const [a] = setupRound(game, 'AS:lucky@red');
     const { result } = play(game, [a!]);
     expect(result.steps.filter((s) => s.message === MSG.lucky)).toHaveLength(2);
-    expect(result.moneyEarned).toBe(30);
-    expect(result.score).toBe((6 + 22) * 31);
+    expect(result.moneyEarned).toBe(14);
+    expect(result.score).toBe((6 + 22) * 21);
   });
 
   it('Divoká: patří do všech barev — doplní Barvu', () => {

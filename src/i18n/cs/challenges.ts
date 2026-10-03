@@ -98,11 +98,11 @@ export const challenges = {
   },
   costume_rental: {
     name: 'Půjčovna kostýmů',
-    desc: 'Každý žolík je jen zapůjčený: pořídíš ho levně, ale nájem platíš každé kolo.',
-    flavor: 'Kostým vraťte vyčištěný. Žolíka taky.',
+    desc: 'Každý žolík je jen na splátky: pořídíš ho levně, ale než bude tvůj, platíš každé kolo.',
+    flavor: 'Kostým vraťte vyčištěný. Žolíka splaťte.',
     rules: {
       rental:
-        'Všichni žolíci jsou zapůjčení: stojí {buy|money}, na konci každého kola za ně zaplatíš {fee|money} a prodávají se za {sell|money}. Žolíci, kteří se půjčit nedají, se nenabízejí.',
+        'Všichni žolíci jsou na splátky: akontace {buy|money}, pak {installments|plural:splátka,splátky,splátek} po {fee|money} na konci kola (bez peněz žolík propadne); nesplacený se prodá za {sell|money}. Žolíci, kteří se na splátky nedají, se nenabízejí.',
       start: 'Start: {money|money}.',
     },
   },

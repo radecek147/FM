@@ -36,11 +36,14 @@ export const MAX_STAKE = 8;
 
 // ─────────────────────────── Večerka (2.5) ───────────────────────────
 
-/** Váhy vzácností žolíků v obchodě a v Žolíkové obálce (legendární jen z razítka). */
+/**
+ * Váhy vzácností žolíků v obchodě a v Žolíkové obálce (legendární jen z razítka a štítku Pouťová tombola). Vlastní
+ * profil 1.0.1: víc vzácných a epických (62 / 30 / 8), protože žolík je jen 60 % kartových slotů Večerky.
+ */
 export const RARITY_WEIGHTS: Readonly<Record<JokerRarity, number>> = Object.freeze({
-  common: 68,
-  rare: 26,
-  epic: 6,
+  common: 62,
+  rare: 30,
+  epic: 8,
   legendary: 0,
 });
 
@@ -68,11 +71,15 @@ export const BOSS_REROLL_COST = 0;
 
 /** Zvětrávající žolík: po tolika dokončených kolech ve slotu zvětrá (trvale debuffnutý). */
 export const PERISH_ROUNDS = 6;
-/** Zapůjčený žolík: cena v obchodě i obálce místo ceny z definice (Kč). */
+/**
+ * Žolík „na splátky“ (nálepka `rental`, 1.0.1 — dřív nájem navždy): akontace v obchodě i obálce místo ceny z definice
+ * (Kč), splátka na konci každého kola (Kč, strhne se z odměny) a počet splátek, po kterých nálepka zmizí a žolík je
+ * hráčův. Na splátku, na kterou nemáš, propadne. Dokud není splacený, prodá se za `RENTAL_SELL_PRICE`.
+ */
 export const RENTAL_BUY_PRICE = 2;
-/** Zapůjčený žolík: poplatek na konci každého kola (Kč). */
 export const RENTAL_FEE = 2;
-/** Zapůjčený žolík: prodejní cena (Kč). */
+export const RENTAL_INSTALLMENTS = 5;
+/** Žolík na splátky: prodejní cena (Kč). */
 export const RENTAL_SELL_PRICE = 1;
 
 // ─────────────────────────── Skórování (3) ───────────────────────────
@@ -123,8 +130,10 @@ export const MSG = Object.freeze({
   jokerSaved: 'joker.saved',
   /** Zvětrávající žolík zvětral. */
   jokerPerished: 'joker.perished',
-  /** Zapůjčený žolík se vrátil do půjčovny (nešlo zaplatit poplatek). */
+  /** Žolík na splátky propadl (nešlo zaplatit splátku). */
   rentalReturned: 'joker.rentalReturned',
+  /** Žolík na splátky je splacený — nálepka zmizela. */
+  rentalPaidOff: 'joker.rentalPaidOff',
   /** Štítek zachránil prohrané kolo (`TagHooks.onRoundLost`). */
   tagSaved: 'tag.saved',
   /** Výzva zakázala ruku — kombinace je silnější než `ChallengeDef.maxScoringHand` (Švejkova anabáze). */
