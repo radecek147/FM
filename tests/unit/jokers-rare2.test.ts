@@ -228,7 +228,6 @@ describe('vzácní žolíci fáze 7 – definice', () => {
     expect(flagged((j) => j.copyable === false)).toEqual([
       'office_connection',
       'glassblower',
-      'court_painter',
       'colorblind_uncle',
       'trodden_path',
       'war_loot',
@@ -326,9 +325,9 @@ describe('vzácní žolíci fáze 7 – texty', () => {
       klekanice: '×2 mult, pokud ti po zahrání v ruce nezůstala žádná figura.',
       parish_priest: '+2,5 mult za každou kartu v balíčku, která má vylepšení, pečeť nebo edici.',
       seer: 'Když jediná ruka dosáhne celého cíle Malé útraty, vytvoří pranostiku její kombinace (potřebuje volný slot).',
-      court_painter: 'Všechny karty kromě kamenných se počítají jako figury.',
+      court_painter: 'Po první ruce kola namaluje první skórující kartu, která není figura, natrvalo jako náhodnou figuru stejné barvy.',
       colorblind_uncle: 'Srdcové a kárové karty se počítají jako jedna barva, pikové a křížové taky.',
-      trodden_path: 'Mezi sousedními kartami Postupky smí chybět jedna hodnota.',
+      trodden_path: 'V celé Postupce smí jedna hodnota chybět (třeba trojka, čtyřka, šestka, sedmička a osmička).',
       war_loot: 'Na konci kola +2 Kč za každého šéfa poraženého od jeho koupě (teď +0 Kč).',
       anonymous_commenter: 'Každá zahraná karta, která neskóruje, dá +7 mult.',
       viral_video: 'První ruka kola dá +64 čipů, každá další ruka v kole polovinu předchozí.',
@@ -731,21 +730,37 @@ describe('Vědma (seer)', () => {
 });
 
 describe('Dvorní malíř (court_painter)', () => {
-  it('všechny karty kromě kamenných jsou figury; po prodeji pravidlo zmizí', () => {
-    const game = makeGame({ registry: reg, jokers: ['court_painter'], money: 10 });
-    expect(game.modifiers().allFaces).toBe(true);
-    const [five, stone] = setupRound(game, '5H 2C:stone');
-    expect(game._core.api.isFace(five!)).toBe(true);
-    expect(game._core.api.isFace(stone!)).toBe(false);
-    winNextHand(game);
-    play(game, [five!]);
-    ok(game.dispatch({ type: 'cashOut' }));
-    ok(game.dispatch({ type: 'sellJoker', uid: joker(game, 'court_painter').uid }));
+  it('po první ruce kola namaluje první skórující nefiguru jako figuru stejné barvy; skóre ruky se nemění', () => {
+    const game = roundGame(['court_painter']);
     expect(game.modifiers().allFaces).toBe(false);
+    const cards = setupRound(game, 'KS 5H 5D 2C:stone');
+    const { result: r, events } = play(game, cards);
+    // Ruka skórovala ještě jako Dvojice pětek (+ král jako kop neskóruje, kamenná ano).
+    expect(r.hand.type).toBe('pair');
+    expect(events).toContainEqual({ type: 'message', key: 'jokers.court_painter.painted' });
+    const five = game.card(cards[1]!.id)!;
+    expect([11, 12, 13]).toContain(five.rank);
+    expect(five.suit).toBe('H');
+    // Druhá pětka a kamenná karta zůstaly.
+    expect(game.card(cards[2]!.id)!.rank).toBe(5);
+    expect(game.card(cards[3]!.id)!.enhancement).toBe('stone');
   });
 
-  it('s Klekánicí: obyčejná karta v ruce je figura', () => {
-    expect(playHand(roundGame(['court_painter', 'klekanice']), 'KS KH 5C', [0, 1]).mult).toBe(2);
+  it('jen v první ruce kola; samé figury nic nezmění', () => {
+    const game = roundGame(['court_painter']);
+    const faces = setupRound(game, 'KS KH');
+    play(game, faces);
+    expect(faces.map((c) => game.card(c.id)!.rank)).toEqual([13, 13]);
+    const twos = setupRound(game, '2S 2H');
+    play(game, twos);
+    expect(twos.map((c) => game.card(c.id)!.rank)).toEqual([2, 2]);
+  });
+
+  it('kopie namaluje další kartu; stav runu je po uložení stejný (deterministicky přes seed)', () => {
+    const game = roundGame(['copier', 'court_painter']);
+    const cards = setupRound(game, '5H 5D');
+    play(game, cards);
+    expect(cards.every((c) => (game.card(c.id)?.rank ?? 0) >= 11)).toBe(true);
   });
 });
 
@@ -768,14 +783,19 @@ describe('Barvoslepý strýc (colorblind_uncle)', () => {
 });
 
 describe('Vyšlapaná pěšina (trodden_path)', () => {
-  it('Postupka smí mít mezery o jednu hodnotu', () => {
-    const hand = '3S 5H 6D 8C 9S';
+  it('v celé Postupce smí chybět jedna hodnota', () => {
+    const hand = '3S 4H 6D 7C 8S';
     expect(playHand(roundGame([]), hand).hand.type).toBe('high_card');
     const r = playHand(roundGame(['trodden_path']), hand);
-    // Postupka: 35 + 3 + 5 + 6 + 8 + 9 = 66 čipů × 4.
-    expect([r.hand.type, r.chips, r.mult]).toEqual(['straight', 66, 4]);
-    // Mezera o dvě hodnoty nestačí.
-    expect(playHand(roundGame(['trodden_path']), '2S 5H 6D 8C 9S').hand.type).toBe('high_card');
+    // Postupka: 35 + 3 + 4 + 6 + 7 + 8 = 63 čipů × 4.
+    expect([r.hand.type, r.chips, r.mult]).toEqual(['straight', 63, 4]);
+    // I s esem nízkým: A-2-3-5-6.
+    expect(playHand(roundGame(['trodden_path']), 'AS 2H 3D 5C 6S').hand.type).toBe('straight');
+  });
+
+  it('dvě mezery (3-5-6-8-9) ani mezera o dvě hodnoty nestačí', () => {
+    expect(playHand(roundGame(['trodden_path']), '3S 5H 6D 8C 9S').hand.type).toBe('high_card');
+    expect(playHand(roundGame(['trodden_path']), '2S 5H 6D 7C 8S').hand.type).toBe('high_card');
   });
 });
 

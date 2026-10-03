@@ -344,11 +344,14 @@ describe('Postupka (DESIGN 2.2.2)', () => {
     expect(typeOf('3S 5H 6D 8C 9S')).toBe('high_card');
   });
 
-  it('straightGaps: smí chybět nejvýš jedna hodnota mezi sousedními kartami (3-5-6-8-9)', () => {
+  it('straightGaps: v celé Postupce smí chybět jedna hodnota (3-4-6-7-8), dvě mezery ne (3-5-6-8-9)', () => {
     const gaps = { straightGaps: true };
-    expect(typeOf('3S 5H 6D 8C 9S', gaps)).toBe('straight');
-    expect(typeOf('2S 4H 6D 8C 10S', gaps)).toBe('straight');
+    expect(typeOf('3S 4H 6D 7C 8S', gaps)).toBe('straight');
+    expect(typeOf('2S 3H 4D 5C 7S', gaps)).toBe('straight');
     expect(typeOf('5S 6H 7D 8C 9S', gaps)).toBe('straight');
+    // dvě mezery neplatí
+    expect(typeOf('3S 5H 6D 8C 9S', gaps)).toBe('high_card');
+    expect(typeOf('2S 4H 6D 8C 10S', gaps)).toBe('high_card');
     // mezera o 2 hodnoty (3 → 6) neplatí
     expect(typeOf('3S 6H 7D 8C 9S', gaps)).toBe('high_card');
     expect(typeOf('2S 3H 4D 5C 8S', gaps)).toBe('high_card');
@@ -357,16 +360,19 @@ describe('Postupka (DESIGN 2.2.2)', () => {
   it('straightGaps s Esem nízkým i vysokým', () => {
     const gaps = { straightGaps: true };
     expect(typeOf('AS 3H 4D 5C 6S', gaps)).toBe('straight');
-    expect(typeOf('AS 2H 3D 5C 7S', gaps)).toBe('straight');
+    expect(typeOf('AS 2H 3D 5C 6S', gaps)).toBe('straight');
+    expect(typeOf('AS 2H 3D 5C 7S', gaps)).toBe('high_card');
     expect(typeOf('9S JH QD KC AS', gaps)).toBe('straight');
-    expect(typeOf('8S 10H QD KC AS', gaps)).toBe('straight');
+    expect(typeOf('8S 10H QD KC AS', gaps)).toBe('high_card');
     // kolem dokola ani s mezerami bez straightWrap
     expect(typeOf('QS AH 2D 3C 4S', gaps)).toBe('high_card');
   });
 
   it('straightGaps + straightWrap', () => {
     expect(typeOf('QS AH 2D 3C 4S', { straightGaps: true, straightWrap: true })).toBe('straight');
-    expect(typeOf('JS KH AD 3C 4S', { straightGaps: true, straightWrap: true })).toBe('straight');
+    expect(typeOf('JS QH AD 2C 3S', { straightGaps: true, straightWrap: true })).toBe('straight');
+    // dvě mezery ani kolem dokola ne
+    expect(typeOf('JS KH AD 3C 4S', { straightGaps: true, straightWrap: true })).toBe('high_card');
   });
 
   it('duplicitní hodnota (4 karty + kopie): skóruje jen jedna karta každé hodnoty, ta víc vlevo', () => {
@@ -398,7 +404,8 @@ describe('Postupka (DESIGN 2.2.2)', () => {
   });
 
   it('fourCardStraightFlush + straightGaps', () => {
-    expect(typeOf('3S 5H 7D 8C KS', { fourCardStraightFlush: true, straightGaps: true })).toBe('straight');
+    expect(typeOf('3S 4H 6D 7C KS', { fourCardStraightFlush: true, straightGaps: true })).toBe('straight');
+    expect(typeOf('3S 5H 7D 8C KS', { fourCardStraightFlush: true, straightGaps: true })).toBe('high_card');
   });
 });
 
@@ -505,9 +512,10 @@ describe('Postupka v barvě a Královská postupka (DESIGN 2.2.2)', () => {
   });
 
   it('straightGaps: Postupka v barvě s mezerami; Královská, když je nejvyšší vysoké Eso', () => {
-    expect(typeOf('3S 5S 6S 8S 9S', { straightGaps: true })).toBe('straight_flush');
+    expect(typeOf('3S 4S 6S 7S 8S', { straightGaps: true })).toBe('straight_flush');
     expect(typeOf('9S JS QS KS AS', { straightGaps: true })).toBe('royal_flush');
     expect(typeOf('AS 3S 4S 5S 6S', { straightGaps: true })).toBe('straight_flush');
+    expect(typeOf('3S 5S 6S 8S 9S', { straightGaps: true })).toBe('flush');
   });
 
   it('fourCardStraightFlush: Postupka v barvě ze 4 karet stejné barvy po sobě', () => {
@@ -803,7 +811,8 @@ describe('pomocné funkce detekce', () => {
     expect(straightKind([12, 13, 14, 2, 3], false, false)).toBeNull();
     expect(straightKind([12, 13, 14, 2, 3], false, true)).toBe('normal');
     expect(straightKind([5, 6, 7, 8, 8], false, false)).toBeNull();
-    expect(straightKind([3, 5, 6, 8, 9], true, false)).toBe('normal');
+    expect(straightKind([3, 4, 6, 7, 8], true, false)).toBe('normal');
+    expect(straightKind([3, 5, 6, 8, 9], true, false)).toBeNull();
     expect(straightKind([9, 11, 12, 13, 14], true, false)).toBe('aceHigh');
   });
 

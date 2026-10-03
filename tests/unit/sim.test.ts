@@ -305,7 +305,7 @@ describe('hodnocení rukou (hand-eval)', () => {
     const straight = analyzeCards(hand, env).find((c) => c.type === 'straight')!;
     expect(straight.cards.map((c) => c.id).sort()).toEqual(ids(cards.slice(0, 5)).sort());
     const mods = (delta: object) => ({ ...env, mods: { ...env.mods, ...delta } });
-    const gaps = roundWith('3S 5H 6D 8C 9S KD 2H 2C');
+    const gaps = roundWith('3S 4H 6D 7C 8S KD 2H 2C');
     const gapHand = gaps.cards.map((c) => cardValue(c, env));
     expect(analyzeCards(gapHand, env).some((c) => c.type === 'straight')).toBe(false);
     expect(analyzeCards(gapHand, mods({ straightGaps: true })).some((c) => c.type === 'straight')).toBe(true);

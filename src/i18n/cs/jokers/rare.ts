@@ -20,8 +20,8 @@ export const jokersRare = {
   },
   herbalist: {
     name: 'Kořenářka',
-    desc: 'Po každé použité babské radě trvale +{mult} mult (teď +{current} mult).',
-    flavor: 'Na každou bolest bylinka, na každou bylinku mult.',
+    desc: 'Po každé použité babské radě trvale +{mult} mult; po kole, ve kterém se žádná rada nepoužila, bylinky zvadnou: −{wilt} mult (teď +{current} mult).',
+    flavor: 'Bylinky sbírá za úplňku. Recepty stahuje z internetu.',
   },
   regular: {
     name: 'Stálý host',

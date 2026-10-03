@@ -7,7 +7,7 @@
  * Výklad mechanik a naměřené hodnoty: docs/DECISIONS.md („Vzácní žolíci fáze 7“).
  */
 import type { JokerCtx, JokerDef } from '../../engine/content-types';
-import type { Card, JokerInstance, Modifiers, Suit } from '../../engine/types';
+import type { Card, JokerInstance, Modifiers, Rank, Suit } from '../../engine/types';
 import { RANKS, SUITS } from '../../engine/types';
 
 // ─────────────────────────── Čísla ───────────────────────────
@@ -59,6 +59,10 @@ const MSG_NOTARY = 'jokers.notary_public.certified';
 const MSG_WITCH = 'jokers.witch.brewed';
 const MSG_SEER = 'jokers.seer.foreseen';
 const MSG_DEFENESTRATION = 'jokers.defenestration.thrown';
+const MSG_PORTRAIT = 'jokers.court_painter.painted';
+
+/** Dvorní malíř: hodnoty figur, které maluje (kluk, dáma, král). */
+const PORTRAIT_RANKS: readonly Rank[] = [11, 12, 13];
 
 /** Id vylepšení a pečetí (src/content/modifiers.ts). */
 const GLASS = 'glass';
@@ -423,14 +427,22 @@ export const RARE2_JOKERS: JokerDef[] = [
     },
   },
   {
-    // Čisté pravidlo (`passive`) — kopírovat nejde (DESIGN 4.4/7). Kamenná karta figurou není (nemá hodnotu).
+    // 1.0.1 (dřív „všechny karty jsou figury“): po první ruce kola namaluje první skórující kartu, která není figura
+    // a má hodnotu (kamenná ne), jako náhodnou figuru stejné barvy — trvale (stream `joker`). Kopie namaluje další.
     id: 'court_painter',
     rarity: 'rare',
     cost: 6,
-    tags: ['utility', 'face'],
-    copyable: false,
+    tags: ['utility', 'face', 'deck'],
     hooks: {
-      passive: () => ({ allFaces: true }),
+      afterHandScored: (ctx) => {
+        if (!ctx.firstHand) return;
+        const card = ctx.scoring.find(
+          (c) => !c.debuffed && ctx.api.cardRank(c) !== null && !ctx.api.isFace(c),
+        );
+        if (!card) return;
+        ctx.api.modifyCard(card.id, { rank: ctx.rng.pick(PORTRAIT_RANKS) });
+        ctx.api.message(MSG_PORTRAIT);
+      },
     },
     art: {
       icon: 'king',
@@ -462,7 +474,8 @@ export const RARE2_JOKERS: JokerDef[] = [
     },
   },
   {
-    // Čisté pravidlo (`passive`) — kopírovat nejde. `hand` čtou boti (styl „Postupky“), v popisku není.
+    // Čisté pravidlo (`passive`) — kopírovat nejde. 1.0.1: v celé Postupce smí chybět jen jedna hodnota (dřív mezi
+    // každými dvěma kartami). `hand` čtou boti (styl „Postupky“), v popisku není.
     id: 'trodden_path',
     rarity: 'rare',
     cost: 6,

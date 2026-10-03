@@ -19,13 +19,15 @@ export const jokersEpic2 = {
   },
   fair_magician: {
     name: 'Kouzelník z pouti',
-    desc: 'Skórují všechny zahrané karty a každá skórující karta dá {xmult|x} mult.',
+    desc: 'Skórují všechny zahrané karty a každá skórující karta dá {xmult|x} mult; {chance} {odds|z}, že po ruce jedna zahraná karta zmizí v klobouku (zničí se).',
     flavor: 'Z klobouku vytáhne králíka, z rukávu eso a z tvé peněženky stovku.',
+    vanished: 'Abraka… dabra… a karta je fuč!',
   },
   tour_guide: {
     name: 'Turistický průvodce',
-    desc: 'Postupka i Barva stačí ze čtyř karet a ruka, která obsahuje Postupku nebo Barvu, dá +{chips|plural:čip,čipy,čipů}.',
+    desc: 'Postupka i Barva stačí ze čtyř karet a ruka, která obsahuje Postupku nebo Barvu, dá +{chips|plural:čip,čipy,čipů}; když má jen {cards|plural:kartu,karty,karet}, chce průvodce spropitné {tip|money}.',
     flavor: 'Značky mají čtyři barvy a jemu to stačí. Pátá cesta stejně vede do hospody.',
+    tip: 'Spropitné pro průvodce. Dobrovolné, ale povinné.',
   },
 
   // ── vlastní ──

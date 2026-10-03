@@ -90,8 +90,14 @@ const oldGuard: JokerDef = {
 
 // ─────────────────────────── #19 Kořenářka ───────────────────────────
 
-/** Fáze 10: +2 → +1 — silnější boti používají víc babských rad (R2 86 % nad pásmem vzácného). */
-const HERBALIST_MULT = 1;
+/**
+ * 1.0.1: +2 mult za babskou radu, ale bylinky vadnou — kolo bez použité rady −1 mult (nejméně 0). Fáze 10 měla +1 bez
+ * vadnutí (+2 bez vadnutí bylo nad pásmem vzácného).
+ */
+const HERBALIST_MULT = 2;
+const HERBALIST_WILT = 1;
+/** Klíč stavu: použila se v tomto kole babská rada? */
+const HERBALIST_FRESH = 'fresh';
 
 const herbalist: JokerDef = {
   id: 'herbalist',
@@ -99,13 +105,21 @@ const herbalist: JokerDef = {
   cost: 6,
   unlock: { type: 'useConsumable', kind: 'rada', count: 10 },
   tags: ['mult', 'scaling', 'consumable'],
-  params: { mult: HERBALIST_MULT },
-  initState: () => ({ mult: 0 }),
+  params: { mult: HERBALIST_MULT, wilt: HERBALIST_WILT },
+  initState: () => ({ mult: 0, [HERBALIST_FRESH]: false }),
   describe: (self) => ({ current: stateNum(self, 'mult') }),
   hooks: {
     onConsumableUsed: (ctx) => {
       if (ctx.isCopy || ctx.kind !== 'rada') return;
       ctx.self.state.mult = stateNum(ctx.self, 'mult') + HERBALIST_MULT;
+      ctx.self.state[HERBALIST_FRESH] = true;
+    },
+    // Konec vyhraného kola: bez použité rady bylinky zvadnou (rada použitá ve Večerce platí pro příští kolo).
+    onRoundEnd: (ctx) => {
+      if (ctx.isCopy) return;
+      if (ctx.self.state[HERBALIST_FRESH] !== true)
+        ctx.self.state.mult = Math.max(0, stateNum(ctx.self, 'mult') - HERBALIST_WILT);
+      ctx.self.state[HERBALIST_FRESH] = false;
     },
     onHandPlayed: (ctx) => {
       const mult = stateNum(ctx.self, 'mult');
