@@ -4109,7 +4109,7 @@ a nechávají základní portréty čitelné.
 
 **Co:** portrét žolíka Červená a černá (src/ui/art/jokers/b05.ts, `DERBY_FANS`) už není rozpůlený na červenou
 a černou, ale sešívaný: dres z bílé a červené poloviny sešitých klikatým stehem s obrácenými rukávy (červený na bílé
-půlce, bílý na červené), sešívaný kulich se švem od bambule po lem, červenobílá šála kolem krku a na tvářích malé
+půlce, bílý na červené), sešívaný kulich se švem od bambule po lem, sešívaná šála kolem krku a na tvářích malé
 půlené vlaječky. Na zdi hospody visí sešívaná vlajka s třásněmi, v televizi hraje sešívaný hráč proti černému.
 Bílá je všude vlevo (z pohledu diváka). Černá zůstala v praporcích s piky a u soupeře v televizi, takže název
 a schopnost (skórující karty červené i černé barvy) dál sedí. Kreslicí sada postav má nové pole `noBlush`

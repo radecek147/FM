@@ -670,7 +670,7 @@ function suitBunting(x0: number, x1: number, y: number, sag: number, n: number):
     ['l', line, 1.2],
     ['f', '#d7442c', red.join(' '), 1.2],
     ['f', '#1a1714', black.join(' '), 1.2],
-    ['f', '#fffaf0', hearts.join(' ') + ' ' + spades.join(' '), 0],
+    ['f', 'paper', hearts.join(' ') + ' ' + spades.join(' '), 0],
   ];
 }
 
@@ -685,8 +685,9 @@ function stitchedSeam(x: number, y0: number, y1: number, w = 4, step = 6): Scene
 }
 
 /**
- * Tisk posouvá barvu proti obrysu (soutisk 2,2 doprava), takže pravá polovina by začínala až kus za švem. Proužek
- * barvy bez obrysu, předem posunutý doleva, ji dotáhne až ke švu na x (papír pod ním schová šev nakreslený potom).
+ * Tisk posouvá barvu proti obrysu (soutisk 2,2 doprava a 1,6 dolů), takže pravá polovina by začínala až kus za švem.
+ * Proužek barvy bez obrysu, předem posunutý doleva, ji dotáhne až ke švu na x. Papír pod ním zakryje šev nakreslený
+ * předtím, proto se šev (a okraje, které proužek protne) kreslí znovu až po něm.
  */
 const seamFill = (x: number, y0: number, y1: number, color: string): SceneOp => [
   'f',
@@ -709,20 +710,27 @@ function tvShirt(cx: number, y: number, side?: 'left' | 'right'): string {
 
 /** Půlená vlaječka na tvář (bílá u žerdi vlevo, červená vlající doprava), levý horní roh x, y, 11 × 8. */
 function cheekFlag(x: number, y: number): SceneOp[] {
-  const fly = (dx: number, dy: number): string =>
-    `M${r1(x + 5.5 + dx)},${r1(y + dy)} C${r1(x + 7.3 + dx)},${r1(y - 1 + dy)} ${r1(x + 9.2 + dx)},${r1(y + 1 + dy)} ` +
-    `${r1(x + 11 + dx)},${r1(y + dy)} L${r1(x + 11 + dx)},${r1(y + 8 + dy)} C${r1(x + 9.2 + dx)},${r1(y + 9 + dy)} ` +
-    `${r1(x + 7.3 + dx)},${r1(y + 7 + dy)} ${r1(x + 5.5 + dx)},${r1(y + 8 + dy)} Z`;
+  const fly = (dx: number, dy: number, cut = 0): string => {
+    const b = y + 8 - cut + dy;
+    return (
+      `M${r1(x + 5.5 + dx)},${r1(y + dy)} C${r1(x + 7.3 + dx)},${r1(y - 1 + dy)} ${r1(x + 9.2 + dx)},${r1(y + 1 + dy)} ` +
+      `${r1(x + 11 + dx)},${r1(y + dy)} L${r1(x + 11 + dx)},${r1(b)} C${r1(x + 9.2 + dx)},${r1(b + 1)} ` +
+      `${r1(x + 7.3 + dx)},${r1(b - 1)} ${r1(x + 5.5 + dx)},${r1(b)} Z`
+    );
+  };
   return [
     ['f', 'paper', `M${x},${y} H${x + 5.5} V${y + 8} H${x} Z`, 0],
-    // Červená předem posunutá proti soutisku, ať po tisku sedí přesně v obrysu.
-    ['f', RED, fly(-2.2, -1.6), 0],
+    // Červená předem posunutá doleva a o soutisk kratší, ať po tisku sedí v obrysu až k dolnímu lemu.
+    ['f', RED, fly(-2.2, 0, 1.6), 0],
     ['l', `M${x},${y} H${x + 5.5} V${y + 8} H${x} Z ${fly(0, 0)}`, 1.2],
   ];
 }
 
+/** Šála omotaná kolem krku (stejný tvar jako `neckScarf` ve figureKit.ts). */
+const SCARF_WRAP = 'M101,195 C110,206 140,206 149,195 L151,210 C140,223 110,223 99,210 Z';
+
 // Červená a černá: sešívaný fanoušek — dres z bílé a červené poloviny sešitých klikatým stehem, rukávy obráceně
-// (červený na bílé půlce, bílý na červené), červenobílá šála kolem krku, sešívaný kulich a na tvářích půlené
+// (červený na bílé půlce, bílý na červené), sešívaná šála kolem krku, sešívaný kulich a na tvářích půlené
 // vlaječky; bílá vždy vlevo. Hospoda pod praporky se srdci a piky, na zdi sešívaná vlajka s třásněmi, v televizi
 // derby sešívaného hráče proti černému. Na pultu pípa a pokladna s tržbou, v ruce půllitr. Bez hvězdy, znaku,
 // jména klubu i nápisů (docs/DECISIONS.md 2026-10-16).
@@ -732,7 +740,7 @@ const DERBY_FANS: Partial<FigureSpec> = {
   body: CREAM,
   body2: RED,
   collar: 'jersey',
-  accent: 'dark',
+  accent: '#b8302a',
   neckScarf: undefined,
   hair: 'short',
   hairColor: '#2f2a26',
@@ -755,7 +763,7 @@ const DERBY_FANS: Partial<FigureSpec> = {
     ...stitchedSeam(56, 100, 138, 3, 5),
     [
       'l',
-      'M31,142 v4 M35,142 v4 M39,142 v4 M43,142 v4 M47,142 v4 M51,142 v4 M55,142 v4 M59,142 v4 M63,142 v4 M67,142 v4 M71,142 v4 M75,142 v4 M79,142 v4',
+      'M32,142 v4 M36,142 v4 M40,142 v4 M44,142 v4 M48,142 v4 M52,142 v4 M56,142 v4 M60,142 v4 M64,142 v4 M68,142 v4 M72,142 v4 M76,142 v4 M80,142 v4',
       1,
     ],
     ['l', 'M27,97 H85', 1.8],
@@ -765,17 +773,15 @@ const DERBY_FANS: Partial<FigureSpec> = {
     ['l', 'M169,129 V136 L177,129 M209,129 V136 L201,129', 1.1],
     ['f', '#5b5850', rect(164, 88, 50, 36), 1.8],
     ['f', '#5d9a3e', rect(169, 93, 40, 26), 1.2],
-    ['l', 'M189,93 V119 M169,106 H173 M205,106 H209', 0.9],
-    ['f', SKIN, `${c(177.8, 92.9, 2.8)} ${c(196.8, 95.9, 2.8)}`, 0],
-    ['l', `${c(180, 94.5, 2.8)} ${c(199, 97.5, 2.8)}`, 0.9],
-    ['f', 'paper', tvShirt(180, 98), 0],
-    ['f', RED, place(tvShirt(180, 98, 'right'), -2.2, 0), 0],
-    ['l', `${tvShirt(180, 98)} M180,98 L180,111`, 0.9],
+    ['l', 'M189,93 V119 M169,106 H173 M207,106 H209', 0.9],
+    ['f', SKIN, `${c(180, 96.5, 2.8)} ${c(199, 97.5, 2.8)}`, 0.9],
+    ['f', 'paper', tvShirt(180, 100), 0],
+    ['f', RED, place(tvShirt(180, 98.4, 'right'), -2.2, 0), 0],
+    ['l', `${tvShirt(180, 100)} M180,100 L180,113`, 0.9],
     ['f', 'dark', tvShirt(199, 101), 0],
-    ['f', '#fffaf0', c(186.8, 113.4, 2.2), 0],
-    ['l', c(189, 115, 2.2), 0.8],
+    ['f', 'paper', c(189, 115, 2.2), 0.8],
     // Výčepní pult: pípa a pokladna s tržbou.
-    ['f', '#c99a62', 'M16,196 H96 V206 H16 Z', 1.4],
+    ['f', '#c99a62', 'M16,196 H92 V206 H16 Z', 1.4],
     ['f', '#d9d2c2', 'M24,196 L24,172 L38,172 L38,196 Z', 1.3],
     ['f', '#d9d2c2', 'M38,176 H46 V186 H42 V180 H38 Z', 1.1],
     ['f', 'dark', 'M28,172 L29.5,158 L34.5,158 L36,172 Z', 0],
@@ -793,7 +799,7 @@ const DERBY_FANS: Partial<FigureSpec> = {
   outfit: [
     // Červená pravá půlka dotažená až ke švu, límec a šev znovu navrch.
     seamFill(125, 212, 284, RED),
-    ['f', 'dark', 'M102,210 C108,232 142,232 148,210 L140,210 C136,222 114,222 110,210 Z', 1.6],
+    ['f', '#b8302a', 'M102,210 C108,232 142,232 148,210 L140,210 C136,222 114,222 110,210 Z', 1.6],
     ['l', 'M125,226 L125,284', 1.6],
     ...stitchedSeam(125, 232, 280, 4, 6),
     // Rukávy obráceně: červený na bílé půlce, bílý na červené.
@@ -802,27 +808,30 @@ const DERBY_FANS: Partial<FigureSpec> = {
     ['f', CREAM, 'M206,284 C202,240 180,218 150,210 C168,228 176,252 178,284 Z', 2.4],
   ],
   extra: [
-    // Červenobílá šála jen omotaná kolem krku (bez visícího konce, ať jsou poloviny dresu čisté).
-    ['f', RED, 'M101,195 C110,206 140,206 149,195 L151,210 C140,223 110,223 99,210 Z', 1.8],
+    // Šála jen omotaná kolem krku (bez visícího konce, ať jsou poloviny dresu čisté), taky sešívaná.
+    ['f', CREAM, SCARF_WRAP, 1.8],
     [
       'f',
-      CREAM,
-      'M111,202 L119,204.5 L119,218.5 L110,216.5 Z M131,204.5 L139,202 L140,216.5 L131,218.5 Z',
-      1,
+      RED,
+      'M125,203.3 C134.8,203.3 144.5,200.5 149,195 L151,210 C145.5,216.5 135.3,219.8 125,219.8 Z',
+      1.8,
     ],
+    seamFill(125, 203.3, 219.8, RED),
+    ['l', SCARF_WRAP, 1.8],
+    ...stitchedSeam(125, 205, 218, 2.5, 4),
     // Půllitr držený za ucho.
     ['i', 'beer-stein', 160, 190, 62, '#f2cf4a'],
     ...hand(168, 222),
     // Na lícních kostech vlaječky (ruměnec vypnutý `noBlush`, červené tváře by splývaly s červenou půlkou).
     ...cheekFlag(103, 159),
     ...cheekFlag(136, 159),
-    // Sešívaný kulich: bílá a červená polovina, lem v týchž barvách (o odstín tmavší), jeden šev od bambule po lem.
+    // Sešívaný kulich: bílá a červená polovina, lem v týchž barvách, jeden šev od bambule po lem.
     ['f', CREAM, 'M96,131 C94,105 108,93 125,93 L125,131 Z', 2.2],
     ['f', RED, 'M125,93 C142,93 156,105 154,131 L125,131 Z', 2.2],
     seamFill(125, 95, 121, RED),
-    ['f', '#d9d2c2', 'M93,121 H125 V135 H93 Z', 1.8],
-    ['f', '#b8302a', 'M125,121 H157 V135 H125 Z', 1.8],
-    seamFill(125, 121, 133.4, '#b8302a'),
+    ['f', CREAM, 'M93,121 H125 V135 H93 Z', 1.8],
+    ['f', RED, 'M125,121 H157 V135 H125 Z', 1.8],
+    seamFill(125, 121, 133.4, RED),
     ['l', 'M93,121 H157 M93,135 H157', 1.8],
     ['l', 'M105,123 v10 M115,123 v10 M135,123 v10 M145,123 v10', 1.1],
     ...stitchedSeam(125, 96, 133, 3, 5),
