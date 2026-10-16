@@ -674,16 +674,27 @@ function suitBunting(x0: number, x1: number, y: number, sag: number, n: number):
   ];
 }
 
-// Červená a černá: fanoušek rozpůlený na dvě barvy (dres, kulich, šála, pomalovaný obličej), v hospodě
-// pod praporky se srdci a piky, v televizi derby; vlevo hospodského pokladna plná tržby, v ruce půllitr.
+/** Šev sešitý klikatým stehem: svislá linka x od y0 do y1 a cik-cak kolem ní. */
+function stitchedSeam(x: number, y0: number, y1: number, w = 4, step = 6): SceneOp[] {
+  let zig = `M${x - w},${y0}`;
+  for (let y = y0 + step, i = 1; y <= y1; y += step, i++) zig += ` L${x + (i % 2 ? w : -w)},${y}`;
+  return [
+    ['l', `M${x},${y0} L${x},${y1}`, 1.4],
+    ['l', zig, 0.9],
+  ];
+}
+
+// Červená a černá: sešívaný fanoušek (dres, kulich i vlajka z bílé a červené poloviny sešité klikatým stehem,
+// červenobílá šála, na tvářích půlené vlaječky) v hospodě pod praporky se srdci a piky; v televizi derby
+// sešívaných proti černým, vlevo hospodského pokladna plná tržby, v ruce půllitr. Bez hvězdy, znaku a jména klubu.
 const DERBY_FANS: Partial<FigureSpec> = {
   bg: '#c99a62',
   motif: 'none',
-  body: '#d7442c',
-  body2: '#1a1714',
+  body: CREAM,
+  body2: RED,
   collar: 'jersey',
-  accent: '#fffaf0',
-  neckScarf: { color: '#1a1714', stripe: '#d7442c' },
+  accent: RED,
+  neckScarf: { color: CREAM, stripe: RED },
   hair: 'short',
   hairColor: '#2f2a26',
   hat: undefined,
@@ -694,12 +705,20 @@ const DERBY_FANS: Partial<FigureSpec> = {
     ['f', '#8c5632', 'M16,150 H234 V284 H16 Z', 1.4],
     ['l', 'M16,158 H234 M50,158 V284 M200,158 V284', 0.9],
     ...suitBunting(18, 234, 54, 8, 9),
-    // Televize s přenosem derby.
+    // Sešívaná vlajka na tyčce, zavěšená šňůrkou na hřebíku.
+    ['l', 'M24,92 L56,78 L88,92', 1.1],
+    ['f', INK, c(56, 78, 2), 0],
+    ['f', CREAM, 'M26,94 H56 V136 C48,132 40,140 32,136 C29,135 27,135 26,136 Z', 1.8],
+    ['f', RED, 'M56,94 H86 V136 C80,135 76,133 70,136 C64,139 60,134 56,136 Z', 1.8],
+    ...stitchedSeam(56, 97, 132, 3, 5),
+    ['l', 'M21,93 H91', 3],
+    // Televize s přenosem derby: sešívaný hráč proti černému.
     ['f', '#5b5850', rect(166, 86, 60, 44), 1.8],
     ['f', '#5d9a3e', rect(172, 92, 48, 32), 1.2],
     ['l', 'M196,92 V124 M172,108 H178 M214,108 H220', 0.9],
-    ['f', '#d7442c', c(186, 106, 4), 1],
-    ['f', '#1a1714', c(206, 112, 4), 1],
+    ['f', CREAM, 'M186,101 A5,5 0 0 0 186,111 Z', 1],
+    ['f', RED, 'M186,101 A5,5 0 0 1 186,111 Z', 1],
+    ['f', '#1a1714', c(206, 112, 4.5), 1],
     ['f', '#fffaf0', c(196, 116, 2.2), 0.8],
     ['l', 'M186,86 L178,74 M206,86 L214,74 M196,130 V150 M184,150 H208', 1.4],
     // Výčepní pult, pípa a pokladna s tržbou.
@@ -714,14 +733,15 @@ const DERBY_FANS: Partial<FigureSpec> = {
     ['l', 'M58,178 h6 M68,178 h6 M78,178 h6 M58,186 h6 M68,186 h6 M78,186 h6', 1.6],
   ],
   extra: [
-    // Pomalovaný obličej: vlevo červené pruhy, vpravo černé.
-    ['f', '#d7442c', 'M102,163 L115,161 L115,165 L102,167 Z M102,170 L115,168 L115,172 L102,174 Z', 0.8],
-    ['f', '#1a1714', 'M135,161 L148,163 L148,167 L135,165 Z M135,168 L148,170 L148,174 L135,172 Z', 0],
-    // Kulich napůl červený, napůl černý, s bambulí.
-    ['f', '#d7442c', 'M96,134 C94,108 108,96 125,96 C142,96 156,108 154,134 Z', 2.2],
-    ['f', '#1a1714', 'M125,96 C142,96 156,108 154,134 L125,134 Z', 0],
-    ['f', '#1a1714', 'M93,124 H125 V138 H93 Z', 1.8],
-    ['f', '#d7442c', 'M125,124 H157 V138 H125 Z', 1.8],
+    // Na lícních kostech namalované půlené vlaječky (bílá | červená).
+    ['f', CREAM, 'M100,158 H106 V166 H100 Z M138,158 H144 V166 H138 Z', 0.9],
+    ['f', RED, 'M106,158 H112 V166 H106 Z M144,158 H150 V166 H144 Z', 0.9],
+    // Sešívaný kulich: bílá a červená polovina se švem, lem obráceně, bílá bambule.
+    ['f', CREAM, 'M96,134 C94,108 108,96 125,96 L125,134 Z', 2.2],
+    ['f', RED, 'M125,96 C142,96 156,108 154,134 L125,134 Z', 2.2],
+    ...stitchedSeam(125, 99, 123, 3, 5),
+    ['f', RED, 'M93,124 H125 V138 H93 Z', 1.8],
+    ['f', CREAM, 'M125,124 H157 V138 H125 Z', 1.8],
     ['l', 'M101,126 v10 M109,126 v10 M117,126 v10 M133,126 v10 M141,126 v10 M149,126 v10', 0.8],
     ['f', '#fffaf0', c(125, 92, 8), 1.6],
   ],
