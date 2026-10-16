@@ -656,13 +656,13 @@ function suitBunting(x0: number, x1: number, y: number, sag: number, n: number):
     const xb = x0 + (x1 - x0) * t1;
     const xm = (xa + xb) / 2;
     const ym = (at(t0) + at(t1)) / 2;
-    const tri = `M${r1(xa)},${r1(at(t0))} L${r1(xb)},${r1(at(t1))} L${r1(xm)},${r1(ym + 18)} Z`;
+    const tri = `M${r1(xa)},${r1(at(t0))} L${r1(xb)},${r1(at(t1))} L${r1(xm)},${r1(ym + 22)} Z`;
     if (i % 2 === 0) {
       red.push(tri);
-      hearts.push(pip('heart', xm, ym + 6, 0.38));
+      hearts.push(pip('heart', xm, ym + 7, 0.5));
     } else {
       black.push(tri);
-      spades.push(pip('spade', xm, ym + 6, 0.38));
+      spades.push(pip('spade', xm, ym + 7, 0.5));
     }
   }
   const line = `M${x0},${y} Q${(x0 + x1) / 2},${y + sag * 2} ${x1},${y}`;
@@ -684,66 +684,149 @@ function stitchedSeam(x: number, y0: number, y1: number, w = 4, step = 6): Scene
   ];
 }
 
-// Červená a černá: sešívaný fanoušek (dres, kulich i vlajka z bílé a červené poloviny sešité klikatým stehem,
-// červenobílá šála, na tvářích půlené vlaječky) v hospodě pod praporky se srdci a piky; v televizi derby
-// sešívaných proti černým, vlevo hospodského pokladna plná tržby, v ruce půllitr. Bez hvězdy, znaku a jména klubu.
+/**
+ * Tisk posouvá barvu proti obrysu (soutisk 2,2 doprava), takže pravá polovina by začínala až kus za švem. Proužek
+ * barvy bez obrysu, předem posunutý doleva, ji dotáhne až ke švu na x (papír pod ním schová šev nakreslený potom).
+ */
+const seamFill = (x: number, y0: number, y1: number, color: string): SceneOp => [
+  'f',
+  color,
+  `M${x - 1.1},${y0} H${x + 2.2} V${y1} H${x - 1.1} Z`,
+  0,
+];
+
+/** Dres hráče v televizi (tričko s rukávy): střed cx, ramena y; `side` = jen levá / pravá polovina. */
+function tvShirt(cx: number, y: number, side?: 'left' | 'right'): string {
+  const half = (k: number): string =>
+    `M${cx},${y} L${cx + 3 * k},${y} L${cx + 7 * k},${y + 3} L${cx + 5 * k},${y + 7} L${cx + 4 * k},${y + 6} ` +
+    `L${cx + 4 * k},${y + 13} L${cx},${y + 13} Z`;
+  if (side) return half(side === 'left' ? -1 : 1);
+  return (
+    `M${cx - 7},${y + 3} L${cx - 3},${y} L${cx + 3},${y} L${cx + 7},${y + 3} L${cx + 5},${y + 7} L${cx + 4},${y + 6} ` +
+    `L${cx + 4},${y + 13} L${cx - 4},${y + 13} L${cx - 4},${y + 6} L${cx - 5},${y + 7} Z`
+  );
+}
+
+/** Půlená vlaječka na tvář (bílá u žerdi vlevo, červená vlající doprava), levý horní roh x, y, 11 × 8. */
+function cheekFlag(x: number, y: number): SceneOp[] {
+  const fly = (dx: number, dy: number): string =>
+    `M${r1(x + 5.5 + dx)},${r1(y + dy)} C${r1(x + 7.3 + dx)},${r1(y - 1 + dy)} ${r1(x + 9.2 + dx)},${r1(y + 1 + dy)} ` +
+    `${r1(x + 11 + dx)},${r1(y + dy)} L${r1(x + 11 + dx)},${r1(y + 8 + dy)} C${r1(x + 9.2 + dx)},${r1(y + 9 + dy)} ` +
+    `${r1(x + 7.3 + dx)},${r1(y + 7 + dy)} ${r1(x + 5.5 + dx)},${r1(y + 8 + dy)} Z`;
+  return [
+    ['f', 'paper', `M${x},${y} H${x + 5.5} V${y + 8} H${x} Z`, 0],
+    // Červená předem posunutá proti soutisku, ať po tisku sedí přesně v obrysu.
+    ['f', RED, fly(-2.2, -1.6), 0],
+    ['l', `M${x},${y} H${x + 5.5} V${y + 8} H${x} Z ${fly(0, 0)}`, 1.2],
+  ];
+}
+
+// Červená a černá: sešívaný fanoušek — dres z bílé a červené poloviny sešitých klikatým stehem, rukávy obráceně
+// (červený na bílé půlce, bílý na červené), červenobílá šála kolem krku, sešívaný kulich a na tvářích půlené
+// vlaječky; bílá vždy vlevo. Hospoda pod praporky se srdci a piky, na zdi sešívaná vlajka s třásněmi, v televizi
+// derby sešívaného hráče proti černému. Na pultu pípa a pokladna s tržbou, v ruce půllitr. Bez hvězdy, znaku,
+// jména klubu i nápisů (docs/DECISIONS.md 2026-10-16).
 const DERBY_FANS: Partial<FigureSpec> = {
   bg: '#c99a62',
   motif: 'none',
   body: CREAM,
   body2: RED,
   collar: 'jersey',
-  accent: RED,
-  neckScarf: { color: CREAM, stripe: RED },
+  accent: 'dark',
+  neckScarf: undefined,
   hair: 'short',
   hairColor: '#2f2a26',
   hat: undefined,
   mood: 'grin',
-  prop: { icon: 'beer-stein', color: '#f2cf4a', x: 160, y: 190, size: 62 },
+  noBlush: true,
+  prop: undefined,
   backdrop: [
-    // Obložení hospody.
-    ['f', '#8c5632', 'M16,150 H234 V284 H16 Z', 1.4],
-    ['l', 'M16,158 H234 M50,158 V284 M200,158 V284', 0.9],
-    ...suitBunting(18, 234, 54, 8, 9),
-    // Sešívaná vlajka na tyčce, zavěšená šňůrkou na hřebíku.
-    ['l', 'M24,92 L56,78 L88,92', 1.1],
-    ['f', INK, c(56, 78, 2), 0],
-    ['f', CREAM, 'M26,94 H56 V136 C48,132 40,140 32,136 C29,135 27,135 26,136 Z', 1.8],
-    ['f', RED, 'M56,94 H86 V136 C80,135 76,133 70,136 C64,139 60,134 56,136 Z', 1.8],
-    ...stitchedSeam(56, 97, 132, 3, 5),
-    ['l', 'M21,93 H91', 3],
-    // Televize s přenosem derby: sešívaný hráč proti černému.
-    ['f', '#5b5850', rect(166, 86, 60, 44), 1.8],
-    ['f', '#5d9a3e', rect(172, 92, 48, 32), 1.2],
-    ['l', 'M196,92 V124 M172,108 H178 M214,108 H220', 0.9],
-    ['f', CREAM, 'M186,101 A5,5 0 0 0 186,111 Z', 1],
-    ['f', RED, 'M186,101 A5,5 0 0 1 186,111 Z', 1],
-    ['f', '#1a1714', c(206, 112, 4.5), 1],
-    ['f', '#fffaf0', c(196, 116, 2.2), 0.8],
-    ['l', 'M186,86 L178,74 M206,86 L214,74 M196,130 V150 M184,150 H208', 1.4],
-    // Výčepní pult, pípa a pokladna s tržbou.
+    // Tmavé obložení hospody (ať se od něj červená půlka dresu odliší) s lištou a spárami mimo půllitr.
+    ['f', '#5e3b24', 'M16,150 H234 V284 H16 Z', 1.4],
+    ['l', 'M16,158 H234 M50,158 V284 M226,158 V284', 0.9],
+    ...suitBunting(18, 234, 54, 8, 8),
+    // Sešívaná vlajka s třásněmi na tyčce s hlavicemi, zavěšená šňůrkou na hřebíku.
+    ['l', 'M28,96 L56,87 L84,96', 1.1],
+    ['f', 'dark', c(56, 87, 1.8), 0],
+    ['f', CREAM, 'M29,98 H56 V140 H29 Z', 1.8],
+    ['f', RED, 'M56,98 H83 V140 H56 Z', 1.8],
+    seamFill(56, 98, 140, RED),
+    ['l', 'M29,98 H83 M29,140 H83', 1.8],
+    ...stitchedSeam(56, 100, 138, 3, 5),
+    [
+      'l',
+      'M31,142 v4 M35,142 v4 M39,142 v4 M43,142 v4 M47,142 v4 M51,142 v4 M55,142 v4 M59,142 v4 M63,142 v4 M67,142 v4 M71,142 v4 M75,142 v4 M79,142 v4',
+      1,
+    ],
+    ['l', 'M27,97 H85', 1.8],
+    ['f', 'dark', `${c(26, 97, 2.4)} ${c(86, 97, 2.4)}`, 0],
+    // Televize na poličce s přenosem derby: sešívaný hráč proti černému.
+    ['f', '#8c5632', 'M162,124 H216 V129 H162 Z', 1.2],
+    ['l', 'M169,129 V136 L177,129 M209,129 V136 L201,129', 1.1],
+    ['f', '#5b5850', rect(164, 88, 50, 36), 1.8],
+    ['f', '#5d9a3e', rect(169, 93, 40, 26), 1.2],
+    ['l', 'M189,93 V119 M169,106 H173 M205,106 H209', 0.9],
+    ['f', SKIN, `${c(177.8, 92.9, 2.8)} ${c(196.8, 95.9, 2.8)}`, 0],
+    ['l', `${c(180, 94.5, 2.8)} ${c(199, 97.5, 2.8)}`, 0.9],
+    ['f', 'paper', tvShirt(180, 98), 0],
+    ['f', RED, place(tvShirt(180, 98, 'right'), -2.2, 0), 0],
+    ['l', `${tvShirt(180, 98)} M180,98 L180,111`, 0.9],
+    ['f', 'dark', tvShirt(199, 101), 0],
+    ['f', '#fffaf0', c(186.8, 113.4, 2.2), 0],
+    ['l', c(189, 115, 2.2), 0.8],
+    // Výčepní pult: pípa a pokladna s tržbou.
     ['f', '#c99a62', 'M16,196 H96 V206 H16 Z', 1.4],
-    ['f', '#d9d2c2', 'M24,196 L24,170 L38,170 L38,196 Z', 1.3],
-    ['f', '#d9d2c2', 'M38,174 H46 V184 H42 V178 H38 Z', 1.1],
-    ['f', '#1a1714', 'M28,170 L30,150 L34,150 L34,170 Z', 0],
-    ['f', '#1a1714', c(32, 149, 4), 0],
+    ['f', '#d9d2c2', 'M24,196 L24,172 L38,172 L38,196 Z', 1.3],
+    ['f', '#d9d2c2', 'M38,176 H46 V186 H42 V180 H38 Z', 1.1],
+    ['f', 'dark', 'M28,172 L29.5,158 L34.5,158 L36,172 Z', 0],
+    ['f', 'dark', c(32, 157, 3.6), 0],
     ['f', '#e9b030', 'M50,196 L52,170 L88,168 L90,196 Z', 1.6],
-    ['f', '#fffaf0', 'M56,168 L84,166 L84,158 L56,160 Z', 1.2],
+    ['f', 'paper', 'M56,168 L84,166 L84,158 L56,160 Z', 1.2],
     ['f', '#5d9a3e', 'M60,166 L70,150 L80,156 L74,166 Z', 1.1],
-    ['l', 'M58,178 h6 M68,178 h6 M78,178 h6 M58,186 h6 M68,186 h6 M78,186 h6', 1.6],
+    [
+      'f',
+      'paper',
+      `${rect(57, 176, 7, 4)} ${rect(67, 176, 7, 4)} ${rect(77, 176, 7, 4)} ${rect(57, 184, 7, 4)} ${rect(67, 184, 7, 4)} ${rect(77, 184, 7, 4)}`,
+      0,
+    ],
+  ],
+  outfit: [
+    // Červená pravá půlka dotažená až ke švu, límec a šev znovu navrch.
+    seamFill(125, 212, 284, RED),
+    ['f', 'dark', 'M102,210 C108,232 142,232 148,210 L140,210 C136,222 114,222 110,210 Z', 1.6],
+    ['l', 'M125,226 L125,284', 1.6],
+    ...stitchedSeam(125, 232, 280, 4, 6),
+    // Rukávy obráceně: červený na bílé půlce, bílý na červené.
+    ['f', RED, 'M44,284 C47.2,248.8 61.9,227.7 83,216.5 C75,234 68,258 66,284 Z', 2.4],
+    // Bílý rukáv přesně přes stínování základní postavy (žádné tečky rastru nezůstanou na červené).
+    ['f', CREAM, 'M206,284 C202,240 180,218 150,210 C168,228 176,252 178,284 Z', 2.4],
   ],
   extra: [
-    // Na lícních kostech namalované půlené vlaječky (bílá | červená).
-    ['f', CREAM, 'M100,158 H106 V166 H100 Z M138,158 H144 V166 H138 Z', 0.9],
-    ['f', RED, 'M106,158 H112 V166 H106 Z M144,158 H150 V166 H144 Z', 0.9],
-    // Sešívaný kulich: bílá a červená polovina se švem, lem obráceně, bílá bambule.
-    ['f', CREAM, 'M96,134 C94,108 108,96 125,96 L125,134 Z', 2.2],
-    ['f', RED, 'M125,96 C142,96 156,108 154,134 L125,134 Z', 2.2],
-    ...stitchedSeam(125, 99, 123, 3, 5),
-    ['f', RED, 'M93,124 H125 V138 H93 Z', 1.8],
-    ['f', CREAM, 'M125,124 H157 V138 H125 Z', 1.8],
-    ['l', 'M101,126 v10 M109,126 v10 M117,126 v10 M133,126 v10 M141,126 v10 M149,126 v10', 0.8],
-    ['f', '#fffaf0', c(125, 92, 8), 1.6],
+    // Červenobílá šála jen omotaná kolem krku (bez visícího konce, ať jsou poloviny dresu čisté).
+    ['f', RED, 'M101,195 C110,206 140,206 149,195 L151,210 C140,223 110,223 99,210 Z', 1.8],
+    [
+      'f',
+      CREAM,
+      'M111,202 L119,204.5 L119,218.5 L110,216.5 Z M131,204.5 L139,202 L140,216.5 L131,218.5 Z',
+      1,
+    ],
+    // Půllitr držený za ucho.
+    ['i', 'beer-stein', 160, 190, 62, '#f2cf4a'],
+    ...hand(168, 222),
+    // Na lícních kostech vlaječky (ruměnec vypnutý `noBlush`, červené tváře by splývaly s červenou půlkou).
+    ...cheekFlag(103, 159),
+    ...cheekFlag(136, 159),
+    // Sešívaný kulich: bílá a červená polovina, lem v týchž barvách (o odstín tmavší), jeden šev od bambule po lem.
+    ['f', CREAM, 'M96,131 C94,105 108,93 125,93 L125,131 Z', 2.2],
+    ['f', RED, 'M125,93 C142,93 156,105 154,131 L125,131 Z', 2.2],
+    seamFill(125, 95, 121, RED),
+    ['f', '#d9d2c2', 'M93,121 H125 V135 H93 Z', 1.8],
+    ['f', '#b8302a', 'M125,121 H157 V135 H125 Z', 1.8],
+    seamFill(125, 121, 133.4, '#b8302a'),
+    ['l', 'M93,121 H157 M93,135 H157', 1.8],
+    ['l', 'M105,123 v10 M115,123 v10 M135,123 v10 M145,123 v10', 1.1],
+    ...stitchedSeam(125, 96, 133, 3, 5),
+    ['f', '#fffaf0', c(125, 89, 7), 1.6],
   ],
 };
 

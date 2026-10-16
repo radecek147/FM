@@ -565,6 +565,8 @@ Náhledy stylů A–I a variant E1–E4 jsou ve scratchpadu (ne v repu); volba h
       (dávky src/ui/art/jokers/b01–b12.ts, náhledy scripts/joker-art-preview.ts, DECISIONS 2026-10-08)
 - [x] Objev tajné kombinace nabídne její pranostiku v příští Večerce; „Odemknout vše“ i s legendárními žolíky;
       odkaz na sestavu odemkne vše
+- [x] Mezera mezi nadpisem „Kam dneska?“ a kartami útrat (zvednutá aktuální karta už nenaléhá na podnadpis)
+- [x] Červená a černá: sešívaný fanoušek (dres, kulich, šála, vlajka; bez hvězdy a znaku, DECISIONS 2026-10-16)
 
 ---
 

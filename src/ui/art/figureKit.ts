@@ -91,6 +91,8 @@ export interface FigureSpec {
   female?: boolean;
   /** Červený nos (štamgasti). */
   redNose?: boolean;
+  /** Bez ruměnce na tvářích (místo něj třeba namalované vlaječky). */
+  noBlush?: boolean;
   /** Rekvizita z knihovny ikon (v pravé ruce). */
   prop?: { icon: string; color: string; x?: number; y?: number; size?: number };
   /** Vlastní tahy pozadí: po motivu, před postavou (scéna za zády — stánek, krajina, předměty v pozadí). */
@@ -765,7 +767,7 @@ export function figure(f: FigureSpec): SceneOp[] {
   ops.push(['f', skin, 'M99,150 C91,144 89,164 100,166 Z', 1.8]);
   ops.push(['f', skin, 'M151,150 C159,144 161,164 150,166 Z', 1.8]);
   ops.push(['f', skin, c(125, 156, 26, 30), 2.4]);
-  ops.push(['f', 'blush', c(108, 168, 6), 0], ['f', 'blush', c(142, 168, 6), 0]);
+  if (!f.noBlush) ops.push(['f', 'blush', c(108, 168, 6), 0], ['f', 'blush', c(142, 168, 6), 0]);
   ops.push(['l', 'M107,144 C111,140 117,140 120,143 M130,143 C133,140 139,140 143,144', 1.8]);
   ops.push(['f', 'dark', c(114, 152, 2.5), 0], ['f', 'dark', c(136, 152, 2.5), 0]);
   if (f.female) ops.push(['l', 'M109,149 l-3,-2 M141,149 l3,-2', 1.2]);

@@ -4104,3 +4104,18 @@ scripts/joker-art-preview.ts. Velikost kresby jedné scény je nejvýš ~84 kB S
 **Proč:** přání hráče („podívej se na každého žolíka zvlášť a uprav ho podobně jako fotbalového fanouška, ať to souvisí
 s jeho názvem a jsou tam hezké detaily“). Dávky v samostatných souborech umožnily kreslit souběžně bez konfliktů
 a nechávají základní portréty čitelné.
+
+## 2026-10-16 — Červená a černá: sešívaný fanoušek
+
+**Co:** portrét žolíka Červená a černá (src/ui/art/jokers/b05.ts, `DERBY_FANS`) už není rozpůlený na červenou
+a černou, ale sešívaný: dres z bílé a červené poloviny sešitých klikatým stehem s obrácenými rukávy (červený na bílé
+půlce, bílý na červené), sešívaný kulich se švem od bambule po lem, červenobílá šála kolem krku a na tvářích malé
+půlené vlaječky. Na zdi hospody visí sešívaná vlajka s třásněmi, v televizi hraje sešívaný hráč proti černému.
+Bílá je všude vlevo (z pohledu diváka). Černá zůstala v praporcích s piky a u soupeře v televizi, takže název
+a schopnost (skórující karty červené i černé barvy) dál sedí. Kreslicí sada postav má nové pole `noBlush`
+(bez ruměnce; vlaječky by s ním splývaly).
+
+**Proč:** přání hráče („předělej ho, ať je sešívaný jako slavista“). Stejně jako u Fotbalového fanouška
+(2026-10-08) je to obecný půlený vzor bez hvězdy, znaku a jména klubu a bez nápisů: hvězda je dnes přímo logo
+skutečného klubu (CLAUDE.md kap. 5). Fotbalový fanoušek má poloviny obráceně (červená vlevo); nechal jsem ho,
+dokud si hráč neřekne.
